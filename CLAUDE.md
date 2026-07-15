@@ -1,5 +1,5 @@
 # LexCapture v8.0 RC — Contexto Maestro del Proyecto
-<!-- Versión: v8.0 RC | Release Candidate: 2026-06-16 | Fase H completada -->
+<!-- Versión: v8.0 RC | Release Candidate: 2026-07-14 | Fase H re-ejecutada (ver sección Fase H más abajo) -->
 
 ## Qué es este proyecto
 **LexCapture v8** es una PWA (Progressive Web App) para la Policía Nacional de Colombia que digitaliza el proceso de registro de capturas en campo. Reemplaza el papeleo manual generando automáticamente documentos legales oficiales.
@@ -77,7 +77,20 @@ Ver cada FASE_X.md para el estado individual. El usuario marca las fases como co
 | M3 | NUNC sin validación 16 dígitos | ✅ validateNunc() implementada (Fase B) |
 | M4 | WhatsApp doble disparo en desktop | ✅ if/else navigator.share (Fase C) |
 | M5 | Debug bar visible en Esqueleto | ✅ Removido (Fase A) |
+| A5 | FPJ-5 fecha como string (no celda-por-celda) | ✅ fechaDia/Mes/Ano + setTc por dígito (confirmado en Fase H) |
+| S1 | `escape()`/`unescape()` deprecated | ✅ Ya no se usan en el código actual (confirmado en Fase H) |
 | C3 | ~~Sin firma digital~~ | **CANCELADO**: documentos se imprimen y firman a mano |
+
+## Fase H (2026-07-14) — revisión final, bugs reales encontrados y corregidos
+Revisión profunda (3 agentes en paralelo + verificación end-to-end con Playwright del golden path real, no solo lectura de código). Historial completo de diffs en `git log`. Hallazgos más severos:
+- **Plantillas OJ de Disposición (Fiscalía/Juzgado) no generaban NUNCA el documento** — el .docx builtin embebido tenía rutas internas con `\` en vez de `/` (`word\document.xml`), por lo que el parser de zip nunca encontraba `word/document.xml` y la función abortaba con "Plantilla inválida". Roto desde el primer arranque de la app. Corregido normalizando separadores al leer el zip.
+- **`URL.revokeObjectURL()` se llamaba inmediatamente después de `a.click()`** en la descarga de documentos OJ y en las exportaciones — podía cancelar la descarga antes de que el navegador la iniciara. Diferido con `setTimeout`.
+- **Guardado cifrado con condición de carrera**: `_lcEncSave` no serializaba escrituras concurrentes a la misma clave de `localStorage`; ahora se serializa por clave y `wizSave()` espera el guardado real antes de confirmar éxito al usuario (antes podía mostrar "Caso guardado ✓" sin haber persistido nada).
+- **"Continuar sin PIN" permitía crear capturas con éxito falso** sin cifrar ni persistir nada — eliminado.
+- **Badge de plazo legal (Ley 906/2004) invertido**: mostraba "URGENTE" mientras el caso tenía *menos* de 36h y desaparecía justo al vencerse el plazo. Ahora escala a "VENCIDO" pasadas 36h.
+- **`activarTemplate` desactivaba plantillas de otros tipos** (activar una de Juzgado rompía la de Fiscalía activa).
+- **NUNC vacío se rellenaba con ceros (`padStart`)** en el FPJ-5 en vez de bloquear la generación — un documento legal oficial podía salir con un NUNC fabricado.
+- Terminología CESPA (wizard: pasos, encabezado de fecha) y `dosGreeting()` (medianoche-5:59am decía "DÍAS") corregidos.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
@@ -85,6 +98,5 @@ Ver cada FASE_X.md para el estado individual. El usuario marca las fases como co
 | C2 | Service Worker requiere HTTPS — sw.js separado no embebido | ALTA |
 | A1 | Localidad/zona/vereda hardcodeadas en datalists | MEDIA |
 | A2 | NUNC con prefijo Medellín hardcodeado — configurar por regional | MEDIA |
-| A5 | FPJ-5 fecha como string en informe generado (no celda-por-celda del formato oficial) | MEDIA |
-| S1 | `escape()`/`unescape()` deprecated en exportConfig/importConfig | BAJA |
-| S2 | innerHTML con datos de usuario sin sanitizar (riesgo bajo en app interna) | BAJA |
+| S2 | innerHTML con datos de usuario sin escapar en atributos `value=""` (perfiles, secciones del dossier). Los 4 `<textarea>` del wizard ya se escapan (Fase H) | BAJA |
+| S3 | Backup de capturas (`exportarCapturas`) se exporta en JSON plano sin cifrar — ya muestra advertencia explícita al usuario (Fase H), pero no cifra el archivo | BAJA |
