@@ -1,0 +1,15 @@
+{
+  "name": "LexCapture — Gestión de Capturas",
+  "short_name": "LexCapture",
+  "description": "App de gestión de capturas para la Policía Nacional de Colombia",
+  "start_url": "./LexCapture_v8.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#d97706",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "es"
+}

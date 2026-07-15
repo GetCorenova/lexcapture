@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>LexCapture v7</title>
+<style>
+:root{
+  --bg:#0f172a;
+  --surface:rgba(30,41,59,.5);
+  --surface-2:rgba(15,23,42,.6);
+  --surface-strong:rgba(15,23,42,.85);
+  --border:rgba(255,255,255,.07);
+  --border-strong:rgba(255,255,255,.12);
+  --text:#e2e8f0;
+  --text-2:#94a3b8;
+  --text-3:#64748b;
+  --flag:#d97706;
+  --flag-2:#f59e0b;
+  --flag-bg:rgba(217,119,6,.14);
+  --oj:#9333ea;
+  --oj-2:#a855f7;
+  --oj-bg:rgba(147,51,234,.14);
+  --accent:#3b82f6;
+  --danger:#ef4444;
+  --ok:#10b981;
+  --radius:12px;
+  --radius-sm:8px;
+  --pad:16px;
+  --shadow:0 8px 28px rgba(0,0,0,.4);
+  --blur:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  font-size:15px;line-height:1.45;color:var(--text);
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 0%,rgba(217,119,6,.10),transparent 60%),
+    radial-gradient(ellipse 80% 50% at 80% 100%,rgba(147,51,234,.10),transparent 60%),
+    var(--bg);
+  background-attachment:fixed;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+input,select,textarea{font:inherit;color:inherit}
+svg{display:block;flex-shrink:0}
+
+/* ===== DEBUG BAR (visible only while developing) ===== */
+#debug-bar{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:rgba(5,12,24,.95);
+  border-bottom:1px solid rgba(16,185,129,.3);
+  color:var(--ok);
+  font:11px ui-monospace,Consolas,Menlo,monospace;
+  padding:5px 12px;
+  display:flex;justify-content:space-between;align-items:center;
+  letter-spacing:.02em;
+}
+#debug-bar .dbg-tag{color:#94a3b8}
+#debug-bar .dbg-status{color:var(--ok)}
+#debug-bar .dbg-status.err{color:var(--danger)}
+
+#app{display:grid;min-height:100dvh;grid-template-rows:1fr;padding-top:26px}
+#sidebar{display:none}
+#main{display:flex;flex-direction:column;min-height:calc(100dvh - 26px);padding-bottom:96px}
+
+.topbar{
+  position:sticky;top:26px;z-index:20;
+  background:rgba(15,23,42,.72);
+  backdrop-filter:blur(var(--blur));
+  -webkit-backdrop-filter:blur(var(--blur));
+  border-bottom:1px solid var(--border);
+  padding:14px 18px;
+  display:flex;align-items:center;gap:12px;min-height:60px;
+}
+.topbar h1{font-size:19px;font-weight:600;letter-spacing:-.01em}
+.topbar .sub{font-size:12px;color:var(--text-2);font-weight:400;display:block;margin-top:2px}
+.topbar .ttl{flex:1;min-width:0}
+.topbar-btn{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--text-2);background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+}
+.topbar-btn:active{background:rgba(255,255,255,.08)}
+.topbar-btn svg{width:18px;height:18px;stroke-width:2}
+
+.screen{display:none;flex:1;padding:18px;gap:18px;flex-direction:column;animation:fadeIn .22s ease-out}
+.screen.on{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.card{
+  background:var(--surface);
+  backdrop-filter:blur(var(--blur));
+  -webkit-backdrop-filter:blur(var(--blur));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:var(--pad);
+}
+
+.empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;gap:14px;padding:48px 24px;color:var(--text-2);
+  min-height:340px;
+}
+.empty .ic{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;color:var(--text-3);
+  margin-bottom:4px;
+}
+.empty .ic svg{width:30px;height:30px;stroke-width:1.5}
+.empty h3{font-size:17px;font-weight:600;color:var(--text)}
+.empty p{font-size:14px;max-width:320px;line-height:1.5}
+.empty .cta{
+  margin-top:8px;padding:11px 22px;border-radius:10px;
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--border-strong);
+  color:var(--text);font-weight:500;font-size:14px;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.empty .cta:active{background:rgba(255,255,255,.12)}
+.empty .cta svg{width:16px;height:16px;stroke-width:2}
+
+.tabs{display:flex;gap:8px;overflow-x:auto;padding:0 0 4px;-webkit-overflow-scrolling:touch}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  padding:8px 16px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text-2);font-size:13px;font-weight:500;
+  white-space:nowrap;flex-shrink:0;
+}
+.tab.on{background:rgba(255,255,255,.10);color:var(--text);border-color:var(--border-strong)}
+
+.choice{
+  display:flex;align-items:center;gap:16px;
+  padding:20px;border-radius:var(--radius);
+  border:1px solid var(--border);
+  background:var(--surface);
+  text-align:left;width:100%;
+}
+.choice:active{transform:scale(.99)}
+.choice .lic{
+  width:52px;height:52px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.choice .lic svg{width:26px;height:26px;stroke-width:1.8}
+.choice .body{flex:1;min-width:0}
+.choice .ti{font-size:16px;font-weight:600;margin-bottom:3px;color:var(--text)}
+.choice .de{font-size:13px;color:var(--text-2);line-height:1.4}
+.choice .arr{color:var(--text-3)}
+.choice.flag .lic{background:var(--flag-bg);color:var(--flag-2)}
+.choice.oj .lic{background:var(--oj-bg);color:var(--oj-2)}
+
+.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+}
+.stat-card .lab{font-size:12px;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.stat-card .val{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.stat-card .sub{font-size:12px;color:var(--text-3);margin-top:2px}
+.stat-card.flag .val{color:var(--flag-2)}
+.stat-card.oj .val{color:var(--oj-2)}
+
+.tpl-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.tpl-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;
+  display:flex;align-items:center;gap:14px;
+}
+.tpl-card .ic{
+  width:44px;height:44px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.tpl-card.flag .ic{background:var(--flag-bg);color:var(--flag-2)}
+.tpl-card.oj .ic{background:var(--oj-bg);color:var(--oj-2)}
+.tpl-card .ic svg{width:22px;height:22px;stroke-width:1.7}
+.tpl-card .body{flex:1;min-width:0}
+.tpl-card .ti{font-size:15px;font-weight:600}
+.tpl-card .de{font-size:12px;color:var(--text-3);margin-top:2px}
+.tpl-card .badge{
+  font-size:11px;color:var(--text-3);
+  padding:3px 8px;border-radius:999px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+}
+
+.sec-title{
+  font-size:12px;font-weight:600;color:var(--text-2);
+  text-transform:uppercase;letter-spacing:.06em;
+  margin:4px 4px -4px;
+}
+
+#bottombar{
+  position:fixed;bottom:0;left:0;right:0;z-index:30;
+  background:rgba(15,23,42,.88);
+  backdrop-filter:blur(var(--blur));
+  -webkit-backdrop-filter:blur(var(--blur));
+  border-top:1px solid var(--border);
+  display:flex;
+  padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 4px;border-radius:8px;color:var(--text-3);
+  font-size:11px;font-weight:500;
+}
+.bn-item.on{color:var(--text)}
+.bn-item svg{width:22px;height:22px;stroke-width:1.8}
+.bn-spacer{width:64px;flex:0 0 64px}
+
+.fab{
+  position:fixed;bottom:calc(22px + env(safe-area-inset-bottom));
+  left:50%;transform:translateX(-50%);
+  width:56px;height:56px;border-radius:50%;z-index:31;
+  background:linear-gradient(135deg,var(--flag) 0%,var(--oj) 100%);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 24px rgba(217,119,6,.4),0 4px 14px rgba(147,51,234,.3);
+  border:2px solid rgba(255,255,255,.1);
+}
+.fab:active{transform:translateX(-50%) scale(.94)}
+.fab svg{width:26px;height:26px;stroke-width:2.4}
+
+.sb-brand{display:flex;align-items:center;gap:11px;padding:6px 10px 22px}
+.sb-brand .logo{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,var(--flag),var(--oj));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:15px;
+}
+.sb-brand .nm{font-weight:600;font-size:15px}
+.sb-brand .v{font-size:11px;color:var(--text-3);margin-top:1px}
+.sb-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;border-radius:8px;
+  color:var(--text-2);font-size:14px;font-weight:500;
+  cursor:pointer;
+}
+.sb-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.sb-item.on{background:rgba(255,255,255,.07);color:var(--text)}
+.sb-item svg{width:18px;height:18px;stroke-width:1.8}
+.sb-sep{height:1px;background:var(--border);margin:8px 6px}
+.sb-cta{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px;border-radius:9px;
+  background:linear-gradient(135deg,var(--flag) 0%,var(--oj) 100%);
+  color:#fff;font-weight:600;font-size:14px;margin:6px 4px;
+}
+.sb-cta svg{width:16px;height:16px;stroke-width:2.4}
+.sb-foot{margin-top:auto;padding:10px;font-size:11px;color:var(--text-3);text-align:center;border-top:1px solid var(--border)}
+
+.sheet-back{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:40;opacity:0;pointer-events:none;
+  transition:opacity .22s;
+}
+.sheet-back.on{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:41;
+  background:rgba(15,23,42,.96);
+  backdrop-filter:blur(var(--blur));
+  -webkit-backdrop-filter:blur(var(--blur));
+  border-top:1px solid var(--border-strong);
+  border-radius:18px 18px 0 0;
+  padding:14px 14px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(100%);
+  transition:transform .26s ease-out;
+  max-height:80vh;overflow-y:auto;
+}
+.sheet.on{transform:none}
+.sheet-handle{width:38px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 12px}
+.sheet-item{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 12px;border-radius:10px;color:var(--text);
+  width:100%;text-align:left;
+}
+.sheet-item:active{background:rgba(255,255,255,.05)}
+.sheet-item .lic{
+  width:40px;height:40px;border-radius:10px;
+  background:rgba(255,255,255,.04);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;color:var(--text-2);
+}
+.sheet-item .lic svg{width:20px;height:20px;stroke-width:1.8}
+.sheet-item .body{flex:1}
+.sheet-item .ti{font-size:15px;font-weight:500}
+.sheet-item .de{font-size:12px;color:var(--text-2);margin-top:2px}
+
+.toast{
+  position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(20px);
+  background:rgba(15,23,42,.95);
+  border:1px solid var(--border-strong);
+  backdrop-filter:blur(var(--blur));
+  color:var(--text);font-size:14px;font-weight:500;
+  padding:11px 18px;border-radius:10px;
+  box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;
+  z-index:50;max-width:90%;text-align:center;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ====== SHARE MENU (sub-sheet) ====== */
+.share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.share-btn{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:14px 4px;border-radius:10px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  color:var(--text);font-size:11px;font-weight:500;
+}
+.share-btn:active{background:rgba(255,255,255,.08)}
+.share-btn .lic{
+  width:42px;height:42px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+}
+.share-btn.wa .lic{background:rgba(37,211,102,.15);color:#25d366}
+.share-btn.em .lic{background:rgba(59,130,246,.15);color:#3b82f6}
+.share-btn.cp .lic{background:rgba(255,255,255,.06);color:var(--text-2)}
+.share-btn.dl .lic{background:rgba(217,119,6,.15);color:var(--flag-2)}
+.share-btn .lic svg{width:22px;height:22px;stroke-width:1.8}
+
+@media (min-width:900px){
+  #app{grid-template-columns:260px 1fr;grid-template-rows:1fr}
+  #sidebar{
+    display:flex;flex-direction:column;gap:4px;padding:20px 14px;
+    background:rgba(15,23,42,.82);
+    backdrop-filter:blur(var(--blur));
+    border-right:1px solid var(--border);
+    position:sticky;top:26px;height:calc(100dvh - 26px);overflow-y:auto;
+  }
+  #bottombar,.fab{display:none}
+  #main{padding-bottom:0}
+  .screen{padding:24px 36px;max-width:1080px;width:100%;margin:0 auto}
+  .topbar{padding:20px 36px;min-height:74px}
+  .topbar h1{font-size:24px}
+  .stat-grid{grid-template-columns:repeat(4,1fr)}
+  .tpl-grid{grid-template-columns:repeat(2,1fr)}
+  .toast{bottom:32px}
+  .share-grid{grid-template-columns:repeat(4,1fr);max-width:480px}
+}
+
+.muted{color:var(--text-2)}
+.small{font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- =========================================================== -->
+<!-- DEBUG BAR — verifica que JS se está ejecutando              -->
+<!-- =========================================================== -->
+<div id="debug-bar">
+  <span><span class="dbg-tag">v7.0.2</span> · <span id="dbg-clock">JS no cargado</span></span>
+  <span class="dbg-status" id="dbg-status">cargando...</span>
+</div>
+
+<div id="app">
+
+<!-- ====== SIDEBAR (desktop) ====== -->
+<aside id="sidebar">
+  <div class="sb-brand">
+    <div class="logo">L</div>
+    <div>
+      <div class="nm">LexCapture</div>
+      <div class="v">v7.0.2 · Fase 0</div>
+    </div>
+  </div>
+
+  <button class="sb-cta" onclick="go('nueva')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    Nueva captura
+  </button>
+
+  <div class="sb-sep"></div>
+
+  <div class="sb-item on" data-screen="capturas" onclick="go('capturas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+    Capturas
+  </div>
+  <div class="sb-item" data-screen="estadisticas" onclick="go('estadisticas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+    Estadísticas
+  </div>
+  <div class="sb-item" data-screen="dossier" onclick="go('dossier')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+    Dossier
+  </div>
+
+  <div class="sb-sep"></div>
+
+  <div class="sb-item" data-screen="perfil" onclick="go('perfil')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+    Perfil
+  </div>
+  <div class="sb-item" data-screen="despachos" onclick="go('despachos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+    Despachos
+  </div>
+  <div class="sb-item" data-screen="plantillas" onclick="go('plantillas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+    Plantillas
+  </div>
+  <div class="sb-item" data-screen="ajustes" onclick="go('ajustes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>
+    Ajustes
+  </div>
+
+  <div class="sb-foot">Estación Candelaria · Distrito 3</div>
+</aside>
+
+<main id="main">
+
+  <!-- ====== CAPTURAS ====== -->
+  <section id="screen-capturas" class="screen on">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Capturas</h1>
+        <span class="sub" id="capturas-sub">Sin capturas registradas</span>
+      </div>
+      <button class="topbar-btn" onclick="toast('Buscador en Fase 1')" aria-label="Buscar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </button>
+    </header>
+
+    <div class="tabs">
+      <button class="tab on" onclick="filterTab(this)">Todas</button>
+      <button class="tab" onclick="filterTab(this)">Flagrancia</button>
+      <button class="tab" onclick="filterTab(this)">Orden judicial</button>
+    </div>
+
+    <div class="empty">
+      <div class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      </div>
+      <h3>No hay capturas</h3>
+      <p>Inicia una nueva captura desde el botón inferior. Aparecerán aquí ordenadas por fecha.</p>
+      <button class="cta" onclick="generarDemo()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.5 2.7"/><path d="M21 3v6h-6"/></svg>
+        Generar caso demo
+      </button>
+    </div>
+  </section>
+
+  <!-- ====== NUEVA CAPTURA ====== -->
+  <section id="screen-nueva" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn" onclick="go('capturas')" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ttl">
+        <h1>Nueva captura</h1>
+        <span class="sub">Selecciona el tipo de procedimiento</span>
+      </div>
+    </header>
+
+    <div class="sec-title">Tipo de captura</div>
+
+    <button class="choice flag" onclick="elegirTipo('flagrancia')">
+      <div class="lic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      </div>
+      <div class="body">
+        <div class="ti">Flagrancia</div>
+        <div class="de">Captura en el momento de los hechos. Genera FPJ-5 (URI o CESPA).</div>
+      </div>
+      <div class="arr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </button>
+
+    <button class="choice oj" onclick="elegirTipo('oj')">
+      <div class="lic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 9l7-5 7 5M9 21V14h6v7M5 9v12M19 9v12"/></svg>
+      </div>
+      <div class="body">
+        <div class="ti">Orden judicial</div>
+        <div class="de">Captura por orden previa. Genera oficio "Dejando a Disposición" (Fiscalía o Juzgado).</div>
+      </div>
+      <div class="arr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </button>
+
+    <div class="card" style="margin-top:8px;display:flex;gap:12px;align-items:flex-start">
+      <div style="color:var(--text-3);margin-top:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      </div>
+      <div class="small muted" style="flex:1">
+        <strong style="color:var(--text)">Cero autocompletado.</strong> Cada captura nueva inicia con todos los campos en blanco. Solo se hereda el perfil del funcionario activo.
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== ESTADÍSTICAS ====== -->
+  <section id="screen-estadisticas" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Estadísticas</h1>
+        <span class="sub">Resumen de tu actividad</span>
+      </div>
+    </header>
+    <div class="tabs">
+      <button class="tab on" onclick="filterTab(this)">Mes</button>
+      <button class="tab" onclick="filterTab(this)">Trimestre</button>
+      <button class="tab" onclick="filterTab(this)">Año</button>
+      <button class="tab" onclick="filterTab(this)">Histórico</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lab">Total</div><div class="val">0</div><div class="sub">capturas</div></div>
+      <div class="stat-card flag"><div class="lab">Flagrancia</div><div class="val">0</div><div class="sub">URI + CESPA</div></div>
+      <div class="stat-card oj"><div class="lab">Orden judicial</div><div class="val">0</div><div class="sub">Fiscalía + Juzgado</div></div>
+      <div class="stat-card"><div class="lab">Promedio</div><div class="val">0</div><div class="sub">capturas/semana</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title" style="margin:0 0 12px">Distribución por tipo</div>
+      <div class="empty" style="min-height:160px;padding:24px">
+        <p class="small">Sin datos para graficar todavía.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== DOSSIER ====== -->
+  <section id="screen-dossier" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Dossier</h1>
+        <span class="sub">Paquete compartible por captura</span>
+      </div>
+    </header>
+
+    <div class="card" style="display:flex;gap:12px;align-items:flex-start">
+      <div style="color:var(--flag-2);margin-top:2px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+      </div>
+      <div class="small" style="flex:1">
+        <div style="font-weight:600;color:var(--text);margin-bottom:4px">Qué es el dossier</div>
+        Por cada captura, la app arma un paquete con los documentos generados (FPJ-5 u oficio), el acta de derechos, y un resumen formateado para WhatsApp. Lo descargas como .zip o lo compartes directo.
+      </div>
+    </div>
+
+    <div class="sec-title">Contenido típico — Flagrancia</div>
+    <div class="card">
+      <div class="small" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between"><span>FPJ-5 (URI o CESPA)</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Acta de derechos del capturado</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Resumen para WhatsApp</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Fotos del operativo</span><span class="muted">Opcional</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Anexos extra (PDF/imágenes)</span><span class="muted">Opcional</span></div>
+      </div>
+    </div>
+
+    <div class="sec-title">Contenido típico — Orden judicial</div>
+    <div class="card">
+      <div class="small" style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between"><span>Oficio "Dejando a Disposición"</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Acta de derechos del capturado</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Resumen para WhatsApp</span><span style="color:var(--ok)">Siempre</span></div>
+        <div style="display:flex;justify-content:space-between"><span>Orden judicial original (foto/PDF)</span><span class="muted">Opcional</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.18)">
+      <div class="small">
+        <strong style="color:var(--flag-2)">Disponible en Fase 7.</strong> Selecciona qué incluir en cada captura, comparte por WhatsApp, correo o descarga el .zip.
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== PERFIL ====== -->
+  <section id="screen-perfil" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Perfil del funcionario</h1>
+        <span class="sub">Múltiples perfiles posibles</span>
+      </div>
+    </header>
+    <div class="empty">
+      <div class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <h3>Sin perfil configurado</h3>
+      <p>Crea tu perfil con grado, identificación, cargo, firma y datos de la unidad. Puedes guardar varios.</p>
+      <button class="cta" onclick="toast('Disponible en Fase 2')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Crear perfil
+      </button>
+    </div>
+  </section>
+
+  <!-- ====== DESPACHOS ====== -->
+  <section id="screen-despachos" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Despachos</h1>
+        <span class="sub">Fiscalías y juzgados</span>
+      </div>
+      <button class="topbar-btn" onclick="toast('Disponible en Fase 2')" aria-label="Agregar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+    </header>
+    <div class="tabs">
+      <button class="tab on" onclick="filterTab(this)">Favoritos</button>
+      <button class="tab" onclick="filterTab(this)">Todos</button>
+      <button class="tab" onclick="filterTab(this)">Mis despachos</button>
+    </div>
+    <div class="empty">
+      <div class="ic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
+      </div>
+      <h3>Lista de despachos</h3>
+      <p>Aquí aparecerán los despachos precargados de Medellín y los que agregues manualmente.</p>
+    </div>
+  </section>
+
+  <!-- ====== PLANTILLAS ====== -->
+  <section id="screen-plantillas" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Plantillas</h1>
+        <span class="sub">Documentos .docx que genera la app</span>
+      </div>
+    </header>
+    <div class="card" style="display:flex;gap:12px;align-items:flex-start;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.18)">
+      <div style="color:var(--flag-2);margin-top:2px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+      </div>
+      <div class="small" style="flex:1">
+        Las plantillas no están activas todavía. Estarán disponibles en la <strong style="color:var(--text)">Fase 3</strong>. Aquí podrás reemplazarlas con tus propios .docx sin reinstalar la app.
+      </div>
+    </div>
+    <div class="sec-title">Flagrancia · FPJ-5</div>
+    <div class="tpl-grid">
+      <div class="tpl-card flag">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="body"><div class="ti">FPJ-5 URI</div><div class="de">Adultos</div></div>
+        <div class="badge">Pendiente</div>
+      </div>
+      <div class="tpl-card flag">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="body"><div class="ti">FPJ-5 CESPA</div><div class="de">Menores · SRPA</div></div>
+        <div class="badge">Pendiente</div>
+      </div>
+    </div>
+    <div class="sec-title">Orden judicial · Oficio</div>
+    <div class="tpl-grid">
+      <div class="tpl-card oj">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+        <div class="body"><div class="ti">Dejando a disposición</div><div class="de">Fiscalía / Juzgado · plantilla única</div></div>
+        <div class="badge">Pendiente</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== AJUSTES ====== -->
+  <section id="screen-ajustes" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Ajustes</h1>
+        <span class="sub">Datos, importar v6, herramientas</span>
+      </div>
+    </header>
+
+    <div class="sec-title">Herramientas</div>
+    <button class="choice" onclick="generarDemo()" style="padding:16px">
+      <div class="lic" style="background:rgba(59,130,246,.15);color:#3b82f6">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.5 2.7"/><path d="M21 3v6h-6"/></svg>
+      </div>
+      <div class="body">
+        <div class="ti">Generador de casos demo</div>
+        <div class="de">Crea capturas sintéticas de prueba (URI, CESPA, OJ).</div>
+      </div>
+      <div class="arr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </button>
+
+    <button class="choice" onclick="toast('Importar v6 en Fase 8')" style="padding:16px">
+      <div class="lic" style="background:rgba(16,185,129,.15);color:var(--ok)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+      </div>
+      <div class="body">
+        <div class="ti">Importar datos de v6</div>
+        <div class="de">Migra capturas y configuración de la versión anterior.</div>
+      </div>
+      <div class="arr"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></div>
+    </button>
+
+    <div class="sec-title" style="margin-top:8px">Apariencia</div>
+    <div class="card small muted">Tema oscuro fijo en esta versión. Soporte de tema claro en Fase 9.</div>
+  </section>
+
+</main>
+
+<!-- ====== BOTTOM NAV ====== -->
+<nav id="bottombar">
+  <button class="bn-item on" data-screen="capturas" onclick="go('capturas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+    Capturas
+  </button>
+  <button class="bn-item" data-screen="estadisticas" onclick="go('estadisticas')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
+    Stats
+  </button>
+  <div class="bn-spacer"></div>
+  <button class="bn-item" data-screen="dossier" onclick="go('dossier')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+    Dossier
+  </button>
+  <button class="bn-item" onclick="openSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    Más
+  </button>
+</nav>
+
+<!-- ====== FAB ====== -->
+<button class="fab" onclick="go('nueva')" aria-label="Nueva captura">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+</button>
+
+<!-- ====== "MÁS" SHEET ====== -->
+<div class="sheet-back" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <button class="sheet-item" onclick="closeSheet();go('perfil')">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>
+    <div class="body"><div class="ti">Perfil</div><div class="de">Multi-perfil del funcionario</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();go('despachos')">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
+    <div class="body"><div class="ti">Despachos</div><div class="de">Fiscalías y juzgados</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();go('plantillas')">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+    <div class="body"><div class="ti">Plantillas</div><div class="de">Documentos .docx</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();go('ajustes')">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg></div>
+    <div class="body"><div class="ti">Ajustes</div><div class="de">Tema, datos, importar v6</div></div>
+  </button>
+  <div style="height:1px;background:var(--border);margin:8px 6px"></div>
+  <button class="sheet-item" onclick="closeSheet();generarDemo()">
+    <div class="lic" style="background:rgba(59,130,246,.15);color:#3b82f6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.8 1 6.5 2.7"/><path d="M21 3v6h-6"/></svg></div>
+    <div class="body"><div class="ti">Generar caso demo</div><div class="de">Crea una captura sintética de prueba</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();abrirCompartir()">
+    <div class="lic" style="background:rgba(37,211,102,.15);color:#25d366"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg></div>
+    <div class="body"><div class="ti">Probar opciones de compartir</div><div class="de">WhatsApp, correo, copiar, descargar</div></div>
+  </button>
+</div>
+
+<!-- ====== SHARE SHEET ====== -->
+<div class="sheet-back" id="share-back" onclick="cerrarCompartir()"></div>
+<div class="sheet" id="share-sheet">
+  <div class="sheet-handle"></div>
+  <div style="padding:0 4px 14px">
+    <div style="font-size:15px;font-weight:600">Compartir captura</div>
+    <div class="small muted" style="margin-top:2px">Selecciona un destino. Disponible completo en Fase 7.</div>
+  </div>
+  <div class="share-grid">
+    <button class="share-btn wa" onclick="cerrarCompartir();toast('WhatsApp: Fase 7')">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.1-.2.3-.8.9-1 1.1-.2.2-.4.2-.7 0-.3-.2-1.2-.5-2.4-1.4-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5 0-.1-.7-1.7-.9-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4 0 1.4 1 2.8 1.2 3 .1.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zm-5.5 7.5c-1.7 0-3.4-.5-4.8-1.4l-.3-.2-3.6.9.9-3.5-.2-.4c-1-1.6-1.5-3.4-1.5-5.2 0-5.2 4.3-9.4 9.5-9.4 2.5 0 4.9 1 6.7 2.8 1.8 1.8 2.8 4.2 2.8 6.7 0 5.2-4.3 9.5-9.5 9.5zm0-20.9C5.7 1 1 5.7 1 11.5c0 1.9.5 3.7 1.4 5.3L1 23l6.3-1.4c1.5.8 3.2 1.3 4.9 1.3 5.8 0 10.5-4.7 10.5-10.5S17.8 1 12 1z"/></svg></div>
+      WhatsApp
+    </button>
+    <button class="share-btn em" onclick="cerrarCompartir();toast('Email: Fase 7')">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></div>
+      Correo
+    </button>
+    <button class="share-btn cp" onclick="cerrarCompartir();toast('Copiado: Fase 7')">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div>
+      Copiar
+    </button>
+    <button class="share-btn dl" onclick="cerrarCompartir();toast('Descarga .zip: Fase 7')">
+      <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></div>
+      Descargar
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+</div>
+
+<script>
+// ============================================================
+// LexCapture v7.0.2 — Fase 0
+// Onclick inline (igual que v6 que sí funciona) + debug visible
+// ============================================================
+
+// Debug bar arriba: si JS corre, el reloj se mueve.
+function dbgTick(){
+  try{
+    var d=new Date();
+    var hh=String(d.getHours()).padStart(2,'0');
+    var mm=String(d.getMinutes()).padStart(2,'0');
+    var ss=String(d.getSeconds()).padStart(2,'0');
+    var c=document.getElementById('dbg-clock');
+    if(c)c.textContent=hh+':'+mm+':'+ss;
+  }catch(e){
+    var s=document.getElementById('dbg-status');
+    if(s){s.textContent='ERR: '+e.message;s.className='dbg-status err'}
+  }
+}
+dbgTick();
+setInterval(dbgTick,1000);
+
+// Marcar JS como OK en cuanto el script arranca
+(function(){
+  var s=document.getElementById('dbg-status');
+  if(s)s.textContent='JS OK';
+})();
+
+// ============== NAVEGACIÓN ==============
+var screens=['capturas','nueva','estadisticas','dossier','perfil','despachos','plantillas','ajustes'];
+
+function go(name){
+  if(screens.indexOf(name)<0)return;
+  var ss=document.querySelectorAll('.screen');
+  for(var i=0;i<ss.length;i++)ss[i].classList.remove('on');
+  var el=document.getElementById('screen-'+name);
+  if(el)el.classList.add('on');
+  var its=document.querySelectorAll('.sb-item, .bn-item');
+  for(var j=0;j<its.length;j++){
+    var it=its[j];
+    if(it.dataset && it.dataset.screen)
+      it.classList.toggle('on',it.dataset.screen===name);
+  }
+  window.scrollTo(0,0);
+  try{history.replaceState({screen:name},'','#'+name)}catch(e){}
+}
+
+// ============== SHEET "MÁS" ==============
+function openSheet(){
+  document.querySelectorAll('.sheet-back')[0].classList.add('on');
+  document.getElementById('sheet').classList.add('on');
+}
+function closeSheet(){
+  document.querySelectorAll('.sheet-back')[0].classList.remove('on');
+  document.getElementById('sheet').classList.remove('on');
+}
+
+// ============== SHARE SHEET ==============
+function abrirCompartir(){
+  document.getElementById('share-back').classList.add('on');
+  document.getElementById('share-sheet').classList.add('on');
+}
+function cerrarCompartir(){
+  document.getElementById('share-back').classList.remove('on');
+  document.getElementById('share-sheet').classList.remove('on');
+}
+
+// ============== TOAST ==============
+var toastTimer=null;
+function toast(msg,dur){
+  if(!dur)dur=2500;
+  var t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.add('on');
+  if(toastTimer)clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('on')},dur);
+}
+
+// ============== HANDLERS DE PLACEHOLDER ==============
+function elegirTipo(t){
+  if(t==='flagrancia')toast('Wizard de flagrancia: Fase 5');
+  else toast('Wizard de orden judicial: Fase 4');
+}
+
+function filterTab(el){
+  var tabs=el.parentNode.querySelectorAll('.tab');
+  for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');
+  el.classList.add('on');
+}
+
+function generarDemo(){
+  toast('Generador de casos demo: Fase 1');
+}
+
+// ============== INIT ==============
+(function init(){
+  try{
+    var hash=location.hash.slice(1);
+    if(hash && screens.indexOf(hash)>=0)go(hash);
+    console.log('[LexCapture v7.0.2] Fase 0 — listo');
+  }catch(e){
+    var s=document.getElementById('dbg-status');
+    if(s){s.textContent='INIT ERR: '+e.message;s.className='dbg-status err'}
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0f172a"/>
+  <path d="M256 80 L390 138 L390 272 Q390 378 256 444 Q122 378 122 272 L122 138 Z" fill="#d97706"/>
+  <text x="256" y="310" font-size="130" font-weight="700" text-anchor="middle" fill="#0f172a" font-family="system-ui,sans-serif">LC</text>
+</svg>
