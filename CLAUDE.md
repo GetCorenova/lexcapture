@@ -56,6 +56,17 @@ Cuando el usuario diga **"ejecutar fase X"** (ej: "ejecutar fase A", "ejecutar f
 | DIAMANTE 3 | Campo `cfg.dosDiamante3` = grado + nombre completo del oficial |
 | Saludo dossier | Automático por hora: DÍAS (06-11:59) / TARDES (12-18:59) / NOCHES (19-05:59) |
 
+## Navegación (2026-07-17) — redistribución profesional
+- **Sidebar desktop** agrupado con etiquetas de sección (`.sb-sec`): **Operación** (Capturas, Personas, Dossier) / **Análisis** (Estadísticas) / **Recursos** (Despachos, Plantillas). Perfil y Ajustes van anclados al fondo en `.sb-bottom` (patrón de apps profesionales).
+- **Bottom bar móvil** (5 ítems): Capturas · Personas · **Nueva** (botón central circular destacado `.bn-cta`, gradiente ámbar→púrpura) · Dossier · Más. El FAB se eliminó por redundante con el CTA central. Estadísticas vive en el sheet "Más" (que ya no repite Personas).
+
+## Tema claro/oscuro (2026-07-17)
+- Oscuro por defecto; el modo claro se activa en **Ajustes → 🎨 Apariencia** (aplica al instante, sin "Guardar ajustes").
+- Persistencia: clave `lc_theme` en localStorage **plano** (no cifrada a propósito — debe aplicarse antes de desbloquear el PIN). Script anti-flash inline en el `<head>`.
+- Mecanismo: `:root[data-theme="light"]` sobreescribe las variables CSS + overrides puntuales de los colores oscuros hardcodeados, todo en un bloque al final del `<style>`. JS: `getTheme()` / `applyTheme()` / `setTheme()`.
+- `--acc-fg` = color de texto sobre fondos cian `var(--acc)`: `#03111f` en oscuro, `#fff` en claro (en claro `--acc` se oscurece a `#0891b2` por contraste). **No volver a hardcodear `#03111f` sobre fondos `var(--acc)`** — usar `var(--acc-fg)`.
+- El `<meta name="theme-color">` se actualiza dinámicamente (`#d97706` oscuro / `#eef2f7` claro).
+
 ## Encabezado del dossier — campos granulares (reemplaza `cfg.dosEncabezado`)
 ```
 cfg.rangoComandante  → ej: "CORONEL" / "MAYOR" / "TENIENTE CORONEL"
@@ -80,6 +91,16 @@ Ver cada FASE_X.md para el estado individual. El usuario marca las fases como co
 | A5 | FPJ-5 fecha como string (no celda-por-celda) | ✅ fechaDia/Mes/Ano + setTc por dígito (confirmado en Fase H) |
 | S1 | `escape()`/`unescape()` deprecated | ✅ Ya no se usan en el código actual (confirmado en Fase H) |
 | C3 | ~~Sin firma digital~~ | **CANCELADO**: documentos se imprimen y firman a mano |
+
+## Publicación en Play Store (2026-07-14) — de-branding institucional
+Google Play no permite nombres/símbolos que aludan a una institución (impersonación de entidad gubernamental sin autorización). Se removieron referencias hardcodeadas de "Policía Nacional" y el ícono con forma de escudo/insignia. La app **mantiene toda su funcionalidad y terminología legal** (FPJ-5, NUNC, SPOA, URI, CESPA, "Estación de Policía [nombreEstacion]" en el dossier) porque eso es vocabulario del sistema judicial colombiano, no una marca institucional — el problema era específicamente el nombre propio "Policía Nacional" y el logo tipo escudo.
+- `manifest.json` / meta description: ya no mencionan la institución.
+- Footer del sidebar y pantalla Ajustes → Info: ya no muestran "Policía Nacional".
+- Campo `Entidad` del servidor (wizard paso 7): default vacío en vez de `'Policía Nacional'` hardcodeado — cada usuario escribe su propia institución (se guarda en `cfg.servidor.entidad` y persiste entre capturas).
+- Datos de ejemplo del Simulador: `entidad`, `nombre` y `correo` genéricos (antes usaba `demo@policia.gov.co`, un dominio oficial real).
+- Emoji `👮` (agente de policía) reemplazado por `👤` en pantallas de Perfil.
+- Ícono rediseñado: pasó de un escudo ámbar con "LC" a un monograma **"L"** ámbar dentro de un **marco de visor de captura** cian (sin forma de escudo/insignia). Archivos finales: `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (los referenciados por `manifest.json`) + `icon.svg` (fuente vectorial) + `<link rel="icon">`/`apple-touch-icon` en el `<head>`. El maskable tiene el diseño al 80% sobre fondo navy para respetar la zona segura del launcher. Master de alta resolución (1254px, generado con Gemini): `verify_01_carga_inicial.png`.
+- **Si se reintroduce texto o un ícono que aluda a la institución, romperá el filtro de Play Store** — no hardcodear el nombre de ninguna institución específica en el código; dejar siempre que sea un campo configurable por el usuario (patrón ya usado en `cfg.rangoComandante`/`cfg.numDistrito`/`cfg.nombreEstacion`).
 
 ## Fase H (2026-07-14) — revisión final, bugs reales encontrados y corregidos
 Revisión profunda (3 agentes en paralelo + verificación end-to-end con Playwright del golden path real, no solo lectura de código). Historial completo de diffs en `git log`. Hallazgos más severos:
