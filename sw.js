@@ -1,6 +1,12 @@
-const CACHE_NAME = 'lexcapture-v8-cache-v1'
+const CACHE_NAME = 'lexcapture-v8-cache-v5'
 const ASSETS = [
-  './LexCapture_v8.html',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-512.png',
+  './icon.svg',
 ]
 
 self.addEventListener('install', e => {
