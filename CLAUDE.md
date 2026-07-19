@@ -44,17 +44,22 @@ Cuando el usuario diga **"ejecutar fase X"** (ej: "ejecutar fase A", "ejecutar f
 - **Mobile-first**: la app se usa con teléfono en campo (sin laptop)
 
 ## Decisiones de diseño — NO cambiar sin instrucción explícita
-| Decisión | Valor |
-|----------|-------|
-| Color Flagrancia | `#d97706` (ámbar) |
-| Color OJ | `#9333ea` (púrpura) |
-| Color acción/acento | `#00c9db` (cian) |
-| Color OK | `#10b981` (verde) |
-| Color error | `#ef4444` (rojo) |
-| Fondo principal | `#0f172a` (del Esqueleto) |
-| VERDE 3 | Campo `cfg.dosVerde3` = grado + nombre completo del oficial (ej: "Subteniente Juan Martínez López") |
-| DIAMANTE 3 | Campo `cfg.dosDiamante3` = grado + nombre completo del oficial |
-| Saludo dossier | Automático por hora: DÍAS (06-11:59) / TARDES (12-18:59) / NOCHES (19-05:59) |
+### Design System v2 (2026-07-18) — reconstrucción completa del sistema visual
+Todos los colores fluyen por tokens CSS; el tema claro solo redefine tokens, no componentes. Los nombres legados (`--acc`, `--bg2`, `--tx`, `--txD`, `--rs`, `--uriT`…) se mantienen como **alias** porque el JS genera HTML que los referencia — no eliminarlos.
+| Decisión | Oscuro | Claro |
+|----------|--------|-------|
+| Acento (índigo, botones primarios, nav activa) | `#8A94F8` (texto `#0E1020`) | `#4E5BD8` (texto blanco) |
+| Fondo / superficies | `#0C0E13` · surface-1 `#12151C` · surface-2 `#171C26` · surface-3 `#1E2430` · elev `#1A202B` | `#F4F5F8` · blanco · `#F6F7FA` · `#ECEEF3` |
+| Flagrancia (ámbar) | `#D98E35` / `#E8A54F` | `#B45309` |
+| OJ (violeta) | `#9E8CF2` / `#B3A6F7` | `#6D3FD4` |
+| URI (azul) / CESPA (rosa) | `#5FA8F5` / `#F2879D` | `#1663C7` / `#BE2A55` |
+| OK / error | `#5BC98C` / `#F27078` | `#0C7A4F` / `#C7222F` |
+| Escalas | Espaciado 4/8/12/16/20/24/32/40/48/64 · radios 6/10/14/20/999 · motion 120/180/240ms `cubic-bezier(.25,.72,.25,1)` |  |
+| Iconografía | Familia única SVG stroke (estilo Feather, stroke 1.8–2). **Sin emojis en la UI** (solo en contenido de negocio: dossier WA, toasts de advertencia) |  |
+| Prohibido | Gradientes en botones, glassmorphism en cards, glows cian, `Courier New` (mono = `ui-monospace` stack) |  |
+| VERDE 3 | Campo `cfg.dosVerde3` = grado + nombre completo del oficial (ej: "Subteniente Juan Martínez López") | |
+| DIAMANTE 3 | Campo `cfg.dosDiamante3` = grado + nombre completo del oficial | |
+| Saludo dossier | Automático por hora: DÍAS (06-11:59) / TARDES (12-18:59) / NOCHES (19-05:59) | |
 
 ## Navegación (2026-07-17) — redistribución profesional
 - **Sidebar desktop** agrupado con etiquetas de sección (`.sb-sec`): **Operación** (Capturas, Personas, Dossier) / **Análisis** (Estadísticas) / **Recursos** (Despachos, Plantillas). Perfil y Ajustes van anclados al fondo en `.sb-bottom` (patrón de apps profesionales).
@@ -64,8 +69,8 @@ Cuando el usuario diga **"ejecutar fase X"** (ej: "ejecutar fase A", "ejecutar f
 - Oscuro por defecto; el modo claro se activa en **Ajustes → 🎨 Apariencia** (aplica al instante, sin "Guardar ajustes").
 - Persistencia: clave `lc_theme` en localStorage **plano** (no cifrada a propósito — debe aplicarse antes de desbloquear el PIN). Script anti-flash inline en el `<head>`.
 - Mecanismo: `:root[data-theme="light"]` sobreescribe las variables CSS + overrides puntuales de los colores oscuros hardcodeados, todo en un bloque al final del `<style>`. JS: `getTheme()` / `applyTheme()` / `setTheme()`.
-- `--acc-fg` = color de texto sobre fondos cian `var(--acc)`: `#03111f` en oscuro, `#fff` en claro (en claro `--acc` se oscurece a `#0891b2` por contraste). **No volver a hardcodear `#03111f` sobre fondos `var(--acc)`** — usar `var(--acc-fg)`.
-- El `<meta name="theme-color">` se actualiza dinámicamente (`#d97706` oscuro / `#eef2f7` claro).
+- `--acc-fg` = color de texto sobre fondos `var(--acc)`: `#0E1020` en oscuro, `#fff` en claro. **No hardcodear texto sobre fondos `var(--acc)`** — usar siempre `var(--acc-fg)`.
+- El `<meta name="theme-color">` se actualiza dinámicamente (`#0C0E13` oscuro / `#F4F5F8` claro).
 
 ## Encabezado del dossier — campos granulares (reemplaza `cfg.dosEncabezado`)
 ```
