@@ -118,6 +118,18 @@ Revisión profunda (3 agentes en paralelo + verificación end-to-end con Playwri
 - **NUNC vacío se rellenaba con ceros (`padStart`)** en el FPJ-5 en vez de bloquear la generación — un documento legal oficial podía salir con un NUNC fabricado.
 - Terminología CESPA (wizard: pasos, encabezado de fecha) y `dosGreeting()` (medianoche-5:59am decía "DÍAS") corregidos.
 
+## FPJ-5 v2 (2026-07-20) — llenado inteligente + formato 100% limpio
+Cambios en el motor del FPJ-5 (`buildFPJBlob`) y el wizard, pedidos en `Documentos/FPJ5.docx`. Verificado end-to-end con Playwright (Chromium) generando los .docx reales de URI y CESPA (46 comprobaciones sobre las celdas del documento).
+
+**Contexto crítico del motor:** `setTc(tcs,i,txt)` y `setPar(pars,i,txt)` escriben por **índice plano** en el arreglo de todas las celdas/párrafos del documento en orden. Las plantillas embebidas (`TPL_URI`/`TPL_CESPA`, base64) comparten el **mismo layout de celdas** (308 celdas); solo difieren los índices de párrafo (narración/EMP). **Las plantillas traen datos de una captura de muestra** (DAYNIS GONZALES, servidor "Nelson David", etc.); toda celda que el código no sobrescriba **filtra ese dato de referencia** — por eso el llenado ahora es exhaustivo. Para regenerar la plantilla hay que respetar ZIP **stored** (sin compresión): `unzipDocx` lee el tamaño comprimido y decodifica directo, no infla.
+
+- **Tipo de documento CC/DIE con "X" automática** (`markDocType()`): apartados 4 (capturado), 5 (víctima) y 6 (testigo). Casilla primaria = **C.C. en URI / T.I. en CESPA** (menor). Índices: capturado casilla primaria `89` + celda libre "Otra" `91` (se escribe el tipo real: DIE/CE/…); víctima `143`(C.C.)/`145`(Otra); testigo `198`/`200`.
+- **Números de identificación sin puntos** (`sinPuntos()` = `.replace(/\./g,'')`): aplicado al **guardar** (persona, perfil, servidor) y al **generar** todos los documentos (FPJ-5 celdas `93`/`147`/`202`/`298`, Disposición OJ, dossier, acta). Cubre datos nuevos y legados.
+- **8. Vehículos implicados**: nuevo **paso del wizard** con pregunta clara "¿Hay vehículos implicados?" (`rStepVeh`, `wc.hayVehiculos`/`wc.vehiculos[]`). Si "Sí" → modal (Marca/Clase/Color/Propietario/Placas), mapeado a celdas `249-253` (veh 1) y `254-258` (veh 2). El formato imprime hasta 2 filas. `collectStep` se refactorizó a **búsqueda por nombre de paso** (no por índice) para tolerar el paso nuevo en los 3 flujos (URI/CESPA/OJ).
+- **Narración**: (a) **no se coloca la hora de puesta a disposición del fiscal** (celdas `289-292` en blanco — la escribe a mano el fiscal que recibe); la fecha de disposición sí se llena. (b) **Se elimina la narración de referencia**: el código antes solo sobrescribía el 1er párrafo (`setPar 363`/`366`) y dejaba filtrando 4-5 párrafos de la historia de muestra. Ahora se limpian todos los párrafos entre la narración y "10. ANEXOS".
+- **Formato 100% limpio**: se limpian/mapean las celdas de referencia que quedaban sin tocar — género de muestra (`102`/`156`/`211`), correo real filtrado en el testigo (`241` traía `Daniel.romang@correo.policia.gov.co`), lugar de nacimiento país/depto/muni (`173`/`175`/`177`, `228`/`230`/`232`), relación con el indiciado (`187`), zona (`66`) y destino del informe (`57`, traía otra sede). Confirmado: cero rastros de la persona de muestra en documentos nuevos.
+- **Diseño preservado 100%**: misma plantilla .docx, anchos de columna, logos y estructura de casillas — los cambios son solo de datos, no de formato.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
