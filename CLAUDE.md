@@ -143,6 +143,14 @@ Tercer pase, sobre `TPL_URI`/`TPL_CESPA`. Los 38 checks de datos siguen en verde
 - **"Sombra" debajo de las casillas de fecha eliminada.** Las dos tablas de fecha (índices 32/33) traían `w:tblBorders` completos a `sz=4` (0.5pt) *además* de los bordes propios de cada caja de dígito a `sz=8` (1pt). Como las cajas ya se dibujan 100% con sus `w:tcBorders` (y las celdas-etiqueta anulan el perímetro con `nil`), el `tblBorders` a sz4 era redundante y podía **fantasmear detrás** del borde de la caja → efecto de sombra en pantalla. Se quitó el `tblBorders` de esas dos tablas; las cajas quedan iguales pero limpias. Verificado: quitar el `tblBorders` no cambia nada visible (todo el dibujo lo aportan los bordes de celda).
 - **Anti-caché (el usuario veía builds viejos).** El redirect de `index.html` ahora apunta a `LexCapture_v8.html?v=9` (subir el token en cada despliegue fuerza al navegador/CDN a descargar el HTML nuevo) y `sw.js` sube a `cache-v9`. `LexCapture_v8.html` no está en la lista de precache del SW, así que la causa de ver cambios "sin aplicar" solía ser caché HTTP del HTML, no el código.
 
+## FPJ-5 v2.3 (2026-07-21) — alineación de raíz: por qué los bordes NO coincidían
+Los pases anteriores igualaron las **tablas** entre sí, pero el documento seguía viéndose torcido. Midiendo el PNG del render (script `measure_lines.ps1`: para cada línea horizontal se toma el x de inicio/fin) aparecieron **tres bordes izquierdos (93/99/107) y tres derechos (1446/1463/1468)** — hasta 22 px ≈ 3 mm de desfase. Causas, todas distintas:
+1. **Las barras grises de sección NO son tablas, son párrafos** (`w:shd` D9D9D9 + `w:pBdr`). Por eso nunca se alinearon al normalizar tablas. Su borde llevaba `w:space="4"` (**4 puntos = 80 twips**) y Word dibuja el borde de párrafo **por fuera** del área de texto → sobresalían ~110 twips del margen. Una además tenía `right space="2"` (de ahí el tercer borde).
+2. **Las tablas** tenían `tblInd=-70`, así que terminaban 70 twips **antes** del margen derecho.
+3. **Sección 3**: la columna de etiquetas medía 1660 y la de "Municipio:" 1125 — insuficientes, y el `:` saltaba de línea en `Municipio:` y `Características:`.
+
+Arreglo: `tblInd = 0` en las 35 tablas (ocupan exactamente el área de contenido, 10631) + `pBdr` left/right `space=0` con `w:ind` left/right = 32 twips en los 10 párrafos de sección (el borde cae justo en el margen) + sección 3 a `[2150,3400,1500,3581]`. Resultado medido: **todo entre x=106..108 y x=1453..1454** (≈0.2 mm). ⚠️ **Al revisar alineación, medir el render, no confiar en el XML**: `tblW`/`tblInd` idénticos no garantizan bordes iguales si hay párrafos con borde propio de por medio.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
