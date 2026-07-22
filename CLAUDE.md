@@ -160,6 +160,15 @@ Al enviar por WhatsApp/correo llegaba **solo el texto** ("📎 Adjunta el archiv
 - Verificado con `verify_envio_doc.mjs` (29 checks, Android + iOS): el `File` que recibe `navigator.share` es el .docx real (~377 KB, MIME `…wordprocessingml.document`) y no se dispara descarga ni `wa.me` solo-texto cuando se puede adjuntar.
 - Anti-caché subido a `?v=14` / `cache-v14`.
 
+## Dossier — "Conocieron el caso" con varios funcionarios + patrulla (2026-07-21)
+El campo era un **input único** (`cfg.conocieronCaso`), así que solo cabía un funcionario y no había dónde indicar la patrulla/unidad. Ahora en **Ajustes → Dossier**:
+- `cfg.patrullaNum` + `cfg.patrullaUnidad` → ej. `"32"` + `"CAI Parque Bolívar"`. `patrullaLabel()` antepone `PATRULLA ` salvo que el usuario ya la haya escrito (`/patrulla/i`), para no generar "PATRULLA Patrulla 32".
+- `cfg.conocieronFuncionarios[]` → lista dinámica de filas (input + ✕) con botón **+ Agregar funcionario**. Las filas no tienen id fijo: `readConocieronRows()` las lee por `querySelectorAll('#aj-con-list .aj-con-inp')` al guardar. Si se borran todas, queda una fila vacía (nunca una lista sin inputs).
+- **Compatibilidad**: `getConocieronList()` cae al string legado `cfg.conocieronCaso` si el arreglo está vacío, así que las configuraciones viejas (y los `.json` de "Importar config") siguen imprimiendo su funcionario. `saveAjustes` mantiene `conocieronCaso` sincronizado (`join(', ')`) para no romper exportaciones hacia atrás.
+- Salida en el dossier: `✅ *Conocieron el caso* PATRULLA 32 CAI Parque Bolívar — SI Nelson David / PT Juan Pérez`. Cada parte es opcional; sin ninguna, la sección no se imprime (`genDossier` ya omite contenido vacío).
+- Se agregó `escAttr()` (escHtml + comillas) porque estas filas se pintan con `innerHTML` y `value="…"` — un nombre con `"` rompía el input (issue S2 aplicado a lo nuevo).
+- Verificado con Playwright (21 checks): alta/baja de filas, persistencia tras recargar, migración del valor legado y el texto final del dossier. Anti-caché a `?v=15` / `cache-v15`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
