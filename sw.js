@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lexcapture-v8-cache-v10'
+const CACHE_NAME = 'lexcapture-v8-cache-v12'
 const ASSETS = [
   './',
   './index.html',
@@ -25,8 +25,30 @@ self.addEventListener('activate', e => {
   self.clients.claim()
 })
 
+// El HTML (navegación e index.html) va SIEMPRE a red primero: con cache-first
+// el SW servía el index viejo indefinidamente y el celular seguía abriendo una
+// build anterior aunque el servidor ya tuviera la nueva. La caché queda como
+// respaldo offline. El resto de assets (iconos, manifest) sigue cache-first.
+const isHTML = req =>
+  req.mode === 'navigate' ||
+  (req.headers.get('accept') || '').includes('text/html')
+
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  )
+  const req = e.request
+  if (req.method !== 'GET') return
+
+  if (isHTML(req)) {
+    e.respondWith(
+      fetch(req)
+        .then(res => {
+          const copy = res.clone()
+          caches.open(CACHE_NAME).then(c => c.put(req, copy)).catch(() => {})
+          return res
+        })
+        .catch(() => caches.match(req).then(c => c || caches.match('./index.html')))
+    )
+    return
+  }
+
+  e.respondWith(caches.match(req).then(cached => cached || fetch(req)))
 })
