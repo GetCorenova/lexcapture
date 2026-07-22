@@ -160,6 +160,15 @@ Al enviar por WhatsApp/correo llegaba **solo el texto** ("📎 Adjunta el archiv
 - Verificado con `verify_envio_doc.mjs` (29 checks, Android + iOS): el `File` que recibe `navigator.share` es el .docx real (~377 KB, MIME `…wordprocessingml.document`) y no se dispara descarga ni `wa.me` solo-texto cuando se puede adjuntar.
 - Anti-caché subido a `?v=14` / `cache-v14`.
 
+## Envío de documentos (2026-07-21, 2º pase) — el dispositivo que NO adjunta ya no deja tirado al usuario
+En un Samsung real, `navigator.canShare({files})` decía `true` pero `share()` **rechazaba**; el `catch` solo descargaba el .docx y **no abría ni WhatsApp ni el correo** ("no deja enviar"). Al reintentar con el otro botón, Chrome preguntaba "¿Deseas volver a descargar el archivo?". Cambios:
+- **El plan B ahora sí abre la app** tras un share fallido. `_openExt()` intenta `window.open` y, si vuelve `null` (popup bloqueado porque el `share()` fallido ya gastó la activación del tap), navega con `_navExt()` → `location.href`. ⚠️ **Un `window.open` que devuelve `null` no es un no-op: sin ese fallback no pasaba nada en pantalla.**
+- **El dispositivo se marca** (`localStorage.lc_share_files='off'`, vía `_shareFilesOff()`/`_markShareFilesOff()`): a partir del segundo envío no se vuelve a intentar `share()`, así el tap conserva la activación y `window.open` funciona **sin sacar al usuario de la app**. Para volver a probar el adjunto directo hay que borrar esa clave.
+- El toast del fallo incluye el **nombre del error** (`NotAllowedError`, …) — es el único canal de diagnóstico desde un celular en campo.
+- **Sin doble descarga** (`out._dl`): el `catch` ya no descarga por su cuenta antes de llamar al plan B.
+- WhatsApp/correo quedan **deshabilitados mientras se genera** el .docx (`_shareBusy` + `.sheet-item[disabled]`, descripción "Preparando el documento…"), y si el tap llega antes de tiempo se va directo al plan B en vez de llamar a `share()` fuera de la activación. El mailto pasa por `_navExt` (el `<a>.click()` sintético es menos fiable en Android; además así el test puede interceptarlo).
+- `verify_envio_doc.mjs` sube a **41 checks** con el escenario "share rechazado" completo. ⚠️ En los tests, el stub de `window.open` debe devolver **un objeto** (lo que hace un popup permitido); si devuelve `null`, `_openExt` navega de verdad la página de prueba a `wa.me` y el resto de la suite explota.
+
 ## Dossier — "Conocieron el caso" con varios funcionarios + patrulla (2026-07-21)
 El campo era un **input único** (`cfg.conocieronCaso`), así que solo cabía un funcionario y no había dónde indicar la patrulla/unidad. Ahora en **Ajustes → Dossier**:
 - `cfg.patrullaNum` + `cfg.patrullaUnidad` → ej. `"32"` + `"CAI Parque Bolívar"`. `patrullaLabel()` antepone `PATRULLA ` salvo que el usuario ya la haya escrito (`/patrulla/i`), para no generar "PATRULLA Patrulla 32".

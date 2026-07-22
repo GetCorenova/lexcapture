@@ -79,7 +79,10 @@ async function bootAndSeed(page) {
       window._shared = { n: d.files.length, name: d.files[0].name, size: d.files[0].size, type: d.files[0].type };
       return Promise.resolve();
     };
-    window.open = function (u) { window._opened = u; return null; };
+    // Devuelve un objeto: es lo que hace un window.open permitido (con activacion
+    // del tap). Si devolviera null, _openExt lo tomaria como popup bloqueado y
+    // navegaria la pestaña a wa.me.
+    window.open = function (u) { window._opened = u; return {}; };
   });
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(600);   // deja terminar la pre-generacion del .docx
@@ -124,13 +127,10 @@ async function bootAndSeed(page) {
   log(!!r3.opened && decodeURIComponent(r3.opened).includes('Adjunta el archivo'), '[3] Mensaje instruye adjuntar desde Descargas');
 
   // ---- 4. Correo sin Web Share: descarga + mailto con asunto ----
+  // El mailto se abre con _navExt (location.href): no requiere activacion del tap.
   await page.evaluate(() => {
     window._mailto = null;
-    var origClick = HTMLAnchorElement.prototype.click;
-    HTMLAnchorElement.prototype.click = function () {
-      if (this.href && this.href.startsWith('mailto:')) { window._mailto = this.href; return; }
-      return origClick.call(this);
-    };
+    window._navExt = function (u) { window._mailto = u; };
   });
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(300);
@@ -254,6 +254,82 @@ async function bootAndSeed(page) {
   log(!!sharedIos && sharedIos.n === 1 && /^FPJ5_URI_.*\.docx$/.test(sharedIos.name) && sharedIos.size > 10000,
     '[11] iOS: navigator.share recibe el .docx adjunto', JSON.stringify(sharedIos));
   log(consoleErrors2.length === 0, '[11] Sin errores de consola (iOS)', consoleErrors2.slice(0, 3).join(' || '));
+
+  // ========== 12. share() RECHAZADO POR EL DISPOSITIVO (caso reportado en campo) ==========
+  // canShare dice que si, pero share() rechaza (NotAllowedError). Antes el usuario
+  // quedaba tirado: solo se descargaba el .docx y no se abria ni WhatsApp ni correo.
+  const ctx3 = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36'
+  });
+  const page3 = await ctx3.newPage();
+  const consoleErrors3 = [];
+  page3.on('pageerror', e => consoleErrors3.push('pageerror: ' + e.message));
+  const uriId3 = await bootAndSeed(page3);
+  await page3.waitForTimeout(300);
+  await page3.evaluate(() => {
+    window._shared = null; window._opened = null; window._navegado = null;
+    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
+    navigator.share = function () {
+      window._shared = 'intentado';
+      var err = new Error('Permission denied'); err.name = 'NotAllowedError';
+      return Promise.reject(err);
+    };
+    window.open = function () { return null; };            // popup bloqueado: sin activacion
+    window._navExt = function (u) { window._navegado = u; };
+  });
+
+  // Estado "preparando": los botones se bloquean mientras se genera el .docx
+  await page3.evaluate(() => { _shareBusy(true); _shareHint('busy'); });
+  const busyDis = await page3.$eval('#share-it-wa', el => el.disabled);
+  const busyTxt = await page3.$eval('#share-de-wa', el => el.textContent);
+  log(busyDis && /Preparando/.test(busyTxt), '[12] Mientras se genera, WhatsApp queda bloqueado', busyTxt);
+
+  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
+  await page3.waitForTimeout(700);
+  log(await page3.$eval('#share-it-wa', el => !el.disabled), '[12] Con el .docx listo, el boton se habilita');
+
+  const [dlFail] = await Promise.all([
+    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
+    page3.click('#share-sheet .sheet-item:nth-of-type(1)')
+  ]);
+  await page3.waitForTimeout(500);
+  const r12 = await page3.evaluate(() => ({ shared: window._shared, nav: window._navegado, flag: localStorage.getItem('lc_share_files') }));
+  log(r12.shared === 'intentado', '[12] Primer envio SI intenta adjuntar directo');
+  log(!!dlFail, '[12] Share fallido: el .docx se descarga', dlFail ? dlFail.suggestedFilename() : '(sin descarga)');
+  log(!!r12.nav && r12.nav.startsWith('https://wa.me/?text='), '[12] Share fallido: IGUAL abre WhatsApp (antes no abria nada)', (r12.nav || '(nada)').slice(0, 50));
+  log(r12.flag === 'off', '[12] El dispositivo queda marcado como "no adjunta"', String(r12.flag));
+
+  // Segundo envio: ya no gasta el tap en share(); plan B con window.open (hay activacion)
+  await page3.evaluate(() => { window._shared = null; window._navegado = null; window._opened = null; window.open = function (u) { window._opened = u; return {}; }; });
+  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
+  await page3.waitForTimeout(600);
+  const deWa2 = await page3.$eval('#share-de-wa', el => el.textContent);
+  log(/clip 📎/.test(deWa2), '[12] Segundo envio: la descripcion ya anuncia el plan B', deWa2);
+  await Promise.all([
+    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
+    page3.click('#share-sheet .sheet-item:nth-of-type(1)')
+  ]);
+  await page3.waitForTimeout(400);
+  const r12b = await page3.evaluate(() => ({ shared: window._shared, opened: window._opened, nav: window._navegado }));
+  log(r12b.shared === null, '[12] Segundo envio: NO vuelve a intentar share (no quema el tap)', String(r12b.shared));
+  log(!!r12b.opened && r12b.opened.startsWith('https://wa.me/?text='), '[12] Segundo envio: abre WhatsApp con window.open, sin sacar al usuario de la app', (r12b.opened || '(nada)').slice(0, 50));
+  log(r12b.nav === null, '[12] Segundo envio: no navega la pestaña fuera de la app', String(r12b.nav));
+
+  // Correo con el dispositivo ya marcado
+  await page3.evaluate(() => { window._mailto = null; window._navExt = function (u) { window._mailto = u; }; });
+  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
+  await page3.waitForTimeout(500);
+  await Promise.all([
+    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
+    page3.click('#share-sheet .sheet-item:nth-of-type(2)')
+  ]);
+  await page3.waitForTimeout(400);
+  const mailto2 = await page3.evaluate(() => window._mailto);
+  log(!!mailto2 && mailto2.startsWith('mailto:?subject=') && decodeURIComponent(mailto2).includes('Adjunta el archivo'),
+    '[12] Correo: abre el cliente de correo con el mensaje listo', (mailto2 || '(nada)').slice(0, 55));
+  log(consoleErrors3.length === 0, '[12] Sin errores de pagina', consoleErrors3.slice(0, 3).join(' || '));
+  await ctx3.close();
 
   console.log('\n======= REPORTE ENVIO DE DOCUMENTOS =======');
   const fails = report.filter(r => r.ok === false);
