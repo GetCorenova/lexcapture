@@ -62,16 +62,16 @@ await page.screenshot({ path: OUT('01_lista') });
 // Abrir menú de desbordamiento de la primera fila
 await page.click('.prow .prow-more');
 await page.waitForTimeout(450);
-log(await page.$eval('#pact-sheet', el => el.classList.contains('on')), 'Sheet de acciones abierto');
-const items = await page.$$eval('#pact-items .sheet-item .ti', els => els.map(e => e.textContent));
+log(await page.$eval('#act-sheet', el => el.classList.contains('on')), 'Sheet de acciones abierto');
+const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
 log(items.length === 5, 'Sheet con 5 acciones etiquetadas', JSON.stringify(items));
-log(await page.$('#pact-head .prow-name') !== null, 'Sheet muestra a quién pertenecen las acciones');
+log(await page.$('#act-head .prow-name') !== null, 'Sheet muestra a quién pertenecen las acciones');
 await page.screenshot({ path: OUT('02_sheet') });
 
 // Copiar datos desde el sheet (acción real)
-await page.click('#pact-items .sheet-item:nth-child(4)');
+await page.click('#act-items .sheet-item:nth-child(4)');
 await page.waitForTimeout(500);
-log(await page.$eval('#pact-sheet', el => !el.classList.contains('on')), 'Sheet se cierra al elegir acción');
+log(await page.$eval('#act-sheet', el => !el.classList.contains('on')), 'Sheet se cierra al elegir acción');
 
 // Tap en la fila abre edición
 await page.click('.prow .prow-body');
@@ -93,7 +93,60 @@ await page.evaluate(() => window.dispatchEvent(new Event('online')));
 await page.waitForTimeout(400);
 log(await page.$eval('#net-badge', el => el.hidden), 'Badge vuelve a ocultarse al recuperar señal');
 
+// ═══ CAPTURAS: mismo patrón ⋮ ═══
+await page.evaluate(() => runSimDemo('flagrancia-uri'));
+await page.waitForTimeout(700);
+await page.evaluate(() => simSavePending());
+await page.waitForTimeout(1100);
+await page.evaluate(() => runSimDemo('flagrancia-cespa'));
+await page.waitForTimeout(700);
+await page.evaluate(() => simSavePending());
+await page.waitForTimeout(1100);
+await page.evaluate(() => go('capturas'));
+await page.waitForTimeout(600);
+const ccN = await page.$$eval('.cc', els => els.length);
+log(ccN >= 2, 'Capturas de prueba en la lista', ccN);
+const ccBtns = await page.$$eval('.cc', els => els.map(e => e.querySelectorAll('button').length));
+log(ccBtns.every(n => n === 1), 'Cada captura tiene UN solo botón (menú ⋮)', JSON.stringify(ccBtns));
+log(await page.$('.cc-act') === null, 'Ya no hay iconos .cc-act sueltos');
+await page.screenshot({ path: OUT('07_capturas') });
+
+await page.click('.cc .prow-more');
+await page.waitForTimeout(450);
+const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
+log(ccItems.length === 4, 'Sheet de captura con 4 acciones etiquetadas', JSON.stringify(ccItems));
+log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
+await page.screenshot({ path: OUT('08_capturas_sheet') });
+
+// Terminología CESPA: "aprehensión", no "captura"
+await page.evaluate(() => closeActionSheet());
+await page.waitForTimeout(350);
+const cespaIdx = await page.$$eval('.cc', els => els.findIndex(e => e.textContent.includes('CESPA')));
+log(cespaIdx >= 0, 'Hay una captura CESPA en la lista', cespaIdx);
+await page.$$eval('.cc .prow-more', (els, i) => els[i].click(), cespaIdx);
+await page.waitForTimeout(450);
+const cespaDel = await page.$eval('#act-items .sheet-item.danger .de', e => e.textContent);
+log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de eliminar', cespaDel);
+
+// "Usar en el dossier" navega y preselecciona el caso
+await page.click('#act-items .sheet-item:nth-child(3)');
+await page.waitForTimeout(800);
+const dosOk = await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on') && !!document.querySelector('.dos-case-option.sel'));
+log(dosOk, 'Acción "Usar en el dossier" abre Dossier con el caso seleccionado');
+await page.screenshot({ path: OUT('09_dossier') });
+await page.evaluate(() => go('capturas'));
+await page.waitForTimeout(400);
+
+// Tap en la tarjeta abre la edición
+await page.click('.cc .cc-name');
+await page.waitForTimeout(600);
+log(await page.evaluate(() => document.getElementById('screen-wizard').classList.contains('on')), 'Tap en la tarjeta abre el wizard de edición');
+await page.evaluate(() => cancelWiz());
+await page.waitForTimeout(400);
+
 // Tema claro
+await page.evaluate(() => go('personas'));
+await page.waitForTimeout(400);
 await page.evaluate(() => setTheme('light'));
 await page.waitForTimeout(400);
 await page.screenshot({ path: OUT('05_lista_claro') });
