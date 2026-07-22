@@ -151,6 +151,15 @@ Los pases anteriores igualaron las **tablas** entre sí, pero el documento segu�
 
 Arreglo: `tblInd = 0` en las 35 tablas (ocupan exactamente el área de contenido, 10631) + `pBdr` left/right `space=0` con `w:ind` left/right = 32 twips en los 10 párrafos de sección (el borde cae justo en el margen) + sección 3 a `[2150,3400,1500,3581]`. Resultado medido: **todo entre x=106..108 y x=1453..1454** (≈0.2 mm). ⚠️ **Al revisar alineación, medir el render, no confiar en el XML**: `tblW`/`tblInd` idénticos no garantizan bordes iguales si hay párrafos con borde propio de por medio.
 
+## Envío de documentos (2026-07-21) — el .docx ahora sí llega adjunto
+Al enviar por WhatsApp/correo llegaba **solo el texto** ("📎 Adjunta el archivo…") sin documento. Causa: un fix previo (`53b7347`) bloqueó `navigator.share` en Android por completo, asumiendo que Chrome rechaza `.docx` en Web Share. **La premisa era falsa**: `.docx` está en la lista de tipos permitidos de Chrome/Android. El `NotAllowedError` real venía de llamar a `share()` **fuera de la activación del tap** — el documento se generaba (base64 → unzip → parseo de 308 celdas → rezip) *después* del clic y antes del `share()`, consumiendo la ventana de activación.
+- **El .docx se pre-genera al abrir el sheet** (`_pregenShareDoc`), no al tocar WhatsApp/correo → `share()` se invoca de inmediato dentro de la activación. ⚠️ **Regla: nunca poner trabajo async/pesado entre el tap y `navigator.share()`/`window.open()`.**
+- `_docShareOk()` ya no discrimina por user-agent; se usa detección real con `navigator.canShare({files:[file]})` sobre el archivo concreto (extensión + MIME).
+- Las descripciones del sheet se actualizan al terminar la pre-generación ("Envía el .docx como archivo adjunto" vs. plan B con el clip 📎).
+- Plan B intacto para navegadores sin Web Share de archivos (escritorio): descarga + `wa.me`/`mailto` con el mensaje que indica adjuntar desde Descargas.
+- Verificado con `verify_envio_doc.mjs` (29 checks, Android + iOS): el `File` que recibe `navigator.share` es el .docx real (~377 KB, MIME `…wordprocessingml.document`) y no se dispara descarga ni `wa.me` solo-texto cuando se puede adjuntar.
+- Anti-caché subido a `?v=14` / `cache-v14`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
