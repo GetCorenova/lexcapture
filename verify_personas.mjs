@@ -114,7 +114,7 @@ await page.screenshot({ path: OUT('07_capturas') });
 await page.click('.cc .prow-more');
 await page.waitForTimeout(450);
 const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
-log(ccItems.length === 4, 'Sheet de captura con 4 acciones etiquetadas', JSON.stringify(ccItems));
+log(ccItems.length === 6, 'Sheet de captura con 6 acciones etiquetadas', JSON.stringify(ccItems));
 log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
 await page.screenshot({ path: OUT('08_capturas_sheet') });
 
@@ -128,11 +128,16 @@ await page.waitForTimeout(450);
 const cespaDel = await page.$eval('#act-items .sheet-item.danger .de', e => e.textContent);
 log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de eliminar', cespaDel);
 
-// "Enviar / Dossier" (1ª acción del sheet) abre la pantalla de salidas del caso ya cargado
+// El sheet de la captura ofrece las salidas directas (documento + dossier)
+const actAll = await page.$eval('#act-items', el => el.textContent);
+log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dossier/.test(actAll) && /Copiar Dossier/.test(actAll),
+  'Sheet ofrece enviar/descargar documento y enviar/copiar dossier');
+// La 1ª acción ("Enviar FPJ-5") abre el sheet de envío del documento
 await page.click('#act-items .sheet-item:nth-child(1)');
-await page.waitForTimeout(800);
-const dosOk = await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on') && !!_dosCasoId && getComputedStyle(document.getElementById('dos-actions')).display === 'flex');
-log(dosOk, 'Acción "Enviar / Dossier" abre las salidas del caso ya cargado');
+await page.waitForTimeout(500);
+const sendOk = await page.evaluate(() => document.getElementById('share-sheet').classList.contains('on') && !!_shareCasoId);
+log(sendOk, 'Acción "Enviar FPJ-5" abre el sheet de envío del documento');
+await page.evaluate(() => closeShareSheet());
 await page.screenshot({ path: OUT('09_dossier') });
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);

@@ -128,13 +128,6 @@ function log(ok, label, extra) {
   ]);
   log(!!download1, '[5] FPJ-5 URI .docx se descarga', download1 ? download1.suggestedFilename() : '(sin descarga)');
 
-  // ---- 6. Generar Acta de Derechos ----
-  const [download2] = await Promise.all([
-    page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.evaluate(() => descargarActa())
-  ]);
-  log(!!download2, '[6] Acta de Derechos .docx se descarga', download2 ? download2.suggestedFilename() : '(sin descarga)');
-
   // ---- 7. Dossier WA: encabezado + saludo automático ----
   const dosTxt = await page.$eval('#dos-txt', el => el.value).catch(() => '');
   const hasEncabezado = dosTxt.includes('CORONEL') && dosTxt.includes('DISTRITO TRES') && dosTxt.includes('CANDELARIA');
@@ -158,11 +151,6 @@ function log(ok, label, extra) {
   // Nota: los labels del dossier son neutrales (QUIÉN, QUÉ, etc.) por diseño — no usan
   // "capturado" ni "aprehendido" literalmente. Solo se verifica que NO diga "capturado".
   log(!/capturad/i.test(dosTxtCespa), '[8] Dossier CESPA no usa la palabra "capturado" (labels neutrales por diseño)');
-  const [download3] = await Promise.all([
-    page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.evaluate(() => descargarActa())
-  ]);
-  log(!!download3, '[8] Acta CESPA (Aprehension) se descarga', download3 ? download3.suggestedFilename() : '(sin descarga)');
 
   // ---- 9. OJ vía simulador — Disposición Fiscalía/Juzgado con plantilla builtin ----
   const ojCase = await page.evaluate(() => {

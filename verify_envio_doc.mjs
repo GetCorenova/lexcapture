@@ -67,7 +67,8 @@ async function bootAndSeed(page) {
   await page.click('#cl .prow-more');
   await page.waitForTimeout(300);
   const actTxt = await page.$eval('#act-sheet', el => el.textContent);
-  log(/Enviar \/ Dossier/.test(actTxt), '[1] Menu de la captura ofrece "Enviar / Dossier"', actTxt.replace(/\s+/g, ' ').slice(0, 70));
+  log(/Enviar FPJ-5/.test(actTxt) && /Descargar FPJ-5/.test(actTxt) && /Enviar Dossier/.test(actTxt) && /Copiar Dossier/.test(actTxt),
+    '[1] Menu de la captura ofrece enviar/descargar documento y enviar/copiar dossier', actTxt.replace(/\s+/g, ' ').slice(0, 90));
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 
