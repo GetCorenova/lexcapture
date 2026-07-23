@@ -80,10 +80,8 @@ await page.evaluate(() => go('estadisticas'));
 await page.waitForTimeout(400);
 await page.screenshot({ path: OUT('07_stats_dark') });
 
-// 7. Dossier con caso seleccionado
-await page.evaluate(() => go('dossier'));
-await page.waitForTimeout(300);
-await page.evaluate(() => { const b = document.querySelector('.dos-case-option'); if (b) b.click(); });
+// 7. Dossier con caso seleccionado (se entra desde una captura → sin selector interno)
+await page.evaluate(() => { const cs = DB.getCases(); if (cs[0]) _dosCasoId = cs[0].id; go('dossier'); });
 await page.waitForTimeout(400);
 log(await page.$eval('#dos-actions', el => getComputedStyle(el).display) === 'flex', 'Botones de dossier visibles (display:flex)');
 await page.screenshot({ path: OUT('08_dossier_dark') });
@@ -130,9 +128,7 @@ await page.screenshot({ path: OUT('14_capturas_light') });
 await page.evaluate(() => go('nueva'));
 await page.waitForTimeout(300);
 await page.screenshot({ path: OUT('15_nueva_light') });
-await page.evaluate(() => go('dossier'));
-await page.waitForTimeout(300);
-await page.evaluate(() => { const b = document.querySelector('.dos-case-option'); if (b) b.click(); });
+await page.evaluate(() => { const cs = DB.getCases(); if (cs[0]) _dosCasoId = cs[0].id; go('dossier'); });
 await page.waitForTimeout(400);
 await page.screenshot({ path: OUT('16_dossier_light') });
 await page.evaluate(() => go('ajustes'));

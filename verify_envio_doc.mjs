@@ -67,7 +67,7 @@ async function bootAndSeed(page) {
   await page.click('#cl .prow-more');
   await page.waitForTimeout(300);
   const actTxt = await page.$eval('#act-sheet', el => el.textContent);
-  log(/Enviar documento/.test(actTxt), '[1] Menu de la captura ofrece "Enviar documento"', actTxt.replace(/\s+/g, ' ').slice(0, 70));
+  log(/Enviar \/ Dossier/.test(actTxt), '[1] Menu de la captura ofrece "Enviar / Dossier"', actTxt.replace(/\s+/g, ' ').slice(0, 70));
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 

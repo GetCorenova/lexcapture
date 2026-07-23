@@ -128,11 +128,11 @@ await page.waitForTimeout(450);
 const cespaDel = await page.$eval('#act-items .sheet-item.danger .de', e => e.textContent);
 log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de eliminar', cespaDel);
 
-// "Usar en el dossier" navega y preselecciona el caso
-await page.click('#act-items .sheet-item:nth-child(3)');
+// "Enviar / Dossier" (1ª acción del sheet) abre la pantalla de salidas del caso ya cargado
+await page.click('#act-items .sheet-item:nth-child(1)');
 await page.waitForTimeout(800);
-const dosOk = await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on') && !!document.querySelector('.dos-case-option.sel'));
-log(dosOk, 'Acción "Usar en el dossier" abre Dossier con el caso seleccionado');
+const dosOk = await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on') && !!_dosCasoId && getComputedStyle(document.getElementById('dos-actions')).display === 'flex');
+log(dosOk, 'Acción "Enviar / Dossier" abre las salidas del caso ya cargado');
 await page.screenshot({ path: OUT('09_dossier') });
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);
