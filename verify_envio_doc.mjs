@@ -351,6 +351,14 @@ async function bootAndSeed(page) {
   log(!!r12c && r12c.n === 1 && /^FPJ5_URI_.*\.docx$/.test(r12c.name),
     '[12b] Marca de versión vieja se ignora: reintenta el adjunto directo', JSON.stringify(r12c));
   log(!!r12c && r12c.hasText === false, '[12b] Comparte SOLO el archivo (sin text) — compatible con Samsung/WhatsApp', r12c ? String(r12c.hasText) : '(sin share)');
+
+  // ---- 12c. El nombre del archivo compartido va SIN tildes/ñ (Samsung) ----
+  // La descarga conserva tildes; solo el File que va a navigator.share se normaliza.
+  const asciiOk = await page3.evaluate(() => {
+    var f = _mkShareFile({ blob: new Blob(['x'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), fname: 'FPJ5_CESPA_Hernández_Muñoz.docx' });
+    return f ? f.name : null;
+  });
+  log(asciiOk === 'FPJ5_CESPA_Hernandez_Munoz.docx', '[12c] El archivo compartido se normaliza a ASCII (Hernández→Hernandez, ñ→n)', String(asciiOk));
   await ctx3.close();
 
   console.log('\n======= REPORTE ENVIO DE DOCUMENTOS =======');
