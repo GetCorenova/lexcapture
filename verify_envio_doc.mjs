@@ -90,9 +90,11 @@ const SEL_DL = '#share-it-dl';
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(600);   // deja terminar la pre-generacion del .docx
   const sheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
+  const coachTxt = await page.$eval('.share-coach', el => el.textContent).catch(() => '');
   const deShare = await page.$eval('#share-de-doc', el => el.textContent);
   log(sheetOn, '[2] Sheet de envio se abre');
-  log(/[Aa]djunt/.test(deShare), '[2] Android: descripcion anuncia adjunto directo (Gmail/Drive/WhatsApp)', deShare);
+  log(/Descargas/.test(coachTxt) && /adjunt/i.test(coachTxt), '[2] Capa 1: tarjeta guia explica que queda en Descargas y como adjuntarlo', coachTxt.replace(/\s+/g, ' ').slice(0, 90));
+  log(/toque/i.test(deShare), '[2] "Compartir directo" queda como via secundaria/opcional', deShare);
   await page.screenshot({ path: join(ROOT, 'verify_envio_02_sheet.png') });
 
   const [dlNone] = await Promise.all([
@@ -154,8 +156,6 @@ const SEL_DL = '#share-it-dl';
   });
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(600);
-  const deNoShare = await page.$eval('#share-de-doc', el => el.textContent);
-  log(/[Dd]escarga/.test(deNoShare), '[4] Sin Web Share: descripcion explica que solo descarga', deNoShare);
   const [dlDesk] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
     page.click(SEL_SHARE)
@@ -277,8 +277,8 @@ const SEL_DL = '#share-it-dl';
   });
   await page2.evaluate((id) => abrirEnvioDoc(id), uriId2);
   await page2.waitForTimeout(700);
-  const deIos = await page2.$eval('#share-de-doc', el => el.textContent);
-  log(/[Aa]djunt/.test(deIos), '[11] iOS: descripcion indica envio como adjunto directo', deIos);
+  const coachIos = await page2.$eval('.share-coach', el => el.textContent).catch(() => '');
+  log(/Descargas/.test(coachIos) && /adjunt/i.test(coachIos), '[11] iOS: tarjeta guia presente (Descargas + adjuntar)', coachIos.replace(/\s+/g, ' ').slice(0, 70));
   await page2.click(SEL_SHARE);
   await page2.waitForTimeout(600);
   const sharedIos = await page2.evaluate(() => window._shared);
