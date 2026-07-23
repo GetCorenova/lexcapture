@@ -44,13 +44,17 @@ async function bootAndSeed(page) {
   });
 }
 
+// Selectores del sheet nuevo: 1 botón "Compartir documento" + 1 "Solo descargar".
+const SEL_SHARE = '#share-it-doc';
+const SEL_DL = '#share-it-dl';
+
 (async () => {
   const browser = await chromium.launch({ headless: true });
 
   // ================= CONTEXTO ANDROID (uso real en campo) =================
-  // Chrome/Android SI permite .docx en Web Share -> debe adjuntarse el archivo.
-  // Si el navegador no soporta compartir archivos, plan B: descargar + abrir
-  // WhatsApp/correo con el mensaje que indica adjuntar desde Descargas.
+  // La ÚNICA vía web para adjuntar un archivo a WhatsApp/Gmail/correo es la hoja
+  // de compartir del sistema (navigator.share con files). La app siempre la abre;
+  // el usuario elige la app destino. Si no hay Web Share de archivos -> descarga.
   const ctxAndroid = await browser.newContext({
     viewport: { width: 390, height: 844 },
     userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36'
@@ -72,84 +76,102 @@ async function bootAndSeed(page) {
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 
-  // ---- 2. Android con Web Share de archivos: el .docx va ADJUNTO ----
+  // ---- 2. Android con Web Share de archivos: el .docx va ADJUNTO por la hoja ----
   await page.evaluate(() => {
     window._shared = null; window._opened = null;
     navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
     navigator.share = function (d) {
-      window._shared = { n: d.files.length, name: d.files[0].name, size: d.files[0].size, type: d.files[0].type };
+      window._shared = { n: d.files.length, name: d.files[0].name, size: d.files[0].size, type: d.files[0].type, hasText: 'text' in d, hasTitle: 'title' in d };
       return Promise.resolve();
     };
-    // Devuelve un objeto: es lo que hace un window.open permitido (con activacion
-    // del tap). Si devolviera null, _openExt lo tomaria como popup bloqueado y
-    // navegaria la pestaña a wa.me.
+    // window.open ya NO se usa en el flujo de envío (no hay respaldo wa.me/mailto).
     window.open = function (u) { window._opened = u; return {}; };
   });
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(600);   // deja terminar la pre-generacion del .docx
   const sheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
-  const deWaShare = await page.$eval('#share-de-wa', el => el.textContent);
+  const deShare = await page.$eval('#share-de-doc', el => el.textContent);
   log(sheetOn, '[2] Sheet de envio se abre');
-  log(/adjunt/i.test(deWaShare) && !/clip/.test(deWaShare), '[2] Android: descripcion WhatsApp anuncia adjunto directo', deWaShare);
+  log(/[Aa]djunt/.test(deShare), '[2] Android: descripcion anuncia adjunto directo (Gmail/Drive/WhatsApp)', deShare);
   await page.screenshot({ path: join(ROOT, 'verify_envio_02_sheet.png') });
 
   const [dlNone] = await Promise.all([
     page.waitForEvent('download', { timeout: 2500 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(1)')
+    page.click(SEL_SHARE)
   ]);
   await page.waitForTimeout(400);
   const r2 = await page.evaluate(() => ({ shared: window._shared, opened: window._opened }));
   log(!!r2.shared && r2.shared.n === 1 && /^FPJ5_URI_.*\.docx$/.test(r2.shared.name) && r2.shared.size > 10000,
-    '[2] Android WA: navigator.share recibe el .docx adjunto', JSON.stringify(r2.shared));
+    '[2] navigator.share recibe el .docx adjunto', JSON.stringify(r2.shared));
   log(!!r2.shared && /wordprocessingml\.document$/.test(r2.shared.type), '[2] MIME correcto de .docx', r2.shared && r2.shared.type);
-  log(r2.opened === null, '[2] Android WA: NO abre wa.me solo-texto cuando puede adjuntar', String(r2.opened));
-  log(dlNone === null, '[2] Android WA: no fuerza descarga cuando adjunta', dlNone ? dlNone.suggestedFilename() : '(sin descarga)');
+  log(!!r2.shared && r2.shared.hasText === false && r2.shared.hasTitle === false, '[2] Comparte SOLO el archivo (sin text ni title) — compatible con Samsung/WhatsApp');
+  log(r2.opened === null, '[2] NO abre wa.me/ventana externa (se eliminó el respaldo de texto)', String(r2.opened));
+  log(dlNone === null, '[2] No fuerza descarga cuando adjunta', dlNone ? dlNone.suggestedFilename() : '(sin descarga)');
 
-  // ---- 3. Sin Web Share de archivos: plan B (descarga + wa.me con mensaje) ----
+  // ---- 3. share() RECHAZADO por la app destino (caso Samsung/WhatsApp) ----
+  // NO se marca el dispositivo, NO se manda texto: el .docx se descarga y se invita
+  // a reintentar eligiendo Gmail o Drive.
+  await page.evaluate(() => {
+    window._shared = null; window._opened = null;
+    localStorage.removeItem('lc_share_files');
+    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
+    navigator.share = function () {
+      window._shared = 'intentado';
+      var err = new Error('Permission denied'); err.name = 'NotAllowedError';
+      return Promise.reject(err);
+    };
+  });
+  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.waitForTimeout(600);
+  const [dlFail] = await Promise.all([
+    page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
+    page.click(SEL_SHARE)
+  ]);
+  await page.waitForTimeout(500);
+  const r3 = await page.evaluate(() => ({ shared: window._shared, opened: window._opened, flag: localStorage.getItem('lc_share_files') }));
+  log(r3.shared === 'intentado', '[3] Share rechazado: SI intentó adjuntar por la hoja del sistema');
+  log(!!dlFail && /^FPJ5_URI_.*\.docx$/.test(dlFail.suggestedFilename()), '[3] Share rechazado: el .docx queda descargado', dlFail ? dlFail.suggestedFilename() : '(sin descarga)');
+  log(r3.opened === null, '[3] Share rechazado: NO abre wa.me solo-texto (fin del spam)', String(r3.opened));
+  log(r3.flag === null, '[3] Share rechazado: NO deshabilita el compartir (sin marca lc_share_files)', String(r3.flag));
+
+  // Reintento inmediato: la app VUELVE a intentar el adjunto (no quedó bloqueada) ----
+  await page.evaluate(() => {
+    window._shared = null;
+    navigator.share = function (d) { window._shared = { n: d.files.length, name: d.files[0].name }; return Promise.resolve(); };
+  });
+  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.waitForTimeout(600);
+  await page.click(SEL_SHARE);
+  await page.waitForTimeout(400);
+  const r3b = await page.evaluate(() => window._shared);
+  log(!!r3b && r3b.n === 1 && /^FPJ5_URI_.*\.docx$/.test(r3b.name),
+    '[3] Reintento: vuelve a intentar el adjunto directo (nunca queda condenado al texto)', JSON.stringify(r3b));
+
+  // ---- 4. Sin Web Share de archivos (escritorio): descarga directa, sin share ----
   await page.evaluate(() => {
     window._shared = null; window._opened = null;
     navigator.canShare = function () { return false; };
   });
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(600);
-  const deWa = await page.$eval('#share-de-wa', el => el.textContent);
-  const deMail = await page.$eval('#share-de-mail', el => el.textContent);
-  log(/clip 📎/.test(deWa), '[3] Sin share: descripcion WhatsApp explica descarga + adjuntar', deWa);
-  log(/Descargas/.test(deMail), '[3] Sin share: descripcion Correo explica descarga + adjuntar', deMail);
-  const [dlWa] = await Promise.all([
+  const deNoShare = await page.$eval('#share-de-doc', el => el.textContent);
+  log(/[Dd]escarga/.test(deNoShare), '[4] Sin Web Share: descripcion explica que solo descarga', deNoShare);
+  const [dlDesk] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(1)')
+    page.click(SEL_SHARE)
   ]);
   await page.waitForTimeout(400);
-  const r3 = await page.evaluate(() => ({ shared: window._shared, opened: window._opened }));
-  log(!!dlWa && /^FPJ5_URI_.*\.docx$/.test(dlWa.suggestedFilename()), '[3] Plan B: el .docx se descarga', dlWa ? dlWa.suggestedFilename() : '(sin descarga)');
-  log(!!r3.opened && r3.opened.startsWith('https://wa.me/?text='), '[3] Plan B: abre wa.me con mensaje', (r3.opened || '').slice(0, 60));
-  log(r3.shared === null, '[3] Plan B: no llama a navigator.share', String(r3.shared));
-  log(!!r3.opened && decodeURIComponent(r3.opened).includes('Adjunta el archivo'), '[3] Mensaje instruye adjuntar desde Descargas');
-
-  // ---- 4. Correo sin Web Share: descarga + mailto con asunto ----
-  // El mailto se abre con _navExt (location.href): no requiere activacion del tap.
-  await page.evaluate(() => {
-    window._mailto = null;
-    window._navExt = function (u) { window._mailto = u; };
-  });
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
-  await page.waitForTimeout(300);
-  const [dlMail] = await Promise.all([
-    page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(2)')
-  ]);
-  await page.waitForTimeout(400);
-  const mailto = await page.evaluate(() => window._mailto);
-  log(!!dlMail, '[4] Android Correo: el .docx se descarga', dlMail ? dlMail.suggestedFilename() : '(sin descarga)');
-  log(!!mailto && mailto.startsWith('mailto:?subject=') && decodeURIComponent(mailto).includes('FPJ-5 URI'), '[4] Android Correo: abre mailto con asunto', (mailto || '').slice(0, 60));
+  const r4 = await page.evaluate(() => ({ shared: window._shared, opened: window._opened }));
+  log(!!dlDesk && /^FPJ5_URI_.*\.docx$/.test(dlDesk.suggestedFilename()), '[4] Sin Web Share: el .docx se descarga', dlDesk ? dlDesk.suggestedFilename() : '(sin descarga)');
+  log(r4.shared === null, '[4] Sin Web Share: no intenta navigator.share', String(r4.shared));
+  log(r4.opened === null, '[4] Sin Web Share: no abre ventana externa', String(r4.opened));
 
   // ---- 5. Solo descargar ----
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(400);
   const [dl1] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(3)')
+    page.click(SEL_DL)
   ]);
   log(!!dl1 && /^FPJ5_URI_.*\.docx$/.test(dl1.suggestedFilename()), '[5] "Solo descargar" baja el .docx', dl1 ? dl1.suggestedFilename() : '(sin descarga)');
 
@@ -161,14 +183,19 @@ async function bootAndSeed(page) {
     renderCases();
     return c.id;
   });
-  await page.evaluate((id) => { window._opened = null; abrirEnvioDoc(id); }, badId);
-  await page.waitForTimeout(300);
+  await page.evaluate((id) => {
+    window._opened = null; window._shared = null;
+    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
+    navigator.share = function () { window._shared = 'intentado'; return Promise.resolve(); };
+    abrirEnvioDoc(id);
+  }, badId);
+  await page.waitForTimeout(400);
   const [dlBad] = await Promise.all([
     page.waitForEvent('download', { timeout: 3000 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(1)')
+    page.click(SEL_SHARE)
   ]);
-  const openedBad = await page.evaluate(() => window._opened);
-  log(dlBad === null && openedBad === null, '[6] Caso con NUNC invalido NO descarga ni abre WhatsApp', 'dl=' + (dlBad ? dlBad.suggestedFilename() : 'null') + ' opened=' + openedBad);
+  const r6 = await page.evaluate(() => ({ opened: window._opened, shared: window._shared }));
+  log(dlBad === null && r6.opened === null && r6.shared === null, '[6] Caso con NUNC invalido NO descarga ni comparte', 'dl=' + (dlBad ? dlBad.suggestedFilename() : 'null') + ' shared=' + r6.shared);
 
   // ---- 7. Caso OJ con plantilla activa ----
   const ojId = await page.evaluate(() => {
@@ -181,20 +208,21 @@ async function bootAndSeed(page) {
     renderCases();
     return c.id;
   });
-  await page.evaluate((id) => { window._opened = null; abrirEnvioDoc(id); }, ojId);
-  await page.waitForTimeout(300);
+  await page.evaluate((id) => {
+    window._shared = null;
+    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
+    navigator.share = function (d) { window._shared = { n: d.files.length, name: d.files[0].name }; return Promise.resolve(); };
+    abrirEnvioDoc(id);
+  }, ojId);
+  await page.waitForTimeout(600);
   const ojTitle = await page.$eval('#share-title', el => el.textContent);
   log(/Documento OJ/.test(ojTitle), '[7] Sheet identifica documento OJ', ojTitle);
-  const [dlOj] = await Promise.all([
-    page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.click('#share-sheet .sheet-item:nth-of-type(1)')
-  ]);
+  await page.click(SEL_SHARE);
   await page.waitForTimeout(400);
-  const openedOj = await page.evaluate(() => window._opened);
-  log(!!dlOj && /^OJ_.*\.docx$/.test(dlOj.suggestedFilename()), '[7] Android OJ: el documento OJ se descarga', dlOj ? dlOj.suggestedFilename() : '(sin descarga)');
-  log(!!openedOj && openedOj.startsWith('https://wa.me/'), '[7] Android OJ: abre wa.me', (openedOj || '').slice(0, 40));
+  const r7 = await page.evaluate(() => window._shared);
+  log(!!r7 && r7.n === 1 && /^OJ_.*\.docx$/.test(r7.name), '[7] OJ: navigator.share recibe el documento OJ adjunto', JSON.stringify(r7));
 
-  // ---- 8. Dossier: botón Enviar por tipo ----
+  // ---- 8. Dossier: botón Enviar por tipo abre el sheet ----
   await page.evaluate((id) => { go('dossier'); _dosCasoId = id; renderDossier(); }, uriId);
   await page.waitForTimeout(300);
   const dosSendUri = await page.$eval('#dos-btn-send', el => el.textContent).catch(() => '');
@@ -222,12 +250,14 @@ async function bootAndSeed(page) {
   ]);
   log(!!dl4 && /^OJ_.*\.docx$/.test(dl4.suggestedFilename()), '[9] genDocOJ() sigue descargando', dl4 ? dl4.suggestedFilename() : '(sin descarga)');
 
-  // ---- 10. Consola limpia (Android) ----
-  log(consoleErrors.length === 0, '[10] Sin errores de consola (Android)', consoleErrors.slice(0, 5).join(' || '));
+  // ---- 10. Consola sin errores INESPERADOS (Android) ----
+  // El escenario [3] fuerza un rechazo de share(); el `console.error('Web Share
+  // falló…')` que dispara es intencional (canal de diagnóstico), no un bug.
+  const realErrors = consoleErrors.filter(e => !/Web Share falló/.test(e));
+  log(realErrors.length === 0, '[10] Sin errores de consola inesperados (Android)', realErrors.slice(0, 5).join(' || '));
   await ctxAndroid.close();
 
   // ================= CONTEXTO iOS (share nativo con archivo) =================
-  // Safari/iOS SI permite compartir .docx via Web Share -> debe usar navigator.share.
   const ctxIos = await browser.newContext({
     viewport: { width: 390, height: 844 },
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
@@ -241,124 +271,33 @@ async function bootAndSeed(page) {
     window._shared = null;
     navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
     navigator.share = function (d) {
-      window._shared = { n: d.files.length, name: d.files[0].name, size: d.files[0].size, text: d.text };
+      window._shared = { n: d.files.length, name: d.files[0].name, size: d.files[0].size, hasText: 'text' in d };
       return Promise.resolve();
     };
   });
   await page2.evaluate((id) => abrirEnvioDoc(id), uriId2);
   await page2.waitForTimeout(700);
-  const deWaIos = await page2.$eval('#share-de-wa', el => el.textContent);
-  log(/archivo adjunto/.test(deWaIos), '[11] iOS: descripcion indica envio como adjunto directo', deWaIos);
-  await page2.click('#share-sheet .sheet-item:nth-of-type(1)');
+  const deIos = await page2.$eval('#share-de-doc', el => el.textContent);
+  log(/[Aa]djunt/.test(deIos), '[11] iOS: descripcion indica envio como adjunto directo', deIos);
+  await page2.click(SEL_SHARE);
   await page2.waitForTimeout(600);
   const sharedIos = await page2.evaluate(() => window._shared);
   log(!!sharedIos && sharedIos.n === 1 && /^FPJ5_URI_.*\.docx$/.test(sharedIos.name) && sharedIos.size > 10000,
     '[11] iOS: navigator.share recibe el .docx adjunto', JSON.stringify(sharedIos));
+  log(!!sharedIos && sharedIos.hasText === false, '[11] iOS: comparte SOLO el archivo (sin text)');
   log(consoleErrors2.length === 0, '[11] Sin errores de consola (iOS)', consoleErrors2.slice(0, 3).join(' || '));
+  await ctxIos.close();
 
-  // ========== 12. share() RECHAZADO POR EL DISPOSITIVO (caso reportado en campo) ==========
-  // canShare dice que si, pero share() rechaza (NotAllowedError). Antes el usuario
-  // quedaba tirado: solo se descargaba el .docx y no se abria ni WhatsApp ni correo.
-  const ctx3 = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36'
-  });
-  const page3 = await ctx3.newPage();
-  const consoleErrors3 = [];
-  page3.on('pageerror', e => consoleErrors3.push('pageerror: ' + e.message));
-  const uriId3 = await bootAndSeed(page3);
-  await page3.waitForTimeout(300);
-  await page3.evaluate(() => {
-    window._shared = null; window._opened = null; window._navegado = null;
-    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
-    navigator.share = function () {
-      window._shared = 'intentado';
-      var err = new Error('Permission denied'); err.name = 'NotAllowedError';
-      return Promise.reject(err);
-    };
-    window.open = function () { return null; };            // popup bloqueado: sin activacion
-    window._navExt = function (u) { window._navegado = u; };
-  });
-
-  // Estado "preparando": los botones se bloquean mientras se genera el .docx
-  await page3.evaluate(() => { _shareBusy(true); _shareHint('busy'); });
-  const busyDis = await page3.$eval('#share-it-wa', el => el.disabled);
-  const busyTxt = await page3.$eval('#share-de-wa', el => el.textContent);
-  log(busyDis && /Preparando/.test(busyTxt), '[12] Mientras se genera, WhatsApp queda bloqueado', busyTxt);
-
-  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
-  await page3.waitForTimeout(700);
-  log(await page3.$eval('#share-it-wa', el => !el.disabled), '[12] Con el .docx listo, el boton se habilita');
-
-  const [dlFail] = await Promise.all([
-    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page3.click('#share-sheet .sheet-item:nth-of-type(1)')
-  ]);
-  await page3.waitForTimeout(500);
-  const r12 = await page3.evaluate(() => ({ shared: window._shared, nav: window._navegado, flag: localStorage.getItem('lc_share_files') }));
-  log(r12.shared === 'intentado', '[12] Primer envio SI intenta adjuntar directo');
-  log(!!dlFail, '[12] Share fallido: el .docx se descarga', dlFail ? dlFail.suggestedFilename() : '(sin descarga)');
-  log(!!r12.nav && r12.nav.startsWith('https://wa.me/?text='), '[12] Share fallido: IGUAL abre WhatsApp (antes no abria nada)', (r12.nav || '(nada)').slice(0, 50));
-  log(!!r12.flag && r12.flag.indexOf('off') === 0, '[12] El dispositivo queda marcado como "no adjunta" (marca versionada)', String(r12.flag));
-
-  // Segundo envio: ya no gasta el tap en share(); plan B con window.open (hay activacion)
-  await page3.evaluate(() => { window._shared = null; window._navegado = null; window._opened = null; window.open = function (u) { window._opened = u; return {}; }; });
-  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
-  await page3.waitForTimeout(600);
-  const deWa2 = await page3.$eval('#share-de-wa', el => el.textContent);
-  log(/clip 📎/.test(deWa2), '[12] Segundo envio: la descripcion ya anuncia el plan B', deWa2);
-  await Promise.all([
-    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page3.click('#share-sheet .sheet-item:nth-of-type(1)')
-  ]);
-  await page3.waitForTimeout(400);
-  const r12b = await page3.evaluate(() => ({ shared: window._shared, opened: window._opened, nav: window._navegado }));
-  log(r12b.shared === null, '[12] Segundo envio: NO vuelve a intentar share (no quema el tap)', String(r12b.shared));
-  log(!!r12b.opened && r12b.opened.startsWith('https://wa.me/?text='), '[12] Segundo envio: abre WhatsApp con window.open, sin sacar al usuario de la app', (r12b.opened || '(nada)').slice(0, 50));
-  log(r12b.nav === null, '[12] Segundo envio: no navega la pestaña fuera de la app', String(r12b.nav));
-
-  // Correo con el dispositivo ya marcado
-  await page3.evaluate(() => { window._mailto = null; window._navExt = function (u) { window._mailto = u; }; });
-  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
-  await page3.waitForTimeout(500);
-  await Promise.all([
-    page3.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page3.click('#share-sheet .sheet-item:nth-of-type(2)')
-  ]);
-  await page3.waitForTimeout(400);
-  const mailto2 = await page3.evaluate(() => window._mailto);
-  log(!!mailto2 && mailto2.startsWith('mailto:?subject=') && decodeURIComponent(mailto2).includes('Adjunta el archivo'),
-    '[12] Correo: abre el cliente de correo con el mensaje listo', (mailto2 || '(nada)').slice(0, 55));
-  log(consoleErrors3.length === 0, '[12] Sin errores de pagina', consoleErrors3.slice(0, 3).join(' || '));
-
-  // ---- 12b. Dispositivo marcado por una versión ANTERIOR se auto-recupera ----
-  // El formato viejo ('off' a secas) ya no atrapa: el teléfono vuelve a intentar
-  // el adjunto directo con la lógica nueva (compartir solo el archivo).
-  await page3.evaluate(() => {
-    localStorage.setItem('lc_share_files', 'off');   // marca de versión anterior
-    window._shared = null;
-    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
-    navigator.share = function (d) {
-      window._shared = { n: d.files.length, name: d.files[0].name, hasText: 'text' in d };
-      return Promise.resolve();
-    };
-  });
-  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
-  await page3.waitForTimeout(600);
-  await page3.click('#share-sheet .sheet-item:nth-of-type(1)');
-  await page3.waitForTimeout(400);
-  const r12c = await page3.evaluate(() => window._shared);
-  log(!!r12c && r12c.n === 1 && /^FPJ5_URI_.*\.docx$/.test(r12c.name),
-    '[12b] Marca de versión vieja se ignora: reintenta el adjunto directo', JSON.stringify(r12c));
-  log(!!r12c && r12c.hasText === false, '[12b] Comparte SOLO el archivo (sin text) — compatible con Samsung/WhatsApp', r12c ? String(r12c.hasText) : '(sin share)');
-
-  // ---- 12c. El nombre del archivo compartido va SIN tildes/ñ (Samsung) ----
+  // ---- 12. El nombre del archivo compartido va SIN tildes/ñ (Samsung) ----
   // La descarga conserva tildes; solo el File que va a navigator.share se normaliza.
+  const ctx3 = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page3 = await ctx3.newPage();
+  await bootAndSeed(page3);
   const asciiOk = await page3.evaluate(() => {
     var f = _mkShareFile({ blob: new Blob(['x'], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), fname: 'FPJ5_CESPA_Hernández_Muñoz.docx' });
     return f ? f.name : null;
   });
-  log(asciiOk === 'FPJ5_CESPA_Hernandez_Munoz.docx', '[12c] El archivo compartido se normaliza a ASCII (Hernández→Hernandez, ñ→n)', String(asciiOk));
+  log(asciiOk === 'FPJ5_CESPA_Hernandez_Munoz.docx', '[12] El archivo compartido se normaliza a ASCII (Hernández→Hernandez, ñ→n)', String(asciiOk));
   await ctx3.close();
 
   console.log('\n======= REPORTE ENVIO DE DOCUMENTOS =======');
