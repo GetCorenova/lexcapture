@@ -299,7 +299,7 @@ async function bootAndSeed(page) {
   log(r12.shared === 'intentado', '[12] Primer envio SI intenta adjuntar directo');
   log(!!dlFail, '[12] Share fallido: el .docx se descarga', dlFail ? dlFail.suggestedFilename() : '(sin descarga)');
   log(!!r12.nav && r12.nav.startsWith('https://wa.me/?text='), '[12] Share fallido: IGUAL abre WhatsApp (antes no abria nada)', (r12.nav || '(nada)').slice(0, 50));
-  log(r12.flag === 'off', '[12] El dispositivo queda marcado como "no adjunta"', String(r12.flag));
+  log(!!r12.flag && r12.flag.indexOf('off') === 0, '[12] El dispositivo queda marcado como "no adjunta" (marca versionada)', String(r12.flag));
 
   // Segundo envio: ya no gasta el tap en share(); plan B con window.open (hay activacion)
   await page3.evaluate(() => { window._shared = null; window._navegado = null; window._opened = null; window.open = function (u) { window._opened = u; return {}; }; });
@@ -330,6 +330,27 @@ async function bootAndSeed(page) {
   log(!!mailto2 && mailto2.startsWith('mailto:?subject=') && decodeURIComponent(mailto2).includes('Adjunta el archivo'),
     '[12] Correo: abre el cliente de correo con el mensaje listo', (mailto2 || '(nada)').slice(0, 55));
   log(consoleErrors3.length === 0, '[12] Sin errores de pagina', consoleErrors3.slice(0, 3).join(' || '));
+
+  // ---- 12b. Dispositivo marcado por una versión ANTERIOR se auto-recupera ----
+  // El formato viejo ('off' a secas) ya no atrapa: el teléfono vuelve a intentar
+  // el adjunto directo con la lógica nueva (compartir solo el archivo).
+  await page3.evaluate(() => {
+    localStorage.setItem('lc_share_files', 'off');   // marca de versión anterior
+    window._shared = null;
+    navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
+    navigator.share = function (d) {
+      window._shared = { n: d.files.length, name: d.files[0].name, hasText: 'text' in d };
+      return Promise.resolve();
+    };
+  });
+  await page3.evaluate((id) => abrirEnvioDoc(id), uriId3);
+  await page3.waitForTimeout(600);
+  await page3.click('#share-sheet .sheet-item:nth-of-type(1)');
+  await page3.waitForTimeout(400);
+  const r12c = await page3.evaluate(() => window._shared);
+  log(!!r12c && r12c.n === 1 && /^FPJ5_URI_.*\.docx$/.test(r12c.name),
+    '[12b] Marca de versión vieja se ignora: reintenta el adjunto directo', JSON.stringify(r12c));
+  log(!!r12c && r12c.hasText === false, '[12b] Comparte SOLO el archivo (sin text) — compatible con Samsung/WhatsApp', r12c ? String(r12c.hasText) : '(sin share)');
   await ctx3.close();
 
   console.log('\n======= REPORTE ENVIO DE DOCUMENTOS =======');
