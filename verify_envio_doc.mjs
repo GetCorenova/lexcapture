@@ -300,6 +300,44 @@ const SEL_DL = '#share-it-dl';
   log(asciiOk === 'FPJ5_CESPA_Hernandez_Munoz.docx', '[12] El archivo compartido se normaliza a ASCII (Hernández→Hernandez, ñ→n)', String(asciiOk));
   await ctx3.close();
 
+  // ---- 13. Capa 2: dentro del envoltorio nativo (Capacitor) usa el share de Android ----
+  // El intent ACTION_SEND NO sufre el candado de Web Share de Chrome (el Samsung que
+  // rechazaba). En web normal esto es inerte; aquí simulamos window.Capacitor.
+  const ctx4 = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    userAgent: 'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Mobile Safari/537.36'
+  });
+  const page4 = await ctx4.newPage();
+  const consoleErrors4 = [];
+  page4.on('pageerror', e => consoleErrors4.push('pageerror: ' + e.message));
+  const uriId4 = await bootAndSeed(page4);
+  await page4.waitForTimeout(300);
+  await page4.evaluate(() => {
+    window._nwrite = null; window._nshare = null;
+    window.Capacitor = {
+      isNativePlatform: function () { return true; },
+      Plugins: {
+        Filesystem: {
+          writeFile: function (o) { window._nwrite = { path: o.path, dir: o.directory, len: (o.data || '').length }; return Promise.resolve(); },
+          getUri: function (o) { return Promise.resolve({ uri: 'file:///cache/' + o.path }); }
+        },
+        Share: { share: function (o) { window._nshare = { files: o.files, title: o.title }; return Promise.resolve(); } }
+      }
+    };
+  });
+  await page4.evaluate((id) => abrirEnvioDoc(id), uriId4);
+  await page4.waitForTimeout(600);
+  const diag4 = await page4.$eval('#share-diag', el => el.textContent);
+  log(/nativo:sí/.test(diag4), '[13] Diagnostico detecta el envoltorio nativo', diag4);
+  log(await page4.$eval('#share-it-doc', el => el.style.display !== 'none'), '[13] "Compartir directo" visible en modo nativo');
+  await page4.click(SEL_SHARE);
+  await page4.waitForTimeout(400);
+  const r13 = await page4.evaluate(() => ({ w: window._nwrite, s: window._nshare }));
+  log(!!r13.w && r13.w.dir === 'CACHE' && r13.w.len > 10000, '[13] Escribe el .docx (base64) en la cache nativa', JSON.stringify(r13.w));
+  log(!!r13.s && Array.isArray(r13.s.files) && /^file:\/\/\/cache\/FPJ5_URI_.*\.docx$/.test(r13.s.files[0]), '[13] Share nativo recibe el file URI del .docx (intent de Android)', JSON.stringify(r13.s));
+  log(consoleErrors4.length === 0, '[13] Sin errores de consola (nativo)', consoleErrors4.slice(0, 3).join(' || '));
+  await ctx4.close();
+
   console.log('\n======= REPORTE ENVIO DE DOCUMENTOS =======');
   const fails = report.filter(r => r.ok === false);
   console.log(fails.length === 0 ? 'TODO OK (' + report.length + ' checks)' : fails.length + ' FALLO(S)');
