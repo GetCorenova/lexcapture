@@ -90,17 +90,28 @@ async function inspect(tipo, caps, vics, tests) {
     kids.forEach((k, pos) => {
       const t = txt(k);
       if (/evento de existir m[aá]s (capturados|v[ií]ctimas|testigos)/i.test(t)) notas.push({ pos, t: t.trim().slice(0, 40) });
-      if (k.localName === 'p' && /^\s*\d+(\.\d+)?[.\s]/.test(t)) { cur = { head: t.trim(), text: '', tbl: 0, geo: [], pos }; secs.push(cur); }
+      if (k.localName === 'p' && /^\s*\d+(\.\d+)?[.\s]/.test(t)) {
+        // Qué hay justo encima de la barra de título: si es una tabla, su borde se suma al del
+        // título y se ve una línea negra gruesa (parece que el renglón estuviera tachado).
+        cur = { head: t.trim(), text: '', tbl: 0, geo: [], pos, previo: pos > 0 ? kids[pos - 1].localName : '' };
+        secs.push(cur);
+      }
       if (!cur) return;
       cur.text += t + '\n';
       if (k.localName === 'tbl') { cur.tbl++; cur.geo.push(geo(k)); }
+    });
+    // "Señales particulares visibles:" — etiqueta en negrita, valor en texto normal.
+    const senas = kids.filter(k => k.localName === 'p' && /ales particulares visibles/.test(txt(k))).map(p => {
+      const rs = Array.from(p.getElementsByTagNameNS(W, 'r')).filter(r => r.getElementsByTagNameNS(W, 't').length);
+      const neg = r => r.getElementsByTagNameNS(W, 'b').length > 0;
+      return { runs: rs.length, etiquetaNegrita: rs[0] ? neg(rs[0]) : null, valorNegrita: rs[1] ? neg(rs[1]) : null, txt: txt(p).slice(0, 45) };
     });
     // Word exige identificadores únicos: los clones no pueden repetir marcadores ni paraId.
     const bmk = Array.from(body.getElementsByTagNameNS(W, 'bookmarkStart')).map(b => b.getAttribute('w:name'));
     const W14 = 'http://schemas.microsoft.com/office/word/2010/wordml';
     const pids = Array.from(body.getElementsByTagNameNS(W, 'p')).map(p => p.getAttributeNS(W14, 'paraId')).filter(Boolean);
     return {
-      secs, notas, nTbl: body.getElementsByTagNameNS(W, 'tbl').length, size: buf.length,
+      secs, notas, senas, nTbl: body.getElementsByTagNameNS(W, 'tbl').length, size: buf.length,
       dupBmk: bmk.filter((v, i) => bmk.indexOf(v) !== i),
       dupPid: pids.filter((v, i) => pids.indexOf(v) !== i),
       full: kids.map(txt).join('\n'), fname: out.fname
@@ -171,6 +182,12 @@ else {
   log(uri.notas.length === 3, '[URI] la nota "se pueden reproducir las casillas" aparece una vez por apartado', uri.notas.length);
   const posNota4 = uri.notas[0].pos, ultima42 = uri.secs.find(s => s.head.startsWith('4.2')).pos;
   log(posNota4 > ultima42, '[URI] la nota del apartado 4 queda después de la última copia (4.2)');
+  // Ninguna barra de título puede ir pegada a una tabla: sus bordes se suman y se ve un trazo
+  // negro grueso, como si el renglón de arriba estuviera tachado (pasaba en 6.1 y 6.2).
+  const pegados = uri.secs.filter(s => s.previo === 'tbl').map(s => s.head.split(' ')[0]);
+  log(pegados.length === 0, '[URI] ninguna barra de título queda pegada al borde de una tabla', pegados.join(',') || 'todas con aire');
+  log(uri.senas.length === 3 && uri.senas.every(s => s.runs >= 2 && s.etiquetaNegrita && !s.valorNegrita),
+    '[URI] "Señales particulares": etiqueta en negrita y señas en texto normal', JSON.stringify(uri.senas.map(s => s.runs + 'runs')));
 }
 
 // ============ 2) CESPA (menores) con 2 aprehendidos y 2 testigos, sin víctima ============
@@ -186,6 +203,11 @@ else {
   log(!!s5 && !/NOMVIC|NOMMEN/.test(s5.text), '[CESPA] sin víctima: el apartado 5 queda vacío, no repetido');
   log(!cespa.secs.some(s => /^5\.\d/.test(s.head)), '[CESPA] sin víctima no se generan apartados 5.1');
   noFiltra(cespa.full, ['DANIEL', 'ROMAN', 'GIRALDO', 'Daniel.romang@correo.policia.gov.co'], '[CESPA]');
+  const pegadosC = cespa.secs.filter(s => s.previo === 'tbl').map(s => s.head.split(' ')[0]);
+  log(pegadosC.length === 0, '[CESPA] ninguna barra de título queda pegada al borde de una tabla', pegadosC.join(',') || 'todas con aire');
+  // La plantilla CESPA trae la etiqueta en un solo run: hay que añadir el run del valor sin negrita.
+  log(cespa.senas.length === 2 && cespa.senas.every(s => s.runs >= 2 && s.etiquetaNegrita && !s.valorNegrita),
+    '[CESPA] "Señales particulares": las señas NO salen resaltadas en negrita', JSON.stringify(cespa.senas.map(s => s.runs + 'runs')));
 }
 
 // ============ 3) Una sola persona por rol: el documento no cambia de forma ============

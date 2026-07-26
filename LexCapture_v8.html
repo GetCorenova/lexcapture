@@ -1716,7 +1716,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 29;
+var _BUILD = 30;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3310,8 +3310,19 @@ function _fpjSenas(nodes,p){
     var ts=nodes[i].getElementsByTagNameNS(FPJ_W,"t");
     if(!ts.length)return false;
     var val=(p&&p.senas)||"No refiere";
-    if(ts.length>1){ts[1].textContent=val;for(var j=2;j<ts.length;j++)ts[j].textContent="";ts[0].textContent="Señales particulares visibles: ";}
-    else ts[0].textContent="Señales particulares visibles: "+val;
+    if(ts.length>1){ts[1].textContent=val;for(var j=2;j<ts.length;j++)ts[j].textContent="";}
+    else{
+      // La plantilla CESPA trae la etiqueta en un único run en negrita; si el valor se escribiera
+      // ahí, las señas del aprehendido saldrían resaltadas. Se añade un segundo run —copia del
+      // primero pero sin negrita— para que el valor quede en texto normal, como en URI.
+      var r0=ts[0].parentNode,r1=r0.cloneNode(true);
+      var pr=r1.getElementsByTagNameNS(FPJ_W,"rPr")[0];
+      if(pr)["b","bCs"].forEach(function(tag){var e=pr.getElementsByTagNameNS(FPJ_W,tag);while(e.length)e[0].parentNode.removeChild(e[0]);});
+      var t1=r1.getElementsByTagNameNS(FPJ_W,"t")[0];
+      t1.textContent=val;t1.setAttribute("xml:space","preserve");
+      r0.parentNode.insertBefore(r1,r0.nextSibling);
+    }
+    ts[0].textContent="Señales particulares visibles: ";
     ts[0].setAttribute("xml:space","preserve");
     return true;
   }
@@ -3330,12 +3341,27 @@ function _fpjLimpiaIds(nodo){
   if(nodo.localName==="p")ps.push(nodo);
   for(i=0;i<ps.length;i++){ps[i].removeAttributeNS(W14,"paraId");ps[i].removeAttributeNS(W14,"textId");}
 }
+/* El apartado de testigos termina en la tabla con borde de "Correo electrónico y redes sociales",
+   así que la barra gris de la copia siguiente quedaría pegada a ese borde: los dos trazos se suman
+   y se ve una línea negra gruesa, como si el correo estuviera tachado. Los apartados 4 y 5 no
+   sufren esto porque terminan en un párrafo vacío. Cuando falta ese respiro se antepone a cada
+   copia el MISMO párrafo en blanco que la plantilla ya usa delante del título del apartado, para
+   que la separación sea la del formato original y no una inventada. */
+function _fpjSeparador(body,blk){
+  var ult=blk.nodes[blk.nodes.length-1];
+  if(ult&&ult.localName==="p"&&!_getElText(ult,FPJ_W).trim())return null;   // ya respira
+  var ant=blk.head.previousSibling;
+  while(ant&&ant.nodeType!==1)ant=ant.previousSibling;
+  if(ant&&ant.localName==="p"&&!_getElText(ant,FPJ_W).trim())return ant;
+  return body.ownerDocument.createElementNS(FPJ_W,"w:p");
+}
 // Repite el apartado una vez por cada persona a partir de la segunda y llena cada copia con SUS
 // datos. `llenar(tcs,base,persona)` recibe las celdas del clon, así que usa los mismos
 // desplazamientos que el original (el clon es idéntico) con base 0.
 function _fpjRepetir(body,blk,num,gente,llenar,conSenas){
   if(!blk||!gente||gente.length<2)return 0;
   var titulo=_getElText(blk.head,FPJ_W),hechas=0;
+  var sep=_fpjSeparador(body,blk);
   for(var k=1;k<gente.length;k++){
     var clon=[],tcs=[],i,j;
     for(i=0;i<blk.nodes.length;i++){
@@ -3350,6 +3376,7 @@ function _fpjRepetir(body,blk,num,gente,llenar,conSenas){
     _setParNode(clon[0],titulo.replace(/^(\s*)\d+(\.\d+)*\.?\s*/,"$1"+num+"."+k+" "));
     llenar(tcs,0,gente[k]);
     if(conSenas)_fpjSenas(clon,gente[k]);
+    if(sep){var sp=sep.cloneNode(true);_fpjLimpiaIds(sp);body.insertBefore(sp,blk.end);}
     for(i=0;i<clon.length;i++)body.insertBefore(clon[i],blk.end);
     hechas++;
   }
