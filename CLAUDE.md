@@ -8,7 +8,7 @@
 ```
 Crear App/
 ├── CLAUDE.md           ← este archivo (leer siempre al iniciar sesión)
-├── FASE_A.md … FASE_H.md  ← instrucciones por fase (leer solo al ejecutar)
+├── FASE_A.md … FASE_I.md  ← instrucciones por fase (leer solo al ejecutar)
 ├── Esqueleto.html      ← diseño v7 (fuente de CSS y navegación)
 ├── Motor.html          ← lógica v4/v6 (fuente de JS y funciones)
 ├── LexCapture_v8.html  ← ARCHIVO OBJETIVO (se crea en Fase A)
@@ -228,6 +228,88 @@ El Dossier era **destino de navegación de primer nivel** (ítem en sidebar + un
 - **La pantalla ya no tiene selector de casos** (`#dos-list` y su render/`selectDosCaso`/CSS `.dos-case-option` eliminados). Topbar con **botón volver** + **subtítulo dinámico** (`#dos-sub` = nombre del capturado). Todas las salidas juntas: Compartir WhatsApp · Copiar · **Enviar FPJ-5/CESPA/OJ** (botón único por tipo, su sheet también descarga) · Descargar Acta. Se quitó el botón "Descargar FPJ-5" redundante (`#dos-btn-fpj`); `descargarFPJ()` **se conserva** como primitiva de descarga directa (sin botón, la usa la regresión `verify_envio_doc.mjs` [9]).
 - **Estado vacío** (`#dos-empty`): si se entra a `#dossier` sin caso (p.ej. recarga con ese hash, ya que el boot hace `go(location.hash)`), se muestra "Sin captura seleccionada" + botón "Ir a Capturas" en vez de un callejón sin salida. Sin redirect re-entrante (rompería el hash del `go()` externo).
 - Verificado con Playwright (19 checks, `verify_collapse.mjs`): navegación sin Dossier, sheet con acción única, hub cargado con subtítulo, sin `#dos-list`/`#dos-btn-fpj`, estado vacío y cero errores de consola. Tests existentes actualizados al flujo nuevo (`verify_personas.mjs`, `verify_ds.mjs`, `verify_envio_doc.mjs`). Anti-caché a `?v=21` / `cache-v21`.
+
+## Módulo "Captura por Orden Judicial" (2026-07-28) — Fase I
+Antes, el flujo OJ era **el de flagrancia con seis campos extra** (`numOrden`, `delitoOrden`,
+`juzgadoOrden`, `fechaOrden`, `autoridadSolicita`, `destinoOJ`) y dos banderas que apagaban víctimas
+y testigos; el documento salía de un `.docx` con 22 `{{TOKEN}}` que **el usuario tenía que subir**
+(sin plantilla activa no se generaba nada). Ahora es un módulo propio, de extremo a extremo.
+Referencia de estructura: `Documentos/Propuesta Plantilla OJ.docx` (solo como guía; **ningún dato de
+ejemplo suyo llega al código ni al documento**). Verificado con `verify_oj.mjs` (**85 checks**) y
+abriendo el `.docx` en **Word real** (COM → PDF → render con Edge).
+
+**Por qué es un módulo aparte y no una rama del wizard de flagrancia:** en flagrancia el policía
+documenta **un delito que presenció**; en orden judicial documenta **una diligencia de cumplimiento**
+de una decisión que otro funcionario ya tomó. No comparten modelo de datos, ni validaciones, ni
+documento. Comparten primitivas (cifrado, personas, zip/docx, sheet de envío) y nada más.
+
+- **Aislamiento**: el módulo vive en el bloque `FASE I` del HTML, todo con prefijo `oj*`/`OJ_*`. Las
+  funciones de flagrancia solo reciben un `if (wc.ojv===2) …; return;` al inicio (`getWizConfig`,
+  `collectStep`, `validateStep1`, `wizSave`, `startWizard`, `editCase`). `verify_multipersona.mjs`
+  (61) y `verify_envio_doc.mjs` (37) siguen en verde **sin tocar sus expectativas**.
+- **Modelo** `caso.oj` con `ojv:2`: `orden`, `despacho`, `proceso`, `requerido`, `diligencia`,
+  `actuacion`, `destino`. Los casos OJ antiguos (**sin `ojv`**) no se migran: siguen abriendo con el
+  flujo anterior y su documento anterior. ⚠️ Al guardar, un caso v2 escribe además un **espejo**
+  (`capturados[0]`, `conductas[]`, `fechaProc`, `spoa`) — por eso la lista de capturas, el buscador,
+  Personas y el dossier funcionan **sin una sola línea nueva** en esas pantallas.
+- **Wizard de 7 pasos** (`OJ_STEPS`): Orden · Despacho · Proceso · Requerido · Materialización ·
+  Actuación · Disposición. Un solo motor de listas repetibles (`OJ_LISTS` + `ojLista*`) sirve a
+  delitos, prórrogas, funcionarios y elementos incautados: **se lee el DOM antes de cada alta/baja**,
+  igual que `readConocieronRows`. Catálogos (`OJ_CAT`) para todo lo normalizable — el formulario
+  evita texto libre salvo donde la ley exige literalidad.
+- **Las dos verificaciones que definen el módulo:**
+  1. **Vigencia de la orden** (art. 298 CPP, mod. Ley 1453/2011 art. 56): 1 año desde la expedición
+     (6 meses si es anterior al 24/06/2011) + prórrogas. Semáforo en vivo y **validación dura**: con
+     orden vencida no se genera el oficio (CSJ AP4491-2016 — capturar con orden vencida obliga a la
+     libertad inmediata).
+  2. **Término de 36 horas** (art. 28 C.P.): se calcula desde la hora de la diligencia, se muestra
+     desde el paso 5 y se **imprime en el documento**.
+- **Motor de destinatario** (`ojResolverDestino`): propone autoridad + **cita su fundamento** y
+  guarda la regla aplicada (`destino.reglaAplicada`) para que la decisión sea trazable meses después.
+  R0 vencida · R1 SRPA (adolescente **al momento de los hechos** → «aprehensión» y destino CESPA) ·
+  R2 Ley 600 (despacho que libró) · R3 imputación/medida (fiscal que dirige, art. 297-298) ·
+  R4-A/R4-B condena (juez de conocimiento o JEPMS; si no hay hora hábil dentro del plazo, juez de
+  control de garantías de turno, **C-042/2018**) · R6 extradición. La disponibilidad del despacho usa
+  jornada hábil configurable + **festivos de Colombia calculados** (Ley 51/1983, traslado al lunes;
+  Pascua por algoritmo), no una lista fija que caduque.
+- **Motor documental — la decisión de arquitectura importante:** el **cuerpo del oficio lo construye
+  la app en OOXML** (`ojx*` + `ojDocCuerpo`) y **la plantilla del usuario solo aporta la capa
+  gráfica**. Del `.docx` subido (tipo `oj_membrete`) se conserva **todo menos el cuerpo**: membrete,
+  pie, logos, estilos, medios y **su `sectPr`** (de ahí salen los márgenes y las referencias a
+  header/footer). Así "una plantilla propia no puede alterar la estructura ni el mapeo" es **cierto
+  por construcción**, no por política. Sin plantilla subida se arma un **paquete base desde cero**
+  (~80 KB, 8 partes) — no hay `.docx` de 1,9 MB embebido en base64 y **la app siempre produce
+  documento**.
+- **Encabezado institucional** (4 líneas jerárquicas) y pie salen **solo de `cfg`**
+  (`ojMinisterio`/`ojInstitucion`/`ojUnidad`/`ojDependencia`, `ojPie*`, `ojClasificacion`…).
+  ⚠️ **Ningún nombre de institución está escrito en el código** (ni en los `placeholder` de Ajustes):
+  es el mismo patrón de `cfg.nombreEstacion` y lo exige el filtro de Play Store. El asunto también es
+  parametrizable (`cfg.ojAsunto`, marcadores `{{TERMINO}}`, `{{ORD_NUMERO}}`, `{{REQ_NOMBRE}}`,
+  `{{RADICADO}}`, `{{DESPACHO}}`). Una plantilla propia puede usar `{{ENC_UNIDAD}}`, `{{PIE_*}}`, etc.
+- **Estructura del oficio**: consecutivo · ciudad y fecha · destinatario · asunto · tabla de
+  identificación · **I** orden (tabla + transcripción textual entre comillas, íntegra y sin
+  reformular) · **II** proceso y delitos · **III** materialización (tabla + relato compuesto desde
+  campos) · **IV** garantías (art. 303) · **V** elementos y cadena de custodia · **VI** puesta a
+  disposición (con el vencimiento de las 36 h y el fundamento aplicado) · firma · anexos · Elaboró /
+  Revisó / Ubicación. Arial, justificado, márgenes institucionales, numeración automática de páginas
+  (campos `PAGE`/`NUMPAGES`), tablas solo donde ayudan.
+- **Lo que la app NO hace**: no produce órdenes de captura (solo las transcribe) y **no genera el
+  acta de derechos** — se diligencia aparte y viaja como anexo; el oficio deja la constancia con hora
+  y lugar. Tampoco hay función de difusión de datos de la orden (C-276/2019).
+- ⚠️ **Lecciones de OOXML que costaron tiempo y hay que respetar al tocar `ojx*`:**
+  - El **orden de los hijos** de `w:pPr` (`keepNext → pBdr → shd → spacing → ind → jc`) y de `w:rPr`
+    (`rFonts → b → i → caps → color → sz → u`) **lo fija el esquema**. Invertirlo hace que Word abra
+    el documento "dañado". Mismo criterio en `w:tcPr` y `w:tblPr`.
+  - Un `*/` dentro de un comentario `/* … */` (p. ej. escribir `ojStep*/ojCollect`) **cierra el
+    comentario** y rompe todo el `<script>`. Comprobar siempre con `node --check` sobre el script
+    extraído del HTML.
+  - **El cuerpo no puede terminar en `<w:tbl>`**: Word añade un párrafo implícito de tamaño normal y
+    aparece **una página en blanco al final**. Se cierra con `ojxCierre()` (párrafo de altura ~0).
+  - Barras de sección y subtítulos llevan `w:keepNext`, si no quedan huérfanos al pie de página.
+  - `mc:Ignorable` solo puede nombrar prefijos **declarados** (lección heredada del FPJ-5 v2.1).
+- **Despachos**: los que se diligencian a mano se guardan en `cfg.despachosPropios` y se reutilizan
+  desde el mismo selector, que también alimenta el destinatario del paso 7.
+- Anti-caché a `?v=31` / `cache-v31`, `_BUILD=31`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

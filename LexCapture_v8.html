@@ -1056,6 +1056,40 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 }
 .theme-seg button.on{background:var(--surface-1);color:var(--text);font-weight:600;box-shadow:var(--sh-1)}
 
+/* ═══ ORDEN JUDICIAL (wizard del oficio de disposición) ═══ */
+.oj-blk{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
+.oj-blk>.st:first-child{margin-top:0}
+.oj-hint{font-size:12px;line-height:1.45;color:var(--text-3);margin:-2px 0 10px}
+.oj-vacio{font-size:13px;color:var(--text-3);padding:10px 0;margin:0}
+.oj-row{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;position:relative}
+.oj-row .fg{margin-bottom:8px}
+.oj-row-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.oj-row-n{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+.oj-row-x{background:none;border:0;color:var(--danger);font-size:13px;cursor:pointer;padding:2px 6px;border-radius:6px}
+.oj-row-x:active{background:var(--pressed)}
+.oj-chk{display:flex;align-items:flex-start;gap:9px;padding:9px 0;cursor:pointer;font-size:13.5px;line-height:1.4;color:var(--text)}
+.oj-chk input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--acc)}
+.oj-chk span small{display:block;color:var(--text-3);font-size:12px;margin-top:2px}
+.oj-alert{border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:10px;font-size:13px;line-height:1.5;border:1px solid}
+.oj-alert b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.oj-alert.dura{background:var(--errB);border-color:var(--danger);color:var(--text)}
+.oj-alert.dura b{color:var(--danger)}
+.oj-alert.blanda{background:var(--warn-bg);border-color:rgba(232,165,79,.35);color:var(--text)}
+.oj-alert.blanda b{color:var(--warn)}
+.oj-alert.ok{background:var(--ok-bg);border-color:rgba(91,201,140,.35);color:var(--text)}
+.oj-alert.ok b{color:var(--ok)}
+.oj-alert.info{background:var(--ojB);border-color:var(--ojBd);color:var(--text)}
+.oj-alert.info b{color:var(--oj-2)}
+.oj-sem{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.oj-sem.ok{background:var(--ok-bg);color:var(--ok)}
+.oj-sem.alerta{background:var(--warn-bg);color:var(--warn)}
+.oj-sem.urgente,.oj-sem.vencido{background:var(--errB);color:var(--danger)}
+.oj-kv{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
+.oj-kv:last-child{border-bottom:0}
+.oj-kv span:first-child{color:var(--text-3);flex:0 0 auto}
+.oj-kv span:last-child{text-align:right;color:var(--text)}
+.oj-fund{font-size:11.5px;color:var(--text-3);margin-top:6px;font-style:italic}
+
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
   .fr{grid-template-columns:1fr 1fr;column-gap:10px}
@@ -1390,6 +1424,54 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
         </div>
       </div>
 
+      <!-- 2b. Oficio de orden judicial -->
+      <div class="aj-section">
+        <div class="aj-sec-hdr" onclick="toggleAjSec('oj-sec')">
+          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14M7 21h10M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/></svg>Oficio de orden judicial</span><span class="aj-sec-arr" id="aj-arr-oj-sec">▶</span>
+        </div>
+        <div class="aj-sec-body" id="aj-body-oj-sec" style="display:none;padding-top:12px">
+          <p class="oj-hint">Encabezado institucional del oficio. Se imprime siempre con esta jerarquía y no se edita dentro del documento: se toma de aquí.</p>
+          <div class="fr">
+            <div class="fg"><label class="fl">Línea 1 — ministerio o sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece la unidad"></div>
+            <div class="fg"><label class="fl">Línea 2 — institución</label><input class="fi" id="aj-oj-inst" placeholder="Nombre de tu institución"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Unidad policial (metropolitana o departamento)"></div>
+            <div class="fg"><label class="fl">Línea 4 — dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Estación, distrito o dependencia"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
+            <div class="fg"><label class="fl">Consecutivo / dependencia</label><input class="fi" id="aj-oj-cons" placeholder="Ej: MEVAL – ESCAN – 1.10"></div>
+          </div>
+          <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
+          <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
+          <div class="st">Pie de página</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-pdir" placeholder="Dirección de la dependencia"></div>
+            <div class="fg"><label class="fl">Teléfonos</label><input class="fi" id="aj-oj-ptel" placeholder="Teléfonos de contacto"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Correo</label><input class="fi" id="aj-oj-pcor" placeholder="Correo institucional"></div>
+            <div class="fg"><label class="fl">Sitio web</label><input class="fi" id="aj-oj-pweb" placeholder="Sitio web institucional"></div>
+          </div>
+          <div class="fr3">
+            <div class="fg"><label class="fl">Código de formato</label><input class="fi" id="aj-oj-cod" placeholder="Ej: 1DS–OF–0001"></div>
+            <div class="fg"><label class="fl">Versión</label><input class="fi" id="aj-oj-ver" placeholder="Ej: VER: 6"></div>
+            <div class="fg"><label class="fl">Clasificación</label><input class="fi" id="aj-oj-clas" placeholder="Ej: INFORMACIÓN PÚBLICA"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Ubicación (TRD)</label><input class="fi" id="aj-oj-trd" placeholder="Código de ubicación documental"></div>
+            <div class="fg"><label class="fl">Revisó</label><input class="fi" id="aj-oj-rev" placeholder="Quien revisa el oficio"></div>
+          </div>
+          <div class="st">Jornada judicial hábil</div>
+          <p class="oj-hint">Se usa para calcular si el juzgado está disponible dentro del término de 36 horas. Los festivos de Colombia se calculan solos.</p>
+          <div class="fr">
+            <div class="fg"><label class="fl">Desde</label><input type="time" class="fi" id="aj-oj-jini"></div>
+            <div class="fg"><label class="fl">Hasta</label><input type="time" class="fi" id="aj-oj-jfin"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- 3. Valores por defecto -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('defaults-sec')">
@@ -1716,7 +1798,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 30;
+var _BUILD = 31;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -1770,7 +1852,7 @@ function abrirEnvioDoc(id) {
   if (!c) { toast('Caso no encontrado'); return; }
   _shareCasoId = id;
   _shareDoc = null;
-  var lbl = c.tipo==='OJ' ? 'Documento OJ' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI');
+  var lbl = c.ojv===2 ? 'Oficio de disposición' : (c.tipo==='OJ' ? 'Documento OJ' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI'));
   var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : '';
   var t = document.getElementById('share-title');
   if (t) t.textContent = lbl + (cap ? ' — ' + cap : '');
@@ -1800,7 +1882,8 @@ async function _pregenShareDoc(c, id) {
   _shareBusy(true); _shareHint('busy');
   var out = null;
   try {
-    if (c.tipo === 'OJ') out = await buildDocOJBlob(c, null);
+    if (c.ojv === 2) out = await buildOficioOJBlob(c);
+    else if (c.tipo === 'OJ') out = await buildDocOJBlob(c, null);
     else out = buildFPJBlob(c);
   } catch(e) { console.error(e); _shareBusy(false); _shareHint(false); return; }
   if (_shareCasoId !== id) return;                                  // el sheet ya cambió de caso
@@ -2096,7 +2179,15 @@ var DB = {
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
     var stored; try { stored=JSON.parse(localStorage.getItem('lc_cfg'))||{}; } catch(e) { stored={}; }
-    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'CANDELARIA',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null};
+    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'CANDELARIA',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null,
+      /* Oficio de orden judicial (Fase I). El encabezado institucional se arma
+         con estos campos: la app no lleva ningún nombre de institución escrito
+         en el código, cada unidad configura el suyo. */
+      ojMinisterio:'',ojInstitucion:'',ojUnidad:'',ojDependencia:'',ojCiudad:'',
+      ojAsunto:'Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}',
+      ojConsecutivo:'',ojCodigoFormato:'',ojVersionFormato:'',ojClasificacion:'INFORMACIÓN PÚBLICA',
+      ojPieDireccion:'',ojPieTelefonos:'',ojPieCorreo:'',ojPieWeb:'',ojUbicacionTRD:'',ojReviso:'',
+      ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[]};
     var out={}; for(var k in def) out[k]=stored[k]!==undefined?stored[k]:def[k]; for(var k in stored) if(!(k in out)) out[k]=stored[k]; return out;
   },
   saveConfig: function(c) { localStorage.setItem('lc_cfg', JSON.stringify(c)); },
@@ -2177,12 +2268,20 @@ var STEPS_STD = ['Caso','Lugar','Capturados','Víctimas','Testigos','Vehículos'
 var STEPS_OJ  = ['Caso','Lugar','Capturado','Vehículos','Narración','Servidor'];
 
 function getWizConfig() {
+  // Módulo de orden judicial v2: formulario propio, sin nada de flagrancia.
+  if (wc&&wc.ojv===2) return ojWizConfig();
+  // Casos OJ creados antes del módulo v2: siguen abriendo con el flujo viejo.
   if (wc&&wc.tipo==='OJ') return {steps:STEPS_OJ, panels:[rStep1,rStep2,rStep3,rStepVeh,rStep6,rStep7]};
   var steps=wc&&wc.tipo==='CESPA'?['Caso','Lugar','Aprehendidos','Víctimas','Testigos','Vehículos','Narración','Servidor']:STEPS_STD;
   return {steps:steps, panels:[rStep1,rStep2,rStep3,rStep4,rStep5,rStepVeh,rStep6,rStep7]};
 }
 
 function startWizard(tipo) {
+  if (tipo === 'OJ') {                       // módulo propio (Fase I)
+    wc = ojNuevoCaso(); ws = 0;
+    document.getElementById('wz-title').textContent = 'Captura por orden judicial';
+    go('wizard'); renderWiz(); return;
+  }
   var cfg = DB.getConfig(); var s = cfg.servidor||{};
   var t = nowParts();
   wc = {
@@ -2213,6 +2312,11 @@ function startWizard(tipo) {
 function editCase(id) {
   var raw = DB.getCase(id); if (!raw) return;
   wc = JSON.parse(JSON.stringify(raw));
+  if (wc.ojv === 2) {                        // caso del módulo de orden judicial
+    ojNormalizar(wc); ws = 0;
+    document.getElementById('wz-title').textContent = 'Captura por orden judicial';
+    go('wizard'); renderWiz(); return;
+  }
   if (wc.capturado&&!wc.capturados){wc.capturados=[wc.capturado];delete wc.capturado;}
   if (wc.victima&&!wc.victimas){wc.victimas=[wc.victima];delete wc.victima;}
   if (wc.testigo&&!wc.testigos){wc.testigos=[wc.testigo];delete wc.testigo;}
@@ -2261,6 +2365,7 @@ function wizNext() {
   renderWiz();
 }
 async function wizSave() {
+  if (wc && wc.ojv===2) return ojGuardarYSalir();
   if (ws===0 && !validateStep1()) return;
   collectStep();
   if (!wc.capturados||!wc.capturados.length){toast('Debe registrar al menos un '+(wc.tipo==='CESPA'?'aprehendido':'capturado'));return;}
@@ -2282,6 +2387,7 @@ async function wizSave() {
 }
 
 function validateStep1() {
+  if (wc && wc.ojv===2) return true;          // el módulo OJ tiene su propia validación
   var el=document.getElementById('w-nunc'); if(!el) return true;
   var val=el.value.replace(/\D/g,'');
   var err=document.getElementById('nunc-err');
@@ -2303,6 +2409,7 @@ function validateNunc(el) {
 }
 
 function collectStep() {
+  if (wc && wc.ojv===2) { ojCollect(); return; }
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
   var isOJ=wc&&wc.tipo==='OJ';
   var stepName=(getWizConfig().steps[ws])||'';
@@ -2612,9 +2719,11 @@ function openCaseSheet(id) {
   // (URI/CESPA) u Oficio de Disposición por orden judicial (Juzgado/Fiscalía).
   var isOJ = c.tipo==='OJ';
   var docNom = isOJ ? 'Disposición' : 'FPJ-5';
-  var docDe  = isOJ
-    ? 'Oficio de disposición a Juzgado o Fiscalía'
-    : (c.tipo==='CESPA' ? 'Informe de aprehensión en flagrancia (CESPA)' : 'Formato de captura en flagrancia');
+  var docDe  = c.ojv===2
+    ? 'Oficio de puesta a disposición por orden judicial'
+    : (isOJ
+      ? 'Oficio de disposición a Juzgado o Fiscalía'
+      : (c.tipo==='CESPA' ? 'Informe de aprehensión en flagrancia (CESPA)' : 'Formato de captura en flagrancia'));
   openActionSheet(head,
     // 1) Enviar el documento oficial (WhatsApp o correo, como .docx adjunto)
     actItem('abrirEnvioDoc', id, ACT_IC.send, 'Enviar '+docNom, 'Por WhatsApp o correo — '+docDe, '', ACT_ACC) +
@@ -2641,6 +2750,7 @@ function abrirDossierCaso(id) {
 function descargarDocCaso(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
+  if (c.ojv === 2) { ojDescargarOficio(c); return; }     // módulo de orden judicial
   if (c.tipo === 'OJ') { genDocOJ(c, null); return; }   // genDocOJ ya descarga y avisa
   var out = buildFPJBlob(c);
   if (!out) return;                                       // no se pudo generar (p. ej. NUNC inválido)
@@ -4003,7 +4113,13 @@ function loadAjustesFields() {
     'aj-patrulla':cfg.patrullaNum,'aj-unidad':cfg.patrullaUnidad,
     'aj-nuncUri':cfg.nuncUri,'aj-nuncCespa':cfg.nuncCespa,
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
-    'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa};
+    'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa,
+    'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,'aj-oj-dep':cfg.ojDependencia,
+    'aj-oj-ciu':cfg.ojCiudad,'aj-oj-cons':cfg.ojConsecutivo,'aj-oj-asunto':cfg.ojAsunto,
+    'aj-oj-pdir':cfg.ojPieDireccion,'aj-oj-ptel':cfg.ojPieTelefonos,'aj-oj-pcor':cfg.ojPieCorreo,'aj-oj-pweb':cfg.ojPieWeb,
+    'aj-oj-cod':cfg.ojCodigoFormato,'aj-oj-ver':cfg.ojVersionFormato,'aj-oj-clas':cfg.ojClasificacion,
+    'aj-oj-trd':cfg.ojUbicacionTRD,'aj-oj-rev':cfg.ojReviso,
+    'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
   renderConocieronRows(getConocieronList(cfg));
@@ -4054,6 +4170,19 @@ function saveAjustes() {
   cfg.nuncUri=v('aj-nuncUri'); cfg.nuncCespa=v('aj-nuncCespa');
   cfg.localidadDefault=v('aj-localidad'); cfg.zonaDefault=v('aj-zona'); cfg.veredaDefault=v('aj-vereda');
   cfg.destUri=v('aj-destUri'); cfg.destCespa=v('aj-destCespa');
+  // Oficio de orden judicial (la sección puede no estar en el DOM: solo se
+  // escribe lo que exista, para no borrar configuración ya guardada).
+  if(document.getElementById('aj-oj-min')){
+    cfg.ojMinisterio=v('aj-oj-min'); cfg.ojInstitucion=v('aj-oj-inst');
+    cfg.ojUnidad=v('aj-oj-uni'); cfg.ojDependencia=v('aj-oj-dep');
+    cfg.ojCiudad=v('aj-oj-ciu'); cfg.ojConsecutivo=v('aj-oj-cons');
+    cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
+    cfg.ojPieDireccion=v('aj-oj-pdir'); cfg.ojPieTelefonos=v('aj-oj-ptel');
+    cfg.ojPieCorreo=v('aj-oj-pcor'); cfg.ojPieWeb=v('aj-oj-pweb');
+    cfg.ojCodigoFormato=v('aj-oj-cod'); cfg.ojVersionFormato=v('aj-oj-ver');
+    cfg.ojClasificacion=v('aj-oj-clas'); cfg.ojUbicacionTRD=v('aj-oj-trd'); cfg.ojReviso=v('aj-oj-rev');
+    cfg.ojJornadaIni=v('aj-oj-jini')||'08:00'; cfg.ojJornadaFin=v('aj-oj-jfin')||'17:00';
+  }
   DB.saveConfig(cfg); toast('Ajustes guardados ✓');
 }
 
@@ -4304,7 +4433,7 @@ function _dispNarr2(caso){
 }
 
 // ── UI Plantillas ──
-var _TIPO_LBL={fpj5_oj:'FPJ-5 OJ',oficio:'Oficio de Disposición',disp_fiscalia:'Disposición — Fiscalía',disp_juzgado:'Disposición — Juzgado',otro:'Otro'};
+var _TIPO_LBL={oj_membrete:'Membrete — Orden judicial',fpj5_oj:'FPJ-5 OJ',oficio:'Oficio de Disposición',disp_fiscalia:'Disposición — Fiscalía',disp_juzgado:'Disposición — Juzgado',otro:'Otro'};
 
 function renderPlantillas(){
   var el=document.getElementById('tpl-gallery');if(!el)return;
@@ -4355,6 +4484,7 @@ function openSubirPlantilla(){
     '<div class="fr" style="margin-top:12px">'+
       '<div class="fg"><label class="fl">Tipo</label>'+
         '<select class="fs" id="tpl-tipo">'+
+          '<option value="oj_membrete">Membrete — Orden judicial</option>'+
           '<option value="disp_fiscalia">Disposición Fiscalía</option>'+
           '<option value="disp_juzgado">Disposición Juzgado</option>'+
           '<option value="fpj5_oj">FPJ-5 OJ</option>'+
@@ -4366,6 +4496,10 @@ function openSubirPlantilla(){
         '<select class="fs" id="tpl-region">'+opts+'</select>'+
       '</div>'+
     '</div>'+
+    '<p class="oj-hint">En «Membrete — Orden judicial» la app toma únicamente el encabezado, el pie, los logos y los márgenes del archivo. '+
+    'El cuerpo del oficio, su estructura y el mapeo de datos los sigue controlando la aplicación. '+
+    'Si el membrete usa los marcadores {{ENC_UNIDAD}}, {{ENC_DEPENDENCIA}}, {{PIE_DIRECCION}}, {{PIE_TELEFONOS}}, {{PIE_CORREO}}, '+
+    '{{PIE_WEB}} o {{CLASIFICACION}}, se rellenan con lo configurado en Ajustes.</p>'+
     '<button class="btn bp bbl mt8" onclick="guardarTemplate()">Cargar plantilla</button>'
   );
 }
@@ -4527,6 +4661,1954 @@ function initDefaultTemplates(){
   });
   if(changed)DB.saveTemplates(tpls);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE I — MÓDULO CAPTURA POR ORDEN JUDICIAL (oficio de puesta a disposición)
+   ───────────────────────────────────────────────────────────────────────────
+   Separación estricta: FORMULARIO (ojStepN, ojCollect) ←→ DOCUMENTO (ojDoc…).
+   El cuerpo del oficio lo controla siempre la app; la plantilla del usuario
+   solo aporta la capa gráfica (membrete, pie, logos, márgenes).
+   Ninguna función de flagrancia (URI/CESPA) se modifica desde aquí.
+═══════════════════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────────
+   I.1 · CATÁLOGOS
+   Todo dato normalizable vive aquí (spec: "evitar campos de texto libre
+   cuando la información pueda normalizarse mediante listas o catálogos").
+   Cada entrada: [valor, etiqueta visible]. El documento imprime la etiqueta.
+───────────────────────────────────────────────────────────────────────── */
+var OJ_CAT = {
+  // Marco procesal bajo el que se libró la orden — cambia el destinatario.
+  tipoOrden: [
+    ['LEY906','Ley 906 de 2004 — sistema acusatorio'],
+    ['LEY600','Ley 600 de 2000 — hechos anteriores al 01/01/2005'],
+    ['SRPA','Ley 1098 de 2006 — responsabilidad penal para adolescentes'],
+    ['EXTRADICION','Captura con fines de extradición']
+  ],
+  // Para qué se libró: define la ruta procesal (art. 297-298, 450, 38.1 CPP).
+  finalidad: [
+    ['IMPUTACION','Comparecencia a formulación de imputación'],
+    ['MEDIDA_ASEGURAMIENTO','Cumplimiento de medida de aseguramiento'],
+    ['CONDENA','Cumplimiento de condena ejecutoriada'],
+    ['EJECUCION_FALLO','Captura al anuncio del sentido del fallo (art. 450)'],
+    ['REVOCATORIA','Revocatoria de subrogado, beneficio o domiciliaria'],
+    ['INDAGATORIA','Vinculación mediante indagatoria (Ley 600)'],
+    ['EXTRADICION','Fines de extradición'],
+    ['OTRA','Otra prevista en la ley']
+  ],
+  estadoOrden: [
+    ['VIGENTE','Vigente'],
+    ['POR_VENCER','Próxima a vencer'],
+    ['VENCIDA','Vencida'],
+    ['PRORROGADA','Prorrogada'],
+    ['CANCELADA','Cancelada'],
+    ['SUSPENDIDA','Suspendida']
+  ],
+  tipoDespacho: [
+    ['JCG','Juzgado penal con función de control de garantías'],
+    ['CONOCIMIENTO','Juzgado penal con función de conocimiento'],
+    ['JEPMS','Juzgado de ejecución de penas y medidas de seguridad'],
+    ['FISCALIA','Fiscalía General de la Nación'],
+    ['ADOLESCENTES','Juzgado / autoridad del sistema de adolescentes'],
+    ['OTRO','Otra autoridad judicial']
+  ],
+  especialidad: [
+    ['PENAL_MUNICIPAL','Penal municipal'],
+    ['PENAL_CIRCUITO','Penal del circuito'],
+    ['PENAL_CIRCUITO_ESP','Penal del circuito especializado'],
+    ['EJECUCION_PENAS','Ejecución de penas y medidas de seguridad'],
+    ['PROMISCUO','Promiscuo municipal'],
+    ['ADOLESCENTES','Penal para adolescentes'],
+    ['OTRA','Otra']
+  ],
+  firmaOrden: [
+    ['MANUSCRITA','Firma manuscrita'],
+    ['DIGITAL','Firma digital / electrónica certificada'],
+    ['ESCANEADA','Copia escaneada del original firmado'],
+    ['SIN_FIRMA','Sin firma visible']
+  ],
+  tipoDoc: [
+    ['CC','Cédula de ciudadanía'],
+    ['TI','Tarjeta de identidad'],
+    ['CE','Cédula de extranjería'],
+    ['PPT','Permiso por protección temporal'],
+    ['PEP','Permiso especial de permanencia'],
+    ['PA','Pasaporte'],
+    ['NUIP','NUIP'],
+    ['SIN_DOC','Sin documento — identificado por otro medio']
+  ],
+  sexo: [['M','Masculino'],['F','Femenino'],['I','Intersexual / no informa']],
+  estadoCivil: [
+    ['SOLTERO','Soltero(a)'],['CASADO','Casado(a)'],['UNION','Unión libre'],
+    ['SEPARADO','Separado(a) / divorciado(a)'],['VIUDO','Viudo(a)'],['NO_INFORMA','No informa']
+  ],
+  metodoIdent: [
+    ['DOCUMENTO','Documento de identidad original portado por el requerido'],
+    ['BIOMETRICO','Cotejo biométrico / consulta en línea de identificación'],
+    ['RESENA','Reseña decadactilar de policía judicial'],
+    ['BASE_DATOS','Consulta en bases de datos institucionales'],
+    ['TESTIGO','Reconocimiento por tercero identificado'],
+    ['OTRO','Otro medio']
+  ],
+  formaUbicacion: [
+    ['PATRULLAJE','Patrullaje y registro a persona en vía pública'],
+    ['CONTROL_ANTECEDENTES','Control y verificación de antecedentes'],
+    ['PUESTO_CONTROL','Puesto de control fijo'],
+    ['ALLANAMIENTO','Diligencia de registro y allanamiento'],
+    ['PRESENTACION','Presentación voluntaria del requerido'],
+    ['LABORES','Labores de investigación y verificación previas'],
+    ['ENTREGA_UNIDAD','Entrega por otra unidad o autoridad'],
+    ['OTRA','Otra']
+  ],
+  tipoLugar: [
+    ['VIA_PUBLICA','Vía pública'],['RESIDENCIA','Residencia'],['ESTABLECIMIENTO','Establecimiento comercial'],
+    ['TRANSPORTE','Medio de transporte'],['INSTITUCION','Instalación institucional'],['RURAL','Zona rural'],['OTRO','Otro']
+  ],
+  sistemaConsulta: [
+    ['PDA','Dispositivo móvil institucional (consulta de antecedentes)'],
+    ['CENTRO_RADIO','Central de radio / centro de despacho'],
+    ['CERTIFICACION','Unidad de certificación judicial'],
+    ['POLICIA_JUDICIAL','Unidad de policía judicial'],
+    ['DESPACHO','Confirmación directa con el despacho judicial'],
+    ['OTRO','Otro medio de verificación']
+  ],
+  usoFuerza: [
+    ['NINGUNO','No se empleó la fuerza'],
+    ['VERBAL','Persuasión verbal'],
+    ['CONTROL_FISICO','Control físico / técnicas de sujeción'],
+    ['MEDIOS_RIGIDOS','Empleo de medios rígidos (esposas)'],
+    ['OTRO','Otro medio, descrito en el informe']
+  ],
+  defensor: [
+    ['CONFIANZA','Defensor de confianza'],
+    ['PUBLICO','Defensoría Pública'],
+    ['NO_DESIGNA','No designó defensor en el momento']
+  ],
+  anexos: [
+    'Acta de derechos del capturado',
+    'Copia de la orden de captura',
+    'Constancia de buen trato',
+    'Acta de incautación / rótulo de cadena de custodia',
+    'Valoración médico-legal o constancia de renuencia',
+    'Registro fotográfico',
+    'Reseña decadactilar'
+  ],
+  parentesco: [
+    ['MADRE','Madre'],['PADRE','Padre'],['CONYUGE','Cónyuge / compañero(a)'],
+    ['HIJO','Hijo(a)'],['HERMANO','Hermano(a)'],['OTRO','Otro familiar o allegado']
+  ]
+};
+function ojLbl(cat,val){
+  var a=OJ_CAT[cat]||[]; for(var i=0;i<a.length;i++) if(a[i][0]===val) return a[i][1];
+  return val||'';
+}
+function ojOpts(cat,val,vacio){
+  var out=vacio?('<option value="">'+escHtml(vacio)+'</option>'):'';
+  (OJ_CAT[cat]||[]).forEach(function(o){
+    out+='<option value="'+o[0]+'"'+(o[0]===val?' selected':'')+'>'+escHtml(o[1])+'</option>';
+  });
+  return out;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   I.2 · MODELO DE DATOS  (caso.oj, versión ojv:2)
+   Los casos OJ antiguos (sin ojv) NO se migran: siguen abriendo con el flujo
+   anterior. Los nuevos guardan además un espejo mínimo (capturados[0],
+   conductas[]) para que la lista, el dossier y el buscador no cambien.
+───────────────────────────────────────────────────────────────────────── */
+function ojPerfilActivo(cfg){
+  var p=null; (cfg.perfiles||[]).forEach(function(x){ if(x.id===cfg.perfilActivo) p=x; });
+  return p||{};
+}
+function ojRegionActiva(cfg){
+  var r=null; (cfg.perfilesRegionales||[]).forEach(function(x){ if(x.id===cfg.perfilRegionalActivo) r=x; });
+  return r||{};
+}
+function ojNuevoCaso(){
+  var cfg=DB.getConfig(), t=nowParts(), reg=ojRegionActiva(cfg), perfil=ojPerfilActivo(cfg);
+  var c={
+    id:uid(), tipo:'OJ', ojv:2, created:Date.now(), updated:Date.now(),
+    fechaProc:t.yy+'-'+t.mm+'-'+t.dd, isTest:false,
+    capturados:[], conductas:[], victimas:[], testigos:[],
+    oj:ojEstructura()
+  };
+  c.oj.diligencia.fecha=t.yy+'-'+t.mm+'-'+t.dd;
+  c.oj.diligencia.hora=t.hh+':'+t.mi;
+  c.oj.diligencia.lugarMunicipio=reg.municipio||'';
+  c.oj.diligencia.lugarDepartamento=reg.departamento||'';
+  c.oj.diligencia.unidad=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim()||(cfg.nombreEstacion||'');
+  c.oj.diligencia.patrulla=cfg.patrullaNum||'';
+  c.oj.orden.verificacion.fecha=c.oj.diligencia.fecha;
+  c.oj.actuacion.derechos.fecha=c.oj.diligencia.fecha;
+  if(perfil.nombre){
+    c.oj.diligencia.funcionarios=[{grado:perfil.grado||'',nombre:perfil.nombre||'',cedula:sinPuntos(perfil.cedula||''),placa:perfil.placa||''}];
+  }
+  return c;
+}
+function ojEstructura(){
+  return {
+    orden:{
+      numero:'', tipoOrden:'LEY906', finalidad:'', estado:'VIGENTE',
+      fechaExpedicion:'', vigenciaMeses:12, vigenciaHasta:'', prorrogas:[],
+      autoridadSolicitante:'', dirigidaA:'', motivoTextual:'',
+      verificacion:{ sistema:'PDA', fecha:'', hora:'', funcionario:'', resultado:'POSITIVO', observacion:'' }
+    },
+    despacho:{
+      despachoId:'', nombre:'', tipo:'', especialidad:'', municipio:'', departamento:'',
+      direccion:'', telefono:'', correo:'', identificacion:'', funcionarioResponsable:'',
+      juezNombre:'', juezCargo:'', firma:'MANUSCRITA'
+    },
+    proceso:{
+      radicado:'', delitos:[], fechaHechos:'', fechaDecision:'',
+      descripcionJuridica:'', codigoInterno:'',
+      pena:{ descripcion:'', meses:'', accesorias:'' }
+    },
+    requerido:{
+      personaId:'', tipoDoc:'CC', numDoc:'', expedidoEn:'',
+      priNom:'', segNom:'', priApe:'', segApe:'',
+      fechaNac:'', edad:'', sexo:'', nacionalidad:'Colombiana', estadoCivil:'',
+      alias:'', profesion:'',
+      resDireccion:'', resBarrio:'', resMunicipio:'', resDepartamento:'', resTelefono:'',
+      nacPais:'Colombia', nacDepartamento:'', nacMunicipio:'',
+      madre:'', padre:'',
+      rasgos:{ estatura:'', contextura:'', tez:'', cabello:'', ojos:'' },
+      senales:'', otrosDatos:'',
+      identidadMetodo:'DOCUMENTO', identidadObservacion:''
+    },
+    diligencia:{
+      fecha:'', hora:'',
+      lugarDireccion:'', lugarBarrio:'', lugarMunicipio:'', lugarDepartamento:'',
+      lugarTipo:'VIA_PUBLICA', coordenadas:'',
+      formaUbicacion:'CONTROL_ANTECEDENTES', formaUbicacionOtra:'',
+      unidad:'', patrulla:'', vehiculo:'', funcionarios:[]
+    },
+    actuacion:{
+      derechos:{ leidos:false, fecha:'', hora:'', lugar:'', observacion:'' },
+      comunicacion:{ seLogro:null, nombre:'', parentesco:'', telefono:'', hora:'' },
+      defensor:{ tipo:'', nombre:'', telefono:'' },
+      fuerza:{ tipo:'NINGUNO', descripcion:'' },
+      lesiones:{ hubo:false, descripcion:'' },
+      valoracion:{ realizada:null, entidad:'', fecha:'', hora:'', renuencia:false },
+      hayIncautacion:false, incautaciones:[],
+      novedades:'', observaciones:'', anexos:[]
+    },
+    destino:{
+      tipo:'', nombre:'', direccion:'', municipio:'', departamento:'', telefono:'', correo:'',
+      sugeridoTipo:'', sugeridoNombre:'', reglaAplicada:'', fundamento:'', motivoCambio:'',
+      fechaEntrega:'', horaEntrega:'', recibeNombre:'', recibeCargo:''
+    }
+  };
+}
+// Rellena lo que falte al abrir un caso guardado con una versión anterior del módulo.
+function ojNormalizar(c){
+  if(!c.oj) c.oj=ojEstructura();
+  var base=ojEstructura();
+  (function fill(dst,src){
+    for(var k in src){
+      if(dst[k]===undefined) dst[k]=src[k];
+      else if(src[k]&&typeof src[k]==='object'&&!Array.isArray(src[k])) fill(dst[k],src[k]);
+    }
+  })(c.oj,base);
+  if(!Array.isArray(c.oj.proceso.delitos)) c.oj.proceso.delitos=[];
+  if(!Array.isArray(c.oj.orden.prorrogas)) c.oj.orden.prorrogas=[];
+  if(!Array.isArray(c.oj.diligencia.funcionarios)) c.oj.diligencia.funcionarios=[];
+  if(!Array.isArray(c.oj.actuacion.incautaciones)) c.oj.actuacion.incautaciones=[];
+  if(!Array.isArray(c.oj.actuacion.anexos)) c.oj.actuacion.anexos=[];
+  return c;
+}
+function ojNombreRequerido(r){
+  if(!r) return '';
+  return ((r.priNom||'')+' '+(r.segNom||'')+' '+(r.priApe||'')+' '+(r.segApe||'')).replace(/\s+/g,' ').trim();
+}
+function ojDocRequerido(r){
+  if(!r||!r.numDoc) return '';
+  return (r.tipoDoc==='SIN_DOC'?'':(r.tipoDoc||'')+' ')+sinPuntos(r.numDoc);
+}
+function ojDelitosTexto(c){
+  return (c.oj.proceso.delitos||[]).map(function(d){
+    return (d.nombre||'')+(d.articulo?' (art. '+d.articulo+(d.inciso?' inc. '+d.inciso:'')+(d.numeral?' num. '+d.numeral:'')+' C.P.)':'')+(d.agravado?' — agravado':'');
+  }).filter(Boolean).join('; ');
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   I.3 · FECHAS, VIGENCIA DE LA ORDEN Y PLAZO CONSTITUCIONAL
+   La vigencia de la orden (art. 298 CPP, mod. Ley 1453/2011 art. 56) y el
+   término de 36 horas (art. 28 C.P.) son las dos verificaciones críticas
+   del módulo: se calculan, se muestran con semáforo y bloquean la salida.
+───────────────────────────────────────────────────────────────────────── */
+var OJ_MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function ojFechaLarga(iso){
+  if(!iso) return '';
+  var p=String(iso).split('-'); if(p.length<3) return iso;
+  var m=parseInt(p[1],10);
+  return parseInt(p[2],10)+' de '+(OJ_MESES[m-1]||'')+' de '+p[0];
+}
+function ojFechaCorta(iso){
+  if(!iso) return '';
+  var p=String(iso).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):iso;
+}
+function ojFechaHora(iso,hora){
+  var f=ojFechaCorta(iso); if(!f) return '';
+  return f+(hora?' a las '+hora+' horas':'');
+}
+function ojDate(iso,hora){
+  if(!iso) return null;
+  var p=String(iso).split('-'); if(p.length<3) return null;
+  var h=(hora||'00:00').split(':');
+  var d=new Date(parseInt(p[0],10),parseInt(p[1],10)-1,parseInt(p[2],10),parseInt(h[0]||'0',10),parseInt(h[1]||'0',10),0,0);
+  return isNaN(d.getTime())?null:d;
+}
+function ojISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function ojHHMM(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function ojSumaMeses(iso,meses){
+  var d=ojDate(iso); if(!d) return '';
+  var dia=d.getDate();
+  d.setMonth(d.getMonth()+(parseInt(meses,10)||0));
+  if(d.getDate()<dia) d.setDate(0);      // 31 ene + 1 mes → 28/29 feb, no 3 mar
+  return ojISO(d);
+}
+// Vigencia: 1 año desde la expedición (6 meses si se expidió antes de la Ley 1453/2011),
+// más las prórrogas registradas. Devuelve estado + días restantes.
+function ojVigencia(orden){
+  var o=orden||{};
+  var meses=parseInt(o.vigenciaMeses,10);
+  if(!meses){ meses=(o.fechaExpedicion && o.fechaExpedicion<'2011-06-24')?6:12; }
+  var hasta=o.fechaExpedicion?ojSumaMeses(o.fechaExpedicion,meses):'';
+  (o.prorrogas||[]).forEach(function(p){ if(p&&p.hasta&&p.hasta>hasta) hasta=p.hasta; });
+  var manual=(o.estado==='CANCELADA'||o.estado==='SUSPENDIDA');
+  if(!hasta) return {hasta:'',estado:manual?o.estado:'',dias:null,meses:meses};
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var dHasta=ojDate(hasta); dHasta.setHours(23,59,59,999);
+  var dias=Math.floor((dHasta-hoy)/86400000);
+  var estado = manual?o.estado : (dias<0?'VENCIDA':(dias<=30?'POR_VENCER':((o.prorrogas||[]).length?'PRORROGADA':'VIGENTE')));
+  return {hasta:hasta,estado:estado,dias:dias,meses:meses};
+}
+// Término del art. 28 C.P.: 36 horas contadas desde la materialización.
+function ojPlazo36(c){
+  var d=ojDate(c.oj.diligencia.fecha,c.oj.diligencia.hora);
+  if(!d) return {vence:'',venceISO:'',horas:null,semaforo:''};
+  var v=new Date(d.getTime()+36*3600000);
+  var horas=(v-Date.now())/3600000;
+  var sem = horas<0?'VENCIDO':(horas<=6?'URGENTE':(horas<=12?'ALERTA':'OK'));
+  return {vence:ojFechaCorta(ojISO(v))+' a las '+ojHHMM(v)+' horas', venceISO:ojISO(v), venceHora:ojHHMM(v),
+          fecha:new Date(v), horas:horas, semaforo:sem};
+}
+// Festivos de Colombia calculados (Ley 51 de 1983: traslado al lunes siguiente).
+function ojPascua(anio){
+  var a=anio%19,b=Math.floor(anio/100),c=anio%100,d=Math.floor(b/4),e=b%4,
+      f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+      i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),
+      mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
+  return new Date(anio,mes-1,dia);
+}
+function ojFestivos(anio){
+  var out={}, add=function(d){ out[ojISO(d)]=true; };
+  [[0,1],[4,1],[6,20],[7,7],[11,8],[11,25]].forEach(function(p){ add(new Date(anio,p[0],p[1])); });
+  var lunes=function(d){ while(d.getDay()!==1) d.setDate(d.getDate()+1); return d; };
+  [[0,6],[2,19],[5,29],[7,15],[9,12],[10,1],[10,11]].forEach(function(p){ add(lunes(new Date(anio,p[0],p[1]))); });
+  var p=ojPascua(anio), dias=function(n){ return new Date(p.getFullYear(),p.getMonth(),p.getDate()+n); };
+  [-3,-2,43,64,71].forEach(function(n){ add(dias(n)); });
+  return out;
+}
+var _ojFestCache={};
+function ojEsFestivo(d){
+  var y=d.getFullYear();
+  if(!_ojFestCache[y]) _ojFestCache[y]=ojFestivos(y);
+  return !!_ojFestCache[y][ojISO(d)];
+}
+function ojEsHabil(d,cfg){
+  if(d.getDay()===0||d.getDay()===6) return false;
+  if(ojEsFestivo(d)) return false;
+  var ini=(cfg.ojJornadaIni||'08:00').split(':'), fin=(cfg.ojJornadaFin||'17:00').split(':');
+  var min=d.getHours()*60+d.getMinutes();
+  return min>=(+ini[0]*60+ +ini[1]) && min<=(+fin[0]*60+ +fin[1]);
+}
+function ojProximaHoraHabil(desde,cfg){
+  var ini=(cfg.ojJornadaIni||'08:00').split(':');
+  var d=new Date(desde.getTime());
+  for(var i=0;i<400;i++){
+    if(ojEsHabil(d,cfg)) return d;
+    var min=d.getHours()*60+d.getMinutes();
+    if(d.getDay()!==0&&d.getDay()!==6&&!ojEsFestivo(d)&&min<(+ini[0]*60+ +ini[1])){
+      d.setHours(+ini[0],+ini[1],0,0); continue;
+    }
+    d.setDate(d.getDate()+1); d.setHours(+ini[0],+ini[1],0,0);
+  }
+  return d;
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.4 · TERMINOLOGÍA Y MOTOR DE DECISIÓN DEL DESTINATARIO
+   La app nunca decide sola: calcula una propuesta, muestra su fundamento
+   legal y deja que el usuario la confirme o la corrija (dejando constancia).
+───────────────────────────────────────────────────────────────────────── */
+// Edad del requerido al momento de los hechos (no al momento de la captura):
+// es la que define si el caso va al sistema de responsabilidad para adolescentes.
+function ojEdadEnHechos(c){
+  var r=c.oj.requerido, fh=c.oj.proceso.fechaHechos||c.oj.diligencia.fecha;
+  if(!r.fechaNac||!fh) return null;
+  var n=ojDate(r.fechaNac), h=ojDate(fh); if(!n||!h) return null;
+  var a=h.getFullYear()-n.getFullYear();
+  if(h.getMonth()<n.getMonth()||(h.getMonth()===n.getMonth()&&h.getDate()<n.getDate())) a--;
+  return a;
+}
+function ojEsAdolescente(c){
+  if(c.oj.orden.tipoOrden==='SRPA') return true;
+  var e=ojEdadEnHechos(c);
+  return e!==null&&e>=14&&e<18;
+}
+// Para menores rige "aprehensión", no "captura" — diferencia legal, no cosmética.
+function ojTermino(c){
+  return ojEsAdolescente(c)
+    ? {sust:'aprehendido', Sust:'Aprehendido', acc:'aprehensión', Acc:'Aprehensión'}
+    : {sust:'capturado',  Sust:'Capturado',  acc:'captura',      Acc:'Captura'};
+}
+function ojResolverDestino(c){
+  var cfg=DB.getConfig(), o=c.oj.orden, d=c.oj.despacho;
+  var vig=ojVigencia(o);
+  var nombreDespacho=d.nombre||'';
+  if(vig.estado==='VENCIDA'){
+    return {tipo:'',nombre:'',regla:'R0-ORDEN-VENCIDA',
+      fundamento:'Art. 298 CPP (vigencia máxima de la orden); CSJ AP4491-2016',
+      nota:'La orden está vencida: procede dar aviso inmediato y por escrito a la autoridad que la libró y a la Fiscalía. No se propone destinatario hasta registrar la prórroga o el aviso.'};
+  }
+  if(ojEsAdolescente(c)){
+    return {tipo:'ADOLESCENTES',nombre:cfg.destCespa||'',regla:'R1-SRPA',
+      fundamento:'Ley 1098 de 2006 — Sistema de Responsabilidad Penal para Adolescentes',
+      nota:'El requerido era adolescente al momento de los hechos: el documento usa «aprehensión» y el destino es el centro de servicios judiciales para adolescentes. Debe avisarse a la defensoría de familia.'};
+  }
+  if(o.tipoOrden==='EXTRADICION'||o.finalidad==='EXTRADICION'){
+    return {tipo:'FISCALIA',nombre:nombreDespacho,regla:'R6-EXTRADICION',
+      fundamento:'Art. 509 CPP; C-243 de 2009',
+      nota:'La captura con fines de extradición la decreta el Fiscal General: es un trámite administrativo y no procede control de legalidad ante juez de garantías.'};
+  }
+  if(o.tipoOrden==='LEY600'){
+    return {tipo:'OTRO',nombre:nombreDespacho,regla:'R2-LEY600',
+      fundamento:'Ley 600 de 2000, arts. 336, 339 y 350',
+      nota:'En Ley 600 el capturado se pone a disposición del mismo despacho que libró la orden; no hay audiencia de legalización ante juez de control de garantías.'};
+  }
+  if(o.finalidad==='IMPUTACION'||o.finalidad==='MEDIDA_ASEGURAMIENTO'){
+    return {tipo:'FISCALIA',nombre:cfg.destUri||'',regla:'R3-FISCAL-INVESTIGACION',
+      fundamento:'Arts. 297 y 298 CPP',
+      nota:'La orden la libró el juez de control de garantías a petición del fiscal: el capturado se entrega al fiscal que dirige la investigación, quien lo presenta ante el juez de garantías dentro de las 36 horas. Se comunica al despacho que libró la orden para su cancelación.'};
+  }
+  if(o.finalidad==='CONDENA'||o.finalidad==='REVOCATORIA'||o.finalidad==='EJECUCION_FALLO'){
+    var disp=ojDisponibilidadDespacho(c,cfg);
+    if(disp.disponible){
+      return {tipo:d.tipo==='JEPMS'?'JEPMS':'CONOCIMIENTO',nombre:nombreDespacho,regla:'R4-A-JUEZ-DISPONIBLE',
+        fundamento:'Art. 298 par. 1º CPP; C-042 de 2018; CSJ AHP3538-2017',
+        nota:'Captura para el cumplimiento de la sentencia: no interviene fiscal. '+disp.explicacion};
+    }
+    return {tipo:'JCG',nombre:'',regla:'R4-B-JUEZ-NO-DISPONIBLE',
+      fundamento:'Art. 298 par. 1º CPP; C-042 de 2018',
+      nota:'El juzgado de conocimiento no está disponible dentro del término. '+disp.explicacion+' Según C-042 de 2018 el capturado puede presentarse ante el juez de control de garantías de turno, que resuelve su situación y ordena la presentación ante el juez que profirió la sentencia al día hábil siguiente.'};
+  }
+  return {tipo:'',nombre:nombreDespacho,regla:'R7-SIN-FINALIDAD',
+    fundamento:'Art. 28 C.P.; art. 297 CPP',
+    nota:'Registra la finalidad de la orden para que el módulo pueda proponer el destinatario.'};
+}
+function ojDisponibilidadDespacho(c,cfg){
+  var plazo=ojPlazo36(c);
+  if(!plazo.fecha) return {disponible:true,explicacion:'Registra la fecha y la hora de la diligencia para calcular la disponibilidad del despacho.'};
+  var ahora=new Date();
+  if(ojEsHabil(ahora,cfg)){
+    return {disponible:true,explicacion:'En este momento es horario judicial hábil ('+(cfg.ojJornadaIni||'08:00')+'–'+(cfg.ojJornadaFin||'17:00')+').'};
+  }
+  var prox=ojProximaHoraHabil(ahora,cfg);
+  var cabe=prox<plazo.fecha;
+  return {disponible:cabe,
+    explicacion:'Próxima hora judicial hábil: '+ojFechaCorta(ojISO(prox))+' a las '+ojHHMM(prox)+' horas; el término de 36 horas vence el '+plazo.vence+'.'};
+}
+function ojAplicarSugerencia(c){
+  var s=ojResolverDestino(c), d=c.oj.destino;
+  d.sugeridoTipo=s.tipo; d.sugeridoNombre=s.nombre;
+  d.reglaAplicada=s.regla; d.fundamento=s.fundamento;
+  if(!d.nombre&&s.nombre) d.nombre=s.nombre;
+  if(!d.tipo&&s.tipo) d.tipo=s.tipo;
+  return s;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   I.5 · MOTOR DE VALIDACIÓN
+   DURA  = impide generar el documento (produciría un informe legalmente
+           incompleto o contrario a la ley).
+   BLANDA= advierte y queda registrada, pero no bloquea.
+───────────────────────────────────────────────────────────────────────── */
+function ojValidar(c){
+  var v=[], o=c.oj.orden, d=c.oj.despacho, pr=c.oj.proceso, r=c.oj.requerido,
+      dl=c.oj.diligencia, ac=c.oj.actuacion, de=c.oj.destino;
+  function add(id,nivel,paso,msg){ v.push({id:id,nivel:nivel,paso:paso,msg:msg}); }
+  var vig=ojVigencia(o);
+
+  // Paso 1 — la orden
+  if(!o.numero) add('V02','DURA',0,'Falta el número de la orden de captura.');
+  if(!o.fechaExpedicion) add('V03','DURA',0,'Falta la fecha de expedición de la orden: sin ella no se puede calcular su vigencia.');
+  if(!o.finalidad) add('V04','DURA',0,'Falta la finalidad de la orden: de ella depende el destinatario y la ruta procesal.');
+  if(vig.estado==='VENCIDA') add('V01','DURA',0,'La orden está VENCIDA (venció el '+ojFechaCorta(vig.hasta)+'). Capturar con orden vencida obliga a la libertad inmediata (CSJ AP4491-2016). Registra la prórroga o el aviso a la autoridad que la libró.');
+  else if(vig.estado==='CANCELADA') add('V01b','DURA',0,'La orden figura CANCELADA: no puede sustentar una puesta a disposición.');
+  else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',0,'La orden figura SUSPENDIDA: verifica su estado con el despacho antes de generar el informe.');
+  else if(vig.estado==='POR_VENCER') add('V01d','BLANDA',0,'La orden vence en '+vig.dias+' día(s) ('+ojFechaCorta(vig.hasta)+').');
+  if(!o.motivoTextual) add('V06','BLANDA',0,'No se transcribió el texto íntegro del motivo de la orden. El informe lo cita literalmente cuando existe.');
+  if(!o.verificacion.hora) add('V17','BLANDA',0,'Sin hora de verificación de la orden en el sistema: es la constancia de que se comprobó la vigencia antes de materializar.');
+
+  // Paso 2 — el despacho
+  if(!d.nombre) add('V05','DURA',1,'Falta el despacho judicial que libró la orden.');
+  if(d.firma==='SIN_FIRMA') add('V19','BLANDA',1,'La orden se registró sin firma visible: el art. 28 C.P. exige mandamiento escrito de autoridad judicial.');
+  if(!d.municipio) add('V05b','BLANDA',1,'Falta el municipio del despacho que libró la orden.');
+
+  // Paso 3 — el proceso
+  if(!(pr.delitos||[]).length) add('V07','BLANDA',2,'No se registró ningún delito: el art. 298 CPP exige que la orden lo indique.');
+  if(!pr.radicado) add('V18','BLANDA',2,'Falta el radicado del proceso (SPOA / número del proceso) transcrito de la orden.');
+
+  // Paso 4 — el requerido
+  if(!r.priNom||!r.priApe) add('V08','DURA',3,'Falta el nombre completo del requerido.');
+  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') add('V09','DURA',3,'Falta el número de documento del requerido. Si no portaba documento, marca «Sin documento» e indica el método de identificación.');
+  if(!r.identidadMetodo) add('V10','BLANDA',3,'No se indicó cómo se confirmó la identidad. Es la verificación central en una captura por orden judicial (riesgo de homonimia).');
+  var edad=ojEdadEnHechos(c);
+  if(edad!==null&&edad<14) add('V11','DURA',3,'El requerido tenía '+edad+' años al momento de los hechos: es menor de 14 y no es responsable penalmente. No procede este informe; corresponde ruta de protección.');
+  else if(ojEsAdolescente(c)) add('V12','BLANDA',3,'El requerido era adolescente al momento de los hechos: el documento usa «aprehensión» y el destino es el sistema de adolescentes. Debe avisarse a la defensoría de familia.');
+
+  // Paso 5 — la materialización
+  if(!dl.fecha||!dl.hora) add('V13','DURA',4,'Falta la fecha o la hora de la '+ojTermino(c).acc+': de ahí arranca el término de 36 horas del art. 28 C.P.');
+  if(!dl.lugarDireccion) add('V14','DURA',4,'Falta el lugar exacto de la '+ojTermino(c).acc+'.');
+  if(!(dl.funcionarios||[]).length) add('V15','DURA',4,'Registra al menos un funcionario que participó en la diligencia.');
+
+  // Paso 6 — la actuación
+  if(!ac.derechos.leidos) add('V16','DURA',5,'Debe constar la lectura de los derechos del '+ojTermino(c).sust+' (art. 303 CPP).');
+  else if(!ac.derechos.hora) add('V16b','DURA',5,'Falta la hora de lectura de los derechos: sin ella la constancia del art. 303 CPP queda incompleta.');
+  if(ac.hayIncautacion&&(ac.incautaciones||[]).some(function(e){return !e.rotulo;}))
+    add('V20','BLANDA',5,'Hay elementos incautados sin rótulo de cadena de custodia.');
+  if(!(ac.anexos||[]).length) add('V21','BLANDA',5,'No se marcó ningún anexo. El acta de derechos y la copia de la orden viajan con el oficio.');
+
+  // Paso 7 — la disposición
+  if(!de.nombre) add('V22','DURA',6,'Falta el destinatario confirmado del informe.');
+  if(de.sugeridoNombre&&de.nombre&&de.nombre!==de.sugeridoNombre&&!de.motivoCambio)
+    add('V23','BLANDA',6,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
+  var plazo=ojPlazo36(c);
+  if(plazo.semaforo==='VENCIDO') add('V24','BLANDA',6,'El término de 36 horas ya venció ('+plazo.vence+'). Deja constancia de la causa en novedades.');
+  else if(plazo.semaforo==='URGENTE') add('V25','BLANDA',6,'Quedan menos de 6 horas del término constitucional (vence el '+plazo.vence+').');
+  return v;
+}
+function ojDuras(c){ return ojValidar(c).filter(function(x){return x.nivel==='DURA';}); }
+/* ─────────────────────────────────────────────────────────────────────────
+   I.6 · WIDGETS Y LISTAS REPETIBLES DEL FORMULARIO
+   Un único motor de listas (delitos, funcionarios, prórrogas, elementos):
+   se leen del DOM antes de cualquier alta/baja, así nada se pierde.
+───────────────────────────────────────────────────────────────────────── */
+function ojPost(fn){ setTimeout(fn,0); }
+function ojwF(label,inner,hint){
+  return '<div class="fg"><label class="fl">'+escHtml(label)+'</label>'+inner+
+    (hint?'<div class="oj-hint" style="margin:5px 0 0">'+escHtml(hint)+'</div>':'')+'</div>';
+}
+function ojwIn(id,val,ph,attrs){
+  return '<input class="fi'+(attrs&&attrs.mono?' mono':'')+'" id="'+id+'" value="'+escAttr(val||'')+'" placeholder="'+escAttr(ph||'')+'"'+((attrs&&attrs.extra)||'')+'>';
+}
+function ojwDt(id,val,extra){ return '<input type="date" class="fi" id="'+id+'" value="'+escAttr(val||'')+'"'+(extra||'')+'>'; }
+function ojwHr(id,val,extra){ return '<input type="time" class="fi" id="'+id+'" value="'+escAttr(val||'')+'"'+(extra||'')+'>'; }
+function ojwSel(id,cat,val,vacio,extra){
+  return '<select class="fs" id="'+id+'"'+(extra||'')+'>'+ojOpts(cat,val,vacio)+'</select>';
+}
+function ojwTA(id,val,ph,rows){
+  return '<textarea class="ft" id="'+id+'" rows="'+(rows||4)+'" placeholder="'+escAttr(ph||'')+'">'+escHtml(val||'')+'</textarea>';
+}
+function ojwChk(id,checked,label,sub,extra){
+  return '<label class="oj-chk"><input type="checkbox" id="'+id+'"'+(checked?' checked':'')+(extra||'')+'>'+
+    '<span>'+escHtml(label)+(sub?'<small>'+escHtml(sub)+'</small>':'')+'</span></label>';
+}
+function ojwR(a,b){ return '<div class="fr">'+a+b+'</div>'; }
+function ojwR3(a,b,c){ return '<div class="fr fr3">'+a+b+c+'</div>'; }
+function ojV(id){ var el=document.getElementById(id); return el?el.value:''; }
+function ojC(id){ var el=document.getElementById(id); return el?!!el.checked:false; }
+
+var OJ_LISTS={
+  delitos:{ path:'proceso.delitos', et:'Delito', vacio:'Sin delitos registrados. Agrega los que indique la orden (art. 298 CPP).',
+    campos:[
+      {k:'nombre',l:'Delito / conducta punible',ph:'Ej: Hurto calificado y agravado'},
+      {k:'articulo',l:'Artículo del Código Penal',ph:'Ej: 240',mono:true,par:'a'},
+      {k:'inciso',l:'Inciso',ph:'Ej: 2',mono:true,par:'b'},
+      {k:'numeral',l:'Numeral',ph:'Ej: 1',mono:true,par:'a'},
+      {k:'codigo',l:'Código del delito (SPOA)',ph:'Opcional',mono:true,par:'b'},
+      {k:'agravado',l:'Con circunstancias de agravación',t:'check'}
+    ]},
+  prorrogas:{ path:'orden.prorrogas', et:'Prórroga', vacio:'Sin prórrogas registradas.',
+    campos:[
+      {k:'fecha',l:'Fecha de la prórroga',t:'date',par:'a'},
+      {k:'hasta',l:'Nueva vigencia hasta',t:'date',par:'b'},
+      {k:'oficio',l:'Oficio o comunicación que la informa',ph:'Ej: oficio No. 1234 del despacho'}
+    ]},
+  funcionarios:{ path:'diligencia.funcionarios', et:'Funcionario', vacio:'Sin funcionarios registrados.',
+    campos:[
+      {k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a'},
+      {k:'cedula',l:'Cédula',ph:'Sin puntos',mono:true,par:'b'},
+      {k:'nombre',l:'Nombres y apellidos',ph:'Nombre completo'},
+      {k:'placa',l:'Placa institucional',ph:'Opcional',mono:true}
+    ]},
+  incautaciones:{ path:'actuacion.incautaciones', et:'Elemento', vacio:'Sin elementos registrados.',
+    campos:[
+      {k:'descripcion',l:'Descripción del elemento',ph:'Ej: un teléfono móvil marca…'},
+      {k:'cantidad',l:'Cantidad',ph:'Ej: 1',par:'a'},
+      {k:'rotulo',l:'Rótulo de cadena de custodia',ph:'No. del rótulo',mono:true,par:'b'},
+      {k:'entregadoA',l:'Entregado a',ph:'Unidad o funcionario que lo recibe'}
+    ]}
+};
+function ojRef(kind){
+  var parts=OJ_LISTS[kind].path.split('.'), o=wc.oj;
+  for(var i=0;i<parts.length-1;i++) o=o[parts[i]];
+  var last=parts[parts.length-1];
+  if(!Array.isArray(o[last])) o[last]=[];
+  return {obj:o,key:last,arr:o[last]};
+}
+function ojListaLeer(kind){
+  var d=OJ_LISTS[kind], ref=ojRef(kind);
+  var wrap=document.getElementById('oj-list-'+kind);
+  if(!wrap) return ref.arr;                       // el paso no está en pantalla: no tocar
+  var out=[];
+  function tieneAlgo(it){ for(var k in it){ if(it[k]&&it[k]!==false) return true; } return false; }
+  wrap.querySelectorAll('.oj-row').forEach(function(row){
+    var item={};
+    d.campos.forEach(function(f){
+      var el=row.querySelector('[data-k="'+f.k+'"]');
+      item[f.k]=el?(f.t==='check'?!!el.checked:el.value):'';
+    });
+    if(tieneAlgo(item)) out.push(item);   // una fila totalmente vacía no se guarda
+  });
+  ref.obj[ref.key]=out;
+  return out;
+}
+function ojListaPintar(kind){
+  var d=OJ_LISTS[kind], ref=ojRef(kind), wrap=document.getElementById('oj-list-'+kind);
+  if(!wrap) return;
+  if(!ref.arr.length){ wrap.innerHTML='<p class="oj-vacio">'+escHtml(d.vacio)+'</p>'; return; }
+  wrap.innerHTML=ref.arr.map(function(it,i){
+    var pares={}, html='';
+    d.campos.forEach(function(f){
+      var id='ojl-'+kind+'-'+i+'-'+f.k, campo;
+      if(f.t==='check') campo=ojwChk(id,!!it[f.k],f.l,'',' data-k="'+f.k+'"');
+      else if(f.t==='date') campo=ojwF(f.l,'<input type="date" class="fi" id="'+id+'" data-k="'+f.k+'" value="'+escAttr(it[f.k]||'')+'">');
+      else campo=ojwF(f.l,'<input class="fi'+(f.mono?' mono':'')+'" id="'+id+'" data-k="'+f.k+'" value="'+escAttr(it[f.k]||'')+'" placeholder="'+escAttr(f.ph||'')+'">');
+      if(f.par==='a'){ pares.a=campo; }
+      else if(f.par==='b'){ html+=ojwR(pares.a||'',campo); pares.a=null; }
+      else { if(pares.a){ html+=pares.a; pares.a=null; } html+=campo; }
+    });
+    if(pares.a) html+=pares.a;
+    return '<div class="oj-row">'+
+      '<div class="oj-row-hd"><span class="oj-row-n">'+escHtml(d.et)+' '+(i+1)+'</span>'+
+      '<button class="oj-row-x" onclick="ojListaQuitar(\''+kind+'\','+i+')">Quitar</button></div>'+
+      html+'</div>';
+  }).join('');
+}
+function ojListaAgregar(kind){
+  ojListaLeer(kind);
+  var ref=ojRef(kind); ref.arr.push({});
+  ojListaPintar(kind);
+}
+function ojListaQuitar(kind,i){
+  ojListaLeer(kind);
+  var ref=ojRef(kind); ref.arr.splice(i,1);
+  ojListaPintar(kind);
+}
+function ojListaBtn(kind,label){
+  return '<div id="oj-list-'+kind+'"></div>'+
+    '<button class="btn bs bsm" style="margin-top:6px" onclick="ojListaAgregar(\''+kind+'\')">+ '+escHtml(label)+'</button>';
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.7 · PASOS DEL FORMULARIO (1 a 4)
+   El orden sigue el de la orden judicial en papel: se transcribe de arriba
+   abajo sin saltar entre secciones.
+───────────────────────────────────────────────────────────────────────── */
+var OJ_STEPS=['Orden','Despacho','Proceso','Requerido','Materialización','Actuación','Disposición'];
+function ojWizConfig(){
+  return {steps:OJ_STEPS, panels:[ojStep1,ojStep2,ojStep3,ojStep4,ojStep5,ojStep6,ojStep7]};
+}
+
+// ── Paso 1 · La orden judicial ──
+function ojVigBoxHtml(){
+  var vig=ojVigencia(wc.oj.orden);
+  if(!vig.hasta) return '<div class="oj-alert info"><b>Vigencia</b>Registra la fecha de expedición para calcular hasta cuándo rige la orden (art. 298 CPP: máximo un año, prorrogable).</div>';
+  var cls={VIGENTE:'ok',PRORROGADA:'ok',POR_VENCER:'blanda',VENCIDA:'dura',CANCELADA:'dura',SUSPENDIDA:'dura'}[vig.estado]||'info';
+  var txt;
+  if(vig.estado==='VENCIDA') txt='La orden venció el '+ojFechaCorta(vig.hasta)+' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden vencida obliga a la libertad inmediata: avisa de inmediato y por escrito a la autoridad que la libró y a la Fiscalía, o registra la prórroga.';
+  else if(vig.estado==='CANCELADA'||vig.estado==='SUSPENDIDA') txt='La orden está marcada como '+ojLbl('estadoOrden',vig.estado).toLowerCase()+'. Verifica su estado con el despacho antes de continuar.';
+  else txt='Vigente hasta el '+ojFechaCorta(vig.hasta)+' ('+vig.dias+' día(s) restantes, vigencia de '+vig.meses+' meses'+((wc.oj.orden.prorrogas||[]).length?' + prórroga':'')+').';
+  return '<div class="oj-alert '+cls+'"><b>Vigencia de la orden — '+escHtml(ojLbl('estadoOrden',vig.estado)||'Sin calcular')+'</b>'+escHtml(txt)+
+    '<div class="oj-fund">Art. 298 CPP (mod. Ley 1453 de 2011, art. 56) · CSJ AP4491-2016</div></div>';
+}
+function ojRefrescarVigencia(){
+  var o=wc.oj.orden;
+  o.fechaExpedicion=ojV('oj-o-fexp'); o.vigenciaMeses=ojV('oj-o-meses'); o.estado=ojV('oj-o-estado');
+  ojListaLeer('prorrogas');
+  var box=document.getElementById('oj-vig-box'); if(box) box.innerHTML=ojVigBoxHtml();
+}
+function ojStep1(){
+  var o=wc.oj.orden;
+  ojPost(function(){ ojListaPintar('prorrogas'); });
+  return '<div class="st" style="margin-top:0">1 · La orden judicial</div>'+
+    '<p class="oj-hint">Transcribe la orden que tienes en la mano. La app no produce órdenes de captura: registra la que expidió el despacho y documenta su cumplimiento.</p>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Identificación</div>'+
+      ojwR(
+        ojwF('No. de la orden',ojwIn('oj-o-num',o.numero,'Ej: 002',{mono:true}),'Es un consecutivo del despacho, no un número único nacional.'),
+        ojwF('Marco procesal',ojwSel('oj-o-tipo','tipoOrden',o.tipoOrden,''))
+      )+
+      ojwF('Finalidad de la orden',ojwSel('oj-o-fin','finalidad',o.finalidad,'— Selecciona —'),'De la finalidad depende ante qué autoridad se pone al capturado.')+
+      ojwR(
+        ojwF('Autoridad solicitante',ojwIn('oj-o-solic',o.autoridadSolicitante,'Fiscal o autoridad que la pidió')),
+        ojwF('Orden dirigida a',ojwIn('oj-o-dirig',o.dirigidaA,'Ej: unidades de policía judicial'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Vigencia</div>'+
+      '<div id="oj-vig-box">'+ojVigBoxHtml()+'</div>'+
+      ojwR3(
+        ojwF('Fecha de expedición',ojwDt('oj-o-fexp',o.fechaExpedicion,' onchange="ojRefrescarVigencia()"')),
+        ojwF('Vigencia (meses)',ojwIn('oj-o-meses',o.vigenciaMeses,'12',{mono:true,extra:' inputmode="numeric" onchange="ojRefrescarVigencia()"'})),
+        ojwF('Estado',ojwSel('oj-o-estado','estadoOrden',o.estado,'',' onchange="ojRefrescarVigencia()"'))
+      )+
+      '<label class="fl" style="margin-top:4px">Prórrogas registradas</label>'+
+      '<p class="oj-hint">El fiscal puede prorrogar la orden cuantas veces sea necesario y debe comunicarlo a la policía judicial. Registra aquí la comunicación.</p>'+
+      ojListaBtn('prorrogas','Agregar prórroga')+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Motivo — texto íntegro de la orden</div>'+
+      '<p class="oj-hint">Se transcribe literal y el documento lo cita entre comillas, sin resumir ni reformular.</p>'+
+      ojwF('Transcripción textual',ojwTA('oj-o-motivo',o.motivoTextual,'Copia aquí, palabra por palabra, el motivo que expresa la orden.',6))+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Verificación antes de materializar</div>'+
+      '<p class="oj-hint">Constancia de que se comprobó la vigencia de la orden antes de privar de la libertad. Es lo que hoy falta en los oficios: no basta decir «registraba orden vigente», hay que decir dónde y cuándo se verificó.</p>'+
+      ojwR(
+        ojwF('Sistema o medio de consulta',ojwSel('oj-o-vsis','sistemaConsulta',o.verificacion.sistema,'')),
+        ojwF('Funcionario que verificó',ojwIn('oj-o-vfun',o.verificacion.funcionario,'Grado y nombre'))
+      )+
+      ojwR3(
+        ojwF('Fecha',ojwDt('oj-o-vfec',o.verificacion.fecha)),
+        ojwF('Hora',ojwHr('oj-o-vhor',o.verificacion.hora)),
+        ojwF('Resultado',
+          '<select class="fs" id="oj-o-vres">'+
+          ['POSITIVO','NEGATIVO','PENDIENTE'].map(function(x){
+            return '<option value="'+x+'"'+(o.verificacion.resultado===x?' selected':'')+'>'+(x==='POSITIVO'?'Positivo — registra orden':x==='NEGATIVO'?'Negativo':'Pendiente de confirmar')+'</option>';
+          }).join('')+'</select>')
+      )+
+      ojwF('Observación de la verificación',ojwIn('oj-o-vobs',o.verificacion.observacion,'Opcional'))+
+    '</div>';
+}
+
+// ── Paso 2 · El despacho que libró la orden ──
+function ojDespachosGuardados(){
+  var cfg=DB.getConfig(); return cfg.despachosPropios||[];
+}
+function ojSelectorDespacho(modoDestino){
+  window._ojDestinoMode=!!modoDestino;
+  var propios=ojDespachosGuardados();
+  var base=(typeof DESPACHOS_MEDELLIN!=='undefined'?DESPACHOS_MEDELLIN:[]).filter(function(d){
+    return d.tipo==='Juzgado'||d.tipo==='Fiscalía'||d.tipo==='Guardia';
+  }).map(function(d){ return {id:'base-'+d.id,nombre:d.nombre,direccion:d.dir,telefono:d.tel,municipio:'',departamento:'',base:true}; });
+  var todos=propios.concat(base);
+  openModal(
+    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<input class="fi" id="oj-desp-q" placeholder="Buscar por nombre o municipio…" oninput="ojSelectorDespachoFiltrar()" style="margin-bottom:12px">'+
+    '<div id="oj-desp-res"></div>'+
+    '<p class="oj-hint" style="margin-top:10px">Los despachos que diligencies a mano quedan guardados para reutilizarlos en próximas actuaciones.</p>'
+  );
+  window._ojDespCache=todos;
+  ojSelectorDespachoFiltrar();
+}
+function ojSelectorDespachoFiltrar(){
+  var q=(ojV('oj-desp-q')||'').toLowerCase();
+  var lista=(window._ojDespCache||[]).filter(function(d){
+    if(!q) return true;
+    return (d.nombre||'').toLowerCase().indexOf(q)>=0||(d.municipio||'').toLowerCase().indexOf(q)>=0;
+  });
+  var el=document.getElementById('oj-desp-res'); if(!el) return;
+  if(!lista.length){ el.innerHTML='<p class="oj-vacio">Sin resultados. Cierra y diligencia el despacho a mano: quedará guardado.</p>'; return; }
+  el.innerHTML=lista.slice(0,40).map(function(d,i){
+    return '<div class="oj-row" style="cursor:pointer" onclick="ojUsarDespacho('+i+')">'+
+      '<div style="font-size:13.5px;font-weight:600;color:var(--text)">'+escHtml(d.nombre)+'</div>'+
+      (d.municipio?'<div class="oj-hint" style="margin:3px 0 0">'+escHtml(d.municipio+(d.departamento?', '+d.departamento:''))+'</div>':'')+
+      (d.direccion?'<div class="oj-hint" style="margin:2px 0 0">'+escHtml(d.direccion)+'</div>':'')+
+    '</div>';
+  }).join('');
+  window._ojDespFiltrados=lista.slice(0,40);
+}
+function ojUsarDespacho(i){
+  var d=(window._ojDespFiltrados||[])[i]; if(!d) return;
+  ojCollect();                                   // no perder lo ya escrito en el paso
+  if(window._ojDestinoMode){                     // el mismo selector alimenta el paso 7
+    window._ojDestinoMode=false;
+    var x=wc.oj.destino;
+    x.nombre=d.nombre||''; x.direccion=d.direccion||x.direccion;
+    x.municipio=d.municipio||x.municipio; x.departamento=d.departamento||x.departamento;
+    x.telefono=d.telefono||x.telefono; x.correo=d.correo||x.correo;
+    if(d.tipo) x.tipo=d.tipo;
+    closeModal(); renderWiz(); toast('Destinatario cargado ✓'); return;
+  }
+  var dp=wc.oj.despacho;
+  dp.despachoId=d.id||''; dp.nombre=d.nombre||'';
+  if(d.tipo) dp.tipo=d.tipo;
+  if(d.especialidad) dp.especialidad=d.especialidad;
+  dp.municipio=d.municipio||dp.municipio; dp.departamento=d.departamento||dp.departamento;
+  dp.direccion=d.direccion||dp.direccion; dp.telefono=d.telefono||dp.telefono; dp.correo=d.correo||dp.correo;
+  if(d.identificacion) dp.identificacion=d.identificacion;
+  closeModal(); renderWiz(); toast('Despacho cargado ✓');
+}
+function ojGuardarDespacho(){
+  ojCollect();
+  var d=wc.oj.despacho;
+  if(!d.nombre){ toast('Escribe primero el nombre del despacho'); return; }
+  var cfg=DB.getConfig(); var lista=cfg.despachosPropios||[];
+  var reg={id:d.despachoId&&d.despachoId.indexOf('base-')!==0?d.despachoId:uid(),
+    nombre:d.nombre,tipo:d.tipo,especialidad:d.especialidad,municipio:d.municipio,departamento:d.departamento,
+    direccion:d.direccion,telefono:d.telefono,correo:d.correo,identificacion:d.identificacion};
+  var i=-1; lista.forEach(function(x,ix){ if(x.id===reg.id||x.nombre===reg.nombre) i=ix; });
+  if(i>=0) lista[i]=reg; else lista.push(reg);
+  cfg.despachosPropios=lista; DB.saveConfig(cfg);
+  wc.oj.despacho.despachoId=reg.id;
+  toast('Despacho guardado para reutilizarlo ✓');
+}
+function ojStep2(){
+  var d=wc.oj.despacho;
+  return '<div class="st" style="margin-top:0">2 · Despacho judicial que libró la orden</div>'+
+    '<p class="oj-hint">Este bloque alimenta el encabezado del destinatario del oficio. Si el despacho ya está registrado, se diligencia solo.</p>'+
+    '<button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="ojSelectorDespacho()">Buscar en despachos guardados</button>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Identificación del despacho</div>'+
+      ojwF('Nombre completo del despacho',ojwIn('oj-d-nom',d.nombre,'Ej: Juzgado Segundo Penal Municipal con Función de Control de Garantías'))+
+      ojwR(
+        ojwF('Tipo',ojwSel('oj-d-tipo','tipoDespacho',d.tipo,'— Selecciona —')),
+        ojwF('Especialidad',ojwSel('oj-d-esp','especialidad',d.especialidad,'— Selecciona —'))
+      )+
+      ojwR(
+        ojwF('Municipio',ojwIn('oj-d-mun',d.municipio,'Municipio del despacho')),
+        ojwF('Departamento',ojwIn('oj-d-dep',d.departamento,'Departamento'))
+      )+
+      ojwF('Dirección',ojwIn('oj-d-dir',d.direccion,'Dirección para el encabezado del oficio'))+
+      ojwR(
+        ojwF('Teléfono',ojwIn('oj-d-tel',d.telefono,'Opcional',{mono:true})),
+        ojwF('Correo electrónico',ojwIn('oj-d-cor',d.correo,'Opcional'))
+      )+
+      ojwR(
+        ojwF('Identificación del despacho',ojwIn('oj-d-ident',d.identificacion,'Código o identificador interno',{mono:true})),
+        ojwF('Funcionario responsable',ojwIn('oj-d-resp',d.funcionarioResponsable,'Secretario o quien suscribe'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Juez que suscribe la orden</div>'+
+      ojwR(
+        ojwF('Nombre del juez',ojwIn('oj-d-juez',d.juezNombre,'Nombres y apellidos')),
+        ojwF('Cargo',ojwIn('oj-d-cargo',d.juezCargo,'Ej: Juez'))
+      )+
+      ojwF('Firma que trae la orden',ojwSel('oj-d-firma','firmaOrden',d.firma,''),'El art. 28 de la Constitución exige mandamiento escrito de autoridad judicial competente.')+
+    '</div>'+
+    '<button class="btn bs bbl bsm" onclick="ojGuardarDespacho()">Guardar este despacho para reutilizarlo</button>';
+}
+
+// ── Paso 3 · El proceso ──
+function ojStep3(){
+  var p=wc.oj.proceso, fin=wc.oj.orden.finalidad;
+  var esCondena=(fin==='CONDENA'||fin==='REVOCATORIA'||fin==='EJECUCION_FALLO');
+  ojPost(function(){ ojListaPintar('delitos'); });
+  return '<div class="st" style="margin-top:0">3 · Proceso judicial</div>'+
+    '<p class="oj-hint">Datos del proceso dentro del cual se libró la orden. En orden judicial el radicado llega completo desde la orden: se transcribe tal cual, sin recortar.</p>'+
+
+    '<div class="oj-blk">'+
+      ojwF('Número del proceso / radicado (SPOA)',ojwIn('oj-p-rad',p.radicado,'Transcríbelo completo desde la orden',{mono:true}))+
+      ojwR(
+        ojwF('Fecha de los hechos',ojwDt('oj-p-fhec',p.fechaHechos)),
+        ojwF('Fecha de la decisión judicial',ojwDt('oj-p-fdec',p.fechaDecision))
+      )+
+      ojwF('Código interno',ojwIn('oj-p-cod',p.codigoInterno,'Opcional — consecutivo interno del despacho',{mono:true}))+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Delitos y artículos aplicados</div>'+
+      ojListaBtn('delitos','Agregar delito')+
+    '</div>'+
+
+    (esCondena?
+    '<div class="oj-blk">'+
+      '<div class="st">Pena impuesta</div>'+
+      '<p class="oj-hint">Solo aplica cuando la orden es para el cumplimiento de una sentencia.</p>'+
+      ojwR(
+        ojwF('Descripción de la pena',ojwIn('oj-p-pena',p.pena.descripcion,'Ej: prisión')),
+        ojwF('Meses de prisión',ojwIn('oj-p-penam',p.pena.meses,'Ej: 96',{mono:true,extra:' inputmode="numeric"'}))
+      )+
+      ojwF('Penas accesorias',ojwIn('oj-p-penaa',p.pena.accesorias,'Opcional'))+
+    '</div>':'')+
+
+    '<div class="oj-blk">'+
+      ojwF('Descripción jurídica',ojwTA('oj-p-desc',p.descripcionJuridica,'Síntesis jurídica de la decisión, tal como la refiere la orden.',4))+
+    '</div>';
+}
+
+// ── Paso 4 · El requerido ──
+function ojStep4(){
+  var r=wc.oj.requerido, t=ojTermino(wc);
+  var edad=ojEdadEnHechos(wc);
+  var aviso='';
+  if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>Al momento de los hechos tenía '+edad+' años: no es responsable penalmente. No procede el informe de captura; corresponde activar la ruta de protección.</div>';
+  else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Sistema de responsabilidad penal para adolescentes</b>Al momento de los hechos tenía '+(edad===null?'menos de 18':edad)+' años: el documento hablará de «aprehensión» y el destino será el sistema de adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
+  return '<div class="st" style="margin-top:0">4 · Persona requerida</div>'+
+    '<p class="oj-hint">En una captura por orden judicial la verificación central es la identidad: estos datos son los que permiten descartar una homonimia.</p>'+
+    aviso+
+    '<button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="ojCargarPersona()">Cargar desde Personas</button>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Identificación</div>'+
+      ojwR(
+        ojwF('Primer nombre',ojwIn('oj-r-pn',r.priNom,'')),
+        ojwF('Segundo nombre',ojwIn('oj-r-sn',r.segNom,''))
+      )+
+      ojwR(
+        ojwF('Primer apellido',ojwIn('oj-r-pa',r.priApe,'')),
+        ojwF('Segundo apellido',ojwIn('oj-r-sa',r.segApe,''))
+      )+
+      ojwR(
+        ojwF('Tipo de documento',ojwSel('oj-r-td','tipoDoc',r.tipoDoc,'')),
+        ojwF('Número de documento',ojwIn('oj-r-nd',r.numDoc,'Sin puntos',{mono:true,extra:' inputmode="numeric"'}))
+      )+
+      ojwR(
+        ojwF('Expedido en',ojwIn('oj-r-exp',r.expedidoEn,'Municipio de expedición')),
+        ojwF('Alias',ojwIn('oj-r-ali',r.alias,'Como figura en la orden'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Datos personales</div>'+
+      ojwR3(
+        ojwF('Fecha de nacimiento',ojwDt('oj-r-fn',r.fechaNac)),
+        ojwF('Edad',ojwIn('oj-r-ed',r.edad,'Años',{mono:true,extra:' inputmode="numeric"'})),
+        ojwF('Sexo',ojwSel('oj-r-sx','sexo',r.sexo,'— Selecciona —'))
+      )+
+      ojwR(
+        ojwF('Nacionalidad',ojwIn('oj-r-nac',r.nacionalidad,'Ej: Colombiana')),
+        ojwF('Estado civil',ojwSel('oj-r-ec','estadoCivil',r.estadoCivil,'— Selecciona —'))
+      )+
+      ojwF('Profesión u ocupación',ojwIn('oj-r-pro',r.profesion,'Ej: comerciante'))+
+      '<label class="fl">Lugar de nacimiento</label>'+
+      ojwR3(
+        ojwF('País',ojwIn('oj-r-np',r.nacPais,'Colombia')),
+        ojwF('Departamento',ojwIn('oj-r-ndep',r.nacDepartamento,'')),
+        ojwF('Municipio',ojwIn('oj-r-nmun',r.nacMunicipio,''))
+      )+
+      ojwR(
+        ojwF('Nombre de la madre',ojwIn('oj-r-madre',r.madre,'Nombres y apellidos')),
+        ojwF('Nombre del padre',ojwIn('oj-r-padre',r.padre,'Nombres y apellidos'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Residencia</div>'+
+      ojwF('Dirección',ojwIn('oj-r-rdir',r.resDireccion,'Dirección de residencia'))+
+      ojwR(
+        ojwF('Barrio o vereda',ojwIn('oj-r-rbar',r.resBarrio,'')),
+        ojwF('Teléfono',ojwIn('oj-r-rtel',r.resTelefono,'',{mono:true}))
+      )+
+      ojwR(
+        ojwF('Municipio',ojwIn('oj-r-rmun',r.resMunicipio,'')),
+        ojwF('Departamento',ojwIn('oj-r-rdep',r.resDepartamento,''))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Características físicas y señales</div>'+
+      ojwR3(
+        ojwF('Estatura',ojwIn('oj-r-est',r.rasgos.estatura,'Ej: 1,72 m')),
+        ojwF('Contextura',ojwIn('oj-r-con',r.rasgos.contextura,'Ej: delgada')),
+        ojwF('Tez',ojwIn('oj-r-tez',r.rasgos.tez,'Ej: trigueña'))
+      )+
+      ojwR(
+        ojwF('Cabello',ojwIn('oj-r-cab',r.rasgos.cabello,'Ej: negro, corto')),
+        ojwF('Ojos',ojwIn('oj-r-ojo',r.rasgos.ojos,'Ej: café'))
+      )+
+      ojwF('Señales particulares visibles',ojwTA('oj-r-sen',r.senales,'Cicatrices, tatuajes, lunares u otras señas que permitan individualizar.',3))+
+      ojwF('Demás datos identificativos',ojwTA('oj-r-otros',r.otrosDatos,'Cualquier otro dato de individualización que traiga la orden.',3))+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Confirmación de la identidad</div>'+
+      '<p class="oj-hint">Cómo se estableció que la persona '+escHtml(ojTermino(wc).sust==='aprehendido'?'aprehendida':'capturada')+' es la requerida por la orden.</p>'+
+      ojwF('Método',ojwSel('oj-r-imet','metodoIdent',r.identidadMetodo,'— Selecciona —'))+
+      ojwF('Observación',ojwIn('oj-r-iobs',r.identidadObservacion,'Ej: se confirmó con reseña decadactilar'))+
+    '</div>';
+}
+function ojCargarPersona(){
+  var personas=DB.getPersons();
+  if(!personas.length){ toast('Aún no hay personas guardadas'); return; }
+  openModal(
+    '<div class="mh"><h2>Cargar persona</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    personas.slice(0,60).map(function(p){
+      return '<div class="oj-row" style="cursor:pointer" onclick="ojUsarPersona(\''+p.id+'\')">'+
+        '<div style="font-size:13.5px;font-weight:600;color:var(--text)">'+escHtml(fullName(p))+'</div>'+
+        '<div class="oj-hint" style="margin:3px 0 0">'+escHtml((p.tipoDoc||'')+' '+sinPuntos(p.numDoc||''))+'</div></div>';
+    }).join('')
+  );
+}
+function ojUsarPersona(id){
+  var p=DB.getPerson(id); if(!p) return;
+  ojCollect();
+  var r=wc.oj.requerido;
+  r.personaId=p.id; r.priNom=p.priNom||''; r.segNom=p.segNom||''; r.priApe=p.priApe||''; r.segApe=p.segApe||'';
+  r.tipoDoc=p.tipoDoc||r.tipoDoc; r.numDoc=sinPuntos(p.numDoc||'');
+  r.expedidoEn=p.expEn||r.expedidoEn;
+  r.fechaNac=p.fn||r.fechaNac; r.edad=p.edad||r.edad;
+  r.profesion=p.ocup||r.profesion;
+  r.nacMunicipio=p.lugNac||r.nacMunicipio;
+  r.resDireccion=p.dirRes||r.resDireccion; r.resTelefono=p.tel||r.resTelefono;
+  r.senales=p.senas||r.senales;
+  if(p.alias&&p.alias!=='N/A') r.alias=p.alias;
+  closeModal(); renderWiz(); toast('Persona cargada ✓');
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.8 · PASOS DEL FORMULARIO (5 a 7)
+───────────────────────────────────────────────────────────────────────── */
+function ojReloj36Html(){
+  var p=ojPlazo36(wc);
+  if(!p.vence) return '<div class="oj-alert info"><b>Término constitucional</b>Registra la fecha y la hora de la diligencia: de ahí arrancan las 36 horas del art. 28 de la Constitución.</div>';
+  var cls={OK:'ok',ALERTA:'blanda',URGENTE:'dura',VENCIDO:'dura'}[p.semaforo]||'info';
+  var horas=Math.floor(Math.abs(p.horas)), mins=Math.round((Math.abs(p.horas)-horas)*60);
+  var txt=p.horas<0
+    ? 'El término venció hace '+horas+' h '+mins+' min (vencía el '+p.vence+').'
+    : 'Quedan '+horas+' h '+mins+' min. Vence el '+p.vence+'.';
+  return '<div class="oj-alert '+cls+'"><b>Término de 36 horas — '+p.semaforo+'</b>'+escHtml(txt)+
+    '<div class="oj-fund">Art. 28 de la Constitución Política · art. 297 CPP</div></div>';
+}
+function ojGPS(){
+  if(!navigator.geolocation){ toast('Este equipo no reporta ubicación'); return; }
+  toast('Obteniendo coordenadas…');
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var el=document.getElementById('oj-g-coord');
+    if(el){ el.value=pos.coords.latitude.toFixed(6)+', '+pos.coords.longitude.toFixed(6); toast('Coordenadas capturadas ✓'); }
+  },function(){ toast('No se pudo obtener la ubicación'); },{enableHighAccuracy:true,timeout:10000});
+}
+function ojStep5(){
+  var g=wc.oj.diligencia, t=ojTermino(wc);
+  ojPost(function(){ ojListaPintar('funcionarios'); });
+  return '<div class="st" style="margin-top:0">5 · Materialización de la '+escHtml(t.acc)+'</div>'+
+    ojReloj36Html()+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Fecha, hora y lugar</div>'+
+      ojwR(
+        ojwF('Fecha de la '+t.acc,ojwDt('oj-g-fec',g.fecha)),
+        ojwF('Hora (24 h)',ojwHr('oj-g-hor',g.hora))
+      )+
+      ojwF('Dirección exacta',ojwIn('oj-g-dir',g.lugarDireccion,'Ej: calle 53 con carrera 51'))+
+      ojwR(
+        ojwF('Barrio o vereda',ojwIn('oj-g-bar',g.lugarBarrio,'')),
+        ojwF('Tipo de lugar',ojwSel('oj-g-tlug','tipoLugar',g.lugarTipo,''))
+      )+
+      ojwR(
+        ojwF('Municipio',ojwIn('oj-g-mun',g.lugarMunicipio,'')),
+        ojwF('Departamento',ojwIn('oj-g-dep',g.lugarDepartamento,''))
+      )+
+      ojwF('Coordenadas geográficas',ojwIn('oj-g-coord',g.coordenadas,'Latitud, longitud',{mono:true}))+
+      '<button class="btn bs bsm" onclick="ojGPS()">Tomar del GPS del equipo</button>'+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Cómo se ubicó al requerido</div>'+
+      ojwF('Forma de ubicación',ojwSel('oj-g-form','formaUbicacion',g.formaUbicacion,'',' onchange="ojCollect();renderWiz()"'))+
+      (g.formaUbicacion==='OTRA'?ojwF('Describe la forma de ubicación',ojwIn('oj-g-formo',g.formaUbicacionOtra,'')):'')+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Unidad que realizó la diligencia</div>'+
+      ojwR(
+        ojwF('Unidad policial',ojwIn('oj-g-uni',g.unidad,'Ej: estación o CAI')),
+        ojwF('Patrulla',ojwIn('oj-g-pat',g.patrulla,'Ej: 32'))
+      )+
+      ojwF('Vehículo institucional',ojwIn('oj-g-veh',g.vehiculo,'Placa o identificación interna',{mono:true}))+
+      '<label class="fl" style="margin-top:4px">Funcionarios participantes</label>'+
+      ojListaBtn('funcionarios','Agregar funcionario')+
+    '</div>';
+}
+function ojStep6(){
+  var a=wc.oj.actuacion, t=ojTermino(wc);
+  ojPost(function(){ ojListaPintar('incautaciones'); });
+  var anexosSel=a.anexos||[];
+  var anexosHtml=OJ_CAT.anexos.map(function(x,i){
+    return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,x);
+  }).join('');
+  var otros=anexosSel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }).join(', ');
+  return '<div class="st" style="margin-top:0">6 · Actuación policial</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Derechos del '+escHtml(t.sust)+'</div>'+
+      '<p class="oj-hint">La app no genera el acta de derechos: se diligencia aparte y viaja como anexo. Aquí queda la constancia de que se leyeron, con hora y lugar (art. 303 CPP).</p>'+
+      ojwChk('oj-a-dler',a.derechos.leidos,'Se leyeron y materializaron los derechos','Guardar silencio, designar defensor, ser informado del hecho y de quién ordenó la captura, comunicar su situación.')+
+      ojwR3(
+        ojwF('Fecha',ojwDt('oj-a-dfec',a.derechos.fecha)),
+        ojwF('Hora (24 h)',ojwHr('oj-a-dhor',a.derechos.hora)),
+        ojwF('Lugar',ojwIn('oj-a-dlug',a.derechos.lugar,'Dónde se leyeron'))
+      )+
+      ojwF('Observación',ojwIn('oj-a-dobs',a.derechos.observacion,'Opcional'))+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Comunicación y defensa</div>'+
+      ojwR(
+        ojwF('Persona a quien se comunicó',ojwIn('oj-a-cnom',a.comunicacion.nombre,'Nombre')),
+        ojwF('Parentesco',ojwSel('oj-a-cpar','parentesco',a.comunicacion.parentesco,'— Selecciona —'))
+      )+
+      ojwR(
+        ojwF('Teléfono',ojwIn('oj-a-ctel',a.comunicacion.telefono,'',{mono:true})),
+        ojwF('Hora de la comunicación',ojwHr('oj-a-chor',a.comunicacion.hora))
+      )+
+      ojwR(
+        ojwF('Defensor',ojwSel('oj-a-dtipo','defensor',a.defensor.tipo,'— Selecciona —')),
+        ojwF('Nombre del defensor',ojwIn('oj-a-dnom',a.defensor.nombre,'Si lo designó'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Uso de la fuerza y estado de salud</div>'+
+      ojwF('Uso de la fuerza',ojwSel('oj-a-fza','usoFuerza',a.fuerza.tipo,''))+
+      ojwF('Descripción del uso de la fuerza',ojwIn('oj-a-fzad',a.fuerza.descripcion,'Solo si se empleó'))+
+      ojwChk('oj-a-lhubo',a.lesiones.hubo,'Se presentaron lesiones')+
+      ojwF('Descripción de las lesiones',ojwIn('oj-a-ldesc',a.lesiones.descripcion,'Opcional'))+
+      ojwR(
+        ojwF('Valoración médica',
+          '<select class="fs" id="oj-a-vmed">'+
+          [['','— Selecciona —'],['SI','Realizada'],['NO','No realizada'],['RENUENCIA','El '+t.sust+' se negó']].map(function(x){
+            return '<option value="'+x[0]+'"'+((a.valoracion.realizada||'')===x[0]?' selected':'')+'>'+escHtml(x[1])+'</option>';
+          }).join('')+'</select>'),
+        ojwF('Entidad que la practicó',ojwIn('oj-a-vent',a.valoracion.entidad,'Opcional'))
+      )+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Elementos incautados y cadena de custodia</div>'+
+      ojwChk('oj-a-hayinc',a.hayIncautacion,'Se incautaron elementos en la diligencia','Si el hallazgo constituye un delito nuevo, se registra como caso de flagrancia aparte: este informe solo lo menciona.')+
+      ojListaBtn('incautaciones','Agregar elemento')+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Novedades y observaciones</div>'+
+      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Hechos relevantes ocurridos durante el procedimiento.',3))+
+      ojwF('Observaciones',ojwTA('oj-a-obs',a.observaciones,'Cualquier precisión que deba conocer la autoridad receptora.',3))+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Anexos que acompañan el oficio</div>'+
+      anexosHtml+
+      ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas'))+
+    '</div>';
+}
+function ojStep7(){
+  var d=wc.oj.destino, s=ojAplicarSugerencia(wc);
+  var vals=ojValidar(wc), duras=vals.filter(function(v){return v.nivel==='DURA';}), blandas=vals.filter(function(v){return v.nivel!=='DURA';});
+  var sug='<div class="oj-alert '+(s.regla.indexOf('R0')===0?'dura':'info')+'">'+
+    '<b>Destinatario propuesto'+(s.nombre?' — '+escHtml(ojLbl('tipoDespacho',s.tipo)||s.tipo):'')+'</b>'+
+    (s.nombre?escHtml(s.nombre)+'<br>':'')+escHtml(s.nota)+
+    '<div class="oj-fund">'+escHtml(s.regla)+' · '+escHtml(s.fundamento)+'</div></div>';
+  var lista=function(arr,cls,titulo){
+    if(!arr.length) return '';
+    return '<div class="oj-alert '+cls+'"><b>'+titulo+'</b>'+arr.map(function(v){
+      return '· Paso '+(v.paso+1)+' ('+OJ_STEPS[v.paso]+'): '+escHtml(v.msg);
+    }).join('<br>')+'</div>';
+  };
+  return '<div class="st" style="margin-top:0">7 · Puesta a disposición</div>'+
+    ojReloj36Html()+
+    sug+
+    '<div class="oj-blk">'+
+      '<div class="st">Destinatario confirmado</div>'+
+      '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDestino()">Buscar en despachos guardados</button>'+
+      ojwF('Autoridad ante la que se deja a disposición',ojwIn('oj-x-nom',d.nombre,'Nombre completo de la autoridad receptora'))+
+      ojwR(
+        ojwF('Tipo',ojwSel('oj-x-tipo','tipoDespacho',d.tipo,'— Selecciona —')),
+        ojwF('Dirección',ojwIn('oj-x-dir',d.direccion,'Para el encabezado del oficio'))
+      )+
+      ojwR(
+        ojwF('Municipio',ojwIn('oj-x-mun',d.municipio,'')),
+        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,''))
+      )+
+      ojwF('Motivo del cambio de destinatario',ojwIn('oj-x-mot',d.motivoCambio,'Solo si te apartas de la propuesta'),'Queda registrado en el caso para que la decisión sea trazable meses después.')+
+    '</div>'+
+
+    '<div class="oj-blk">'+
+      '<div class="st">Entrega</div>'+
+      ojwR(
+        ojwF('Fecha de entrega',ojwDt('oj-x-fec',d.fechaEntrega)),
+        ojwF('Hora de entrega',ojwHr('oj-x-hor',d.horaEntrega))
+      )+
+      ojwR(
+        ojwF('Quién recibe',ojwIn('oj-x-rec',d.recibeNombre,'Nombre')),
+        ojwF('Cargo',ojwIn('oj-x-rcar',d.recibeCargo,'Cargo'))
+      )+
+    '</div>'+
+
+    lista(duras,'dura','Faltan datos obligatorios ('+duras.length+')')+
+    lista(blandas,'blanda','Advertencias ('+blandas.length+')')+
+    (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles. Guarda el caso y genera el oficio desde la tarjeta de la captura.</div>')+
+    '<button class="btn boj bbl" onclick="ojGenerarDesdeWizard()" style="margin-top:6px">Generar oficio de puesta a disposición</button>'+
+    '<p class="oj-hint" style="margin-top:8px">Generar el oficio guarda antes el caso.</p>';
+}
+function ojSelectorDestino(){ ojSelectorDespacho(true); }
+/* ─────────────────────────────────────────────────────────────────────────
+   I.9 · RECOLECCIÓN DEL PASO ACTIVO
+   Se llama en cada avance/retroceso del wizard y antes de guardar o generar.
+───────────────────────────────────────────────────────────────────────── */
+function ojCollect(){
+  if(!wc||wc.ojv!==2) return;
+  var paso=OJ_STEPS[ws]||'';
+  var o=wc.oj.orden, d=wc.oj.despacho, p=wc.oj.proceso, r=wc.oj.requerido,
+      g=wc.oj.diligencia, a=wc.oj.actuacion, x=wc.oj.destino;
+  if(paso==='Orden'){
+    if(!document.getElementById('oj-o-num')) return;
+    o.numero=ojV('oj-o-num'); o.tipoOrden=ojV('oj-o-tipo'); o.finalidad=ojV('oj-o-fin');
+    o.autoridadSolicitante=ojV('oj-o-solic'); o.dirigidaA=ojV('oj-o-dirig');
+    o.fechaExpedicion=ojV('oj-o-fexp'); o.vigenciaMeses=ojV('oj-o-meses'); o.estado=ojV('oj-o-estado');
+    o.motivoTextual=ojV('oj-o-motivo');
+    o.verificacion={sistema:ojV('oj-o-vsis'),funcionario:ojV('oj-o-vfun'),fecha:ojV('oj-o-vfec'),
+      hora:ojV('oj-o-vhor'),resultado:ojV('oj-o-vres'),observacion:ojV('oj-o-vobs')};
+    ojListaLeer('prorrogas');
+    o.vigenciaHasta=ojVigencia(o).hasta;
+  } else if(paso==='Despacho'){
+    if(!document.getElementById('oj-d-nom')) return;
+    d.nombre=ojV('oj-d-nom'); d.tipo=ojV('oj-d-tipo'); d.especialidad=ojV('oj-d-esp');
+    d.municipio=ojV('oj-d-mun'); d.departamento=ojV('oj-d-dep'); d.direccion=ojV('oj-d-dir');
+    d.telefono=ojV('oj-d-tel'); d.correo=ojV('oj-d-cor'); d.identificacion=ojV('oj-d-ident');
+    d.funcionarioResponsable=ojV('oj-d-resp'); d.juezNombre=ojV('oj-d-juez');
+    d.juezCargo=ojV('oj-d-cargo'); d.firma=ojV('oj-d-firma');
+  } else if(paso==='Proceso'){
+    if(!document.getElementById('oj-p-rad')) return;
+    p.radicado=ojV('oj-p-rad'); p.fechaHechos=ojV('oj-p-fhec'); p.fechaDecision=ojV('oj-p-fdec');
+    p.codigoInterno=ojV('oj-p-cod'); p.descripcionJuridica=ojV('oj-p-desc');
+    if(document.getElementById('oj-p-pena'))
+      p.pena={descripcion:ojV('oj-p-pena'),meses:ojV('oj-p-penam'),accesorias:ojV('oj-p-penaa')};
+    ojListaLeer('delitos');
+  } else if(paso==='Requerido'){
+    if(!document.getElementById('oj-r-pn')) return;
+    r.priNom=ojV('oj-r-pn'); r.segNom=ojV('oj-r-sn'); r.priApe=ojV('oj-r-pa'); r.segApe=ojV('oj-r-sa');
+    r.tipoDoc=ojV('oj-r-td'); r.numDoc=sinPuntos(ojV('oj-r-nd')); r.expedidoEn=ojV('oj-r-exp'); r.alias=ojV('oj-r-ali');
+    r.fechaNac=ojV('oj-r-fn'); r.edad=ojV('oj-r-ed'); r.sexo=ojV('oj-r-sx');
+    r.nacionalidad=ojV('oj-r-nac'); r.estadoCivil=ojV('oj-r-ec'); r.profesion=ojV('oj-r-pro');
+    r.nacPais=ojV('oj-r-np'); r.nacDepartamento=ojV('oj-r-ndep'); r.nacMunicipio=ojV('oj-r-nmun');
+    r.madre=ojV('oj-r-madre'); r.padre=ojV('oj-r-padre');
+    r.resDireccion=ojV('oj-r-rdir'); r.resBarrio=ojV('oj-r-rbar'); r.resTelefono=ojV('oj-r-rtel');
+    r.resMunicipio=ojV('oj-r-rmun'); r.resDepartamento=ojV('oj-r-rdep');
+    r.rasgos={estatura:ojV('oj-r-est'),contextura:ojV('oj-r-con'),tez:ojV('oj-r-tez'),cabello:ojV('oj-r-cab'),ojos:ojV('oj-r-ojo')};
+    r.senales=ojV('oj-r-sen'); r.otrosDatos=ojV('oj-r-otros');
+    r.identidadMetodo=ojV('oj-r-imet'); r.identidadObservacion=ojV('oj-r-iobs');
+    if(!r.edad&&r.fechaNac) r.edad=String(calcAgeVal(r.fechaNac));
+  } else if(paso==='Materialización'){
+    if(!document.getElementById('oj-g-fec')) return;
+    g.fecha=ojV('oj-g-fec'); g.hora=ojV('oj-g-hor');
+    g.lugarDireccion=ojV('oj-g-dir'); g.lugarBarrio=ojV('oj-g-bar'); g.lugarTipo=ojV('oj-g-tlug');
+    g.lugarMunicipio=ojV('oj-g-mun'); g.lugarDepartamento=ojV('oj-g-dep'); g.coordenadas=ojV('oj-g-coord');
+    g.formaUbicacion=ojV('oj-g-form');
+    if(document.getElementById('oj-g-formo')) g.formaUbicacionOtra=ojV('oj-g-formo');
+    g.unidad=ojV('oj-g-uni'); g.patrulla=ojV('oj-g-pat'); g.vehiculo=ojV('oj-g-veh');
+    ojListaLeer('funcionarios');
+  } else if(paso==='Actuación'){
+    if(!document.getElementById('oj-a-dhor')) return;
+    a.derechos={leidos:ojC('oj-a-dler'),fecha:ojV('oj-a-dfec'),hora:ojV('oj-a-dhor'),
+      lugar:ojV('oj-a-dlug'),observacion:ojV('oj-a-dobs')};
+    a.comunicacion={nombre:ojV('oj-a-cnom'),parentesco:ojV('oj-a-cpar'),telefono:ojV('oj-a-ctel'),
+      hora:ojV('oj-a-chor'),seLogro:!!ojV('oj-a-cnom')};
+    a.defensor={tipo:ojV('oj-a-dtipo'),nombre:ojV('oj-a-dnom'),telefono:a.defensor.telefono||''};
+    a.fuerza={tipo:ojV('oj-a-fza'),descripcion:ojV('oj-a-fzad')};
+    a.lesiones={hubo:ojC('oj-a-lhubo'),descripcion:ojV('oj-a-ldesc')};
+    a.valoracion={realizada:ojV('oj-a-vmed'),entidad:ojV('oj-a-vent'),fecha:a.valoracion.fecha||'',
+      hora:a.valoracion.hora||'',renuencia:ojV('oj-a-vmed')==='RENUENCIA'};
+    a.hayIncautacion=ojC('oj-a-hayinc');
+    ojListaLeer('incautaciones');
+    a.novedades=ojV('oj-a-nov'); a.observaciones=ojV('oj-a-obs');
+    var anx=[];
+    OJ_CAT.anexos.forEach(function(x,i){ if(ojC('oj-a-anx'+i)) anx.push(x); });
+    ojV('oj-a-anxo').split(',').forEach(function(s){ s=s.trim(); if(s) anx.push(s); });
+    a.anexos=anx;
+  } else if(paso==='Disposición'){
+    if(!document.getElementById('oj-x-nom')) return;
+    x.nombre=ojV('oj-x-nom'); x.tipo=ojV('oj-x-tipo'); x.direccion=ojV('oj-x-dir');
+    x.municipio=ojV('oj-x-mun'); x.departamento=ojV('oj-x-dep'); x.motivoCambio=ojV('oj-x-mot');
+    x.fechaEntrega=ojV('oj-x-fec'); x.horaEntrega=ojV('oj-x-hor');
+    x.recibeNombre=ojV('oj-x-rec'); x.recibeCargo=ojV('oj-x-rcar');
+  }
+  wc.updated=Date.now();
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.10 · CONSTRUCTOR OOXML
+   El cuerpo del oficio se construye aquí, párrafo por párrafo. Nunca sale
+   de una plantilla editable: así la estructura documental y el mapeo de
+   datos quedan bajo control de la app (spec § 7).
+   Geometría: carta 12240×15840, márgenes 1701 izq / 1134 der → 9405 útiles.
+───────────────────────────────────────────────────────────────────────── */
+var OJX_W=9405;                 // ancho del área de contenido, en twips
+var OJX_FUENTE='Arial';
+function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
+function ojxRun(txt,o){
+  o=o||{};
+  var sz=o.sz||24;
+  // Mismo criterio que en w:pPr: el esquema exige rFonts → b → i → caps →
+  // color → sz → u. Un orden distinto abre el documento "dañado" en Word.
+  var rpr='<w:rPr><w:rFonts w:ascii="'+OJX_FUENTE+'" w:hAnsi="'+OJX_FUENTE+'" w:cs="'+OJX_FUENTE+'"/>'+
+    (o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/><w:iCs/>':'')+
+    (o.caps?'<w:caps/>':'')+(o.color?'<w:color w:val="'+o.color+'"/>':'')+
+    '<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>'+
+    (o.u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+  var partes=String(txt==null?'':txt).split('\n');
+  var cuerpo=partes.map(function(t,i){
+    return (i?'<w:br/>':'')+'<w:t xml:space="preserve">'+ojxTxt(t)+'</w:t>';
+  }).join('');
+  return '<w:r>'+rpr+cuerpo+'</w:r>';
+}
+function ojxP(runs,o){
+  o=o||{};
+  // El orden de los hijos de w:pPr lo fija el esquema (pBdr → shd → spacing →
+  // ind → jc): invertirlo hace que Word marque el documento como dañado.
+  var ppr='<w:pPr>'+
+    (o.keepNext?'<w:keepNext/><w:keepLines/>':'')+
+    (o.bdr||'')+
+    (o.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.shd+'"/>':'')+
+    '<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after==null?120:o.after)+'" w:line="'+(o.line||240)+'" w:lineRule="auto"/>'+
+    ((o.indL||o.indR)?'<w:ind w:left="'+(o.indL||0)+'" w:right="'+(o.indR||0)+'"/>':'')+
+    (o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+
+    '</w:pPr>';
+  return '<w:p>'+ppr+(Array.isArray(runs)?runs.join(''):(runs||''))+'</w:p>';
+}
+function ojxVacio(n){ var s=''; for(var i=0;i<(n||1);i++) s+=ojxP('',{after:0}); return s; }
+// El cuerpo no puede terminar en tabla: Word añade un párrafo implícito de
+// tamaño normal y eso arrastra una página en blanco al final. Se cierra con un
+// párrafo de altura casi nula.
+function ojxCierre(){
+  return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>'+
+    '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
+}
+// Barra de sección: borde pegado al margen (space=0 + ind 32) para que no
+// sobresalga del área de contenido — lección de alineación del FPJ-5 v2.3.
+function ojxSeccion(txt){
+  var b=['top','left','bottom','right'].map(function(x){
+    return '<w:'+x+' w:val="single" w:sz="4" w:space="0" w:color="7F7F7F"/>';
+  }).join('');
+  // keepNext: una barra de sección jamás debe quedar sola al pie de una página.
+  return ojxP(ojxRun(txt,{b:true,sz:22}),
+    {shd:'D9D9D9',bdr:'<w:pBdr>'+b+'</w:pBdr>',indL:32,indR:32,before:200,after:120,keepNext:true});
+}
+function ojxTabla(filas,anchos,o){
+  o=o||{}; var sz=o.sz||20;
+  var total=anchos.reduce(function(a,b){return a+b;},0);
+  var bordes='<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(function(b){
+    return '<w:'+b+' w:val="single" w:sz="4" w:space="0" w:color="7F7F7F"/>';
+  }).join('')+'</w:tblBorders>';
+  var pr='<w:tblPr><w:tblW w:w="'+total+'" w:type="dxa"/><w:tblInd w:w="0" w:type="dxa"/>'+bordes+
+    '<w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="90" w:type="dxa"/>'+
+    '<w:bottom w:w="40" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar>'+
+    '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr>';
+  var grid='<w:tblGrid>'+anchos.map(function(w){return '<w:gridCol w:w="'+w+'"/>';}).join('')+'</w:tblGrid>';
+  var trs=filas.map(function(f){
+    var col=0;
+    var tcs=f.map(function(c){
+      var span=c.span||1, w=0;
+      for(var i=0;i<span;i++) w+=(anchos[col+i]||0);
+      col+=span;
+      return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+
+        (span>1?'<w:gridSpan w:val="'+span+'"/>':'')+
+        (c.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+c.shd+'"/>':'')+
+        '<w:vAlign w:val="center"/></w:tcPr>'+
+        ojxP(ojxRun(c.t,{b:c.b,i:c.i,sz:c.sz||sz}),{jc:c.jc||'left',after:0,line:240})+'</w:tc>';
+    }).join('');
+    return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+tcs+'</w:tr>';
+  }).join('');
+  return '<w:tbl>'+pr+grid+trs+'</w:tbl>';
+}
+// Tabla etiqueta/valor: solo imprime las filas con dato (spec § 8: el documento
+// no muestra nada que no venga del formulario).
+function ojxTablaDatos(pares,o){
+  o=o||{};
+  var filas=pares.filter(function(p){ return o.todas||(p[1]!==''&&p[1]!=null); })
+    .map(function(p){
+      return [{t:p[0],b:true,shd:'F2F2F2'},{t:p[1]==null?'':String(p[1])}];
+    });
+  if(!filas.length) return '';
+  var wEt=o.wEt||3100;
+  return ojxTabla(filas,[wEt,OJX_W-wEt],{sz:o.sz||20});
+}
+function ojxCampoNum(){
+  return '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:t>1</w:t></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+}
+function ojxCampoTot(){
+  return '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r><w:instrText xml:space="preserve"> NUMPAGES </w:instrText></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r><w:t>1</w:t></w:r>'+
+    '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   I.11 · PAQUETE .DOCX
+   Base: se arma desde cero, sin un solo dato de ejemplo (spec § 8).
+   Personalizada: del .docx del usuario se conserva TODO menos el cuerpo
+   (membrete, pie, logos, estilos, márgenes) — así una plantilla propia
+   nunca puede alterar la estructura ni el mapeo (spec § 7).
+───────────────────────────────────────────────────────────────────────── */
+var OJ_NS_W='xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" '+
+  'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '+
+  'xmlns:o="urn:schemas-microsoft-com:office:office" '+
+  'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" '+
+  'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" '+
+  'xmlns:v="urn:schemas-microsoft-com:vml" '+
+  'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" '+
+  'xmlns:w10="urn:schemas-microsoft-com:office:word" '+
+  'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '+
+  'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" '+
+  'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" '+
+  'mc:Ignorable="w14 wps wpc"';
+var OJ_XMLDECL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
+var OJ_SECTPR_BASE='<w:sectPr>'+
+  '<w:headerReference w:type="default" r:id="rId3"/>'+
+  '<w:footerReference w:type="default" r:id="rId4"/>'+
+  '<w:pgSz w:w="12240" w:h="15840"/>'+
+  '<w:pgMar w:top="1667" w:right="1134" w:bottom="1134" w:left="1701" w:header="709" w:footer="567" w:gutter="0"/>'+
+  '<w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr>';
+function ojBytes(s){ return new TextEncoder().encode(s); }
+function ojTexto(b){ return new TextDecoder().decode(b); }
+function ojPaqueteBase(cfg){
+  var f={};
+  f['[Content_Types].xml']=ojBytes(OJ_XMLDECL+
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
+    '<Default Extension="xml" ContentType="application/xml"/>'+
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
+    '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '</Types>');
+  f['_rels/.rels']=ojBytes(OJ_XMLDECL+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'+
+    '</Relationships>');
+  f['word/_rels/document.xml.rels']=ojBytes(OJ_XMLDECL+
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'+
+    '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
+    '</Relationships>');
+  f['word/styles.xml']=ojBytes(OJ_XMLDECL+
+    '<w:styles '+OJ_NS_W+'><w:docDefaults><w:rPrDefault><w:rPr>'+
+    '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/>'+
+    '<w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="es-CO" w:eastAsia="es-CO" w:bidi="ar-SA"/>'+
+    '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>'+
+    '<w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+    '<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>'+
+    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/>'+
+    '<w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>'+
+    '<w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>'+
+    '<w:style w:type="numbering" w:default="1" w:styleId="NoList"><w:name w:val="No List"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/></w:style>'+
+    '</w:styles>');
+  f['word/settings.xml']=ojBytes(OJ_XMLDECL+
+    '<w:settings '+OJ_NS_W+'><w:zoom w:percent="100"/><w:defaultTabStop w:val="708"/>'+
+    '<w:characterSpacingControl w:val="doNotCompress"/>'+
+    '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>'+
+    '</w:settings>');
+  f['word/header1.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+ojEncabezadoXml(cfg)+'</w:hdr>');
+  f['word/footer1.xml']=ojBytes(OJ_XMLDECL+'<w:ftr '+OJ_NS_W+'>'+ojPieXml(cfg)+'</w:ftr>');
+  return f;
+}
+// Encabezado institucional: estructura jerárquica fija, contenido 100 %
+// configurable (spec § 1). Nada de esto se escribe a mano en el documento.
+function ojEncabezadoXml(cfg){
+  var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,cfg.ojDependencia];
+  var xml=lineas.map(function(t,i){
+    if(!t) return '';
+    return ojxP(ojxRun(String(t).toUpperCase(),{b:true,sz:i<2?20:20}),{jc:'center',after:0,line:240});
+  }).join('');
+  if(!xml) xml=ojxP('',{after:0});
+  return xml+ojxP('',{after:0});
+}
+function ojPieXml(cfg){
+  var b=['top'].map(function(x){ return '<w:'+x+' w:val="single" w:sz="4" w:space="2" w:color="7F7F7F"/>'; }).join('');
+  var contacto=[cfg.ojPieDireccion,cfg.ojPieTelefonos,cfg.ojPieCorreo,cfg.ojPieWeb].filter(Boolean).join('  ·  ');
+  var out=ojxP(ojxRun(contacto,{sz:14}),{jc:'center',after:0,line:240,bdr:'<w:pBdr>'+b+'</w:pBdr>'});
+  var izq=[cfg.ojCodigoFormato,cfg.ojVersionFormato].filter(Boolean).join('   ');
+  out+='<w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="4702"/><w:tab w:val="right" w:pos="9405"/></w:tabs>'+
+    '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+
+    ojxRun(izq,{sz:14})+'<w:r><w:tab/></w:r>'+ojxRun('Página ',{sz:14})+ojxCampoNum()+ojxRun(' de ',{sz:14})+ojxCampoTot()+
+    '<w:r><w:tab/></w:r>'+ojxRun(cfg.ojClasificacion||'',{sz:14,b:true})+'</w:p>';
+  return out;
+}
+// Tokens admitidos en el membrete/pie de una plantilla personalizada.
+function ojTokensMembrete(xml,cfg){
+  var map={
+    '{{ENC_MINISTERIO}}':cfg.ojMinisterio||'',
+    '{{ENC_INSTITUCION}}':cfg.ojInstitucion||'',
+    '{{ENC_UNIDAD}}':cfg.ojUnidad||'',
+    '{{ENC_DEPENDENCIA}}':cfg.ojDependencia||'',
+    '{{PIE_DIRECCION}}':cfg.ojPieDireccion||'',
+    '{{PIE_TELEFONOS}}':cfg.ojPieTelefonos||'',
+    '{{PIE_CORREO}}':cfg.ojPieCorreo||'',
+    '{{PIE_WEB}}':cfg.ojPieWeb||'',
+    '{{CLASIFICACION}}':cfg.ojClasificacion||'',
+    '{{COD_FORMATO}}':cfg.ojCodigoFormato||'',
+    '{{VER_FORMATO}}':cfg.ojVersionFormato||''
+  };
+  Object.keys(map).forEach(function(k){ xml=xml.split(k).join(escapeXml(map[k])); });
+  return xml;
+}
+// Devuelve {files, sectPr, origen}. Si hay plantilla de membrete activa se usa
+// su paquete completo y solo se reemplaza el cuerpo de word/document.xml.
+async function ojPaquete(cfg){
+  var tpl=DB.getActiveTemplate('oj_membrete');
+  if(tpl&&tpl.docxBase64){
+    try{
+      var raw=atob(tpl.docxBase64);
+      var buf=new Uint8Array(raw.length);
+      for(var i=0;i<raw.length;i++) buf[i]=raw.charCodeAt(i);
+      var files=await _unzipBufAsync(buf);
+      if(files['word/document.xml']){
+        var xml=ojTexto(files['word/document.xml']);
+        var m=xml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/g);
+        return {files:files, sectPr:(m&&m[m.length-1])||OJ_SECTPR_BASE, origen:tpl.nombre||'plantilla propia', propia:true};
+      }
+      toast('La plantilla de membrete no es un .docx válido — se usa la plantilla base');
+    }catch(e){ console.error('[LexCapture OJ] plantilla de membrete',e); toast('No se pudo leer la plantilla de membrete — se usa la base'); }
+  }
+  return {files:ojPaqueteBase(cfg), sectPr:OJ_SECTPR_BASE, origen:'plantilla base', propia:false};
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.12 · COMPOSICIÓN DEL OFICIO
+   Mapeo formulario → documento. Ningún texto de este bloque se escribe a
+   mano en Word: todo lo visible sale del formulario o de la configuración.
+───────────────────────────────────────────────────────────────────────── */
+function ojAsuntoTexto(c,cfg){
+  var t=ojTermino(c);
+  var plantilla=cfg.ojAsunto||'Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}';
+  var map={
+    '{{TERMINO}}':t.sust,
+    '{{ORD_NUMERO}}':c.oj.orden.numero||'________',
+    '{{REQ_NOMBRE}}':ojNombreRequerido(c.oj.requerido),
+    '{{RADICADO}}':c.oj.proceso.radicado||'',
+    '{{DESPACHO}}':c.oj.despacho.nombre||''
+  };
+  Object.keys(map).forEach(function(k){ plantilla=plantilla.split(k).join(map[k]); });
+  return plantilla;
+}
+function ojListaFuncionarios(g){
+  return (g.funcionarios||[]).map(function(f){
+    return [f.grado,f.nombre].filter(Boolean).join(' ');
+  }).filter(Boolean);
+}
+function ojFrase(partes){ return partes.filter(Boolean).join(''); }
+function ojLugarTexto(g){
+  return [g.lugarDireccion,g.lugarBarrio?'barrio '+g.lugarBarrio:'',
+          g.lugarMunicipio,g.lugarDepartamento].filter(Boolean).join(', ');
+}
+// Relato de la materialización: se compone a partir de campos normalizados,
+// nunca de texto libre escrito directamente en el documento.
+function ojRelato(c,cfg){
+  var o=c.oj.orden,d=c.oj.despacho,p=c.oj.proceso,r=c.oj.requerido,g=c.oj.diligencia,a=c.oj.actuacion;
+  var t=ojTermino(c), vig=ojVigencia(o), pars=[];
+  var func=ojListaFuncionarios(g);
+  var quien=func.length? (func.length===1?'el suscrito '+func[0]:'los suscritos '+func.slice(0,-1).join(', ')+' y '+func[func.length-1]) : '';
+  var unidad=[g.unidad,g.patrulla?'patrulla '+g.patrulla:''].filter(Boolean).join(', ');
+  pars.push(ojFrase([
+    g.fecha?'El día '+ojFechaLarga(g.fecha):'En la fecha',
+    g.hora?', siendo las '+g.hora+' horas':'',
+    quien?', '+quien:'',
+    unidad?', adscrito(s) a '+unidad:'',
+    ', en desarrollo de '+(g.formaUbicacion==='OTRA'?(g.formaUbicacionOtra||'labores del servicio'):ojLbl('formaUbicacion',g.formaUbicacion).toLowerCase()),
+    ojLugarTexto(g)?', en '+ojLugarTexto(g):'',
+    g.coordenadas?' (coordenadas '+g.coordenadas+')':'',
+    ', se ubicó e individualizó a '+(ojNombreRequerido(r).toUpperCase()||'la persona requerida'),
+    ojDocRequerido(r)?', identificado(a) con '+ojDocRequerido(r):'',
+    '.'
+  ]));
+  pars.push(ojFrase([
+    'Verificada la información en '+(ojLbl('sistemaConsulta',o.verificacion.sistema)||'el sistema de consulta institucional').toLowerCase(),
+    o.verificacion.fecha?' el '+ojFechaCorta(o.verificacion.fecha):'',
+    o.verificacion.hora?' a las '+o.verificacion.hora+' horas':'',
+    o.verificacion.funcionario?', por '+o.verificacion.funcionario:'',
+    ', se estableció que registra orden de captura No. '+(o.numero||'________'),
+    o.fechaExpedicion?', expedida el '+ojFechaCorta(o.fechaExpedicion):'',
+    d.nombre?' por el '+d.nombre:'',
+    vig.hasta?', vigente hasta el '+ojFechaCorta(vig.hasta):'',
+    p.radicado?', dentro del proceso radicado '+p.radicado:'',
+    ojDelitosTexto(c)?', por '+ojDelitosTexto(c):'',
+    o.finalidad?', con la finalidad de: '+ojLbl('finalidad',o.finalidad).toLowerCase():'',
+    '.'
+  ]));
+  if(r.identidadMetodo&&r.identidadMetodo!=='DOCUMENTO'){
+    pars.push(ojFrase([
+      'La plena identidad de la persona requerida se estableció mediante '+ojLbl('metodoIdent',r.identidadMetodo).toLowerCase(),
+      r.identidadObservacion?': '+r.identidadObservacion:'',
+      ', descartando cualquier situación de homonimia.'
+    ]));
+  }
+  pars.push(ojFrase([
+    'Confirmada la vigencia de la orden',
+    a.derechos.hora?', siendo las '+a.derechos.hora+' horas':'',
+    a.derechos.lugar?', en '+a.derechos.lugar:'',
+    ', se procedió a leer y materializar los derechos del '+t.sust+
+    ', conforme al artículo 303 de la Ley 906 de 2004.',
+    a.derechos.observacion?' '+a.derechos.observacion:''
+  ]));
+  if(a.fuerza.tipo&&a.fuerza.tipo!=='NINGUNO'){
+    pars.push(ojFrase([
+      'Durante el procedimiento se registró el siguiente uso de la fuerza: '+ojLbl('usoFuerza',a.fuerza.tipo).toLowerCase(),
+      a.fuerza.descripcion?': '+a.fuerza.descripcion:'',
+      '.',
+      a.lesiones.hubo?' Se presentaron lesiones: '+(a.lesiones.descripcion||'según consta en la valoración médica')+'.':''
+    ]));
+  } else if(a.lesiones.hubo){
+    pars.push('Se presentaron lesiones durante el procedimiento: '+(a.lesiones.descripcion||'según consta en la valoración médica')+'.');
+  }
+  if(a.hayIncautacion&&(a.incautaciones||[]).length){
+    pars.push('En desarrollo de la diligencia se incautaron los elementos relacionados en el numeral V del presente informe, sometidos a cadena de custodia.');
+  }
+  if(a.novedades) pars.push('Novedades: '+a.novedades);
+  return pars;
+}
+function ojRelatoDisposicion(c,cfg){
+  var x=c.oj.destino, t=ojTermino(c), plazo=ojPlazo36(c), pars=[];
+  pars.push(ojFrase([
+    'En consecuencia, el '+t.sust+' es puesto a disposición de la autoridad competente, '+(x.nombre||'según se indica en el numeral anterior'),
+    x.direccion?', ubicada en '+x.direccion:'',
+    x.municipio?', '+[x.municipio,x.departamento].filter(Boolean).join(', '):'',
+    '.',
+    plazo.vence?' El término de treinta y seis (36) horas previsto en el artículo 28 de la Constitución Política vence el '+plazo.vence+'.':''
+  ]));
+  if(x.fundamento) pars.push('Fundamento de la puesta a disposición: '+x.fundamento+'.');
+  if(x.reglaAplicada==='R4-B-JUEZ-NO-DISPONIBLE'){
+    pars.push('Por no encontrarse disponible el juzgado de conocimiento dentro del término constitucional, el '+t.sust+
+      ' se presenta ante el juez de control de garantías de turno, quien resuelve su situación, adopta las medidas provisionales '+
+      'a que haya lugar y ordena su presentación, con las diligencias, ante el juez que profirió la sentencia al día hábil siguiente '+
+      '(Sentencia C-042 de 2018).');
+  }
+  if(x.motivoCambio) pars.push('El destinatario se determinó así por la siguiente razón: '+x.motivoCambio+'.');
+  if(c.oj.actuacion.observaciones) pars.push('Observaciones: '+c.oj.actuacion.observaciones);
+  return pars;
+}
+function ojDocCuerpo(c,cfg){
+  var o=c.oj.orden,d=c.oj.despacho,p=c.oj.proceso,r=c.oj.requerido,g=c.oj.diligencia,a=c.oj.actuacion,x=c.oj.destino;
+  var t=ojTermino(c), vig=ojVigencia(o), plazo=ojPlazo36(c), perfil=ojPerfilActivo(cfg);
+  var out='';
+  var J={jc:'both',after:140,line:264};
+
+  // ── Consecutivo, ciudad y fecha ──
+  if(cfg.ojConsecutivo) out+=ojxP(ojxRun('No. ________ / '+cfg.ojConsecutivo,{sz:22}),{after:160});
+  var ciudad=cfg.ojCiudad||g.lugarMunicipio||d.municipio||'';
+  out+=ojxP(ojxRun([ciudad,ojFechaLarga(c.fechaProc||g.fecha)].filter(Boolean).join(', '),{sz:24}),{after:280});
+
+  // ── Destinatario ──
+  out+=ojxP(ojxRun('Señor(a)',{sz:24}),{after:0});
+  out+=ojxP(ojxRun((x.nombre||'').toUpperCase(),{b:true,sz:24}),{after:0});
+  if(x.tipo) out+=ojxP(ojxRun(ojLbl('tipoDespacho',x.tipo),{sz:24}),{after:0});
+  if(x.direccion) out+=ojxP(ojxRun(x.direccion,{sz:24}),{after:0});
+  var ciudadDest=[x.municipio,x.departamento].filter(Boolean).join(', ');
+  if(ciudadDest) out+=ojxP(ojxRun(ciudadDest,{sz:24}),{after:0});
+  out+=ojxVacio(1);
+
+  // ── Asunto ──
+  out+=ojxP([ojxRun('Asunto: ',{b:true,sz:24}),ojxRun(ojAsuntoTexto(c,cfg),{b:true,sz:24})],{after:240,jc:'both'});
+
+  // ── Presentación + identificación del requerido ──
+  out+=ojxP(ojxRun('De manera atenta y respetuosa me permito dejar a disposición de ese despacho a la persona '+
+    (t.sust==='aprehendido'?'aprehendida':'capturada')+' que se identifica a continuación:',{sz:24}),J);
+  var nacimiento=[ojFechaCorta(r.fechaNac),[r.nacMunicipio,r.nacDepartamento,r.nacPais].filter(Boolean).join(', ')].filter(Boolean).join(' — ');
+  var padres=[r.madre,r.padre].filter(Boolean).join(' y ');
+  var residencia=[r.resDireccion,r.resBarrio,r.resMunicipio,r.resDepartamento].filter(Boolean).join(', ');
+  var fisicas=[r.rasgos.estatura?'estatura '+r.rasgos.estatura:'',r.rasgos.contextura?'contextura '+r.rasgos.contextura:'',
+    r.rasgos.tez?'tez '+r.rasgos.tez:'',r.rasgos.cabello?'cabello '+r.rasgos.cabello:'',r.rasgos.ojos?'ojos '+r.rasgos.ojos:''].filter(Boolean).join(', ');
+  out+=ojxTabla([
+    [{t:'Nombres y apellidos',b:true,shd:'F2F2F2'},{t:ojNombreRequerido(r).toUpperCase(),b:true}]
+  ].concat(
+    [['Documento de identidad',ojDocRequerido(r)+(r.expedidoEn?' de '+r.expedidoEn:'')],
+     ['Alias',r.alias],
+     ['Fecha y lugar de nacimiento',nacimiento],
+     ['Edad',r.edad?r.edad+' años':''],
+     ['Sexo',ojLbl('sexo',r.sexo)],
+     ['Nacionalidad',r.nacionalidad],
+     ['Estado civil',ojLbl('estadoCivil',r.estadoCivil)],
+     ['Profesión u ocupación',r.profesion],
+     ['Nombres de los padres',padres],
+     ['Residencia',residencia],
+     ['Teléfono',r.resTelefono],
+     ['Características físicas',fisicas],
+     ['Señales particulares',r.senales],
+     ['Demás datos identificativos',r.otrosDatos]
+    ].filter(function(f){ return f[1]; })
+     .map(function(f){ return [{t:f[0],b:true,shd:'F2F2F2'},{t:f[1]}]; })
+  ),[3100,OJX_W-3100],{sz:20});
+
+  // ── I. La orden ──
+  out+=ojxSeccion('I. ORDEN JUDICIAL QUE SE MATERIALIZA');
+  out+=ojxTablaDatos([
+    ['No. de la orden',o.numero],
+    ['Fecha de expedición',ojFechaCorta(o.fechaExpedicion)],
+    ['Vigencia',vig.hasta?('hasta el '+ojFechaCorta(vig.hasta)+' — '+ojLbl('estadoOrden',vig.estado)):''],
+    ['Prórrogas',(o.prorrogas||[]).map(function(pr){
+        return ojFechaCorta(pr.fecha)+(pr.hasta?' → '+ojFechaCorta(pr.hasta):'')+(pr.oficio?' ('+pr.oficio+')':'');
+      }).join('; ')],
+    ['Finalidad',ojLbl('finalidad',o.finalidad)],
+    ['Marco procesal',ojLbl('tipoOrden',o.tipoOrden)],
+    ['Autoridad solicitante',o.autoridadSolicitante],
+    ['Orden dirigida a',o.dirigidaA],
+    ['Despacho que la libró',d.nombre],
+    ['Especialidad',ojLbl('especialidad',d.especialidad)],
+    ['Ciudad del despacho',[d.municipio,d.departamento].filter(Boolean).join(', ')],
+    ['Dirección del despacho',d.direccion],
+    ['Contacto del despacho',[d.telefono,d.correo].filter(Boolean).join(' · ')],
+    ['Identificación del despacho',d.identificacion],
+    ['Funcionario responsable',d.funcionarioResponsable],
+    ['Juez que la suscribe',[d.juezNombre,d.juezCargo].filter(Boolean).join(' — ')],
+    ['Firma de la orden',ojLbl('firmaOrden',d.firma)],
+    ['Verificación previa',o.verificacion.sistema?
+      (ojLbl('sistemaConsulta',o.verificacion.sistema)+
+       (o.verificacion.fecha?' · '+ojFechaCorta(o.verificacion.fecha):'')+
+       (o.verificacion.hora?' '+o.verificacion.hora+' horas':'')+
+       (o.verificacion.resultado?' · resultado '+o.verificacion.resultado.toLowerCase():'')):'']
+  ]);
+  if(o.motivoTextual){
+    out+=ojxP(ojxRun('La orden expresa textualmente:',{sz:24}),{jc:'both',before:160,after:80});
+    out+=ojxP(ojxRun('«'+o.motivoTextual+'»',{i:true,sz:22}),{jc:'both',indL:567,indR:567,after:140,line:264});
+  }
+
+  // ── II. El proceso ──
+  out+=ojxSeccion('II. PROCESO JUDICIAL');
+  out+=ojxTablaDatos([
+    ['Número del proceso / radicado',p.radicado],
+    ['Fecha de los hechos',ojFechaCorta(p.fechaHechos)],
+    ['Fecha de la decisión judicial',ojFechaCorta(p.fechaDecision)],
+    ['Código interno',p.codigoInterno],
+    ['Pena impuesta',[p.pena.descripcion,p.pena.meses?p.pena.meses+' meses':'',p.pena.accesorias].filter(Boolean).join(' · ')]
+  ]);
+  if((p.delitos||[]).length){
+    out+=ojxP(ojxRun('Delitos y artículos aplicados',{b:true,sz:22}),{before:160,after:80,keepNext:true});
+    out+=ojxTabla([[{t:'No.',b:true,shd:'F2F2F2',jc:'center'},{t:'Delito',b:true,shd:'F2F2F2'},{t:'Norma aplicada',b:true,shd:'F2F2F2'}]]
+      .concat((p.delitos||[]).map(function(dd,i){
+        var norma=[dd.articulo?'Art. '+dd.articulo:'',dd.inciso?'inc. '+dd.inciso:'',dd.numeral?'num. '+dd.numeral:''].filter(Boolean).join(', ');
+        return [{t:String(i+1),jc:'center'},
+                {t:(dd.nombre||'')+(dd.agravado?' (agravado)':'')},
+                {t:norma?norma+' del Código Penal'+(dd.codigo?' · código '+dd.codigo:''):(dd.codigo||'')}];
+      })),[700,4700,OJX_W-5400],{sz:20});
+  }
+  if(p.descripcionJuridica) out+=ojxP(ojxRun(p.descripcionJuridica,{sz:24}),{jc:'both',before:140,after:140,line:264});
+
+  // ── III. Materialización ──
+  out+=ojxSeccion('III. MATERIALIZACIÓN DE LA '+t.Acc.toUpperCase());
+  out+=ojxTablaDatos([
+    ['Fecha y hora',ojFechaHora(g.fecha,g.hora)],
+    ['Lugar exacto',ojLugarTexto(g)],
+    ['Tipo de lugar',ojLbl('tipoLugar',g.lugarTipo)],
+    ['Coordenadas geográficas',g.coordenadas],
+    ['Unidad policial',g.unidad],
+    ['Patrulla',g.patrulla],
+    ['Vehículo institucional',g.vehiculo],
+    ['Forma de ubicación',g.formaUbicacion==='OTRA'?g.formaUbicacionOtra:ojLbl('formaUbicacion',g.formaUbicacion)]
+  ]);
+  if((g.funcionarios||[]).length){
+    out+=ojxP(ojxRun('Funcionarios participantes',{b:true,sz:22}),{before:160,after:80,keepNext:true});
+    out+=ojxTabla([[{t:'Grado',b:true,shd:'F2F2F2'},{t:'Nombres y apellidos',b:true,shd:'F2F2F2'},
+                    {t:'Cédula',b:true,shd:'F2F2F2'},{t:'Placa',b:true,shd:'F2F2F2'}]]
+      .concat((g.funcionarios||[]).map(function(fu){
+        return [{t:fu.grado||''},{t:fu.nombre||''},{t:sinPuntos(fu.cedula||'')},{t:fu.placa||''}];
+      })),[2000,4005,1900,1500],{sz:20});
+  }
+  ojRelato(c,cfg).forEach(function(par){ out+=ojxP(ojxRun(par,{sz:24}),{jc:'both',before:120,after:120,line:264}); });
+
+  // ── IV. Garantías ──
+  out+=ojxSeccion('IV. GARANTÍAS DEL '+t.Sust.toUpperCase()+' Y ACTUACIÓN POLICIAL');
+  out+=ojxTablaDatos([
+    ['Lectura de derechos (art. 303 CPP)',a.derechos.leidos?
+      ('Sí'+(a.derechos.fecha?' · '+ojFechaCorta(a.derechos.fecha):'')+(a.derechos.hora?' '+a.derechos.hora+' horas':'')+
+       (a.derechos.lugar?' · '+a.derechos.lugar:'')):'No registrada'],
+    ['Comunicación de la situación',a.comunicacion.nombre?
+      (a.comunicacion.nombre+(a.comunicacion.parentesco?' ('+ojLbl('parentesco',a.comunicacion.parentesco).toLowerCase()+')':'')+
+       (a.comunicacion.telefono?' · tel. '+a.comunicacion.telefono:'')+(a.comunicacion.hora?' · '+a.comunicacion.hora+' horas':'')):''],
+    ['Defensor',a.defensor.tipo?(ojLbl('defensor',a.defensor.tipo)+(a.defensor.nombre?' — '+a.defensor.nombre:'')):''],
+    ['Uso de la fuerza',ojLbl('usoFuerza',a.fuerza.tipo)+(a.fuerza.descripcion?' — '+a.fuerza.descripcion:'')],
+    ['Lesiones',a.lesiones.hubo?('Sí'+(a.lesiones.descripcion?' — '+a.lesiones.descripcion:'')):'No se registraron'],
+    ['Valoración médica',a.valoracion.realizada?
+      ({SI:'Realizada',NO:'No realizada',RENUENCIA:'El '+t.sust+' se negó'}[a.valoracion.realizada]||'')+
+      (a.valoracion.entidad?' — '+a.valoracion.entidad:''):'']
+  ]);
+
+  // ── V. Elementos ──
+  if(a.hayIncautacion&&(a.incautaciones||[]).length){
+    out+=ojxSeccion('V. ELEMENTOS MATERIALES Y CADENA DE CUSTODIA');
+    out+=ojxTabla([[{t:'Cant.',b:true,shd:'F2F2F2',jc:'center'},{t:'Descripción del elemento',b:true,shd:'F2F2F2'},
+                    {t:'Rótulo de cadena de custodia',b:true,shd:'F2F2F2'},{t:'Entregado a',b:true,shd:'F2F2F2'}]]
+      .concat((a.incautaciones||[]).map(function(e){
+        return [{t:e.cantidad||'1',jc:'center'},{t:e.descripcion||''},{t:e.rotulo||''},{t:e.entregadoA||''}];
+      })),[800,3800,2400,OJX_W-7000],{sz:20});
+  }
+
+  // ── VI. Puesta a disposición ──
+  out+=ojxSeccion('VI. PUESTA A DISPOSICIÓN');
+  out+=ojxTablaDatos([
+    ['Autoridad receptora',x.nombre],
+    ['Tipo de autoridad',ojLbl('tipoDespacho',x.tipo)],
+    ['Dirección',[x.direccion,x.municipio,x.departamento].filter(Boolean).join(', ')],
+    ['Fecha y hora de entrega',ojFechaHora(x.fechaEntrega,x.horaEntrega)],
+    ['Recibe',[x.recibeNombre,x.recibeCargo].filter(Boolean).join(' — ')],
+    ['Vencimiento del término de 36 horas',plazo.vence],
+    ['Fundamento legal aplicado',x.fundamento]
+  ]);
+  ojRelatoDisposicion(c,cfg).forEach(function(par){ out+=ojxP(ojxRun(par,{sz:24}),{jc:'both',before:120,after:120,line:264}); });
+
+  // ── Firma ──
+  out+=ojxP(ojxRun('Atentamente,',{sz:24}),{before:240,after:0});
+  out+=ojxVacio(3);
+  var grado=perfil.grado||(cfg.servidor&&cfg.servidor.grado)||'';
+  var nombre=perfil.nombre||(cfg.servidor&&cfg.servidor.nombre)||'';
+  out+=ojxP(ojxRun((grado+' '+nombre).trim().toUpperCase(),{b:true,sz:24}),{after:0});
+  [cfg.ojDependencia,cfg.ojPieDireccion,
+   (perfil.telefono||cfg.dosTel)?'Celular: '+(perfil.telefono||cfg.dosTel):'',
+   (perfil.correo||'')?'Correo: '+perfil.correo:''
+  ].filter(Boolean).forEach(function(l){ out+=ojxP(ojxRun(l,{sz:22}),{after:0}); });
+
+  // ── Anexos ──
+  if((a.anexos||[]).length){
+    out+=ojxP(ojxRun('Anexos:',{b:true,sz:22}),{before:240,after:60});
+    (a.anexos||[]).forEach(function(an){ out+=ojxP(ojxRun('–  '+an,{sz:22}),{after:0,indL:283}); });
+  }
+
+  // ── Elaboró / Revisó / Ubicación ──
+  // Un solo bloque de 2×2: si quedara suelto al final arrastraría una página
+  // en blanco, que es exactamente lo que pasaba con párrafos independientes.
+  var elaboro=[grado,nombre].filter(Boolean).join(' ');
+  out+=ojxTabla([
+    [{t:'Elaboró: '+elaboro,shd:'F2F2F2'},{t:'Revisó: '+(cfg.ojReviso||''),shd:'F2F2F2'}],
+    [{t:'Fecha de elaboración: '+ojFechaCorta(c.fechaProc||ojISO(new Date()))},
+     {t:'Ubicación: '+(cfg.ojUbicacionTRD||'')}]
+  ],[Math.round(OJX_W/2),OJX_W-Math.round(OJX_W/2)],{sz:18});
+  return out+ojxCierre();
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   I.13 · GENERACIÓN DEL .DOCX
+───────────────────────────────────────────────────────────────────────── */
+function ojNombreArchivo(c){
+  var r=c.oj.requerido;
+  var quien=[r.priApe,r.priNom].filter(Boolean).join('_')||'requerido';
+  var f=(c.oj.diligencia.fecha||c.fechaProc||'').split('-').reverse().join('-');
+  return ('OJ_Disposicion_'+quien+'_'+f).replace(/[^\w\-]+/g,'_')+'.docx';
+}
+async function buildOficioOJBlob(c){
+  try{
+    if(!c||!c.oj){ toast('Este caso no tiene datos de orden judicial'); return null; }
+    var cfg=DB.getConfig();
+    ojNormalizar(c);
+    var paquete=await ojPaquete(cfg);
+    var cuerpo=ojDocCuerpo(c,cfg);
+    var docXml=OJ_XMLDECL+'<w:document '+OJ_NS_W+'><w:body>'+cuerpo+paquete.sectPr+'</w:body></w:document>';
+    var files=paquete.files;
+    files['word/document.xml']=ojBytes(docXml);
+    // Membrete y pie: son la única capa que una plantilla propia puede cambiar.
+    Object.keys(files).forEach(function(n){
+      if(/^word\/(header|footer)\d*\.xml$/.test(n)){
+        var xml=ojTexto(files[n]);
+        if(xml.indexOf('{{')>=0) xml=ojTokensMembrete(normalizeXmlRuns(xml),cfg);
+        files[n]=ojBytes(xml);
+      }
+    });
+    var lista=Object.keys(files).map(function(n){ return {name:n,data:files[n]}; });
+    var zip=_buildZip(lista);
+    var blob=new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    return {blob:blob, fname:ojNombreArchivo(c), label:'Oficio de puesta a disposición', origen:paquete.origen};
+  }catch(e){
+    console.error('[LexCapture OJ] generando oficio',e);
+    toast('Error generando el oficio: '+e.message);
+    return null;
+  }
+}
+async function ojDescargarOficio(id){
+  var c=(typeof id==='object'&&id)?id:DB.getCase(id);
+  if(!c){ toast('Caso no encontrado'); return; }
+  var duras=ojDuras(ojNormalizar(c));
+  if(duras.length){
+    toast('Faltan '+duras.length+' dato(s) obligatorio(s): '+duras[0].msg,7000);
+    return;
+  }
+  toast('Generando oficio…');
+  var out=await buildOficioOJBlob(c);
+  if(!out) return;
+  _dlDocBlob(out.blob,out.fname);
+  _dlDone(out.label);
+}
+/* ─────────────────────────────────────────────────────────────────────────
+   I.14 · GUARDADO
+   El caso OJ guarda además un espejo mínimo (capturados[0], conductas) para
+   que la lista de capturas, el buscador y el dossier sigan funcionando sin
+   tocar una sola función de flagrancia.
+───────────────────────────────────────────────────────────────────────── */
+function ojPersonaEspejo(c){
+  var r=c.oj.requerido;
+  return {
+    id:r.personaId||uid(), rol:'Capturado',
+    tipoDoc:r.tipoDoc==='SIN_DOC'?'':r.tipoDoc, numDoc:sinPuntos(r.numDoc), expEn:r.expedidoEn||'',
+    priNom:r.priNom||'', segNom:r.segNom||'', priApe:r.priApe||'', segApe:r.segApe||'',
+    alias:r.alias||'N/A', fn:r.fechaNac||'', edad:r.edad||'',
+    lugNac:[r.nacMunicipio,r.nacDepartamento].filter(Boolean).join(', '),
+    ecivil:ojLbl('estadoCivil',r.estadoCivil), escol:'', ocup:r.profesion||'',
+    dirRes:r.resDireccion||'', tel:r.resTelefono||'', correo:'',
+    padres:[r.madre,r.padre].filter(Boolean).join(' y '),
+    senas:r.senales||''
+  };
+}
+async function ojGuardarCaso(silencioso){
+  ojCollect();
+  var r=wc.oj.requerido;
+  if(!r.priNom||!r.priApe){ toast('Registra al menos el nombre y el apellido de la persona requerida'); return false; }
+  ojAplicarSugerencia(wc);
+  wc.oj.orden.vigenciaHasta=ojVigencia(wc.oj.orden).hasta;
+  var plazo=ojPlazo36(wc);
+  wc.oj.destino.plazoVence=plazo.venceISO?plazo.venceISO+' '+plazo.venceHora:'';
+  // Espejo para las pantallas compartidas (lista, personas, dossier)
+  var persona=ojPersonaEspejo(wc);
+  wc.oj.requerido.personaId=persona.id;
+  wc.capturados=[persona];
+  wc.conductas=(wc.oj.proceso.delitos||[]).map(function(d){ return d.nombre; }).filter(Boolean);
+  wc.victimas=[]; wc.testigos=[]; wc.sinVictima=true; wc.sinTestigo=true;
+  wc.fechaProc=wc.oj.diligencia.fecha||wc.fechaProc;
+  wc.spoa=wc.oj.proceso.radicado||'';
+  wc.numOrden=wc.oj.orden.numero||'';
+  wc.juzgadoOrden=wc.oj.despacho.nombre||'';
+  wc.delitoOrden=(wc.conductas[0]||'');
+  wc.destino=wc.oj.destino.nombre||'';
+  wc.updated=Date.now();
+  try{
+    await DB.saveCase(wc);
+    await DB.savePerson(persona);
+    if(!silencioso) toast('Caso guardado ✓');
+    return true;
+  }catch(e){
+    console.error('[LexCapture OJ] guardando caso',e);
+    toast('⚠️ Error guardando el caso — el PIN pudo bloquearse. Vuelve a intentarlo.');
+    return false;
+  }
+}
+async function ojGuardarYSalir(){
+  var ok=await ojGuardarCaso();
+  if(ok){ wc=null; go('capturas'); }
+}
+async function ojGenerarDesdeWizard(){
+  ojCollect();
+  var duras=ojDuras(wc);
+  if(duras.length){
+    var v=duras[0];
+    toast('Falta un dato obligatorio (paso '+(v.paso+1)+'): '+v.msg,7000);
+    ws=v.paso; renderWiz();
+    return;
+  }
+  var ok=await ojGuardarCaso(true);
+  if(!ok) return;
+  await ojDescargarOficio(wc);
+}
+/*OJ_MODULE_END*/
 
 document.addEventListener('DOMContentLoaded', function() {
   applyTheme(getTheme());

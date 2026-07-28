@@ -101,8 +101,10 @@ await page.screenshot({ path: OUT('10_plantillas_dark') });
 // 10. Ajustes (con secciones SVG)
 await page.evaluate(() => go('ajustes'));
 await page.waitForTimeout(300);
+// Toda sección de Ajustes debe traer su icono SVG (el DS v2 no usa emojis en UI).
 const ajSvg = await page.$$eval('.aj-sec-lbl svg', els => els.length);
-log(ajSvg === 8, 'Encabezados de Ajustes con SVG', ajSvg);
+const ajHdr = await page.$$eval('.aj-sec-hdr', els => els.length);
+log(ajSvg === ajHdr && ajHdr >= 8, 'Cada encabezado de Ajustes tiene su SVG', ajSvg + '/' + ajHdr);
 await page.screenshot({ path: OUT('11_ajustes_dark') });
 
 // 11. Personas
