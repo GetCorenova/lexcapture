@@ -408,6 +408,87 @@ const dossier = await page.evaluate(() => {
 log(dossier.ok === true, 'El dossier de texto no se rompe con un caso de orden judicial', dossier.ok ? '' : dossier.txt);
 log(dossier.ok && /PRIMERAPELLIDO|APELLIDONUEVO/.test(dossier.txt), 'El dossier toma la persona del espejo');
 
+/* ─────────── 8c. Que la descarga NUNCA quede muda ───────────
+   Tres caminos que dejaban al usuario sin documento y sin explicación:
+   un caso OJ anterior al módulo, un caso nuevo incompleto, y el sheet de envío
+   que sí generaba el oficio que la descarga bloqueaba. */
+await page.evaluate(() => {
+  window.__dl = [];
+  const od = window._dlDocBlob;
+  window._dlDocBlob = function (b, f) { window.__dl.push(f); return od(b, f); };
+});
+const legado = await page.evaluate(async () => {
+  const c = {
+    id: 'legado1', tipo: 'OJ', fechaProc: '2026-07-01', created: Date.now(),
+    capturados: [{ id: 'pl', priNom: 'JUAN', segNom: 'CARLOS', priApe: 'PEREZ', segApe: 'GOMEZ', tipoDoc: 'CC', numDoc: '1.123', dirRes: 'Calle 5', senas: 'lunar' }],
+    conductas: ['Hurto'], numOrden: '55', juzgadoOrden: 'Juzgado X', fechaOrden: '2026-05-01', destinoOJ: 'JUZGADO',
+    lugar: { dir: 'Cra 10', barrio: 'Centro', muni: 'Medellin', depto: 'Antioquia' },
+    servidor: { grado: 'Patrullero', nombre: 'ANA RUIZ', ident: '2.222' },
+    narracion: { fechaCapD: '01', fechaCapM: '07', fechaCapA: '2026', horaCapH: '09', horaCapM: '15', texto: 'relato viejo' }
+  };
+  await DB.saveCase(c);
+  window.__dl = [];
+  await descargarDocCaso('legado1');
+  await new Promise(r => setTimeout(r, 900));
+  const adaptado = ojDesdeLegado(DB.getCase('legado1'));
+  return {
+    descargas: window.__dl, pantalla: location.hash,
+    numOrden: adaptado.oj.orden.numero, despacho: adaptado.oj.despacho.nombre,
+    requerido: ojNombreRequerido(adaptado.oj.requerido),
+    hora: adaptado.oj.diligencia.hora, func: adaptado.oj.diligencia.funcionarios.length
+  };
+});
+log(legado.descargas.length === 1, 'Una captura OJ anterior al módulo SÍ descarga su oficio', legado.descargas[0]);
+log(legado.pantalla !== '#plantillas', 'Ya no se desvía al usuario a subir una plantilla', legado.pantalla);
+log(legado.numOrden === '55' && legado.despacho === 'Juzgado X' && legado.requerido === 'JUAN CARLOS PEREZ GOMEZ' &&
+  legado.hora === '09:15' && legado.func === 1, 'La adaptación del caso viejo conserva orden, despacho, persona, hora y funcionario');
+
+const incompleto = await page.evaluate(async () => {
+  const c = ojNuevoCaso();
+  c.oj.requerido.priNom = 'ANA'; c.oj.requerido.priApe = 'GOMEZ'; c.oj.requerido.numDoc = '999';
+  c.oj.orden.numero = '7'; c.oj.orden.fechaExpedicion = '2026-07-01'; c.oj.orden.finalidad = 'CONDENA';
+  c.oj.despacho.nombre = 'Juzgado Y'; c.oj.diligencia.lugarDireccion = 'Calle 1';
+  c.capturados = [{ id: 'x', priNom: 'ANA', priApe: 'GOMEZ' }];
+  await DB.saveCase(c);
+  window.__dl = [];
+  await descargarDocCaso(c.id);
+  await new Promise(r => setTimeout(r, 400));
+  const txt = document.getElementById('modal-c').textContent;
+  const duras = ojDuras(DB.getCase(c.id));
+  return {
+    id: c.id, abierto: document.getElementById('modal').classList.contains('open'),
+    lineas: (txt.match(/Paso \d/g) || []).length, duras: duras.length,
+    primerPaso: duras[0].paso, descargas: window.__dl
+  };
+});
+log(incompleto.abierto === true && incompleto.descargas.length === 0, 'Un caso incompleto no descarga a medias: explica por qué');
+log(incompleto.lineas === incompleto.duras, 'El aviso lista TODAS las faltas, no solo la primera',
+  incompleto.lineas + '/' + incompleto.duras);
+
+const envio = await page.evaluate(async id => {
+  closeModal();
+  abrirEnvioDoc(id);
+  await new Promise(r => setTimeout(r, 900));
+  return {
+    sheet: document.getElementById('share-sheet').classList.contains('on'),
+    modal: document.getElementById('modal').classList.contains('open'),
+    doc: window._shareDoc ? _shareDoc.fname : null
+  };
+}, incompleto.id);
+log(envio.sheet === false && envio.doc === null, 'Enviar aplica el mismo criterio que descargar: no produce un oficio incompleto');
+log(envio.modal === true, 'Y muestra la misma explicación');
+
+const salto = await page.evaluate(async id => {
+  closeModal();
+  const duras = ojDuras(DB.getCase(id));
+  ojCompletarCaso(id, duras[0].paso);
+  await new Promise(r => setTimeout(r, 300));
+  return { hash: location.hash, paso: ws, esperado: duras[0].paso };
+}, incompleto.id);
+log(salto.hash === '#wizard' && salto.paso === salto.esperado,
+  '«Completar el caso» abre el wizard justo en el paso que falla', 'paso ' + (salto.paso + 1));
+await page.evaluate(() => { wc = null; go('capturas'); });
+
 /* ─────────── 9. Flagrancia intacta ─────────── */
 const flagrancia = await page.evaluate(() => {
   const c = SIM.genFlagrancia('flagrancia-uri');

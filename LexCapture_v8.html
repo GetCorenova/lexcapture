@@ -1798,7 +1798,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 31;
+var _BUILD = 32;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -1850,6 +1850,14 @@ function abrirEnvioDoc(id) {
   if (!id) { toast('Selecciona un caso primero'); return; }
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
+  // Mismo criterio que la descarga: lo que no se puede generar tampoco se envía.
+  // Antes el sheet sí producía un oficio al que le faltaban datos obligatorios.
+  if (c.ojv === 2) {
+    var _duras = ojDuras(ojNormalizar(c));
+    // Se limpia el documento pre-generado de otro caso: si no, quedaría vivo un
+    // .docx que no corresponde al caso que el usuario acaba de tocar.
+    if (_duras.length) { _shareDoc = null; _shareCasoId = null; ojModalFaltantes(id, _duras); return; }
+  }
   _shareCasoId = id;
   _shareDoc = null;
   var lbl = c.ojv===2 ? 'Oficio de disposición' : (c.tipo==='OJ' ? 'Documento OJ' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI'));
@@ -1882,7 +1890,7 @@ async function _pregenShareDoc(c, id) {
   _shareBusy(true); _shareHint('busy');
   var out = null;
   try {
-    if (c.ojv === 2) out = await buildOficioOJBlob(c);
+    if (c.ojv === 2 || (c.tipo === 'OJ' && !DB.getActiveTemplate('fpj5_oj'))) out = await buildOficioOJBlob(ojCasoParaDocumento(c));
     else if (c.tipo === 'OJ') out = await buildDocOJBlob(c, null);
     else out = buildFPJBlob(c);
   } catch(e) { console.error(e); _shareBusy(false); _shareHint(false); return; }
@@ -2679,6 +2687,7 @@ function closeActionSheet() {
 var ACT_OK   = 'background:var(--ok-bg);border-color:transparent;color:var(--ok)';
 var ACT_ACC  = 'background:var(--accG);border-color:transparent;color:var(--acc)';
 var ACT_URI  = 'background:var(--uriB);border-color:transparent;color:var(--uriT)';
+var ACT_OJ   = 'background:var(--ojB);border-color:transparent;color:var(--oj-2)';
 
 function openPersonSheet(id) {
   var p = DB.getPerson(id); if (!p) return;
@@ -2733,6 +2742,11 @@ function openCaseSheet(id) {
     actItem('enviarDossierCaso', id, ACT_IC.wa, 'Enviar Dossier', 'Resumen del caso por WhatsApp o correo', '', ACT_OK) +
     // 4) Copiar el dossier al portapapeles
     actItem('copiarDossierCaso', id, ACT_IC.copy, 'Copiar Dossier', 'Copia el texto del dossier al portapapeles') +
+    // 4b) Captura OJ del formato anterior: pasarla al módulo nuevo
+    (isOJ && c.ojv !== 2
+      ? actItem('ojCompletarCaso', id, ACT_IC.edit, 'Completar al formato nuevo',
+          'Pasa esta captura al módulo de orden judicial con sus datos actuales', '', ACT_OJ)
+      : '') +
     // 5) Editar   6) Eliminar
     actItem('editCase', id, ACT_IC.edit, 'Editar captura', 'Abre el formulario para modificar los datos') +
     actItem('delCase', id, ACT_IC.del, 'Eliminar', 'Borra el registro de '+termino+' de forma permanente', ' danger'));
@@ -2750,7 +2764,10 @@ function abrirDossierCaso(id) {
 function descargarDocCaso(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
-  if (c.ojv === 2) { ojDescargarOficio(c); return; }     // módulo de orden judicial
+  // Orden judicial: módulo nuevo. Un caso anterior solo sigue por la ruta vieja
+  // si el usuario tiene su plantilla .docx activa; si no, se adapta al vuelo
+  // (antes se quedaba sin documento y se le mandaba a subir una plantilla).
+  if (c.ojv === 2 || (c.tipo === 'OJ' && !DB.getActiveTemplate('fpj5_oj'))) { ojDescargarOficio(c); return; }
   if (c.tipo === 'OJ') { genDocOJ(c, null); return; }   // genDocOJ ya descarga y avisa
   var out = buildFPJBlob(c);
   if (!out) return;                                       // no se pudo generar (p. ej. NUNC inválido)
@@ -6525,19 +6542,102 @@ async function buildOficioOJBlob(c){
     return null;
   }
 }
-async function ojDescargarOficio(id){
-  var c=(typeof id==='object'&&id)?id:DB.getCase(id);
+/* ── Capturas OJ anteriores al módulo ──────────────────────────────────────
+   Antes, un caso OJ sin plantilla .docx subida NO producía documento: el único
+   camino era "ve a Plantillas y sube el formato oficial". Ahora esos casos se
+   adaptan al vuelo al modelo nuevo y sí generan el oficio. La adaptación es una
+   COPIA: el caso guardado no se toca (nada se migra a la fuerza). */
+function ojEsLegado(c){ return !!c && c.tipo==='OJ' && c.ojv!==2; }
+function ojDesdeLegado(orig){
+  var cfg=DB.getConfig();
+  var c=JSON.parse(JSON.stringify(orig));
+  var cap=(c.capturados&&c.capturados[0])||{};
+  var narr=c.narracion||{}, lug=c.lugar||{}, serv=c.servidor||{};
+  c.ojv=2; c.ojAdaptado=true;
+  c.oj=ojEstructura();
+  var o=c.oj;
+  o.orden.numero=c.numOrden||'';
+  o.orden.fechaExpedicion=c.fechaOrden||'';
+  o.orden.autoridadSolicitante=c.autoridadSolicita||'';
+  o.orden.finalidad='';                                   // el formulario viejo no la tenía
+  o.despacho.nombre=c.juzgadoOrden||c.autoridadSolicita||'';
+  o.proceso.radicado=c.spoa||c.nunc||'';
+  o.proceso.delitos=(c.conductas||[]).filter(Boolean).map(function(x){ return {nombre:x}; });
+  if(!o.proceso.delitos.length&&c.delitoOrden) o.proceso.delitos=[{nombre:c.delitoOrden}];
+  o.requerido.priNom=cap.priNom||''; o.requerido.segNom=cap.segNom||'';
+  o.requerido.priApe=cap.priApe||''; o.requerido.segApe=cap.segApe||'';
+  o.requerido.tipoDoc=cap.tipoDoc||'CC'; o.requerido.numDoc=sinPuntos(cap.numDoc||'');
+  o.requerido.expedidoEn=cap.expEn||''; o.requerido.fechaNac=cap.fn||''; o.requerido.edad=cap.edad||'';
+  o.requerido.profesion=cap.ocup||''; o.requerido.nacMunicipio=cap.lugNac||'';
+  o.requerido.resDireccion=cap.dirRes||''; o.requerido.resTelefono=cap.tel||'';
+  o.requerido.senales=cap.senas||''; o.requerido.madre=cap.padres||'';
+  if(cap.alias&&cap.alias!=='N/A') o.requerido.alias=cap.alias;
+  var d=[narr.fechaCapA,narr.fechaCapM,narr.fechaCapD].filter(Boolean);
+  o.diligencia.fecha=d.length===3?d.join('-'):(c.fechaProc||'');
+  o.diligencia.hora=(narr.horaCapH&&narr.horaCapM)?(narr.horaCapH+':'+narr.horaCapM):'';
+  o.diligencia.lugarDireccion=lug.dir||''; o.diligencia.lugarBarrio=lug.barrio||'';
+  o.diligencia.lugarMunicipio=lug.muni||''; o.diligencia.lugarDepartamento=lug.depto||'';
+  if(serv.nombre) o.diligencia.funcionarios=[{grado:serv.grado||'',nombre:serv.nombre,cedula:sinPuntos(serv.ident||''),placa:''}];
+  o.actuacion.derechos.leidos=true;                       // el flujo viejo lo daba por hecho
+  o.actuacion.derechos.fecha=o.diligencia.fecha;
+  o.actuacion.observaciones=narr.texto||'';               // no perder el relato ya escrito
+  o.destino.nombre=(c.destinoOJ==='JUZGADO')?(c.juzgadoOrden||''):(c.destino||cfg.destUri||'');
+  return c;
+}
+// El documento se arma sobre esta copia; los casos v2 se usan tal cual.
+function ojCasoParaDocumento(c){ return ojEsLegado(c)?ojDesdeLegado(c):ojNormalizar(c); }
+
+/* Un bloqueo tiene que explicarse: antes era un toast que nombraba UNA de las
+   faltas y se iba. Ahora se listan todas y se puede saltar al paso exacto. */
+function ojModalFaltantes(id,duras){
+  var filas=duras.map(function(v){
+    return '<div class="oj-kv" style="align-items:flex-start">'+
+      '<span style="min-width:78px">Paso '+(v.paso+1)+'</span>'+
+      '<span style="text-align:left">'+escHtml(v.msg)+'</span></div>';
+  }).join('');
+  openModal(
+    '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="oj-alert dura"><b>No se puede generar todavía</b>'+
+    'El oficio de puesta a disposición es un documento legal: sin estos datos saldría incompleto ante el despacho judicial.</div>'+
+    filas+
+    (id?'<button class="btn bp bbl" style="margin-top:16px" onclick="ojCompletarCaso(\''+id+'\','+duras[0].paso+')">Completar el caso</button>':'')
+  );
+}
+function ojCompletarCaso(id,paso){
+  closeModal();
+  var c=DB.getCase(id); if(!c){ toast('Caso no encontrado'); return; }
+  if(ojEsLegado(c)){                                     // se convierte al abrirlo, no antes
+    wc=ojDesdeLegado(c);
+    toast('Caso del formato anterior: complétalo y guárdalo para generar el oficio',6000);
+  } else {
+    wc=ojNormalizar(JSON.parse(JSON.stringify(c)));
+  }
+  ws=paso||0;
+  document.getElementById('wz-title').textContent='Captura por orden judicial';
+  go('wizard'); renderWiz();
+}
+async function ojDescargarOficio(ref){
+  var c=(typeof ref==='object'&&ref)?ref:DB.getCase(ref);
   if(!c){ toast('Caso no encontrado'); return; }
-  var duras=ojDuras(ojNormalizar(c));
-  if(duras.length){
-    toast('Faltan '+duras.length+' dato(s) obligatorio(s): '+duras[0].msg,7000);
-    return;
+  var legado=ojEsLegado(c);
+  var caso=ojCasoParaDocumento(c);
+  if(!legado){
+    var duras=ojDuras(caso);
+    if(duras.length){ ojModalFaltantes(c.id,duras); return; }
   }
   toast('Generando oficio…');
-  var out=await buildOficioOJBlob(c);
+  var out=await buildOficioOJBlob(caso);
   if(!out) return;
   _dlDocBlob(out.blob,out.fname);
-  _dlDone(out.label);
+  if(legado){
+    // Un caso viejo nunca tuvo estos campos: se entrega igual, pero avisando.
+    var faltan=ojDuras(caso);
+    toast(faltan.length
+      ? 'Oficio en Descargas ✓ — se generó con los datos del formato anterior; revísalo y complétalo desde «Completar al formato nuevo»'
+      : 'Oficio en Descargas ✓ — generado desde un caso del formato anterior', 7000);
+  } else {
+    _dlDone(out.label);
+  }
 }
 /* ─────────────────────────────────────────────────────────────────────────
    I.14 · GUARDADO

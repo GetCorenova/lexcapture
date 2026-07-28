@@ -311,6 +311,24 @@ documento. Comparten primitivas (cifrado, personas, zip/docx, sheet de envío) y
   desde el mismo selector, que también alimenta el destinatario del paso 7.
 - Anti-caché a `?v=31` / `cache-v31`, `_BUILD=31`.
 
+### "No deja descargar el informe" (mismo día) — tres caminos que dejaban al usuario sin documento
+Reportado en campo. Reproducidos los tres con Playwright antes de tocar nada; ahora son checks fijos
+de `verify_oj.mjs` (**95 checks**). Anti-caché a `?v=32` / `cache-v32`, `_BUILD=32`.
+- **Capturas OJ creadas antes del módulo** (`ojv` ausente) caían en `genDocOJ`, que exige una
+  plantilla `.docx` subida: toast *"Sin plantilla activa — ve a Plantillas"* + redirección, y **nunca
+  descargaban**. Ahora `ojDesdeLegado()` las adapta **al vuelo, sobre una copia** (el caso guardado no
+  se toca) y sí generan el oficio nuevo; se avisa que salió con los datos del formato anterior. ⚠️ Si
+  el usuario tiene una plantilla `fpj5_oj` activa se respeta su ruta de siempre: la migración nunca
+  le quita su formato. El sheet de la captura ofrece además **"Completar al formato nuevo"**.
+- **Bloqueo por validación dura sin explicación**: era un toast que nombraba **una** de las faltas y
+  se iba. Ahora `ojModalFaltantes()` lista **todas** con su paso y un botón que abre el wizard
+  **justo en el paso que falla** (`ojCompletarCaso(id,paso)`).
+- ⚠️ **Descargar y enviar aplicaban criterios distintos**: `abrirEnvioDoc` **sí pre-generaba** el
+  oficio al que le faltaban datos obligatorios mientras `descargarDocCaso` lo bloqueaba — se podía
+  mandar al juzgado por una vía lo que la otra consideraba inválido. Las dos comparten ahora el mismo
+  chequeo, y el early-return limpia `_shareDoc`/`_shareCasoId` para no dejar vivo el `.docx`
+  pre-generado de otro caso.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
