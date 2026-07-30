@@ -237,6 +237,38 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #net-badge.offline{color:var(--danger);border-color:transparent;background:var(--errB)}
 #net-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
 
+/* ═══ DIÁLOGO DE EXPORTACIÓN ═══ */
+.exp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0 16px}
+.exp-opt{
+  display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
+  padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);
+  background:var(--surface-2);color:var(--text);
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease);
+}
+.exp-opt:active{background:var(--surface-3)}
+.exp-opt.on{border-color:var(--acc);background:var(--acc-bg)}
+.exp-opt-lbl{font-size:14px;font-weight:600}
+.exp-opt-sub{font-size:11.5px;color:var(--text-3);line-height:1.3}
+.exp-opt.on .exp-opt-lbl{color:var(--acc)}
+#exp-go[disabled]{opacity:.45;cursor:not-allowed}
+
+/* ═══ BANNER MODO INVITADO ═══
+   Barra fija arriba del todo. Usa el ámbar de flagrancia: es una advertencia
+   permanente, no un estado neutro. */
+#guest-bar{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:1400;
+  align-items:center;gap:12px;padding:8px 14px;
+  background:var(--flag-2);color:#0E1020;
+  font-size:12.5px;line-height:1.35;
+}
+#guest-bar.on{display:flex}
+#guest-bar .gb-txt{flex:1;min-width:0}
+#guest-bar .gb-btn{
+  flex:0 0 auto;padding:6px 14px;border-radius:8px;border:1px solid rgba(14,16,32,.35);
+  background:transparent;color:#0E1020;font-size:12px;font-weight:600;cursor:pointer;
+}
+body.guest{padding-top:38px}
+
 /* ═══ BANNER PWA ═══ */
 #install-banner{
   display:none;position:fixed;bottom:84px;left:12px;right:12px;z-index:998;
@@ -1430,39 +1462,52 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14M7 21h10M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/></svg>Oficio de orden judicial</span><span class="aj-sec-arr" id="aj-arr-oj-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-oj-sec" style="display:none;padding-top:12px">
-          <p class="oj-hint">Encabezado institucional del oficio. Se imprime siempre con esta jerarquía y no se edita dentro del documento: se toma de aquí.</p>
+          <div class="st" style="margin-top:0">Membrete</div>
+          <p class="oj-hint">Las cuatro líneas del encabezado del oficio. Se imprimen siempre con esta jerarquía y no se editan dentro del documento: se toman de aquí.</p>
           <div class="fr">
             <div class="fg"><label class="fl">Línea 1 — ministerio o sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece la unidad"></div>
             <div class="fg"><label class="fl">Línea 2 — institución</label><input class="fi" id="aj-oj-inst" placeholder="Nombre de tu institución"></div>
           </div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Unidad policial (metropolitana o departamento)"></div>
-            <div class="fg"><label class="fl">Línea 4 — dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Estación, distrito o dependencia"></div>
+          <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento de policía, dirección o especialidad"></div>
+          <p class="oj-hint">Ej: METROPOLITANA DEL VALLE DE ABURRÁ · METROPOLITANA DE BOGOTÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE INVESTIGACIÓN CRIMINAL E INTERPOL · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</p>
+          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Estación, seccional o dependencia"></div>
+          <p class="oj-hint">Ej: ESTACIÓN DE POLICÍA CANDELARIA · ESTACIÓN DE POLICÍA CAÑASGORDAS · SECCIONAL DE INVESTIGACIÓN CRIMINAL</p>
+          <div class="fg"><label class="fl">Logo o escudo del membrete</label>
+            <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
           </div>
+          <div id="aj-oj-logo-prev"></div>
+          <p class="oj-hint">Imagen cuadrada, se imprime a 1,9 cm a la izquierda de las cuatro líneas. Si no cargas ninguna, el texto queda exactamente en la misma posición.</p>
           <div class="fr">
             <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
             <div class="fg"><label class="fl">Consecutivo / dependencia</label><input class="fi" id="aj-oj-cons" placeholder="Ej: MEVAL – ESCAN – 1.10"></div>
           </div>
           <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
-          <div class="st">Pie de página</div>
+          <div class="st">Bloque de contacto al pie del oficio</div>
+          <p class="oj-hint">Cierra el documento con los datos de la dependencia que lo emite.</p>
+          <div class="fg"><label class="fl">Dependencia (como debe verse en el pie)</label><input class="fi" id="aj-oj-pdep" placeholder="Ej: Estación de Policía La Candelaria"></div>
           <div class="fr">
             <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-pdir" placeholder="Dirección de la dependencia"></div>
             <div class="fg"><label class="fl">Teléfonos</label><input class="fi" id="aj-oj-ptel" placeholder="Teléfonos de contacto"></div>
           </div>
           <div class="fr">
-            <div class="fg"><label class="fl">Correo</label><input class="fi" id="aj-oj-pcor" placeholder="Correo institucional"></div>
+            <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-oj-pcor" placeholder="Correo institucional"></div>
             <div class="fg"><label class="fl">Sitio web</label><input class="fi" id="aj-oj-pweb" placeholder="Sitio web institucional"></div>
+          </div>
+          <div class="st">Lugar de custodia por defecto</div>
+          <p class="oj-hint">Dónde queda normalmente el capturado. El oficio lo deja por escrito para que el despacho sepa a dónde dirigir sus requerimientos. Si un procedimiento termina en otro sitio, se cambia en el paso 7 del formulario.</p>
+          <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Si se deja vacío se usa la dependencia del pie"></div>
+          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Dirección donde queda el capturado"></div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Abonado telefónico</label><input class="fi" id="aj-oj-ctel" placeholder="Teléfono de la unidad"></div>
+            <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-oj-ccor" placeholder="Correo de la unidad"></div>
           </div>
           <div class="fr3">
             <div class="fg"><label class="fl">Código de formato</label><input class="fi" id="aj-oj-cod" placeholder="Ej: 1DS–OF–0001"></div>
             <div class="fg"><label class="fl">Versión</label><input class="fi" id="aj-oj-ver" placeholder="Ej: VER: 6"></div>
             <div class="fg"><label class="fl">Clasificación</label><input class="fi" id="aj-oj-clas" placeholder="Ej: INFORMACIÓN PÚBLICA"></div>
           </div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Ubicación (TRD)</label><input class="fi" id="aj-oj-trd" placeholder="Código de ubicación documental"></div>
-            <div class="fg"><label class="fl">Revisó</label><input class="fi" id="aj-oj-rev" placeholder="Quien revisa el oficio"></div>
-          </div>
+          <p class="oj-hint">Se imprimen a la izquierda del pie, junto al número de página. Déjalos vacíos si tu unidad no los usa.</p>
           <div class="st">Jornada judicial hábil</div>
           <p class="oj-hint">Se usa para calcular si el juzgado está disponible dentro del término de 36 horas. Los festivos de Colombia se calculan solos.</p>
           <div class="fr">
@@ -1573,6 +1618,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 <div id="net-badge" hidden>
   <span class="dot"></span>
   <span id="net-label">Sin señal</span>
+</div>
+
+<!-- ====== BANNER MODO INVITADO ======
+     Visible en todo momento mientras dure la sesión: el invitado nunca debe
+     creer que sus capturas quedaron guardadas en el equipo. -->
+<div id="guest-bar">
+  <span class="gb-txt"><b>Modo invitado</b> · nada se guarda en este equipo — descarga tus documentos antes de salir</span>
+  <button class="gb-btn" onclick="guestSalir()">Salir</button>
 </div>
 
 <!-- ====== BANNER INSTALACION PWA ====== -->
@@ -1798,7 +1851,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 32;
+var _BUILD = 34;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -1846,8 +1899,24 @@ function _mkShareFile(out) {
   if (!out) return null;
   try { return new File([out.blob], _asciiName(out.fname), {type: out.blob.type}); } catch(e) { return null; }
 }
+/* Enviar también produce un documento final, así que también pide formato y
+   tamaño primero. Si se elige PDF se va directo a la vista de impresión: no hay
+   archivo que adjuntar hasta que el usuario lo guarde desde ahí. */
 function abrirEnvioDoc(id) {
   if (!id) { toast('Selecciona un caso primero'); return; }
+  var c0 = DB.getCase(id);
+  if (!c0) { toast('Caso no encontrado'); return; }
+  var esOJ = (c0.tipo === 'OJ' || c0.ojv === 2);
+  var quien = (c0.capturados && c0.capturados[0]) ? fullName(c0.capturados[0]) : '';
+  var lbl = esOJ ? 'Oficio de puesta a disposición' : (c0.tipo === 'CESPA' ? 'Informe de aprehensión CESPA' : 'FPJ-5 URI');
+  lcPedirExport(esOJ ? 'OJ' : 'FPJ', lbl + (quien ? ' — ' + quien : ''), function(sel){
+    if (sel.fmt === 'PDF') { lcProducir(c0, sel, esOJ); return; }
+    _sharePapel = sel.papel;
+    _abrirEnvioSheet(id);
+  });
+}
+var _sharePapel = 'CARTA';
+function _abrirEnvioSheet(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
   // Mismo criterio que la descarga: lo que no se puede generar tampoco se envía.
@@ -1860,7 +1929,9 @@ function abrirEnvioDoc(id) {
   }
   _shareCasoId = id;
   _shareDoc = null;
-  var lbl = c.ojv===2 ? 'Oficio de disposición' : (c.tipo==='OJ' ? 'Documento OJ' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI'));
+  // Toda captura por orden judicial produce el mismo oficio, sea del módulo o
+  // del formato anterior: el sheet nombra lo que realmente va a salir.
+  var lbl = (c.tipo==='OJ'||c.ojv===2) ? 'Oficio de disposición' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI');
   var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : '';
   var t = document.getElementById('share-title');
   if (t) t.textContent = lbl + (cap ? ' — ' + cap : '');
@@ -1890,9 +1961,8 @@ async function _pregenShareDoc(c, id) {
   _shareBusy(true); _shareHint('busy');
   var out = null;
   try {
-    if (c.ojv === 2 || (c.tipo === 'OJ' && !DB.getActiveTemplate('fpj5_oj'))) out = await buildOficioOJBlob(ojCasoParaDocumento(c));
-    else if (c.tipo === 'OJ') out = await buildDocOJBlob(c, null);
-    else out = buildFPJBlob(c);
+    if (c.tipo === 'OJ' || c.ojv === 2) out = await buildOficioOJBlob(ojCasoParaDocumento(c), _sharePapel);
+    else out = buildFPJBlob(c, _sharePapel);
   } catch(e) { console.error(e); _shareBusy(false); _shareHint(false); return; }
   if (_shareCasoId !== id) return;                                  // el sheet ya cambió de caso
   if (!out) { _shareBusy(false); _shareHint(false); return; }        // no se pudo generar (p. ej. NUNC inválido)
@@ -2010,6 +2080,126 @@ var _personsCache = null;
 var _pinAttempts = 0;
 var _pinLockUntil = 0;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   EXPORTACIÓN: FORMATO DE SALIDA Y TAMAÑO DE PAPEL
+   Antes de producir cualquier documento final se piden SIEMPRE las dos cosas.
+   La adaptación toca únicamente la diagramación física: ni un dato del
+   contenido cambia entre un tamaño y otro.
+
+   ⚠️ Ancho, no alto, es lo que importa: Carta y Oficio comparten 8,5" de ancho,
+   así que pasar de una a otra solo cambia cuántas líneas caben por hoja — las
+   tablas no se tocan. Un tamaño más angosto (8 × 13,5") obliga a reescalar
+   anchos, y eso en el FPJ-5 está prohibido: sus 35 tablas son el formato
+   oficial de la Fiscalía, calibradas a 10631 twips tras tres pasadas de
+   alineación (v2.1–v2.3), y reescalarlas parte palabras dentro de las casillas.
+   Por eso el FPJ-5 solo admite tamaños de igual ancho; el oficio de orden
+   judicial, que arma la app, admite cualquiera.
+═══════════════════════════════════════════════════════════════════════════ */
+var LC_PAPEL = {
+  CARTA:    { id:'CARTA',    lbl:'Carta',           sub:'21,6 × 27,9 cm · 8,5 × 11"',   w:12240, h:15840, cssW:'8.5in',  cssH:'11in' },
+  OFICIO:   { id:'OFICIO',   lbl:'Oficio',          sub:'21,6 × 33 cm · 8,5 × 13"',     w:12240, h:18720, cssW:'8.5in',  cssH:'13in' },
+  P8X135:   { id:'P8X135',   lbl:'8 × 13,5"',       sub:'20,3 × 34,3 cm',               w:11520, h:19440, cssW:'8in',    cssH:'13.5in' }
+};
+var LC_PAPEL_ORDEN = ['CARTA','OFICIO','P8X135'];
+function lcPapel(id){ return LC_PAPEL[id] || LC_PAPEL.CARTA; }
+// Ancho de referencia del formato FPJ-5 (el de sus 35 tablas). Solo los tamaños
+// que lo respetan pueden usarse sin tocar una sola casilla.
+var LC_FPJ_ANCHO = 12240;
+function lcPapelSirveFPJ(id){ return lcPapel(id).w === LC_FPJ_ANCHO; }
+function lcPapelesFPJ(){ return LC_PAPEL_ORDEN.filter(lcPapelSirveFPJ); }
+
+/* Diálogo obligatorio. No devuelve nada hasta que el usuario elige AMBAS
+   opciones: el botón de generar nace deshabilitado. `kind` es 'OJ' o 'FPJ'
+   (el FPJ-5 restringe la lista de tamaños y lo explica en pantalla). */
+var _lcExportCb = null, _lcExportKind = 'OJ', _lcExportSel = { fmt:'', papel:'' };
+function lcPedirExport(kind, nombreDoc, cb){
+  _lcExportCb = cb; _lcExportKind = kind;
+  // Se arranca SIEMPRE sin selección: la elección tiene que ser un acto del
+  // usuario, no un valor por defecto que se cuela sin que lo mire.
+  _lcExportSel = { fmt:'', papel:'' };
+  var papeles = (kind==='FPJ') ? lcPapelesFPJ() : LC_PAPEL_ORDEN;
+  var opt = function(grupo, id, lbl, sub){
+    return '<button type="button" class="exp-opt" id="exp-'+grupo+'-'+id+'" '+
+      'onclick="lcExportElegir(\''+grupo+'\',\''+id+'\')">'+
+      '<span class="exp-opt-lbl">'+escHtml(lbl)+'</span>'+
+      (sub?'<span class="exp-opt-sub">'+escHtml(sub)+'</span>':'')+'</button>';
+  };
+  openModal(
+    '<div class="mh"><h2>Exportar documento</h2><button class="mx" onclick="lcExportCancelar()">✕</button></div>'+
+    (nombreDoc?'<p class="oj-hint" style="margin-top:0">'+escHtml(nombreDoc)+'</p>':'')+
+    '<div class="st" style="margin-top:12px">1 · Formato de salida</div>'+
+    '<div class="exp-grid">'+
+      opt('fmt','DOCX','Word','.docx — editable')+
+      opt('fmt','PDF','PDF','.pdf — listo para imprimir')+
+    '</div>'+
+    '<div class="st">2 · Tamaño del papel</div>'+
+    '<div class="exp-grid">'+
+      papeles.map(function(p){ return opt('papel',p,LC_PAPEL[p].lbl,LC_PAPEL[p].sub); }).join('')+
+    '</div>'+
+    (kind==='FPJ'
+      ? '<p class="oj-hint">El FPJ-5 es el formato oficial de la Fiscalía: sus casillas están calibradas a 8,5" '+
+        'de ancho, así que solo se ofrecen los tamaños que las respetan. Cambia el alto de la hoja, no el formato.</p>'
+      : '')+
+    '<button class="btn bp bbl" id="exp-go" disabled style="margin-top:18px" onclick="lcExportConfirmar()">'+
+      'Elige formato y tamaño</button>'
+  );
+}
+function lcExportElegir(grupo, id){
+  var lista = grupo==='fmt' ? ['DOCX','PDF'] : LC_PAPEL_ORDEN;
+  lista.forEach(function(x){
+    var el=document.getElementById('exp-'+grupo+'-'+x);
+    if(el) el.classList.toggle('on', x===id);
+  });
+  _lcExportSel[grupo==='fmt'?'fmt':'papel']=id;
+  var go=document.getElementById('exp-go');
+  if(go){
+    var listo=!!(_lcExportSel.fmt && _lcExportSel.papel);
+    go.disabled=!listo;
+    go.textContent = listo
+      ? 'Generar '+(_lcExportSel.fmt==='PDF'?'PDF':'Word')+' en '+lcPapel(_lcExportSel.papel).lbl
+      : (!_lcExportSel.fmt ? 'Elige el formato de salida' : 'Elige el tamaño del papel');
+  }
+}
+function lcExportCancelar(){ _lcExportCb=null; closeModal(); }
+function lcExportConfirmar(){
+  if(!_lcExportSel.fmt || !_lcExportSel.papel) return;   // no se genera nada a medias
+  var cb=_lcExportCb; _lcExportCb=null;
+  var sel={ fmt:_lcExportSel.fmt, papel:_lcExportSel.papel };
+  closeModal();
+  if(cb) cb(sel);
+}
+
+/* ═══ MODO INVITADO ═══
+   Para el funcionario que usa un teléfono prestado o un computador ajeno y no
+   puede (o no quiere) tocar los Ajustes ni el Perfil del dueño. Tiene TODOS los
+   formularios —orden judicial y flagrancia— y produce los documentos completos.
+   La contrapartida, dicha sin rodeos en pantalla: NADA se guarda en el equipo.
+   Ni capturas, ni personas, ni configuración: todo vive en memoria y se pierde
+   al cerrar. Por eso el invitado no necesita el PIN del dueño y tampoco ve ni
+   modifica un solo dato suyo. */
+var _guest = false, _guestCfg = null, _guestTpls = [];
+function guestEntrar() {
+  _guest = true;
+  _guestCfg = _cfgConDefaults({});
+  _guestTpls = [];
+  _casesCache = []; _personsCache = [];
+  initDefaultTemplates();                 // los formatos integrados, en su lista
+  _pinHide();
+  var b = document.getElementById('guest-bar'); if (b) b.classList.add('on');
+  document.body.classList.add('guest');
+  go('capturas'); renderCases();
+  toast('Modo invitado: los formularios y los documentos funcionan completos, pero nada queda guardado en este equipo', 8000);
+}
+function guestSalir() {
+  if (!confirm('Salir del modo invitado.\n\nLas capturas de esta sesión NO se guardaron en el equipo y se perderán.\n\n¿Descargaste ya los documentos que necesitas?')) return;
+  location.reload();
+}
+// Toast honesto: en invitado no se puede decir "guardado".
+function guestToastGuardado(msg) {
+  toast(_guest ? 'Listo en esta sesión — recuerda descargar el documento: en modo invitado nada se guarda' : msg,
+    _guest ? 6000 : 3000);
+}
+
 /* ═══ PIN FLOW ═══ */
 function _pinOv(html) {
   var el = document.getElementById('pin-box'); if (el) el.innerHTML = html;
@@ -2025,7 +2215,8 @@ function showPinSetup() {
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-a" placeholder="Nuevo PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')document.getElementById(\'pin-b\').focus()">'+
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-b" placeholder="Confirmar PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doSetPin()">'+
     '<div class="pin-err" id="pin-err"></div>'+
-    '<button class="pin-btn" onclick="doSetPin()">Crear PIN</button>'
+    '<button class="pin-btn" onclick="doSetPin()">Crear PIN</button>'+
+    '<div class="pin-forget" onclick="guestEntrar()">Usar como invitado (sin guardar nada)</div>'
   );
   setTimeout(function(){ var el=document.getElementById('pin-a'); if(el) el.focus(); }, 120);
 }
@@ -2038,6 +2229,9 @@ function showPinEntry() {
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-e" placeholder="PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doUnlockPin()">'+
     '<div class="pin-err" id="pin-err"></div>'+
     '<button class="pin-btn" onclick="doUnlockPin()">Ingresar</button>'+
+    // Equipo prestado: el invitado hace su procedimiento sin el PIN del dueño y
+    // sin ver ni tocar sus datos.
+    '<div class="pin-forget" onclick="guestEntrar()">Usar como invitado (sin guardar nada)</div>'+
     '<div class="pin-forget" onclick="forgotPin()">Olvidé mi PIN</div>'
   );
   setTimeout(function(){ var el=document.getElementById('pin-e'); if(el) el.focus(); }, 120);
@@ -2126,6 +2320,10 @@ async function _lcDecrypt(b64) {
 }
 var _lcWriteChain = {};
 function _lcEncSave(key, val) {
+  // Invitado: los datos viven solo en las cachés en memoria (ya actualizadas por
+  // el llamador). No se escribe nada en el equipo — y se resuelve de verdad, así
+  // que el flujo continúa sin fingir un guardado que no ocurrió.
+  if (_guest) return Promise.resolve();
   if (!_sessionKey) {
     var err = new Error('Sin sesión activa — no se guardó');
     console.error('[LexCapture] cifrado error', key, err);
@@ -2186,7 +2384,23 @@ var DB = {
   savePerson: function(p) { var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
+    // Modo invitado: configuración propia en memoria. Ni se lee ni se escribe la
+    // del dueño del equipo (quien presta el teléfono no expone sus datos, y el
+    // invitado no le cambia los suyos).
+    if (_guest) return _guestCfg;
     var stored; try { stored=JSON.parse(localStorage.getItem('lc_cfg'))||{}; } catch(e) { stored={}; }
+    return _cfgConDefaults(stored);
+  },
+  saveConfig: function(c) { if (_guest) { _guestCfg=c; return; } localStorage.setItem('lc_cfg', JSON.stringify(c)); },
+  getTemplates: function() { if (_guest) return _guestTpls; try{return JSON.parse(localStorage.getItem('lc_templates'))||[];}catch(e){return[];} },
+  saveTemplates: function(t) { if (_guest) { _guestTpls=t; return; } localStorage.setItem('lc_templates', JSON.stringify(t)); },
+  saveTemplate: function(t) { var a=this.getTemplates();var i=a.findIndex(function(x){return x.id===t.id;});if(i>=0)a[i]=t;else a.push(t);this.saveTemplates(a); },
+  deleteTemplate: function(id) { this.saveTemplates(this.getTemplates().filter(function(t){return t.id!==id;})); },
+  getTemplate: function(id) { var a=this.getTemplates();for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];return null; },
+  getActiveTemplate: function(tipo) { var a=this.getTemplates();for(var i=0;i<a.length;i++)if(a[i].activa&&a[i].tipo===tipo)return a[i];return null; }
+};
+function _cfgConDefaults(stored) {
+    stored=stored||{};
     var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'CANDELARIA',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null,
       /* Oficio de orden judicial (Fase I). El encabezado institucional se arma
          con estos campos: la app no lleva ningún nombre de institución escrito
@@ -2195,17 +2409,15 @@ var DB = {
       ojAsunto:'Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}',
       ojConsecutivo:'',ojCodigoFormato:'',ojVersionFormato:'',ojClasificacion:'INFORMACIÓN PÚBLICA',
       ojPieDireccion:'',ojPieTelefonos:'',ojPieCorreo:'',ojPieWeb:'',ojUbicacionTRD:'',ojReviso:'',
+      /* Bloque de contacto al pie del oficio y lugar donde queda el capturado.
+         El pie imprime la dependencia tal como debe verse (ojPieDependencia);
+         la custodia se puede cambiar por procedimiento — el capturado no siempre
+         queda en la misma estación. */
+      ojPieDependencia:'',ojCustEstacion:'',ojCustDireccion:'',ojCustTelefono:'',ojCustCorreo:'',
+      ojLogoB64:'',ojLogoMime:'',
       ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[]};
     var out={}; for(var k in def) out[k]=stored[k]!==undefined?stored[k]:def[k]; for(var k in stored) if(!(k in out)) out[k]=stored[k]; return out;
-  },
-  saveConfig: function(c) { localStorage.setItem('lc_cfg', JSON.stringify(c)); },
-  getTemplates: function() { try{return JSON.parse(localStorage.getItem('lc_templates'))||[];}catch(e){return[];} },
-  saveTemplates: function(t) { localStorage.setItem('lc_templates', JSON.stringify(t)); },
-  saveTemplate: function(t) { var a=this.getTemplates();var i=a.findIndex(function(x){return x.id===t.id;});if(i>=0)a[i]=t;else a.push(t);this.saveTemplates(a); },
-  deleteTemplate: function(id) { this.saveTemplates(this.getTemplates().filter(function(t){return t.id!==id;})); },
-  getTemplate: function(id) { var a=this.getTemplates();for(var i=0;i<a.length;i++)if(a[i].id===id)return a[i];return null; },
-  getActiveTemplate: function(tipo) { var a=this.getTemplates();for(var i=0;i<a.length;i++)if(a[i].activa&&a[i].tipo===tipo)return a[i];return null; }
-};
+}
 
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function fmtDate(d) { if(!d) return '—'; var p=d.split('-'); return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:d; }
@@ -2224,7 +2436,7 @@ function filterCasos(f, el) {
 
 function renderCases() {
   var el = document.getElementById('cl');
-  if (!_sessionKey && localStorage.getItem('lc_key_salt')) {
+  if (!_guest && !_sessionKey && localStorage.getItem('lc_key_salt')) {
     if (el) el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Datos protegidos</h3><p>Ingresa tu PIN para acceder a las capturas.</p><button class="cta" onclick="showPinEntry()">Ingresar PIN</button></div>';
     var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = 'Datos protegidos';
     return;
@@ -2387,7 +2599,7 @@ async function wizSave() {
       jobs=jobs.concat((saved.testigos||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Testigo'}));}));
     }
     await Promise.all(jobs);
-    wc=null; go('capturas'); toast('Caso guardado ✓');
+    wc=null; go('capturas'); guestToastGuardado('Caso guardado ✓');
   } catch(e) {
     console.error('[LexCapture] error guardando caso', e);
     toast('⚠️ Error guardando el caso — el PIN pudo bloquearse. Vuelve a intentarlo.');
@@ -2761,19 +2973,39 @@ function abrirDossierCaso(id) {
 
 // ── Salidas directas desde el sheet de la captura ──
 // Descarga el documento oficial (.docx) según el tipo: FPJ-5 URI/CESPA u Oficio OJ.
-function descargarDocCaso(id) {
-  var c = DB.getCase(id);
+/* Punto único de salida de un documento final. Pide SIEMPRE formato y tamaño
+   antes de producir nada, y después entrega: .docx a Descargas, o la vista de
+   impresión ya diagramada en ese tamaño para guardar como PDF. */
+function lcExportarCaso(id) {
+  var c = (typeof id === 'object' && id) ? id : DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
-  // Orden judicial: módulo nuevo. Un caso anterior solo sigue por la ruta vieja
-  // si el usuario tiene su plantilla .docx activa; si no, se adapta al vuelo
-  // (antes se quedaba sin documento y se le mandaba a subir una plantilla).
-  if (c.ojv === 2 || (c.tipo === 'OJ' && !DB.getActiveTemplate('fpj5_oj'))) { ojDescargarOficio(c); return; }
-  if (c.tipo === 'OJ') { genDocOJ(c, null); return; }   // genDocOJ ya descarga y avisa
-  var out = buildFPJBlob(c);
-  if (!out) return;                                       // no se pudo generar (p. ej. NUNC inválido)
-  _dlDocBlob(out.blob, out.fname);
-  toast(out.label + ' descargado ✓');
+  var esOJ = (c.tipo === 'OJ' || c.ojv === 2);
+  var quien = (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : '';
+  var lbl = esOJ ? 'Oficio de puesta a disposición' : (c.tipo === 'CESPA' ? 'Informe de aprehensión CESPA' : 'FPJ-5 URI');
+  lcPedirExport(esOJ ? 'OJ' : 'FPJ', lbl + (quien ? ' — ' + quien : ''), function(sel){
+    lcProducir(c, sel, esOJ);
+  });
 }
+async function lcProducir(c, sel, esOJ) {
+  toast('Generando documento…');
+  var out = null;
+  if (esOJ) {
+    var caso = ojCasoParaDocumento(c);
+    if (!ojEsLegado(c)) {
+      var duras = ojDuras(caso);
+      if (duras.length) { ojModalFaltantes(c.id, duras); return; }
+    }
+    out = await buildOficioOJBlob(caso, sel.papel);
+  } else {
+    out = buildFPJBlob(c, sel.papel);
+  }
+  if (!out) return;                       // no se pudo generar (p. ej. NUNC inválido)
+  if (sel.fmt === 'PDF') { lcImprimir(out); return; }
+  _dlDocBlob(out.blob, out.fname);
+  toast(out.label + ' en Descargas ✓ — ' + lcPapel(out.papel).lbl + ', listo para imprimir', 6000);
+}
+// Compatibilidad: la ruta antigua ahora pasa por el diálogo de exportación.
+function descargarDocCaso(id) { lcExportarCaso(id); }
 // Envía el dossier (texto). En móvil usa el selector nativo (WhatsApp, correo, más);
 // en escritorio (sin navigator.share) muestra un sub-sheet con WhatsApp / Correo.
 // El texto se genera de forma síncrona para no gastar la activación del tap antes de share().
@@ -2990,17 +3222,14 @@ function rStep7(){
   var hasPerfiles=cfg.perfiles&&cfg.perfiles.length;
   var ojHtml='';
   if(wc&&wc.tipo==='OJ'){
-    var tplOJ=DB.getActiveTemplate('fpj5_oj');
     var isJzg=(wc.destinoOJ==='JUZGADO');
     var tplDispTipo=isJzg?'disp_juzgado':'disp_fiscalia';
     var tplDisp=DB.getActiveTemplate(tplDispTipo);
     var dispLbl=isJzg?'Disposición — Juzgado':'Disposición — Fiscalía';
     ojHtml='<div class="st" style="margin-top:16px">Documentos OJ</div>'+
-      (tplOJ
-        ?'<button class="btn bp bbl" onclick="genDocOJ(wc)" style="margin-bottom:6px">Generar FPJ-5 OJ</button>'+
-          '<p style="font-size:.75rem;color:var(--txD);margin-top:2px;margin-bottom:10px">Usando: '+tplOJ.nombre+'</p>'
-        :'<button class="btn bs bbl" onclick="go(\'plantillas\');toast(\'Sube la plantilla OJ oficial\')" style="margin-bottom:6px">Subir plantilla FPJ-5 OJ</button>'+
-          '<p style="font-size:.75rem;color:var(--txD);margin-top:2px;margin-bottom:10px">Sin plantilla FPJ-5 activa.</p>')+
+      // El oficio de puesta a disposición lo genera siempre el módulo, con su
+      // formato oficial: ya no depende de ninguna plantilla subida.
+      '<button class="btn bp bbl" onclick="ojDescargarOficio(wc)" style="margin-bottom:10px">Generar oficio de puesta a disposición</button>'+
       (tplDisp
         ?'<button class="btn boj bbl" onclick="genDocDisposicion(wc)">Generar '+dispLbl+'</button>'+
           '<p style="font-size:.75rem;color:var(--txD);margin-top:4px">Usando: '+tplDisp.nombre+'</p>'
@@ -3572,11 +3801,7 @@ function _dlDocBlob(blob,fname){
 function descargarFPJ(){
   if(!_dosCasoId){toast("Selecciona un caso primero");return;}
   var c=DB.getCase(_dosCasoId);if(!c){toast("Caso no encontrado");return;}
-  if(c.tipo==="OJ"){genDocOJ(c,null);return;}
-  var out=buildFPJBlob(c);
-  if(!out)return;
-  _dlDocBlob(out.blob,out.fname);
-  toast(out.label+" generado correctamente");
+  lcExportarCaso(c);
 }
 // ── Helpers FPJ: números de identificación sin puntos y marcado automático del tipo de documento ──
 function sinPuntos(s){return String(s==null?"":s).replace(/\./g,"").trim();}
@@ -3594,7 +3819,30 @@ function markDocType(tcs,ccCell,otraCell,person,primaryType,capMode){
   if(t===primaryType){setTc(tcs,ccCell,"X");setTc(tcs,otraCell,"");}
   else{setTc(tcs,ccCell,"");setTc(tcs,otraCell,capMode?t:"X");}
 }
-function buildFPJBlob(c){
+/* Aplica el tamaño de papel al sectPr del FPJ-5.
+   ⚠️ SOLO se tocan `w:pgSz` y el alto disponible: el ancho de página se deja
+   intacto porque las 35 tablas del formato están calibradas a 10631 twips
+   (12242 − 851 izq − 760 der). Cambiar el ancho las descuadraría y partiría
+   palabras dentro de las casillas, que es justo lo que costó tres pasadas
+   arreglar (FPJ-5 v2.1–v2.3). Por eso el diálogo de exportación solo ofrece
+   tamaños de igual ancho para este documento. */
+function fpjAplicarPapel(doc,W,papelId){
+  if(!lcPapelSirveFPJ(papelId)) return false;      // salvaguarda: nunca reescalar
+  var p=lcPapel(papelId);
+  var secs=doc.getElementsByTagNameNS(W,"sectPr");
+  for(var i=0;i<secs.length;i++){
+    var pg=secs[i].getElementsByTagNameNS(W,"pgSz")[0];
+    if(!pg) continue;
+    // El alto de la plantilla es 15842 (2 twips más que la carta nominal): se
+    // conserva ese desfase para no mover ni un pelo la diagramación existente.
+    var anchoTpl=parseInt(pg.getAttributeNS(W,"w")||pg.getAttribute("w:w")||"12242",10);
+    var desfase=anchoTpl-12240;
+    pg.setAttributeNS(W,"w:h",String(p.h+desfase));
+    pg.setAttributeNS(W,"w:w",String(p.w+desfase));
+  }
+  return true;
+}
+function buildFPJBlob(c,papel){
   var tf=c.tipo==="CESPA"?"CESPA":"URI";
   var tpl=tf==="CESPA"?TPL_CESPA:TPL_URI;
   try{
@@ -3672,13 +3920,16 @@ function buildFPJBlob(c){
     var v1=vehs[0]||{},v2=vehs[1]||{};
     setTc(tcs,249,v1.marca||"");setTc(tcs,250,v1.clase||"");setTc(tcs,251,v1.color||"");setTc(tcs,252,v1.prop||"");setTc(tcs,253,v1.placas||"");
     setTc(tcs,254,v2.marca||"");setTc(tcs,255,v2.clase||"");setTc(tcs,256,v2.color||"");setTc(tcs,257,v2.prop||"");setTc(tcs,258,v2.placas||"");
+    // Tamaño de papel: solo el alto de la hoja. Ni una casilla se toca.
+    fpjAplicarPapel(doc,W,papel||'CARTA');
     // Construir y descargar
     files["word/document.xml"]=new TextEncoder().encode(new XMLSerializer().serializeToString(doc));
     var zf=Object.entries(files).map(function(e){return{name:e[0],data:e[1] instanceof Uint8Array?e[1]:new Uint8Array(e[1])};});
     zf.sort(function(a,b){return a.name==="[Content_Types].xml"?-1:b.name==="[Content_Types].xml"?1:a.name.localeCompare(b.name);});
     var blob=new Blob([_buildZip(zf)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
     var fname="FPJ5_"+tf+"_"+(cap.priApe||"caso")+"_"+(cap.priNom||"")+".docx";
-    return {blob:blob,fname:fname,label:(tf==="CESPA"?"Informe aprehension CESPA":"FPJ-5 URI")};
+    return {blob:blob,fname:fname,label:(tf==="CESPA"?"Informe aprehension CESPA":"FPJ-5 URI"),
+            files:files,papel:(lcPapelSirveFPJ(papel||'CARTA')?(papel||'CARTA'):'CARTA')};
   }catch(e){console.error(e);toast("Error generando FPJ-5: "+e.message);return null;}
 }
 function simShowDossier(){
@@ -4133,13 +4384,47 @@ function loadAjustesFields() {
     'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa,
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,'aj-oj-dep':cfg.ojDependencia,
     'aj-oj-ciu':cfg.ojCiudad,'aj-oj-cons':cfg.ojConsecutivo,'aj-oj-asunto':cfg.ojAsunto,
+    'aj-oj-pdep':cfg.ojPieDependencia,
     'aj-oj-pdir':cfg.ojPieDireccion,'aj-oj-ptel':cfg.ojPieTelefonos,'aj-oj-pcor':cfg.ojPieCorreo,'aj-oj-pweb':cfg.ojPieWeb,
+    'aj-oj-cest':cfg.ojCustEstacion,'aj-oj-cdir':cfg.ojCustDireccion,
+    'aj-oj-ctel':cfg.ojCustTelefono,'aj-oj-ccor':cfg.ojCustCorreo,
     'aj-oj-cod':cfg.ojCodigoFormato,'aj-oj-ver':cfg.ojVersionFormato,'aj-oj-clas':cfg.ojClasificacion,
-    'aj-oj-trd':cfg.ojUbicacionTRD,'aj-oj-rev':cfg.ojReviso,
     'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
+  renderLogoOJ(cfg);
   renderConocieronRows(getConocieronList(cfg));
+}
+/* Logo del membrete. Se guarda en la configuración como base64 y se embebe en el
+   .docx: ningún escudo ni logotipo institucional viaja dentro del código de la
+   app (requisito de publicación — la app no puede alegar pertenecer a ninguna
+   institución; el usuario aporta el suyo). */
+function renderLogoOJ(cfg){
+  var el=document.getElementById('aj-oj-logo-prev'); if(!el) return;
+  cfg=cfg||DB.getConfig();
+  if(!cfg.ojLogoB64){ el.innerHTML='<p class="oj-hint">Sin logo cargado — el oficio sale solo con las cuatro líneas de texto.</p>'; return; }
+  el.innerHTML='<div class="flx g8" style="align-items:center;margin-top:8px">'+
+    '<img src="data:'+escAttr(cfg.ojLogoMime||'image/png')+';base64,'+escAttr(cfg.ojLogoB64)+'" '+
+    'alt="Logo del membrete" style="width:56px;height:56px;object-fit:contain;background:var(--surface-2);border-radius:8px;padding:4px">'+
+    '<button class="btn bs bsm" style="color:var(--err)" onclick="ajQuitarLogoOJ()">Quitar logo</button></div>';
+}
+function ajCargarLogoOJ(input){
+  var f=input&&input.files&&input.files[0]; if(!f) return;
+  if(f.size>400*1024){ toast('La imagen es muy pesada: usa una de menos de 400 KB'); input.value=''; return; }
+  var rd=new FileReader();
+  rd.onload=function(e){
+    var cfg=DB.getConfig();
+    cfg.ojLogoB64=String(e.target.result).split(',')[1]||'';
+    cfg.ojLogoMime=f.type||'image/png';
+    DB.saveConfig(cfg); renderLogoOJ(cfg); toast('Logo cargado ✓');
+  };
+  rd.readAsDataURL(f);
+}
+function ajQuitarLogoOJ(){
+  var cfg=DB.getConfig(); cfg.ojLogoB64=''; cfg.ojLogoMime='';
+  DB.saveConfig(cfg); renderLogoOJ(cfg);
+  var f=document.getElementById('aj-oj-logo-file'); if(f) f.value='';
+  toast('Logo quitado');
 }
 
 /* ─── Ajustes › funcionarios que conocieron el caso (lista dinámica) ─── */
@@ -4194,10 +4479,13 @@ function saveAjustes() {
     cfg.ojUnidad=v('aj-oj-uni'); cfg.ojDependencia=v('aj-oj-dep');
     cfg.ojCiudad=v('aj-oj-ciu'); cfg.ojConsecutivo=v('aj-oj-cons');
     cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
+    cfg.ojPieDependencia=v('aj-oj-pdep');
     cfg.ojPieDireccion=v('aj-oj-pdir'); cfg.ojPieTelefonos=v('aj-oj-ptel');
     cfg.ojPieCorreo=v('aj-oj-pcor'); cfg.ojPieWeb=v('aj-oj-pweb');
+    cfg.ojCustEstacion=v('aj-oj-cest'); cfg.ojCustDireccion=v('aj-oj-cdir');
+    cfg.ojCustTelefono=v('aj-oj-ctel'); cfg.ojCustCorreo=v('aj-oj-ccor');
     cfg.ojCodigoFormato=v('aj-oj-cod'); cfg.ojVersionFormato=v('aj-oj-ver');
-    cfg.ojClasificacion=v('aj-oj-clas'); cfg.ojUbicacionTRD=v('aj-oj-trd'); cfg.ojReviso=v('aj-oj-rev');
+    cfg.ojClasificacion=v('aj-oj-clas');
     cfg.ojJornadaIni=v('aj-oj-jini')||'08:00'; cfg.ojJornadaFin=v('aj-oj-jfin')||'17:00';
   }
   DB.saveConfig(cfg); toast('Ajustes guardados ✓');
@@ -4299,70 +4587,10 @@ function normalizeXmlRuns(xml){
   return xml;
 }
 
-// ── Motor de inyección ──
-async function genDocOJ(caso,plantillaId){
-  toast('Generando documento OJ…');
-  var out=await buildDocOJBlob(caso,plantillaId);
-  if(!out)return;
-  _dlDocBlob(out.blob,out.fname);
-  toast('Documento OJ generado ✓');
-}
-async function buildDocOJBlob(caso,plantillaId){
-  var plantilla=plantillaId?DB.getTemplate(plantillaId):DB.getActiveTemplate('fpj5_oj');
-  if(!plantilla){toast('Sin plantilla activa — ve a Plantillas y sube el formato oficial OJ');go('plantillas');return null;}
-  try{
-  var raw=atob(plantilla.docxBase64);
-  var buf=new Uint8Array(raw.length);
-  for(var i=0;i<raw.length;i++)buf[i]=raw.charCodeAt(i);
-  var files=await _unzipBufAsync(buf);
-  if(!files['word/document.xml']){toast('Plantilla inválida — no contiene word/document.xml');return;}
-  var xml=new TextDecoder().decode(files['word/document.xml']);
-  xml=normalizeXmlRuns(xml);
-  var cfg=DB.getConfig();
-  var reg=null;
-  (cfg.perfilesRegionales||[]).forEach(function(p){if(p.id===cfg.perfilRegionalActivo)reg=p;});
-  reg=reg||{};
-  var perfil=null;
-  (cfg.perfiles||[]).forEach(function(p){if(p.id===cfg.perfilActivo)perfil=p;});
-  perfil=perfil||{};
-  var cap=(caso.capturados&&caso.capturados[0])?caso.capturados[0]:{};
-  var narr=caso.narracion||{};
-  var map={
-    '{{DEPARTAMENTO}}': reg.departamento||'',
-    '{{MUNICIPIO}}':    reg.municipio||'',
-    '{{NUNC}}':         caso.nunc||'',
-    '{{SPOA}}':         caso.spoa||'',
-    '{{INCIDENTE}}':    caso.numIncidente||'',
-    '{{FECHA_DIA}}':    narr.fechaCapD||caso.fechaDia||'',
-    '{{FECHA_MES}}':    narr.fechaCapM||caso.fechaMes||'',
-    '{{FECHA_ANO}}':    narr.fechaCapA||caso.fechaAno||'',
-    '{{HORA_CAPTURA}}': (narr.horaCapH&&narr.horaCapM)?(narr.horaCapH+':'+narr.horaCapM):'',
-    '{{NOMBRE_CAPTURADO}}': fullName(cap),
-    '{{DOC_CAPTURADO}}':    (cap.tipoDoc||'')+' '+sinPuntos(cap.numDoc),
-    '{{EDAD_CAPTURADO}}':   String(cap.edad||calcAgeVal(cap.fn)||''),
-    '{{CONDUCTAS}}':        (caso.conductas||[]).filter(Boolean).join(', ')||caso.delitoOrden||'',
-    '{{NARRACION}}':        narr.texto||'',
-    '{{DESPACHO}}':         caso.juzgadoOrden||caso.autoridadSolicita||'',
-    '{{NUM_ORDEN}}':        caso.numOrden||'',
-    '{{NOMBRE_FUNCIONARIO}}': perfil.nombre||(cfg.servidor&&cfg.servidor.nombre)||'',
-    '{{GRADO_FUNCIONARIO}}':  perfil.grado||(cfg.servidor&&cfg.servidor.grado)||'',
-    '{{CEDULA_FUNCIONARIO}}': sinPuntos(perfil.cedula||(cfg.servidor&&cfg.servidor.ident)||''),
-    '{{ESTACION}}': 'ESTACIÓN DE POLICÍA '+(cfg.nombreEstacion||''),
-    '{{DISTRITO}}': 'DISTRITO '+(cfg.numDistrito||'')+' DE POLICÍA',
-  };
-  Object.keys(map).forEach(function(key){xml=xml.split(key).join(escapeXml(map[key]));});
-  var outFiles=[];
-  Object.keys(files).forEach(function(name){
-    outFiles.push({name:name,data:name==='word/document.xml'?new TextEncoder().encode(xml):files[name]});
-  });
-  var zipBuf=_buildZip(outFiles);
-  var blob=new Blob([zipBuf],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-  var capNom=(cap.priApe||'capturado')+'_'+(cap.priNom||'');
-  var fecha=(narr.fechaCapD||caso.fechaDia||'')+'-'+(narr.fechaCapM||caso.fechaMes||'')+'-'+(narr.fechaCapA||caso.fechaAno||'');
-  return {blob:blob,fname:'OJ_'+capNom+'_'+fecha+'.docx',label:'Documento OJ'};
-  }catch(e){console.error(e);toast('Error generando documento OJ: '+e.message);return null;}
-}
-
+/* ── Motor de inyección de plantillas ──
+   El FPJ-5 OJ por plantilla subida quedó descartado: el documento de captura
+   por orden judicial lo genera siempre el módulo (buildOficioOJBlob) con su
+   formato oficial. Aquí solo sobrevive el de los oficios de Disposición. */
 async function genDocDisposicion(caso,tipoDoc){
   if(!tipoDoc) tipoDoc=(caso.destinoOJ==='JUZGADO')?'disp_juzgado':'disp_fiscalia';
   var plantilla=DB.getActiveTemplate(tipoDoc);
@@ -4501,10 +4729,8 @@ function openSubirPlantilla(){
     '<div class="fr" style="margin-top:12px">'+
       '<div class="fg"><label class="fl">Tipo</label>'+
         '<select class="fs" id="tpl-tipo">'+
-          '<option value="oj_membrete">Membrete — Orden judicial</option>'+
           '<option value="disp_fiscalia">Disposición Fiscalía</option>'+
           '<option value="disp_juzgado">Disposición Juzgado</option>'+
-          '<option value="fpj5_oj">FPJ-5 OJ</option>'+
           '<option value="oficio">Oficio (otro)</option>'+
           '<option value="otro">Otro</option>'+
         '</select>'+
@@ -4513,10 +4739,9 @@ function openSubirPlantilla(){
         '<select class="fs" id="tpl-region">'+opts+'</select>'+
       '</div>'+
     '</div>'+
-    '<p class="oj-hint">En «Membrete — Orden judicial» la app toma únicamente el encabezado, el pie, los logos y los márgenes del archivo. '+
-    'El cuerpo del oficio, su estructura y el mapeo de datos los sigue controlando la aplicación. '+
-    'Si el membrete usa los marcadores {{ENC_UNIDAD}}, {{ENC_DEPENDENCIA}}, {{PIE_DIRECCION}}, {{PIE_TELEFONOS}}, {{PIE_CORREO}}, '+
-    '{{PIE_WEB}} o {{CLASIFICACION}}, se rellenan con lo configurado en Ajustes.</p>'+
+    '<p class="oj-hint">El oficio de captura por orden judicial <b>no admite plantillas</b>: lo genera siempre la app con su '+
+    'formato oficial, para que la estructura y la tipografía no puedan alterarse. Su membrete, su logo y su pie se '+
+    'configuran en Ajustes → Oficio de orden judicial.</p>'+
     '<button class="btn bp bbl mt8" onclick="guardarTemplate()">Cargar plantilla</button>'
   );
 }
@@ -4800,9 +5025,14 @@ var OJ_CAT = {
     ['PUBLICO','Defensoría Pública'],
     ['NO_DESIGNA','No designó defensor en el momento']
   ],
+  /* Anexos. El orden de esta lista es el orden en que se imprimen (y detrás van
+     los que el usuario escriba a mano, en el orden que los escribió).
+     {{ORD_NUMERO}} se resuelve con el No. de la orden ya registrado en el paso 1:
+     el usuario no vuelve a escribirlo. */
   anexos: [
+    'Informe dejando a disposición',
     'Acta de derechos del capturado',
-    'Copia de la orden de captura',
+    'Copia orden de captura oficio No. {{ORD_NUMERO}}',
     'Constancia de buen trato',
     'Acta de incautación / rótulo de cadena de custodia',
     'Valoración médico-legal o constancia de renuencia',
@@ -4859,6 +5089,25 @@ function ojNuevoCaso(){
   if(perfil.nombre){
     c.oj.diligencia.funcionarios=[{grado:perfil.grado||'',nombre:perfil.nombre||'',cedula:sinPuntos(perfil.cedula||''),placa:perfil.placa||''}];
   }
+  ojPrellenarDeCfg(c,cfg);
+  return c;
+}
+/* Encabezado, custodia y firma: lo que esté configurado entra solo; lo que falte
+   se le pide al usuario en el paso 7 (equipo sin configurar o modo invitado). */
+function ojPrellenarDeCfg(c,cfg){
+  cfg=cfg||DB.getConfig();
+  var perfil=ojPerfilActivo(cfg), e=c.oj.encabezado, cu=c.oj.custodia, fi=c.oj.firma;
+  if(!e.unidad) e.unidad=cfg.ojUnidad||'';
+  if(!e.dependencia) e.dependencia=cfg.ojDependencia||'';
+  if(!cu.estacion) cu.estacion=cfg.ojCustEstacion||cfg.ojPieDependencia||cfg.ojDependencia||'';
+  if(!cu.direccion) cu.direccion=cfg.ojCustDireccion||cfg.ojPieDireccion||'';
+  if(!cu.telefono) cu.telefono=cfg.ojCustTelefono||cfg.ojPieTelefonos||'';
+  if(!cu.correo) cu.correo=cfg.ojCustCorreo||cfg.ojPieCorreo||'';
+  if(!fi.grado) fi.grado=perfil.grado||(cfg.servidor&&cfg.servidor.grado)||'';
+  if(!fi.nombre) fi.nombre=perfil.nombre||(cfg.servidor&&cfg.servidor.nombre)||'';
+  if(!fi.cargo) fi.cargo=perfil.cargo||(cfg.servidor&&cfg.servidor.cargo)||'';
+  if(!fi.telefono) fi.telefono=perfil.telefono||cfg.dosTel||'';
+  if(!fi.correo) fi.correo=perfil.correo||(cfg.servidor&&cfg.servidor.correo)||'';
   return c;
 }
 function ojEstructura(){
@@ -4912,7 +5161,17 @@ function ojEstructura(){
       tipo:'', nombre:'', direccion:'', municipio:'', departamento:'', telefono:'', correo:'',
       sugeridoTipo:'', sugeridoNombre:'', reglaAplicada:'', fundamento:'', motivoCambio:'',
       fechaEntrega:'', horaEntrega:'', recibeNombre:'', recibeCargo:''
-    }
+    },
+    /* Encabezado del oficio (líneas 3 y 4 del membrete). Sale de Ajustes, pero se
+       guarda EN EL CASO: así el documento se puede volver a generar meses después
+       igual que se emitió, aunque la unidad del usuario haya cambiado. */
+    encabezado:{ unidad:'', dependencia:'' },
+    /* Lugar donde queda el capturado. Se imprime como constancia dentro de la
+       narración: el despacho tiene que saber a dónde dirigir sus requerimientos. */
+    custodia:{ estacion:'', direccion:'', telefono:'', correo:'' },
+    /* Quien firma. Se precarga del perfil activo; se puede diligenciar a mano
+       (equipo prestado o modo invitado, donde no hay perfil configurado). */
+    firma:{ grado:'', nombre:'', cargo:'', telefono:'', correo:'' }
   };
 }
 // Rellena lo que falte al abrir un caso guardado con una versión anterior del módulo.
@@ -4930,6 +5189,9 @@ function ojNormalizar(c){
   if(!Array.isArray(c.oj.diligencia.funcionarios)) c.oj.diligencia.funcionarios=[];
   if(!Array.isArray(c.oj.actuacion.incautaciones)) c.oj.actuacion.incautaciones=[];
   if(!Array.isArray(c.oj.actuacion.anexos)) c.oj.actuacion.anexos=[];
+  // Encabezado, custodia y firma: si el caso no los trae (creado antes de que
+  // existieran, o en un equipo sin configurar), se toman de Ajustes al abrirlo.
+  ojPrellenarDeCfg(c);
   return c;
 }
 function ojNombreRequerido(r){
@@ -5199,6 +5461,12 @@ function ojValidar(c){
 
   // Paso 7 — la disposición
   if(!de.nombre) add('V22','DURA',6,'Falta el destinatario confirmado del informe.');
+  // Encabezado y firma: sin ellos el oficio sale sin membrete o sin quien lo suscriba.
+  var en=c.oj.encabezado||{}, fi=c.oj.firma||{}, cu=c.oj.custodia||{};
+  if(!en.unidad) add('V26','DURA',6,'Falta la unidad del encabezado (metropolitana, departamento o dirección). Configúrala en Ajustes o diligénciala en este paso.');
+  if(!en.dependencia) add('V27','DURA',6,'Falta la estación o dependencia del encabezado.');
+  if(!fi.nombre) add('V28','DURA',6,'Falta quién firma el oficio: cárgalo del perfil activo o diligéncialo en este paso.');
+  if(!cu.estacion&&!cu.direccion) add('V29','BLANDA',6,'No se indicó dónde queda el '+ojTermino(c).sust+'. El oficio deja esa constancia para que el despacho sepa a dónde dirigir sus requerimientos.');
   if(de.sugeridoNombre&&de.nombre&&de.nombre!==de.sugeridoNombre&&!de.motivoCambio)
     add('V23','BLANDA',6,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
   var plazo=ojPlazo36(c);
@@ -5750,9 +6018,12 @@ function ojStep6(){
   ojPost(function(){ ojListaPintar('incautaciones'); });
   var anexosSel=a.anexos||[];
   var anexosHtml=OJ_CAT.anexos.map(function(x,i){
-    return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,x);
+    // El del oficio de la orden se muestra ya con su número resuelto: el usuario
+    // no lo escribe, sale del paso 1.
+    return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,ojAnexoTexto(x,wc));
   }).join('');
   var otros=anexosSel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }).join(', ');
+  var nAnx=anexosSel.length;
   return '<div class="st" style="margin-top:0">6 · Actuación policial</div>'+
 
     '<div class="oj-blk">'+
@@ -5806,15 +6077,21 @@ function ojStep6(){
     '</div>'+
 
     '<div class="oj-blk">'+
-      '<div class="st">Novedades y observaciones</div>'+
-      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Hechos relevantes ocurridos durante el procedimiento.',3))+
-      ojwF('Observaciones',ojwTA('oj-a-obs',a.observaciones,'Cualquier precisión que deba conocer la autoridad receptora.',3))+
+      '<div class="st">Narración de los hechos</div>'+
+      '<p class="oj-hint">Espacio libre. El oficio ya arma solo el relato con los datos que registraste '+
+      '(fecha, hora, lugar, verificación de la orden, lectura de derechos, puesta a disposición y la unidad '+
+      'donde queda el '+escHtml(t.sust)+'). Escribe aquí lo que solo tú sabes del procedimiento: se imprime al '+
+      'final de la narración bajo el título «Observaciones».</p>'+
+      ojwF('Relato del procedimiento',ojwTA('oj-a-obs',a.observaciones,'Cuenta el procedimiento con tus palabras. Este espacio va en blanco hasta que lo escribas.',7))+
+      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Solo si hubo alguna novedad que deba conocer la autoridad receptora.',3))+
     '</div>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Anexos que acompañan el oficio</div>'+
+      '<p class="oj-hint">Marca o escribe los anexos: la app cuenta cuántos son y los imprime en este mismo '+
+      'orden («Anexos: '+escHtml(ojNumPalabra(nAnx))+' ('+nAnx+')»). El número de la orden de captura se toma del paso 1.</p>'+
       anexosHtml+
-      ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas'))+
+      ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas — se imprimen en el orden que los escribas'))+
     '</div>';
 }
 function ojStep7(){
@@ -5830,21 +6107,27 @@ function ojStep7(){
       return '· Paso '+(v.paso+1)+' ('+OJ_STEPS[v.paso]+'): '+escHtml(v.msg);
     }).join('<br>')+'</div>';
   };
+  var e=wc.oj.encabezado, cu=wc.oj.custodia, fi=wc.oj.firma, t=ojTermino(wc);
+  var faltaEnc=(!e.unidad||!e.dependencia);
   return '<div class="st" style="margin-top:0">7 · Puesta a disposición</div>'+
     ojReloj36Html()+
     sug+
     '<div class="oj-blk">'+
       '<div class="st">Destinatario confirmado</div>'+
+      '<p class="oj-hint">El oficio va dirigido a un despacho concreto (un juzgado o la Fiscalía) con su dirección. '+
+      'Este dato viene en la orden de captura: transcríbelo. Si ya lo usaste antes, búscalo — los despachos que '+
+      'diligencies a mano quedan guardados.</p>'+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDestino()">Buscar en despachos guardados</button>'+
-      ojwF('Autoridad ante la que se deja a disposición',ojwIn('oj-x-nom',d.nombre,'Nombre completo de la autoridad receptora'))+
+      ojwF('Autoridad ante la que se deja a disposición',ojwIn('oj-x-nom',d.nombre,'Ej: Juzgado Treinta y Seis Penal Municipal de Conocimiento de Medellín'),'Un nombre largo no descuadra el documento: ocupa las líneas que necesite.')+
       ojwR(
         ojwF('Tipo',ojwSel('oj-x-tipo','tipoDespacho',d.tipo,'— Selecciona —')),
-        ojwF('Dirección',ojwIn('oj-x-dir',d.direccion,'Para el encabezado del oficio'))
+        ojwF('Dirección (nomenclatura)',ojwIn('oj-x-dir',d.direccion,'Ej: Calle 00 No. 00-00'))
       )+
       ojwR(
-        ojwF('Municipio',ojwIn('oj-x-mun',d.municipio,'')),
-        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,''))
+        ojwF('Ciudad',ojwIn('oj-x-mun',d.municipio,'Ej: Medellín')),
+        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Ej: Antioquia'))
       )+
+      '<button class="btn bs bsm" onclick="ojGuardarDestinatario()">Guardar este despacho para reutilizarlo</button>'+
       ojwF('Motivo del cambio de destinatario',ojwIn('oj-x-mot',d.motivoCambio,'Solo si te apartas de la propuesta'),'Queda registrado en el caso para que la decisión sea trazable meses después.')+
     '</div>'+
 
@@ -5860,6 +6143,49 @@ function ojStep7(){
       )+
     '</div>'+
 
+    /* Encabezado del oficio (selecciones 1 y 2). Normalmente ya viene de Ajustes;
+       si el equipo no está configurado se pide aquí y no se vuelve a preguntar. */
+    '<div class="oj-blk">'+
+      '<div class="st">Encabezado del oficio</div>'+
+      (faltaEnc
+        ? '<div class="oj-alert blanda"><b>Falta el encabezado</b>Este equipo no tiene configurada la unidad ni la '+
+          'dependencia. Diligéncialas aquí: quedan guardadas como valor por defecto y no se te vuelven a pedir.</div>'
+        : '<p class="oj-hint">Viene de Ajustes → Oficio de orden judicial. Si lo cambias aquí, queda como nuevo valor por defecto.</p>')+
+      ojwF('Unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES')+
+      ojwF('Estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Estación, seccional o dependencia'),'Ej: ESTACIÓN DE POLICÍA CANDELARIA · SECCIONAL DE INVESTIGACIÓN CRIMINAL')+
+    '</div>'+
+
+    /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
+       narración. No siempre es la misma estación, por eso se puede cambiar aquí. */
+    '<div class="oj-blk">'+
+      '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
+      '<p class="oj-hint">El oficio cierra la narración diciéndole al despacho dónde está el '+escHtml(t.sust)+' y cómo '+
+      'contactar esa unidad. Viene de Ajustes, pero cámbialo si esta vez quedó en otro sitio.</p>'+
+      ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Ej: Estación de Policía La Candelaria'))+
+      ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'))+
+      ojwR(
+        ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
+        ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
+      )+
+    '</div>'+
+
+    /* Firma (selección 8): del perfil activo, o a mano si no hay perfil. */
+    '<div class="oj-blk">'+
+      '<div class="st">Quién firma el oficio</div>'+
+      (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil cargado</b>No hay un perfil de funcionario activo en este '+
+        'equipo. Diligencia aquí quién firma: se imprime al pie del oficio y no se guarda en ningún perfil.</div>')+
+      '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar del perfil activo</button>'+
+      ojwR(
+        ojwF('Grado',ojwIn('oj-f-gra',fi.grado,'Ej: Subintendente')),
+        ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo'))
+      )+
+      ojwF('Cargo',ojwIn('oj-f-car',fi.cargo,'Ej: Integrante patrulla de vigilancia'))+
+      ojwR(
+        ojwF('Celular',ojwIn('oj-f-tel',fi.telefono,'Ej: 310 449 8111',{mono:true})),
+        ojwF('Correo institucional',ojwIn('oj-f-cor',fi.correo,'Correo del funcionario'))
+      )+
+    '</div>'+
+
     lista(duras,'dura','Faltan datos obligatorios ('+duras.length+')')+
     lista(blandas,'blanda','Advertencias ('+blandas.length+')')+
     (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles. Guarda el caso y genera el oficio desde la tarjeta de la captura.</div>')+
@@ -5867,6 +6193,27 @@ function ojStep7(){
     '<p class="oj-hint" style="margin-top:8px">Generar el oficio guarda antes el caso.</p>';
 }
 function ojSelectorDestino(){ ojSelectorDespacho(true); }
+/* El destinatario del oficio también es un despacho reutilizable: quien lo
+   diligencia a mano una vez no debería volver a escribirlo nunca. */
+function ojGuardarDestinatario(){
+  ojCollect();
+  var x=wc.oj.destino;
+  if(!x.nombre){ toast('Escribe primero el nombre del despacho destinatario'); return; }
+  var cfg=DB.getConfig(), lista=cfg.despachosPropios||[];
+  var reg={id:uid(),nombre:x.nombre,tipo:x.tipo,especialidad:'',municipio:x.municipio,
+    departamento:x.departamento,direccion:x.direccion,telefono:x.telefono,correo:x.correo,identificacion:''};
+  var i=-1; lista.forEach(function(y,ix){ if(y.nombre===reg.nombre) i=ix; });
+  if(i>=0){ reg.id=lista[i].id; lista[i]=reg; } else lista.push(reg);
+  cfg.despachosPropios=lista; DB.saveConfig(cfg);
+  toast('Despacho guardado para reutilizarlo ✓');
+}
+function ojCargarFirmaPerfil(){
+  var cfg=DB.getConfig(), p=ojPerfilActivo(cfg);
+  if(!p.nombre){ toast('No hay un perfil activo — diligencia la firma a mano o crea uno en Perfil'); return; }
+  ojCollect();
+  wc.oj.firma={grado:p.grado||'',nombre:p.nombre||'',cargo:p.cargo||'',telefono:p.telefono||'',correo:p.correo||''};
+  renderWiz(); toast('Firma cargada del perfil ✓');
+}
 /* ─────────────────────────────────────────────────────────────────────────
    I.9 · RECOLECCIÓN DEL PASO ACTIVO
    Se llama en cada avance/retroceso del wizard y antes de guardar o generar.
@@ -5947,6 +6294,11 @@ function ojCollect(){
     x.municipio=ojV('oj-x-mun'); x.departamento=ojV('oj-x-dep'); x.motivoCambio=ojV('oj-x-mot');
     x.fechaEntrega=ojV('oj-x-fec'); x.horaEntrega=ojV('oj-x-hor');
     x.recibeNombre=ojV('oj-x-rec'); x.recibeCargo=ojV('oj-x-rcar');
+    wc.oj.encabezado={unidad:ojV('oj-e-uni'),dependencia:ojV('oj-e-dep')};
+    wc.oj.custodia={estacion:ojV('oj-c-est'),direccion:ojV('oj-c-dir'),
+      telefono:ojV('oj-c-tel'),correo:ojV('oj-c-cor')};
+    wc.oj.firma={grado:ojV('oj-f-gra'),nombre:ojV('oj-f-nom'),cargo:ojV('oj-f-car'),
+      telefono:ojV('oj-f-tel'),correo:ojV('oj-f-cor')};
   }
   wc.updated=Date.now();
 }
@@ -5955,14 +6307,56 @@ function ojCollect(){
    El cuerpo del oficio se construye aquí, párrafo por párrafo. Nunca sale
    de una plantilla editable: así la estructura documental y el mapeo de
    datos quedan bajo control de la app (spec § 7).
-   Geometría: carta 12240×15840, márgenes 1701 izq / 1134 der → 9405 útiles.
+   Geometría tomada de «Documentos/Propuesta Plantilla OJ.docx», que es el único
+   formato del módulo: carta 12240×15840, márgenes 1985 arriba / 1701 izq /
+   1134 der / 1701 abajo → 9405 twips útiles. Fuente base Arial 11 pt (sz 22),
+   interlineado 240 «atLeast» y spacing after 120, igual que sus docDefaults.
+   ⚠️ Estos valores NO son decorativos: son el formato. Cambiar uno cambia el
+   documento oficial, que es exactamente lo que no se puede hacer.
 ───────────────────────────────────────────────────────────────────────── */
-var OJX_W=9405;                 // ancho del área de contenido, en twips
+/* Márgenes del formato, en twips. Se mantienen CONSTANTES en todos los tamaños
+   de papel: son medidas absolutas de impresión, no proporciones. Lo que cambia
+   es cuánto contenido cabe (papel más alto) y el ancho útil (papel más angosto).
+   El ancho de contenido se recalcula y todas las tablas lo siguen, así ninguna
+   se sale del margen ni se queda corta. */
+var OJX_MAR={ top:1985, right:1134, bottom:1701, left:1701, header:709, footer:992 };
+var OJX_PAPEL='CARTA';
+var OJX_W=12240-OJX_MAR.left-OJX_MAR.right;   // ancho del área de contenido (9405 en Carta)
+var OJX_ET_BASE=3119;                          // columna de etiquetas del formato, en Carta
+function ojxSetPapel(id){
+  OJX_PAPEL=LC_PAPEL[id]?id:'CARTA';
+  var p=lcPapel(OJX_PAPEL);
+  OJX_W=p.w-OJX_MAR.left-OJX_MAR.right;
+  /* ⚠️ La columna de etiquetas NO se escala con el papel: se mantiene en su
+     medida absoluta. Escalarla proporcionalmente parte la etiqueta más larga
+     («Fecha y lugar de nacimiento») en dos líneas en cuanto la hoja se
+     estrecha — es la misma lección del FPJ-5 v2.2: recalcular anchos
+     reintroduce wraps. Quien absorbe el cambio de ancho es la columna de
+     valores, que sí puede fluir. Solo se recorta si la hoja fuera tan angosta
+     que la etiqueta se comiera la mitad del renglón. */
+  OJX_ET=Math.min(OJX_ET_BASE,Math.round(OJX_W*0.42));
+}
+function ojSectPr(){
+  var p=lcPapel(OJX_PAPEL);
+  return '<w:sectPr>'+
+    '<w:headerReference w:type="default" r:id="rId4"/>'+
+    '<w:footerReference w:type="default" r:id="rId5"/>'+
+    '<w:headerReference w:type="first" r:id="rId3"/>'+
+    '<w:footerReference w:type="first" r:id="rId5"/>'+
+    '<w:pgSz w:w="'+p.w+'" w:h="'+p.h+'"/>'+
+    '<w:pgMar w:top="'+OJX_MAR.top+'" w:right="'+OJX_MAR.right+'" w:bottom="'+OJX_MAR.bottom+
+      '" w:left="'+OJX_MAR.left+'" w:header="'+OJX_MAR.header+'" w:footer="'+OJX_MAR.footer+'" w:gutter="0"/>'+
+    '<w:cols w:space="720"/><w:titlePg/><w:docGrid w:linePitch="360"/></w:sectPr>';
+}
 var OJX_FUENTE='Arial';
+var OJX_SZ=22;                  // 11 pt — texto corrido del oficio
+var OJX_SZ_TABLA=20;            // 10 pt — celdas de las tablas y bloque de firma
+var OJX_SZ_PIE=18;              // 9 pt  — bloque de contacto al pie
+var OJX_ET=OJX_ET_BASE;         // columna de etiquetas de las 3 tablas (según papel)
 function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
 function ojxRun(txt,o){
   o=o||{};
-  var sz=o.sz||24;
+  var sz=o.sz||OJX_SZ;
   // Mismo criterio que en w:pPr: el esquema exige rFonts → b → i → caps →
   // color → sz → u. Un orden distinto abre el documento "dañado" en Word.
   var rpr='<w:rPr><w:rFonts w:ascii="'+OJX_FUENTE+'" w:hAnsi="'+OJX_FUENTE+'" w:cs="'+OJX_FUENTE+'"/>'+
@@ -5978,19 +6372,24 @@ function ojxRun(txt,o){
 }
 function ojxP(runs,o){
   o=o||{};
-  // El orden de los hijos de w:pPr lo fija el esquema (pBdr → shd → spacing →
-  // ind → jc): invertirlo hace que Word marque el documento como dañado.
+  // El orden de los hijos de w:pPr lo fija el esquema (pStyle → keepNext →
+  // keepLines → pBdr → shd → spacing → ind → jc): invertirlo hace que Word
+  // marque el documento como dañado.
   var ppr='<w:pPr>'+
-    (o.keepNext?'<w:keepNext/><w:keepLines/>':'')+
+    (o.pStyle?'<w:pStyle w:val="'+o.pStyle+'"/>':'')+
+    (o.keepNext?'<w:keepNext/>':'')+
+    (o.keepLines===false?'':'<w:keepLines/>')+
     (o.bdr||'')+
     (o.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+o.shd+'"/>':'')+
-    '<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after==null?120:o.after)+'" w:line="'+(o.line||240)+'" w:lineRule="auto"/>'+
-    ((o.indL||o.indR)?'<w:ind w:left="'+(o.indL||0)+'" w:right="'+(o.indR||0)+'"/>':'')+
+    '<w:spacing w:before="'+(o.before||0)+'" w:after="'+(o.after==null?120:o.after)+
+      '" w:line="'+(o.line||240)+'" w:lineRule="'+(o.lineRule||'atLeast')+'"/>'+
+    ((o.indL||o.indR||o.hang)?'<w:ind w:left="'+(o.indL||0)+'" w:right="'+(o.indR||0)+'"'+
+      (o.hang?' w:hanging="'+o.hang+'"':'')+'/>':'')+
     (o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+
     '</w:pPr>';
   return '<w:p>'+ppr+(Array.isArray(runs)?runs.join(''):(runs||''))+'</w:p>';
 }
-function ojxVacio(n){ var s=''; for(var i=0;i<(n||1);i++) s+=ojxP('',{after:0}); return s; }
+function ojxVacio(n){ var s=''; for(var i=0;i<(n||1);i++) s+=ojxP('',{after:0,keepLines:false}); return s; }
 // El cuerpo no puede terminar en tabla: Word añade un párrafo implícito de
 // tamaño normal y eso arrastra una página en blanco al final. Se cierra con un
 // párrafo de altura casi nula.
@@ -5998,54 +6397,56 @@ function ojxCierre(){
   return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>'+
     '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
 }
-// Barra de sección: borde pegado al margen (space=0 + ind 32) para que no
-// sobresalga del área de contenido — lección de alineación del FPJ-5 v2.3.
+/* Título de apartado («1.  IDENTIFICACIÓN DEL CAPTURADO»): estilo Ttulo1 con
+   filete inferior 404040, tal como está en el formato. Dos espacios tras el
+   punto, como el original. keepNext para que no quede huérfano al pie. */
 function ojxSeccion(txt){
-  var b=['top','left','bottom','right'].map(function(x){
-    return '<w:'+x+' w:val="single" w:sz="4" w:space="0" w:color="7F7F7F"/>';
-  }).join('');
-  // keepNext: una barra de sección jamás debe quedar sola al pie de una página.
-  return ojxP(ojxRun(txt,{b:true,sz:22}),
-    {shd:'D9D9D9',bdr:'<w:pBdr>'+b+'</w:pBdr>',indL:32,indR:32,before:200,after:120,keepNext:true});
+  return ojxP(ojxRun(txt,{b:true,sz:OJX_SZ}),
+    {pStyle:'Ttulo1',keepNext:true,before:180,after:100,
+     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="404040"/></w:pBdr>'});
 }
-function ojxTabla(filas,anchos,o){
-  o=o||{}; var sz=o.sz||20;
-  var total=anchos.reduce(function(a,b){return a+b;},0);
-  var bordes='<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(function(b){
-    return '<w:'+b+' w:val="single" w:sz="4" w:space="0" w:color="7F7F7F"/>';
-  }).join('')+'</w:tblBorders>';
-  var pr='<w:tblPr><w:tblW w:w="'+total+'" w:type="dxa"/><w:tblInd w:w="0" w:type="dxa"/>'+bordes+
-    '<w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="90" w:type="dxa"/>'+
-    '<w:bottom w:w="40" w:type="dxa"/><w:right w:w="90" w:type="dxa"/></w:tblCellMar>'+
-    '<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="0" w:noVBand="0"/></w:tblPr>';
-  var grid='<w:tblGrid>'+anchos.map(function(w){return '<w:gridCol w:w="'+w+'"/>';}).join('')+'</w:tblGrid>';
-  var trs=filas.map(function(f){
-    var col=0;
-    var tcs=f.map(function(c){
-      var span=c.span||1, w=0;
-      for(var i=0;i<span;i++) w+=(anchos[col+i]||0);
-      col+=span;
+/* Línea horizontal fina que separa el cuerpo del bloque de contacto final. */
+function ojxFilete(){
+  return ojxP('',{keepLines:false,before:560,after:150,line:120,lineRule:'exact',
+    bdr:'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
+}
+/* Espaciador de 6 pt entre la última tabla y la narración (formato original). */
+function ojxAire(){ return ojxP('',{keepLines:false,after:0,line:120,lineRule:'exact'}); }
+/* Tabla etiqueta/valor de dos columnas — la única estructura tabular del oficio.
+   Bordes exteriores sz6/808080, interiores sz4/BFBFBF, etiquetas con trama
+   EFEFEF: los valores del formato, no una elección de la app.
+   ⚠️ SIEMPRE imprime todas las filas: un dato que el usuario no registró queda
+   EN BLANCO, nunca se rellena ni se omite la fila (así el destinatario ve qué
+   falta en vez de recibir un dato inventado). */
+function ojxTablaDatos(pares){
+  var val=OJX_W-OJX_ET;
+  var pr='<w:tblPr><w:tblW w:w="'+OJX_W+'" w:type="dxa"/>'+
+    '<w:tblBorders>'+
+      '<w:top w:val="single" w:sz="6" w:space="0" w:color="808080"/>'+
+      '<w:left w:val="single" w:sz="6" w:space="0" w:color="808080"/>'+
+      '<w:bottom w:val="single" w:sz="6" w:space="0" w:color="808080"/>'+
+      '<w:right w:val="single" w:sz="6" w:space="0" w:color="808080"/>'+
+      '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'+
+      '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'+
+    '</w:tblBorders>'+
+    '<w:tblCellMar><w:top w:w="26" w:type="dxa"/><w:left w:w="113" w:type="dxa"/>'+
+    '<w:bottom w:w="26" w:type="dxa"/><w:right w:w="113" w:type="dxa"/></w:tblCellMar>'+
+    '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
+  var grid='<w:tblGrid><w:gridCol w:w="'+OJX_ET+'"/><w:gridCol w:w="'+val+'"/></w:tblGrid>';
+  var trs=pares.map(function(p,i){
+    var ultima=(i===pares.length-1);
+    function tc(w,shd,run){
       return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+
-        (span>1?'<w:gridSpan w:val="'+span+'"/>':'')+
-        (c.shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+c.shd+'"/>':'')+
+        (shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+shd+'"/>':'')+
         '<w:vAlign w:val="center"/></w:tcPr>'+
-        ojxP(ojxRun(c.t,{b:c.b,i:c.i,sz:c.sz||sz}),{jc:c.jc||'left',after:0,line:240})+'</w:tc>';
-    }).join('');
-    return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+tcs+'</w:tr>';
+        ojxP(run,{keepNext:!ultima,keepLines:false,after:0})+'</w:tc>';
+    }
+    return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+
+      tc(OJX_ET,'EFEFEF',ojxRun(p[0],{b:true,sz:OJX_SZ_TABLA}))+
+      tc(val,'',ojxRun(p[1]==null?'':String(p[1]),{b:!!p[2],sz:OJX_SZ_TABLA}))+
+      '</w:tr>';
   }).join('');
   return '<w:tbl>'+pr+grid+trs+'</w:tbl>';
-}
-// Tabla etiqueta/valor: solo imprime las filas con dato (spec § 8: el documento
-// no muestra nada que no venga del formulario).
-function ojxTablaDatos(pares,o){
-  o=o||{};
-  var filas=pares.filter(function(p){ return o.todas||(p[1]!==''&&p[1]!=null); })
-    .map(function(p){
-      return [{t:p[0],b:true,shd:'F2F2F2'},{t:p[1]==null?'':String(p[1])}];
-    });
-  if(!filas.length) return '';
-  var wEt=o.wEt||3100;
-  return ojxTabla(filas,[wEt,OJX_W-wEt],{sz:o.sz||20});
 }
 function ojxCampoNum(){
   return '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
@@ -6064,10 +6465,14 @@ function ojxCampoTot(){
 
 /* ─────────────────────────────────────────────────────────────────────────
    I.11 · PAQUETE .DOCX
-   Base: se arma desde cero, sin un solo dato de ejemplo (spec § 8).
-   Personalizada: del .docx del usuario se conserva TODO menos el cuerpo
-   (membrete, pie, logos, estilos, márgenes) — así una plantilla propia
-   nunca puede alterar la estructura ni el mapeo (spec § 7).
+   ⚠️ NO se admiten plantillas subidas por el usuario para este documento.
+   El oficio se arma siempre desde cero con la estructura, la tipografía y la
+   geometría de «Documentos/Propuesta Plantilla OJ.docx». Es la garantía, por
+   construcción, de que el formato conserva su estado original 100 %: no hay
+   ningún archivo intermedio que pueda alterarlo.
+   Lo único configurable es el CONTENIDO del membrete (las 4 líneas y el logo
+   de la unidad) y el bloque de contacto del pie: ningún nombre de institución
+   está escrito en el código.
 ───────────────────────────────────────────────────────────────────────── */
 var OJ_NS_W='xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" '+
   'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" '+
@@ -6082,24 +6487,36 @@ var OJ_NS_W='xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordproces
   'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" '+
   'mc:Ignorable="w14 wps wpc"';
 var OJ_XMLDECL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
-var OJ_SECTPR_BASE='<w:sectPr>'+
-  '<w:headerReference w:type="default" r:id="rId3"/>'+
-  '<w:footerReference w:type="default" r:id="rId4"/>'+
-  '<w:pgSz w:w="12240" w:h="15840"/>'+
-  '<w:pgMar w:top="1667" w:right="1134" w:bottom="1134" w:left="1701" w:header="709" w:footer="567" w:gutter="0"/>'+
-  '<w:cols w:space="708"/><w:docGrid w:linePitch="360"/></w:sectPr>';
+/* La geometría de página la arma ojSectPr() con el tamaño elegido.
+   titlePg + encabezado «first» = el membrete con el logo va solo en la primera
+   hoja (como en el original); las siguientes llevan encabezado vacío. El pie
+   con «Página N de M» va en todas. */
 function ojBytes(s){ return new TextEncoder().encode(s); }
 function ojTexto(b){ return new TextDecoder().decode(b); }
+function ojB64Bytes(b64){
+  var raw=atob(b64||''), out=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
+  return out;
+}
+// Extensión del logo a partir de su MIME (el paquete la necesita en Content_Types).
+function ojLogoExt(cfg){
+  var m=String(cfg.ojLogoMime||'').toLowerCase();
+  if(m.indexOf('png')>=0) return 'png';
+  if(m.indexOf('gif')>=0) return 'gif';
+  return 'jpeg';
+}
 function ojPaqueteBase(cfg){
-  var f={};
+  var f={}, logo=cfg.ojLogoB64?ojLogoExt(cfg):'';
   f['[Content_Types].xml']=ojBytes(OJ_XMLDECL+
     '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
     '<Default Extension="xml" ContentType="application/xml"/>'+
+    (logo?'<Default Extension="'+logo+'" ContentType="image/'+(logo==='jpeg'?'jpeg':logo)+'"/>':'')+
     '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'+
     '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'+
     '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'+
     '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
+    '<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
     '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
     '</Types>');
   f['_rels/.rels']=ojBytes(OJ_XMLDECL+
@@ -6111,15 +6528,22 @@ function ojPaqueteBase(cfg){
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'+
     '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>'+
     '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>'+
-    '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
+    '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/>'+
+    '<Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>'+
     '</Relationships>');
+  /* docDefaults y estilo Ttulo1 copiados del formato: Arial 11 pt, color negro,
+     interlineado 240 «atLeast», spacing after 120. */
   f['word/styles.xml']=ojBytes(OJ_XMLDECL+
     '<w:styles '+OJ_NS_W+'><w:docDefaults><w:rPrDefault><w:rPr>'+
     '<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:eastAsia="Arial" w:cs="Arial"/>'+
-    '<w:sz w:val="24"/><w:szCs w:val="24"/><w:lang w:val="es-CO" w:eastAsia="es-CO" w:bidi="ar-SA"/>'+
+    '<w:color w:val="000000"/>'+
+    '<w:sz w:val="22"/><w:szCs w:val="22"/><w:lang w:val="es-CO" w:eastAsia="es-CO" w:bidi="ar-SA"/>'+
     '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>'+
-    '<w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>'+
+    '<w:spacing w:after="120" w:line="240" w:lineRule="atLeast"/></w:pPr></w:pPrDefault></w:docDefaults>'+
     '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>'+
+    '<w:style w:type="paragraph" w:styleId="Ttulo1"><w:name w:val="heading 1"/><w:uiPriority w:val="9"/><w:qFormat/>'+
+    '<w:pPr><w:spacing w:before="360" w:after="160"/><w:outlineLvl w:val="0"/></w:pPr>'+
+    '<w:rPr><w:b/><w:bCs/></w:rPr></w:style>'+
     '<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>'+
     '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/>'+
     '<w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>'+
@@ -6132,68 +6556,99 @@ function ojPaqueteBase(cfg){
     '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>'+
     '</w:settings>');
   f['word/header1.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+ojEncabezadoXml(cfg)+'</w:hdr>');
+  f['word/header2.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+ojxP('',{after:0,keepLines:false})+'</w:hdr>');
   f['word/footer1.xml']=ojBytes(OJ_XMLDECL+'<w:ftr '+OJ_NS_W+'>'+ojPieXml(cfg)+'</w:ftr>');
+  if(logo){
+    f['word/media/logo.'+logo]=ojB64Bytes(cfg.ojLogoB64);
+    f['word/_rels/header1.xml.rels']=ojBytes(OJ_XMLDECL+
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.'+logo+'"/>'+
+      '</Relationships>');
+  }
   return f;
 }
-// Encabezado institucional: estructura jerárquica fija, contenido 100 %
-// configurable (spec § 1). Nada de esto se escribe a mano en el documento.
+/* Membrete: tabla sin bordes de 1560 + 7845 twips — logo cuadrado de 1,91 cm
+   (723900 EMU) a la izquierda y las cuatro líneas jerárquicas a la derecha,
+   alineadas a la izquierda y en 10 pt, con la primera en negrita. Debajo, el
+   filete gris que separa del cuerpo.
+   ⚠️ La celda del logo se mantiene aunque no haya logo cargado: así el texto
+   ocupa exactamente la misma posición con logo y sin él, y cargarlo después no
+   mueve nada. Ningún nombre de institución vive en el código: las 4 líneas y el
+   logo salen de Ajustes (requisito de publicación en Play Store). */
 function ojEncabezadoXml(cfg){
   var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,cfg.ojDependencia];
-  var xml=lineas.map(function(t,i){
-    if(!t) return '';
-    return ojxP(ojxRun(String(t).toUpperCase(),{b:true,sz:i<2?20:20}),{jc:'center',after:0,line:240});
+  var txt=lineas.map(function(t,i){
+    return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_TABLA}),{after:0,keepLines:false});
   }).join('');
-  if(!xml) xml=ojxP('',{after:0});
-  return xml+ojxP('',{after:0});
+  // La celda del logo mantiene su medida absoluta (1,91 cm); la del texto absorbe
+  // el cambio de ancho, así el membrete se ve igual en cualquier tamaño de hoja.
+  var wLogo=1560, wTxt=OJX_W-wLogo;
+  var img=cfg.ojLogoB64
+    ? '<w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'+
+      '<wp:extent cx="723900" cy="723900"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'+
+      '<wp:docPr id="1" name="Escudo"/><wp:cNvGraphicFramePr>'+
+      '<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'+
+      '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+
+      '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'+
+      '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'+
+      '<pic:nvPicPr><pic:cNvPr id="0" name=""/><pic:cNvPicPr>'+
+      '<a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr></pic:nvPicPr>'+
+      '<pic:blipFill><a:blip r:embed="rId1"/><a:srcRect/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
+      '<pic:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="723900" cy="723900"/></a:xfrm>'+
+      '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>'+
+      '</wp:inline></w:drawing></w:r>'
+    : '';
+  var sinBordes='<w:tcBorders>'+['top','left','bottom','right'].map(function(x){
+    return '<w:'+x+' w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/>';
+  }).join('')+'</w:tcBorders>';
+  var tbl='<w:tbl><w:tblPr><w:tblW w:w="'+OJX_W+'" w:type="dxa"/>'+
+    '<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(function(x){
+      return '<w:'+x+' w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/>';
+    }).join('')+'</w:tblBorders>'+
+    '<w:tblCellMar><w:left w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tblCellMar>'+
+    '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>'+
+    '<w:tblGrid><w:gridCol w:w="'+wLogo+'"/><w:gridCol w:w="'+wTxt+'"/></w:tblGrid>'+
+    '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+
+      '<w:tc><w:tcPr><w:tcW w:w="'+wLogo+'" w:type="dxa"/>'+sinBordes+'<w:vAlign w:val="center"/></w:tcPr>'+
+        ojxP(img,{after:0,keepLines:false})+'</w:tc>'+
+      '<w:tc><w:tcPr><w:tcW w:w="'+wTxt+'" w:type="dxa"/>'+sinBordes+'<w:vAlign w:val="center"/></w:tcPr>'+
+        txt+'</w:tc>'+
+    '</w:tr></w:tbl>';
+  return tbl+ojxP('',{keepLines:false,before:60,after:0,line:120,lineRule:'exact',
+    bdr:'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="808080"/></w:pBdr>'});
 }
+/* Pie: filete fino + «Página N de M» centrado en 9 pt gris, tal como el formato.
+   El código/versión/clasificación del formato se imprimen a su izquierda solo si
+   la unidad los tiene configurados (muchas no los usan). */
 function ojPieXml(cfg){
-  var b=['top'].map(function(x){ return '<w:'+x+' w:val="single" w:sz="4" w:space="2" w:color="7F7F7F"/>'; }).join('');
-  var contacto=[cfg.ojPieDireccion,cfg.ojPieTelefonos,cfg.ojPieCorreo,cfg.ojPieWeb].filter(Boolean).join('  ·  ');
-  var out=ojxP(ojxRun(contacto,{sz:14}),{jc:'center',after:0,line:240,bdr:'<w:pBdr>'+b+'</w:pBdr>'});
-  var izq=[cfg.ojCodigoFormato,cfg.ojVersionFormato].filter(Boolean).join('   ');
-  out+='<w:p><w:pPr><w:tabs><w:tab w:val="center" w:pos="4702"/><w:tab w:val="right" w:pos="9405"/></w:tabs>'+
-    '<w:spacing w:before="0" w:after="0" w:line="240" w:lineRule="auto"/></w:pPr>'+
-    ojxRun(izq,{sz:14})+'<w:r><w:tab/></w:r>'+ojxRun('Página ',{sz:14})+ojxCampoNum()+ojxRun(' de ',{sz:14})+ojxCampoTot()+
-    '<w:r><w:tab/></w:r>'+ojxRun(cfg.ojClasificacion||'',{sz:14,b:true})+'</w:p>';
+  var out=ojxP('',{keepLines:false,after:80,line:60,lineRule:'exact',jc:'center',
+    bdr:'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
+  /* Código, versión y clasificación van en su propia línea centrada, y el número
+     de página en la siguiente — como en el formato. ⚠️ No se usan tabuladores:
+     en una hoja angosta el texto de la izquierda desborda el tabulador y se pega
+     al «Página N de M» («INFORMACIÓN PÚBLICAPágina 1 de 2»). Dos líneas
+     centradas se comportan igual en cualquier ancho. */
+  var meta=[cfg.ojCodigoFormato,cfg.ojVersionFormato,cfg.ojClasificacion].filter(Boolean).join('   ');
+  if(meta) out+=ojxP(ojxRun(meta,{sz:OJX_SZ_PIE,color:'404040'}),{keepLines:false,after:0,line:200,jc:'center'});
+  out+=ojxP(ojxRun('Página ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoNum()+
+            ojxRun(' de ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoTot(),
+            {keepLines:false,after:30,line:220,jc:'center'});
   return out;
 }
-// Tokens admitidos en el membrete/pie de una plantilla personalizada.
-function ojTokensMembrete(xml,cfg){
-  var map={
-    '{{ENC_MINISTERIO}}':cfg.ojMinisterio||'',
-    '{{ENC_INSTITUCION}}':cfg.ojInstitucion||'',
-    '{{ENC_UNIDAD}}':cfg.ojUnidad||'',
-    '{{ENC_DEPENDENCIA}}':cfg.ojDependencia||'',
-    '{{PIE_DIRECCION}}':cfg.ojPieDireccion||'',
-    '{{PIE_TELEFONOS}}':cfg.ojPieTelefonos||'',
-    '{{PIE_CORREO}}':cfg.ojPieCorreo||'',
-    '{{PIE_WEB}}':cfg.ojPieWeb||'',
-    '{{CLASIFICACION}}':cfg.ojClasificacion||'',
-    '{{COD_FORMATO}}':cfg.ojCodigoFormato||'',
-    '{{VER_FORMATO}}':cfg.ojVersionFormato||''
-  };
-  Object.keys(map).forEach(function(k){ xml=xml.split(k).join(escapeXml(map[k])); });
-  return xml;
+// Un solo paquete posible: el del formato. Sin ramas de plantilla externa.
+function ojPaquete(cfg){
+  return {files:ojPaqueteBase(cfg), sectPr:ojSectPr(), origen:'formato oficial del módulo'};
 }
-// Devuelve {files, sectPr, origen}. Si hay plantilla de membrete activa se usa
-// su paquete completo y solo se reemplaza el cuerpo de word/document.xml.
-async function ojPaquete(cfg){
-  var tpl=DB.getActiveTemplate('oj_membrete');
-  if(tpl&&tpl.docxBase64){
-    try{
-      var raw=atob(tpl.docxBase64);
-      var buf=new Uint8Array(raw.length);
-      for(var i=0;i<raw.length;i++) buf[i]=raw.charCodeAt(i);
-      var files=await _unzipBufAsync(buf);
-      if(files['word/document.xml']){
-        var xml=ojTexto(files['word/document.xml']);
-        var m=xml.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/g);
-        return {files:files, sectPr:(m&&m[m.length-1])||OJ_SECTPR_BASE, origen:tpl.nombre||'plantilla propia', propia:true};
-      }
-      toast('La plantilla de membrete no es un .docx válido — se usa la plantilla base');
-    }catch(e){ console.error('[LexCapture OJ] plantilla de membrete',e); toast('No se pudo leer la plantilla de membrete — se usa la base'); }
-  }
-  return {files:ojPaqueteBase(cfg), sectPr:OJ_SECTPR_BASE, origen:'plantilla base', propia:false};
+/* Configuración efectiva del documento: la del usuario, pero con la unidad y la
+   dependencia que quedaron guardadas EN EL CASO. Así un oficio se reimprime
+   igual a como se emitió aunque el funcionario haya cambiado de unidad, y el
+   caso creado en un equipo sin configurar usa lo que se diligenció a mano. */
+function ojCfgDoc(c,cfg){
+  var out={}; for(var k in cfg) out[k]=cfg[k];
+  var e=(c.oj&&c.oj.encabezado)||{};
+  if(e.unidad) out.ojUnidad=e.unidad;
+  if(e.dependencia) out.ojDependencia=e.dependencia;
+  return out;
 }
 /* ─────────────────────────────────────────────────────────────────────────
    I.12 · COMPOSICIÓN DEL OFICIO
@@ -6257,6 +6712,10 @@ function ojRelato(c,cfg){
     o.finalidad?', con la finalidad de: '+ojLbl('finalidad',o.finalidad).toLowerCase():'',
     '.'
   ]));
+  // El motivo de la orden se cita literal, entre comillas, sin resumir ni
+  // reformular. Va dentro de la narración porque el formato no tiene un
+  // apartado propio para él — pero jamás se pierde.
+  if(o.motivoTextual) pars.push('La orden expresa textualmente: «'+o.motivoTextual+'».');
   if(r.identidadMetodo&&r.identidadMetodo!=='DOCUMENTO'){
     pars.push(ojFrase([
       'La plena identidad de la persona requerida se estableció mediante '+ojLbl('metodoIdent',r.identidadMetodo).toLowerCase(),
@@ -6282,8 +6741,20 @@ function ojRelato(c,cfg){
   } else if(a.lesiones.hubo){
     pars.push('Se presentaron lesiones durante el procedimiento: '+(a.lesiones.descripcion||'según consta en la valoración médica')+'.');
   }
+  // Los elementos se relacionan CON su rótulo dentro del relato: el formato no
+  // tiene tabla de cadena de custodia, y un rótulo perdido rompe la trazabilidad
+  // del elemento material probatorio.
   if(a.hayIncautacion&&(a.incautaciones||[]).length){
-    pars.push('En desarrollo de la diligencia se incautaron los elementos relacionados en el numeral V del presente informe, sometidos a cadena de custodia.');
+    var els=(a.incautaciones||[]).map(function(e){
+      return ojFrase([
+        e.cantidad?e.cantidad+' ':'',
+        e.descripcion||'elemento sin describir',
+        e.rotulo?' (rótulo de cadena de custodia No. '+e.rotulo+')':'',
+        e.entregadoA?', entregado a '+e.entregadoA:''
+      ]);
+    });
+    pars.push('En desarrollo de la diligencia se incautaron los siguientes elementos, sometidos a cadena de custodia: '+
+      ojEnumerar(els)+'.');
   }
   if(a.novedades) pars.push('Novedades: '+a.novedades);
   return pars;
@@ -6305,203 +6776,179 @@ function ojRelatoDisposicion(c,cfg){
       '(Sentencia C-042 de 2018).');
   }
   if(x.motivoCambio) pars.push('El destinatario se determinó así por la siguiente razón: '+x.motivoCambio+'.');
-  if(c.oj.actuacion.observaciones) pars.push('Observaciones: '+c.oj.actuacion.observaciones);
+  var cu=ojCustodiaTexto(c,cfg);
+  if(cu) pars.push(cu);
   return pars;
 }
+/* Constancia de custodia: cierra la narración diciéndole al despacho DÓNDE está
+   el capturado y CÓMO contactar esa unidad. Se compone con los datos que el
+   usuario configuró o diligenció (la estación no siempre es la misma), y solo
+   se imprime lo que exista: si no hay correo no queda un «y correo electrónico»
+   suelto. Va como una frase más de la narración, no como un bloque aparte. */
+function ojCustodiaTexto(c,cfg){
+  var cu=c.oj.custodia||{}, t=ojTermino(c);
+  if(!cu.estacion&&!cu.direccion) return '';
+  var contacto=[
+    cu.telefono?'abonado telefónico '+cu.telefono:'',
+    cu.correo?'correo electrónico '+cu.correo:''
+  ].filter(Boolean);
+  return ojFrase([
+    'Finalmente, se deja constancia de que el '+t.sust+' quedó bajo custodia en ',
+    cu.estacion||'la unidad policial',
+    cu.direccion?', ubicada en '+cu.direccion:'',
+    contacto.length?', '+(contacto.length===2?contacto[0]+' y '+contacto[1]:contacto[0]):'',
+    ', para atender cualquier requerimiento que formule la autoridad judicial competente.'
+  ]);
+}
+/* Delitos como los pide el formato: «Hurto agravado con violencia (Art. 239,
+   240 y 241 del Código Penal Colombiano)». Los artículos de un mismo delito se
+   agrupan en un solo paréntesis. */
+function ojDelitosDoc(c){
+  return (c.oj.proceso.delitos||[]).map(function(d){
+    var arts=[d.articulo,d.inciso?'inc. '+d.inciso:'',d.numeral?'num. '+d.numeral:''].filter(Boolean);
+    var nom=(d.nombre||'')+(d.agravado?' agravado':'');
+    if(!nom) return '';
+    return nom+(arts.length?' (Art. '+ojEnumerar(arts)+' del Código Penal Colombiano)':'');
+  }).filter(Boolean).join('; ');
+}
+// "a, b y c" — enumeración en español, para artículos y listas cortas.
+function ojEnumerar(a){
+  a=(a||[]).filter(Boolean);
+  if(a.length<2) return a.join('');
+  return a.slice(0,-1).join(', ')+' y '+a[a.length-1];
+}
+/* El formato escribe la cantidad de anexos en letras: «Anexos: tres (3)».
+   La app la calcula: el usuario marca o escribe, nunca cuenta a mano. */
+var OJ_NUMS=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez',
+  'once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
+function ojNumPalabra(n){ return OJ_NUMS[n]!==undefined?OJ_NUMS[n]:String(n); }
+/* El anexo de la copia de la orden lleva su número: se toma del paso 1 («No. de
+   la orden»), el usuario no lo vuelve a escribir. */
+function ojAnexoTexto(s,c){
+  return String(s||'').split('{{ORD_NUMERO}}').join(c.oj.orden.numero||'________');
+}
+/* Cuerpo del oficio. Sigue, párrafo por párrafo y en el mismo orden, la
+   estructura de «Documentos/Propuesta Plantilla OJ.docx»:
+     ciudad y fecha · destinatario · asunto · presentación
+     1. IDENTIFICACIÓN DEL CAPTURADO      (9 filas fijas)
+     2. DATOS DEL PROCESO JUDICIAL        (10 filas fijas)
+     3. MATERIALIZACIÓN DE LA CAPTURA     (4 filas fijas)
+     narración de los hechos · firma · anexos · bloque de contacto
+   ⚠️ Las filas de las tres tablas son FIJAS y SIEMPRE se imprimen: lo que el
+   usuario no registró queda en blanco. Nunca se inventa un dato ni se oculta
+   una fila — el despacho debe poder ver qué falta. */
 function ojDocCuerpo(c,cfg){
   var o=c.oj.orden,d=c.oj.despacho,p=c.oj.proceso,r=c.oj.requerido,g=c.oj.diligencia,a=c.oj.actuacion,x=c.oj.destino;
-  var t=ojTermino(c), vig=ojVigencia(o), plazo=ojPlazo36(c), perfil=ojPerfilActivo(cfg);
-  var out='';
-  var J={jc:'both',after:140,line:264};
+  var t=ojTermino(c), out='';
+  var J={jc:'both'};                       // párrafo de texto corrido, justificado
 
-  // ── Consecutivo, ciudad y fecha ──
-  if(cfg.ojConsecutivo) out+=ojxP(ojxRun('No. ________ / '+cfg.ojConsecutivo,{sz:22}),{after:160});
+  // ── Ciudad y fecha del procedimiento (selección 3) ──
+  if(cfg.ojConsecutivo) out+=ojxP(ojxRun('No. ________ / '+cfg.ojConsecutivo),{after:160});
   var ciudad=cfg.ojCiudad||g.lugarMunicipio||d.municipio||'';
-  out+=ojxP(ojxRun([ciudad,ojFechaLarga(c.fechaProc||g.fecha)].filter(Boolean).join(', '),{sz:24}),{after:280});
+  out+=ojxP(ojxRun([ciudad,ojFechaLarga(g.fecha||c.fechaProc)].filter(Boolean).join(', ')),{after:240});
 
-  // ── Destinatario ──
-  out+=ojxP(ojxRun('Señor(a)',{sz:24}),{after:0});
-  out+=ojxP(ojxRun((x.nombre||'').toUpperCase(),{b:true,sz:24}),{after:0});
-  if(x.tipo) out+=ojxP(ojxRun(ojLbl('tipoDespacho',x.tipo),{sz:24}),{after:0});
-  if(x.direccion) out+=ojxP(ojxRun(x.direccion,{sz:24}),{after:0});
-  var ciudadDest=[x.municipio,x.departamento].filter(Boolean).join(', ');
-  if(ciudadDest) out+=ojxP(ojxRun(ciudadDest,{sz:24}),{after:0});
-  out+=ojxVacio(1);
+  // ── Destinatario: juzgado o fiscalía, con su dirección (selección 4) ──
+  // El nombre de un juzgado puede ser larguísimo; va en su propio párrafo, así
+  // que ajusta de línea sin descuadrar nada de lo que viene debajo.
+  out+=ojxP(ojxRun('Señor(a)'),{after:0});
+  out+=ojxP(ojxRun((x.nombre||'').toUpperCase(),{b:true}),{after:0});
+  out+=ojxP(ojxRun(x.direccion||''),{after:0});
+  out+=ojxP(ojxRun([x.municipio,x.departamento].filter(Boolean).join(', ')),{after:300});
 
-  // ── Asunto ──
-  out+=ojxP([ojxRun('Asunto: ',{b:true,sz:24}),ojxRun(ojAsuntoTexto(c,cfg),{b:true,sz:24})],{after:240,jc:'both'});
-
-  // ── Presentación + identificación del requerido ──
+  // ── Asunto y presentación (selección 5: texto fijo del formato) ──
+  out+=ojxP(ojxRun('Asunto: '+ojAsuntoTexto(c,cfg),{b:true}),{after:220});
   out+=ojxP(ojxRun('De manera atenta y respetuosa me permito dejar a disposición de ese despacho a la persona '+
-    (t.sust==='aprehendido'?'aprehendida':'capturada')+' que se identifica a continuación:',{sz:24}),J);
+    (t.sust==='aprehendido'?'aprehendida':'capturada')+' que se identifica a continuación:'),{after:100,jc:'both'});
+
+  // ── 1. Identificación (selección 6) ──
   var nacimiento=[ojFechaCorta(r.fechaNac),[r.nacMunicipio,r.nacDepartamento,r.nacPais].filter(Boolean).join(', ')].filter(Boolean).join(' — ');
-  var padres=[r.madre,r.padre].filter(Boolean).join(' y ');
   var residencia=[r.resDireccion,r.resBarrio,r.resMunicipio,r.resDepartamento].filter(Boolean).join(', ');
-  var fisicas=[r.rasgos.estatura?'estatura '+r.rasgos.estatura:'',r.rasgos.contextura?'contextura '+r.rasgos.contextura:'',
-    r.rasgos.tez?'tez '+r.rasgos.tez:'',r.rasgos.cabello?'cabello '+r.rasgos.cabello:'',r.rasgos.ojos?'ojos '+r.rasgos.ojos:''].filter(Boolean).join(', ');
-  out+=ojxTabla([
-    [{t:'Nombres y apellidos',b:true,shd:'F2F2F2'},{t:ojNombreRequerido(r).toUpperCase(),b:true}]
-  ].concat(
-    [['Documento de identidad',ojDocRequerido(r)+(r.expedidoEn?' de '+r.expedidoEn:'')],
-     ['Alias',r.alias],
-     ['Fecha y lugar de nacimiento',nacimiento],
-     ['Edad',r.edad?r.edad+' años':''],
-     ['Sexo',ojLbl('sexo',r.sexo)],
-     ['Nacionalidad',r.nacionalidad],
-     ['Estado civil',ojLbl('estadoCivil',r.estadoCivil)],
-     ['Profesión u ocupación',r.profesion],
-     ['Nombres de los padres',padres],
-     ['Residencia',residencia],
-     ['Teléfono',r.resTelefono],
-     ['Características físicas',fisicas],
-     ['Señales particulares',r.senales],
-     ['Demás datos identificativos',r.otrosDatos]
-    ].filter(function(f){ return f[1]; })
-     .map(function(f){ return [{t:f[0],b:true,shd:'F2F2F2'},{t:f[1]}]; })
-  ),[3100,OJX_W-3100],{sz:20});
-
-  // ── I. La orden ──
-  out+=ojxSeccion('I. ORDEN JUDICIAL QUE SE MATERIALIZA');
+  var senales=[r.senales,
+    [r.rasgos.estatura?'estatura '+r.rasgos.estatura:'',r.rasgos.contextura?'contextura '+r.rasgos.contextura:'',
+     r.rasgos.tez?'tez '+r.rasgos.tez:'',r.rasgos.cabello?'cabello '+r.rasgos.cabello:'',
+     r.rasgos.ojos?'ojos '+r.rasgos.ojos:''].filter(Boolean).join(', ')
+  ].filter(Boolean).join('. ');
+  out+=ojxSeccion('1.  IDENTIFICACIÓN DEL '+t.Sust.toUpperCase());
   out+=ojxTablaDatos([
-    ['No. de la orden',o.numero],
-    ['Fecha de expedición',ojFechaCorta(o.fechaExpedicion)],
-    ['Vigencia',vig.hasta?('hasta el '+ojFechaCorta(vig.hasta)+' — '+ojLbl('estadoOrden',vig.estado)):''],
-    ['Prórrogas',(o.prorrogas||[]).map(function(pr){
-        return ojFechaCorta(pr.fecha)+(pr.hasta?' → '+ojFechaCorta(pr.hasta):'')+(pr.oficio?' ('+pr.oficio+')':'');
-      }).join('; ')],
-    ['Finalidad',ojLbl('finalidad',o.finalidad)],
-    ['Marco procesal',ojLbl('tipoOrden',o.tipoOrden)],
-    ['Autoridad solicitante',o.autoridadSolicitante],
-    ['Orden dirigida a',o.dirigidaA],
-    ['Despacho que la libró',d.nombre],
-    ['Especialidad',ojLbl('especialidad',d.especialidad)],
-    ['Ciudad del despacho',[d.municipio,d.departamento].filter(Boolean).join(', ')],
-    ['Dirección del despacho',d.direccion],
-    ['Contacto del despacho',[d.telefono,d.correo].filter(Boolean).join(' · ')],
-    ['Identificación del despacho',d.identificacion],
-    ['Funcionario responsable',d.funcionarioResponsable],
-    ['Juez que la suscribe',[d.juezNombre,d.juezCargo].filter(Boolean).join(' — ')],
-    ['Firma de la orden',ojLbl('firmaOrden',d.firma)],
-    ['Verificación previa',o.verificacion.sistema?
-      (ojLbl('sistemaConsulta',o.verificacion.sistema)+
-       (o.verificacion.fecha?' · '+ojFechaCorta(o.verificacion.fecha):'')+
-       (o.verificacion.hora?' '+o.verificacion.hora+' horas':'')+
-       (o.verificacion.resultado?' · resultado '+o.verificacion.resultado.toLowerCase():'')):'']
+    ['Nombres y apellidos',ojNombreRequerido(r).toUpperCase()],
+    ['Documento de identidad',ojDocRequerido(r)+(r.expedidoEn&&ojDocRequerido(r)?' de '+r.expedidoEn:'')],
+    ['Fecha y lugar de nacimiento',nacimiento],
+    ['Edad',r.edad?r.edad+' años':''],
+    ['Profesión u ocupación',r.profesion||''],
+    ['Nombres de los padres',[r.madre,r.padre].filter(Boolean).join(' y ')],
+    ['Residencia',residencia],
+    ['Teléfono',r.resTelefono||''],
+    ['Señales particulares',senales]
   ]);
-  if(o.motivoTextual){
-    out+=ojxP(ojxRun('La orden expresa textualmente:',{sz:24}),{jc:'both',before:160,after:80});
-    out+=ojxP(ojxRun('«'+o.motivoTextual+'»',{i:true,sz:22}),{jc:'both',indL:567,indR:567,after:140,line:264});
-  }
 
-  // ── II. El proceso ──
-  out+=ojxSeccion('II. PROCESO JUDICIAL');
+  // ── 2. Datos del proceso judicial (selección 6) ──
+  out+=ojxSeccion('2.  DATOS DEL PROCESO JUDICIAL');
   out+=ojxTablaDatos([
-    ['Número del proceso / radicado',p.radicado],
-    ['Fecha de los hechos',ojFechaCorta(p.fechaHechos)],
-    ['Fecha de la decisión judicial',ojFechaCorta(p.fechaDecision)],
-    ['Código interno',p.codigoInterno],
-    ['Pena impuesta',[p.pena.descripcion,p.pena.meses?p.pena.meses+' meses':'',p.pena.accesorias].filter(Boolean).join(' · ')]
+    ['No. de la orden',o.numero||''],
+    ['Fecha de expedición',ojFechaLarga(o.fechaExpedicion)],
+    ['Autoridad solicitante',o.autoridadSolicitante||''],
+    ['Despacho que la libró',d.nombre||''],
+    ['SPOA',p.radicado||''],
+    ['Número Interno',p.codigoInterno||''],
+    ['Fecha de los Hechos',ojFechaLarga(p.fechaHechos)],
+    ['Delito(s) Imputado(s)',ojDelitosDoc(c)],
+    ['Marco Procesal',ojLbl('tipoOrden',o.tipoOrden)],
+    ['Motivo de la Captura',ojLbl('finalidad',o.finalidad)]
   ]);
-  if((p.delitos||[]).length){
-    out+=ojxP(ojxRun('Delitos y artículos aplicados',{b:true,sz:22}),{before:160,after:80,keepNext:true});
-    out+=ojxTabla([[{t:'No.',b:true,shd:'F2F2F2',jc:'center'},{t:'Delito',b:true,shd:'F2F2F2'},{t:'Norma aplicada',b:true,shd:'F2F2F2'}]]
-      .concat((p.delitos||[]).map(function(dd,i){
-        var norma=[dd.articulo?'Art. '+dd.articulo:'',dd.inciso?'inc. '+dd.inciso:'',dd.numeral?'num. '+dd.numeral:''].filter(Boolean).join(', ');
-        return [{t:String(i+1),jc:'center'},
-                {t:(dd.nombre||'')+(dd.agravado?' (agravado)':'')},
-                {t:norma?norma+' del Código Penal'+(dd.codigo?' · código '+dd.codigo:''):(dd.codigo||'')}];
-      })),[700,4700,OJX_W-5400],{sz:20});
-  }
-  if(p.descripcionJuridica) out+=ojxP(ojxRun(p.descripcionJuridica,{sz:24}),{jc:'both',before:140,after:140,line:264});
 
-  // ── III. Materialización ──
-  out+=ojxSeccion('III. MATERIALIZACIÓN DE LA '+t.Acc.toUpperCase());
+  // ── 3. Materialización (selección 6) ──
+  out+=ojxSeccion('3.  MATERIALIZACIÓN DE LA '+t.Acc.toUpperCase());
   out+=ojxTablaDatos([
     ['Fecha y hora',ojFechaHora(g.fecha,g.hora)],
-    ['Lugar exacto',ojLugarTexto(g)],
+    ['Lugar',ojLugarTexto(g)],
     ['Tipo de lugar',ojLbl('tipoLugar',g.lugarTipo)],
-    ['Coordenadas geográficas',g.coordenadas],
-    ['Unidad policial',g.unidad],
-    ['Patrulla',g.patrulla],
-    ['Vehículo institucional',g.vehiculo],
-    ['Forma de ubicación',g.formaUbicacion==='OTRA'?g.formaUbicacionOtra:ojLbl('formaUbicacion',g.formaUbicacion)]
-  ]);
-  if((g.funcionarios||[]).length){
-    out+=ojxP(ojxRun('Funcionarios participantes',{b:true,sz:22}),{before:160,after:80,keepNext:true});
-    out+=ojxTabla([[{t:'Grado',b:true,shd:'F2F2F2'},{t:'Nombres y apellidos',b:true,shd:'F2F2F2'},
-                    {t:'Cédula',b:true,shd:'F2F2F2'},{t:'Placa',b:true,shd:'F2F2F2'}]]
-      .concat((g.funcionarios||[]).map(function(fu){
-        return [{t:fu.grado||''},{t:fu.nombre||''},{t:sinPuntos(fu.cedula||'')},{t:fu.placa||''}];
-      })),[2000,4005,1900,1500],{sz:20});
-  }
-  ojRelato(c,cfg).forEach(function(par){ out+=ojxP(ojxRun(par,{sz:24}),{jc:'both',before:120,after:120,line:264}); });
-
-  // ── IV. Garantías ──
-  out+=ojxSeccion('IV. GARANTÍAS DEL '+t.Sust.toUpperCase()+' Y ACTUACIÓN POLICIAL');
-  out+=ojxTablaDatos([
-    ['Lectura de derechos (art. 303 CPP)',a.derechos.leidos?
-      ('Sí'+(a.derechos.fecha?' · '+ojFechaCorta(a.derechos.fecha):'')+(a.derechos.hora?' '+a.derechos.hora+' horas':'')+
-       (a.derechos.lugar?' · '+a.derechos.lugar:'')):'No registrada'],
-    ['Comunicación de la situación',a.comunicacion.nombre?
-      (a.comunicacion.nombre+(a.comunicacion.parentesco?' ('+ojLbl('parentesco',a.comunicacion.parentesco).toLowerCase()+')':'')+
-       (a.comunicacion.telefono?' · tel. '+a.comunicacion.telefono:'')+(a.comunicacion.hora?' · '+a.comunicacion.hora+' horas':'')):''],
-    ['Defensor',a.defensor.tipo?(ojLbl('defensor',a.defensor.tipo)+(a.defensor.nombre?' — '+a.defensor.nombre:'')):''],
-    ['Uso de la fuerza',ojLbl('usoFuerza',a.fuerza.tipo)+(a.fuerza.descripcion?' — '+a.fuerza.descripcion:'')],
-    ['Lesiones',a.lesiones.hubo?('Sí'+(a.lesiones.descripcion?' — '+a.lesiones.descripcion:'')):'No se registraron'],
-    ['Valoración médica',a.valoracion.realizada?
-      ({SI:'Realizada',NO:'No realizada',RENUENCIA:'El '+t.sust+' se negó'}[a.valoracion.realizada]||'')+
-      (a.valoracion.entidad?' — '+a.valoracion.entidad:''):'']
+    ['Forma de ubicación',g.formaUbicacion==='OTRA'?(g.formaUbicacionOtra||''):ojLbl('formaUbicacion',g.formaUbicacion)]
   ]);
 
-  // ── V. Elementos ──
-  if(a.hayIncautacion&&(a.incautaciones||[]).length){
-    out+=ojxSeccion('V. ELEMENTOS MATERIALES Y CADENA DE CUSTODIA');
-    out+=ojxTabla([[{t:'Cant.',b:true,shd:'F2F2F2',jc:'center'},{t:'Descripción del elemento',b:true,shd:'F2F2F2'},
-                    {t:'Rótulo de cadena de custodia',b:true,shd:'F2F2F2'},{t:'Entregado a',b:true,shd:'F2F2F2'}]]
-      .concat((a.incautaciones||[]).map(function(e){
-        return [{t:e.cantidad||'1',jc:'center'},{t:e.descripcion||''},{t:e.rotulo||''},{t:e.entregadoA||''}];
-      })),[800,3800,2400,OJX_W-7000],{sz:20});
+  // ── Narración de los hechos (selección 7) ──
+  // Se compone con los datos del formulario y cierra con la constancia de dónde
+  // quedó el capturado. Lo que el usuario escriba a mano va al final, bajo
+  // «Observaciones», como en el formato.
+  out+=ojxAire();
+  var pars=ojRelato(c,cfg).concat(ojRelatoDisposicion(c,cfg));
+  pars.forEach(function(par,i){
+    out+=ojxP(ojxRun(par),{jc:'both',after:(i===pars.length-1&&!a.observaciones)?400:(i===pars.length-1?160:120)});
+  });
+  if(a.observaciones){
+    out+=ojxP([ojxRun('Observaciones:',{b:true}),ojxRun(' '+a.observaciones)],{jc:'both',after:400});
   }
 
-  // ── VI. Puesta a disposición ──
-  out+=ojxSeccion('VI. PUESTA A DISPOSICIÓN');
-  out+=ojxTablaDatos([
-    ['Autoridad receptora',x.nombre],
-    ['Tipo de autoridad',ojLbl('tipoDespacho',x.tipo)],
-    ['Dirección',[x.direccion,x.municipio,x.departamento].filter(Boolean).join(', ')],
-    ['Fecha y hora de entrega',ojFechaHora(x.fechaEntrega,x.horaEntrega)],
-    ['Recibe',[x.recibeNombre,x.recibeCargo].filter(Boolean).join(' — ')],
-    ['Vencimiento del término de 36 horas',plazo.vence],
-    ['Fundamento legal aplicado',x.fundamento]
-  ]);
-  ojRelatoDisposicion(c,cfg).forEach(function(par){ out+=ojxP(ojxRun(par,{sz:24}),{jc:'both',before:120,after:120,line:264}); });
-
-  // ── Firma ──
-  out+=ojxP(ojxRun('Atentamente,',{sz:24}),{before:240,after:0});
+  // ── Firma (selección 8) ──
+  var fi=c.oj.firma||{};
+  out+=ojxP(ojxRun('Atentamente,'),{after:0});
   out+=ojxVacio(3);
-  var grado=perfil.grado||(cfg.servidor&&cfg.servidor.grado)||'';
-  var nombre=perfil.nombre||(cfg.servidor&&cfg.servidor.nombre)||'';
-  out+=ojxP(ojxRun((grado+' '+nombre).trim().toUpperCase(),{b:true,sz:24}),{after:0});
-  [cfg.ojDependencia,cfg.ojPieDireccion,
-   (perfil.telefono||cfg.dosTel)?'Celular: '+(perfil.telefono||cfg.dosTel):'',
-   (perfil.correo||'')?'Correo: '+perfil.correo:''
-  ].filter(Boolean).forEach(function(l){ out+=ojxP(ojxRun(l,{sz:22}),{after:0}); });
+  out+=ojxP(ojxRun([fi.grado,(fi.nombre||'').toUpperCase()].filter(Boolean).join(' '),{b:true}),{after:0});
+  out+=ojxP(ojxRun(fi.cargo||'',{sz:OJX_SZ_TABLA}),{after:0});
+  out+=ojxP(ojxRun([fi.telefono?'Celular: '+fi.telefono:'',fi.correo||''].filter(Boolean).join(' · '),{sz:OJX_SZ_TABLA}),{after:320});
 
-  // ── Anexos ──
-  if((a.anexos||[]).length){
-    out+=ojxP(ojxRun('Anexos:',{b:true,sz:22}),{before:240,after:60});
-    (a.anexos||[]).forEach(function(an){ out+=ojxP(ojxRun('–  '+an,{sz:22}),{after:0,indL:283}); });
+  // ── Anexos: la app cuenta, el usuario solo marca o escribe (selección 9) ──
+  var anexos=(a.anexos||[]).map(function(s){ return ojAnexoTexto(s,c); }).filter(Boolean);
+  if(anexos.length){
+    out+=ojxP(ojxRun('Anexos: '+ojNumPalabra(anexos.length)+' ('+anexos.length+')',{b:true,sz:OJX_SZ_TABLA}),
+      {keepNext:true,after:60});
+    anexos.forEach(function(an,i){
+      out+=ojxP(ojxRun('– '+an,{sz:OJX_SZ_TABLA}),{after:(i===anexos.length-1)?0:40,indL:284,hang:284});
+    });
   }
 
-  // ── Elaboró / Revisó / Ubicación ──
-  // Un solo bloque de 2×2: si quedara suelto al final arrastraría una página
-  // en blanco, que es exactamente lo que pasaba con párrafos independientes.
-  var elaboro=[grado,nombre].filter(Boolean).join(' ');
-  out+=ojxTabla([
-    [{t:'Elaboró: '+elaboro,shd:'F2F2F2'},{t:'Revisó: '+(cfg.ojReviso||''),shd:'F2F2F2'}],
-    [{t:'Fecha de elaboración: '+ojFechaCorta(c.fechaProc||ojISO(new Date()))},
-     {t:'Ubicación: '+(cfg.ojUbicacionTRD||'')}]
-  ],[Math.round(OJX_W/2),OJX_W-Math.round(OJX_W/2)],{sz:18});
+  // ── Bloque de contacto al pie del cuerpo (selección 10) ──
+  var pieLineas=[
+    [cfg.ojPieDependencia||cfg.ojDependencia||'',true],
+    [cfg.ojPieDireccion||'',false],
+    [[cfg.ojPieTelefonos?'Teléfono: '+cfg.ojPieTelefonos:'',cfg.ojPieCorreo||''].filter(Boolean).join(' · '),false],
+    [cfg.ojPieWeb||'',false]
+  ].filter(function(l){ return l[0]; });
+  if(pieLineas.length){
+    out+=ojxFilete();
+    pieLineas.forEach(function(l){
+      out+=ojxP(ojxRun(l[0],{b:l[1],sz:OJX_SZ_PIE}),{after:0,jc:'center'});
+    });
+  }
   return out+ojxCierre();
 }
 
@@ -6514,28 +6961,26 @@ function ojNombreArchivo(c){
   var f=(c.oj.diligencia.fecha||c.fechaProc||'').split('-').reverse().join('-');
   return ('OJ_Disposicion_'+quien+'_'+f).replace(/[^\w\-]+/g,'_')+'.docx';
 }
-async function buildOficioOJBlob(c){
+async function buildOficioOJBlob(c,papel){
   try{
     if(!c||!c.oj){ toast('Este caso no tiene datos de orden judicial'); return null; }
-    var cfg=DB.getConfig();
+    // El tamaño de papel se fija ANTES de componer: todas las tablas, el
+    // membrete y el pie se arman ya con el ancho útil de esa hoja.
+    ojxSetPapel(papel||'CARTA');
+    var cfg=ojCfgDoc(c,DB.getConfig());
     ojNormalizar(c);
-    var paquete=await ojPaquete(cfg);
+    var paquete=ojPaquete(cfg);
     var cuerpo=ojDocCuerpo(c,cfg);
     var docXml=OJ_XMLDECL+'<w:document '+OJ_NS_W+'><w:body>'+cuerpo+paquete.sectPr+'</w:body></w:document>';
     var files=paquete.files;
     files['word/document.xml']=ojBytes(docXml);
-    // Membrete y pie: son la única capa que una plantilla propia puede cambiar.
-    Object.keys(files).forEach(function(n){
-      if(/^word\/(header|footer)\d*\.xml$/.test(n)){
-        var xml=ojTexto(files[n]);
-        if(xml.indexOf('{{')>=0) xml=ojTokensMembrete(normalizeXmlRuns(xml),cfg);
-        files[n]=ojBytes(xml);
-      }
-    });
     var lista=Object.keys(files).map(function(n){ return {name:n,data:files[n]}; });
     var zip=_buildZip(lista);
     var blob=new Blob([zip],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
-    return {blob:blob, fname:ojNombreArchivo(c), label:'Oficio de puesta a disposición', origen:paquete.origen};
+    // `files` viaja con el resultado: es la misma fuente de la que se arma la
+    // vista de impresión del PDF, para que .docx y PDF no puedan divergir.
+    return {blob:blob, fname:ojNombreArchivo(c), label:'Oficio de puesta a disposición',
+            origen:paquete.origen, files:files, papel:OJX_PAPEL};
   }catch(e){
     console.error('[LexCapture OJ] generando oficio',e);
     toast('Error generando el oficio: '+e.message);
@@ -6582,6 +7027,11 @@ function ojDesdeLegado(orig){
   o.actuacion.derechos.fecha=o.diligencia.fecha;
   o.actuacion.observaciones=narr.texto||'';               // no perder el relato ya escrito
   o.destino.nombre=(c.destinoOJ==='JUZGADO')?(c.juzgadoOrden||''):(c.destino||cfg.destUri||'');
+  if(serv.nombre){
+    o.firma.grado=serv.grado||''; o.firma.nombre=serv.nombre||'';
+    o.firma.cargo=serv.cargo||''; o.firma.telefono=serv.tel||''; o.firma.correo=serv.correo||'';
+  }
+  ojPrellenarDeCfg(c,cfg);
   return c;
 }
 // El documento se arma sobre esta copia; los casos v2 se usan tal cual.
@@ -6616,9 +7066,17 @@ function ojCompletarCaso(id,paso){
   document.getElementById('wz-title').textContent='Captura por orden judicial';
   go('wizard'); renderWiz();
 }
-async function ojDescargarOficio(ref){
+// Pasa por el diálogo obligatorio de formato y tamaño antes de producir nada.
+function ojDescargarOficio(ref){
   var c=(typeof ref==='object'&&ref)?ref:DB.getCase(ref);
   if(!c){ toast('Caso no encontrado'); return; }
+  var quien=ojNombreRequerido((c.oj&&c.oj.requerido)||{})||
+            ((c.capturados&&c.capturados[0])?fullName(c.capturados[0]):'');
+  lcPedirExport('OJ','Oficio de puesta a disposición'+(quien?' — '+quien:''),function(sel){
+    ojProducirOficio(c,sel);
+  });
+}
+async function ojProducirOficio(c,sel){
   var legado=ojEsLegado(c);
   var caso=ojCasoParaDocumento(c);
   if(!legado){
@@ -6626,8 +7084,9 @@ async function ojDescargarOficio(ref){
     if(duras.length){ ojModalFaltantes(c.id,duras); return; }
   }
   toast('Generando oficio…');
-  var out=await buildOficioOJBlob(caso);
+  var out=await buildOficioOJBlob(caso,sel.papel);
   if(!out) return;
+  if(sel.fmt==='PDF'){ lcImprimir(out); return; }
   _dlDocBlob(out.blob,out.fname);
   if(legado){
     // Un caso viejo nunca tuvo estos campos: se entrega igual, pero avisando.
@@ -6645,6 +7104,19 @@ async function ojDescargarOficio(ref){
    que la lista de capturas, el buscador y el dossier sigan funcionando sin
    tocar una sola función de flagrancia.
 ───────────────────────────────────────────────────────────────────────── */
+/* Si el usuario diligenció la unidad/dependencia (o el lugar de custodia) porque
+   el equipo no estaba configurado, se guardan como valor por defecto: la app le
+   pidió el dato una vez, no en cada procedimiento. */
+function ojRecordarEncabezado(c){
+  var cfg=DB.getConfig(), e=c.oj.encabezado||{}, cu=c.oj.custodia||{}, cambio=false;
+  if(e.unidad&&cfg.ojUnidad!==e.unidad){ cfg.ojUnidad=e.unidad; cambio=true; }
+  if(e.dependencia&&cfg.ojDependencia!==e.dependencia){ cfg.ojDependencia=e.dependencia; cambio=true; }
+  if(cu.estacion&&!cfg.ojCustEstacion){ cfg.ojCustEstacion=cu.estacion; cambio=true; }
+  if(cu.direccion&&!cfg.ojCustDireccion){ cfg.ojCustDireccion=cu.direccion; cambio=true; }
+  if(cu.telefono&&!cfg.ojCustTelefono){ cfg.ojCustTelefono=cu.telefono; cambio=true; }
+  if(cu.correo&&!cfg.ojCustCorreo){ cfg.ojCustCorreo=cu.correo; cambio=true; }
+  if(cambio) DB.saveConfig(cfg);
+}
 function ojPersonaEspejo(c){
   var r=c.oj.requerido;
   return {
@@ -6664,6 +7136,7 @@ async function ojGuardarCaso(silencioso){
   var r=wc.oj.requerido;
   if(!r.priNom||!r.priApe){ toast('Registra al menos el nombre y el apellido de la persona requerida'); return false; }
   ojAplicarSugerencia(wc);
+  ojRecordarEncabezado(wc);
   wc.oj.orden.vigenciaHasta=ojVigencia(wc.oj.orden).hasta;
   var plazo=ojPlazo36(wc);
   wc.oj.destino.plazoVence=plazo.venceISO?plazo.venceISO+' '+plazo.venceHora:'';
@@ -6683,7 +7156,7 @@ async function ojGuardarCaso(silencioso){
   try{
     await DB.saveCase(wc);
     await DB.savePerson(persona);
-    if(!silencioso) toast('Caso guardado ✓');
+    if(!silencioso) guestToastGuardado('Caso guardado ✓');
     return true;
   }catch(e){
     console.error('[LexCapture OJ] guardando caso',e);
@@ -6706,9 +7179,458 @@ async function ojGenerarDesdeWizard(){
   }
   var ok=await ojGuardarCaso(true);
   if(!ok) return;
-  await ojDescargarOficio(wc);
+  ojDescargarOficio(wc);          // pide formato y tamaño antes de producir
 }
 /*OJ_MODULE_END*/
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   VISTA DE IMPRESIÓN (PDF)
+   El PDF NO se dibuja aparte: se traduce a HTML el MISMO word/document.xml que
+   acaba de producir el .docx. Un solo origen de verdad — el FPJ-5, que es el
+   formato oficial de la Fiscalía, nunca se redibuja a mano: sus 35 tablas se
+   transcriben con los anchos que ya trae el XML (tblGrid/tcW), sus bordes y su
+   tipografía. Lo que cambia entre .docx y PDF es el motor que lo pinta, no el
+   documento.
+
+   Paginación propia: el navegador no sabe repetir membrete/pie con numeración
+   («Página N de M» no existe en CSS de Chrome). Por eso el contenido se reparte
+   en cajas de página de medida exacta, midiendo bloque por bloque, y las tablas
+   largas se cortan POR FILA — nunca por la mitad de una fila.
+═══════════════════════════════════════════════════════════════════════════ */
+var LC_W_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+var LC_R_NS='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+function lcPx(tw){ return (Number(tw)||0)/15; }                 // twips → px (96 dpi)
+function lcPt(halfPt){ return (Number(halfPt)||0)/2; }          // media-punto → pt
+function lcAttr(el,name){
+  if(!el) return '';
+  return el.getAttributeNS(LC_W_NS,name) || el.getAttribute('w:'+name) || '';
+}
+function lcHijo(el,name){
+  if(!el) return null;
+  var c=el.children;
+  for(var i=0;i<c.length;i++) if(c[i].localName===name) return c[i];
+  return null;
+}
+function lcHijos(el,name){
+  var out=[]; if(!el) return out;
+  var c=el.children;
+  for(var i=0;i<c.length;i++) if(c[i].localName===name) out.push(c[i]);
+  return out;
+}
+/* Mapa r:id → parte del paquete, para resolver imágenes y referencias. */
+function lcRels(files,parte){
+  var map={}, key='word/_rels/'+parte+'.rels';
+  if(!files[key]) return map;
+  var doc=new DOMParser().parseFromString(new TextDecoder().decode(files[key]),'application/xml');
+  var rs=doc.getElementsByTagName('Relationship');
+  for(var i=0;i<rs.length;i++){
+    map[rs[i].getAttribute('Id')]={target:rs[i].getAttribute('Target'),type:rs[i].getAttribute('Type')};
+  }
+  return map;
+}
+function lcMediaUri(files,rels,rid){
+  var r=rels[rid]; if(!r) return '';
+  var path=('word/'+r.target).replace(/\/\.\//g,'/').replace(/^word\/\.\.\//,'');
+  var data=files[path]; if(!data) return '';
+  var ext=(path.split('.').pop()||'png').toLowerCase();
+  var mime=ext==='png'?'image/png':ext==='gif'?'image/gif':ext==='svg'?'image/svg+xml':'image/jpeg';
+  var bin=''; var u8=data instanceof Uint8Array?data:new Uint8Array(data);
+  for(var i=0;i<u8.length;i++) bin+=String.fromCharCode(u8[i]);
+  return 'data:'+mime+';base64,'+btoa(bin);
+}
+/* ── Runs ── */
+function lcRunHtml(r,files,rels){
+  var rPr=lcHijo(r,'rPr'), css=[], txt='';
+  if(rPr){
+    var f=lcHijo(rPr,'rFonts'); var face=f?(lcAttr(f,'ascii')||''):'';
+    if(face) css.push('font-family:'+face+',Arial,sans-serif');
+    if(lcHijo(rPr,'b')) css.push('font-weight:700');
+    if(lcHijo(rPr,'i')) css.push('font-style:italic');
+    if(lcHijo(rPr,'caps')) css.push('text-transform:uppercase');
+    if(lcHijo(rPr,'u')) css.push('text-decoration:underline');
+    var col=lcHijo(rPr,'color'); var cv=col?lcAttr(col,'val'):'';
+    if(cv&&cv!=='auto') css.push('color:#'+cv);
+    var sz=lcHijo(rPr,'sz'); var sv=sz?lcAttr(sz,'val'):'';
+    if(sv) css.push('font-size:'+lcPt(sv)+'pt');
+  }
+  var kids=r.children;
+  for(var i=0;i<kids.length;i++){
+    var k=kids[i];
+    // HTML colapsa los espacios consecutivos; el formato usa dos tras el punto
+    // del título («1.  IDENTIFICACIÓN…»). Se preservan tal cual.
+    if(k.localName==='t') txt+=escHtml(k.textContent).replace(/ {2}/g,'&nbsp; ');
+    else if(k.localName==='br') txt+='<br>';
+    else if(k.localName==='tab') txt+='<span class="tb"></span>';
+    else if(k.localName==='noBreakHyphen') txt+='&#8209;';
+    else if(k.localName==='drawing'){
+      var blip=k.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/main','blip')[0];
+      var ext=k.getElementsByTagNameNS('http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing','extent')[0];
+      var rid=blip?(blip.getAttributeNS(LC_R_NS,'embed')||blip.getAttribute('r:embed')):'';
+      var uri=rid?lcMediaUri(files,rels,rid):'';
+      if(uri){
+        // EMU → px: 914400 EMU = 1 pulgada = 96 px
+        var cx=ext?Number(ext.getAttribute('cx')||0)/9525:0;
+        var cy=ext?Number(ext.getAttribute('cy')||0)/9525:0;
+        txt+='<img src="'+uri+'"'+(cx?' style="width:'+cx+'px;height:'+cy+'px"':'')+' alt="">';
+      }
+    }
+  }
+  if(!txt) return '';
+  return '<span'+(css.length?' style="'+css.join(';')+'"':'')+'>'+txt+'</span>';
+}
+/* ── Bordes ── */
+function lcBorde(el,lado){
+  var b=lcHijo(el,lado); if(!b) return 'none';
+  var val=lcAttr(b,'val');
+  if(!val||val==='none'||val==='nil') return 'none';
+  var sz=Number(lcAttr(b,'sz')||4);                 // octavos de punto
+  var col=lcAttr(b,'color'); col=(!col||col==='auto')?'000000':col;
+  return Math.max(1,Math.round(sz/8*(96/72)))+'px solid #'+col;
+}
+/* ── Párrafos ── */
+function lcParHtml(p,files,rels,opts){
+  var pPr=lcHijo(p,'pPr'), css=[], cls=[];
+  var esVacio=true;
+  var runs='';
+  var kids=p.children;
+  for(var i=0;i<kids.length;i++){
+    var k=kids[i];
+    if(k.localName==='r'){ var h=lcRunHtml(k,files,rels); if(h){ runs+=h; esVacio=false; } }
+    else if(k.localName==='hyperlink'){
+      var hr=lcHijos(k,'r');
+      for(var j=0;j<hr.length;j++){ var h2=lcRunHtml(hr[j],files,rels); if(h2){ runs+=h2; esVacio=false; } }
+    }
+    else if(k.localName==='fldSimple'||k.localName==='sdt'){
+      var fr=k.getElementsByTagNameNS(LC_W_NS,'r');
+      for(var j2=0;j2<fr.length;j2++){ var h3=lcRunHtml(fr[j2],files,rels); if(h3){ runs+=h3; esVacio=false; } }
+    }
+  }
+  /* Campos PAGE / NUMPAGES: en el XML vienen ya "calculados" como el texto «1»
+     (es el valor que Word deja cacheado). Se marcan aquí, en el orden en que
+     aparecen, y al terminar de paginar se les pone el número real de la hoja y
+     el total: es la única forma de tener «Página N de M» en la impresión del
+     navegador, que no sabe contar páginas por CSS. */
+  var instr=p.getElementsByTagNameNS(LC_W_NS,'instrText');
+  if(instr.length&&runs){
+    var campos=[];
+    for(var q=0;q<instr.length;q++){
+      var t=instr[q].textContent||'';
+      if(/NUMPAGES/.test(t)) campos.push('tot');
+      else if(/\bPAGE\b/.test(t)) campos.push('num');
+    }
+    var ci2=0;
+    runs=runs.replace(/(<span[^>]*>)(\s*1\s*)(<\/span>)/g,function(m,a,b,c){
+      var tipo=campos[ci2++];
+      return tipo?(a.replace('<span','<span class="fld-'+tipo+'"')+b+c):m;
+    });
+  }
+  if(pPr){
+    var jc=lcHijo(pPr,'jc'); var jv=jc?lcAttr(jc,'val'):'';
+    if(jv) css.push('text-align:'+({both:'justify',center:'center',right:'right',left:'left'}[jv]||'left'));
+    var sp=lcHijo(pPr,'spacing');
+    if(sp){
+      css.push('margin-top:'+lcPx(lcAttr(sp,'before'))+'px');
+      var af=lcAttr(sp,'after'); css.push('margin-bottom:'+lcPx(af===''?120:af)+'px');
+      var line=lcAttr(sp,'line'), rule=lcAttr(sp,'lineRule');
+      if(line){
+        if(rule==='exact'||rule==='atLeast') css.push((rule==='exact'?'height:':'min-height:')+lcPx(line)+'px');
+        else css.push('line-height:'+(Number(line)/240)+'');
+      }
+    } else { css.push('margin:0 0 8px'); }
+    var ind=lcHijo(pPr,'ind');
+    if(ind){
+      var il=lcPx(lcAttr(ind,'left')), ir=lcPx(lcAttr(ind,'right')), ih=lcPx(lcAttr(ind,'hanging'));
+      if(il) css.push('padding-left:'+il+'px');
+      if(ir) css.push('padding-right:'+ir+'px');
+      if(ih) css.push('text-indent:-'+ih+'px');
+    }
+    var shd=lcHijo(pPr,'shd'); var fill=shd?lcAttr(shd,'fill'):'';
+    if(fill&&fill!=='auto') css.push('background:#'+fill);
+    var bdr=lcHijo(pPr,'pBdr');
+    if(bdr){
+      ['top','bottom','left','right'].forEach(function(l){
+        var b=lcBorde(bdr,l); if(b!=='none') css.push('border-'+l+':'+b);
+      });
+    }
+    if(lcHijo(pPr,'keepNext')) cls.push('keep');
+  }
+  if(esVacio&&!runs) runs='&#8203;';                 // párrafo vacío conserva su alto
+  return '<p class="'+cls.join(' ')+'" style="'+css.join(';')+'">'+runs+'</p>';
+}
+/* ── Tablas ── */
+function lcTablaHtml(tbl,files,rels){
+  var tblPr=lcHijo(tbl,'tblPr');
+  var grid=lcHijo(tbl,'tblGrid');
+  var cols=lcHijos(grid,'gridCol').map(function(g){ return lcPx(lcAttr(g,'w')); });
+  var total=cols.reduce(function(a,b){ return a+b; },0);
+  var bordes=tblPr?lcHijo(tblPr,'tblBorders'):null;
+  var mar=tblPr?lcHijo(tblPr,'tblCellMar'):null;
+  var padT=mar?lcPx(lcAttr(lcHijo(mar,'top'),'w')):0;
+  var padL=mar?lcPx(lcAttr(lcHijo(mar,'left'),'w')):2;
+  var padB=mar?lcPx(lcAttr(lcHijo(mar,'bottom'),'w')):0;
+  var padR=mar?lcPx(lcAttr(lcHijo(mar,'right'),'w')):2;
+  var out='<table style="width:'+total+'px;table-layout:fixed;border-collapse:collapse">'+
+    '<colgroup>'+cols.map(function(w){ return '<col style="width:'+w+'px">'; }).join('')+'</colgroup><tbody>';
+  lcHijos(tbl,'tr').forEach(function(tr){
+    out+='<tr>';
+    var ci=0;
+    lcHijos(tr,'tc').forEach(function(tc){
+      var tcPr=lcHijo(tc,'tcPr');
+      var span=1, gs=tcPr?lcHijo(tcPr,'gridSpan'):null;
+      if(gs) span=Number(lcAttr(gs,'val')||1);
+      var vm=tcPr?lcHijo(tcPr,'vMerge'):null;
+      if(vm&&(lcAttr(vm,'val')||'continue')==='continue'){ ci+=span; return; }   // celda fusionada
+      var css=['padding:'+padT+'px '+padR+'px '+padB+'px '+padL+'px','vertical-align:top','overflow-wrap:break-word'];
+      var va=tcPr?lcHijo(tcPr,'vAlign'):null;
+      if(va&&lcAttr(va,'val')==='center') css[1]='vertical-align:middle';
+      var shd=tcPr?lcHijo(tcPr,'shd'):null; var fill=shd?lcAttr(shd,'fill'):'';
+      if(fill&&fill!=='auto') css.push('background:#'+fill);
+      var tb=tcPr?lcHijo(tcPr,'tcBorders'):null;
+      ['top','bottom','left','right'].forEach(function(l){
+        var b=tb?lcBorde(tb,l):'none';
+        if(b==='none'&&bordes) b=lcBorde(bordes,l);
+        // Los bordes interiores del conjunto valen para las divisiones internas.
+        if(b==='none'&&bordes) b=lcBorde(bordes,(l==='top'||l==='bottom')?'insideH':'insideV');
+        css.push('border-'+l+':'+(b==='none'?'0':b));
+      });
+      var cont='';
+      lcHijos(tc,'p').forEach(function(p){ cont+=lcParHtml(p,files,rels,{}); });
+      lcHijos(tc,'tbl').forEach(function(t2){ cont+=lcTablaHtml(t2,files,rels); });
+      out+='<td'+(span>1?' colspan="'+span+'"':'')+' style="'+css.join(';')+'">'+cont+'</td>';
+      ci+=span;
+    });
+    out+='</tr>';
+  });
+  return out+'</tbody></table>';
+}
+/* Traduce el cuerpo (o un encabezado/pie) a una lista de bloques HTML. */
+function lcBloques(root,files,rels){
+  var out=[];
+  var c=root.children;
+  for(var i=0;i<c.length;i++){
+    if(c[i].localName==='p') out.push({tipo:'p',html:lcParHtml(c[i],files,rels,{}),keep:!!lcHijo(lcHijo(c[i],'pPr'),'keepNext')});
+    else if(c[i].localName==='tbl') out.push({tipo:'tbl',nodo:c[i],html:lcTablaHtml(c[i],files,rels)});
+  }
+  return out;
+}
+
+/* ── Construcción de la vista imprimible ────────────────────────────────── */
+function lcPrintDoc(out){
+  var files=out.files;
+  if(!files||!files['word/document.xml']) return null;
+  var papel=lcPapel(out.papel||'CARTA');
+  var relsDoc=lcRels(files,'document.xml');
+  var doc=new DOMParser().parseFromString(new TextDecoder().decode(files['word/document.xml']),'application/xml');
+  var body=doc.getElementsByTagNameNS(LC_W_NS,'body')[0];
+  if(!body) return null;
+  var sect=doc.getElementsByTagNameNS(LC_W_NS,'sectPr');
+  sect=sect[sect.length-1];
+  var pgMar=sect?lcHijo(sect,'pgMar'):null;
+  var M={
+    top:lcPx(pgMar?lcAttr(pgMar,'top'):1440), bottom:lcPx(pgMar?lcAttr(pgMar,'bottom'):1440),
+    left:lcPx(pgMar?lcAttr(pgMar,'left'):1440), right:lcPx(pgMar?lcAttr(pgMar,'right'):1440),
+    header:lcPx(pgMar?lcAttr(pgMar,'header'):720), footer:lcPx(pgMar?lcAttr(pgMar,'footer'):720)
+  };
+  // Encabezado de primera página y de las siguientes; pie común.
+  function parte(tipo){
+    if(!sect) return null;
+    var refs=lcHijos(sect,tipo==='footer'?'footerReference':'headerReference');
+    var byType={};
+    refs.forEach(function(r){
+      var t=lcAttr(r,'type')||'default';
+      var rid=r.getAttributeNS(LC_R_NS,'id')||r.getAttribute('r:id');
+      var rel=relsDoc[rid];
+      if(rel) byType[t]='word/'+rel.target;
+    });
+    return byType;
+  }
+  var hdrs=parte('header')||{}, ftrs=parte('footer')||{};
+  function render(path){
+    if(!path||!files[path]) return {html:'',rels:{}};
+    var nombre=path.replace(/^word\//,'');
+    var r=lcRels(files,nombre);
+    var d=new DOMParser().parseFromString(new TextDecoder().decode(files[path]),'application/xml');
+    var raiz=d.documentElement;
+    return {html:lcBloques(raiz,files,r).map(function(b){ return b.html; }).join(''),rels:r};
+  }
+  var hdrFirst=render(hdrs.first||hdrs.default), hdrDef=render(hdrs.default||hdrs.first);
+  var ftrFirst=render(ftrs.first||ftrs.default), ftrDef=render(ftrs.default||ftrs.first);
+  var bloques=lcBloques(body,files,relsDoc);
+  return {
+    papel:papel, M:M, bloques:bloques,
+    hdrFirst:hdrFirst.html, hdrDef:hdrDef.html,
+    ftrFirst:ftrFirst.html, ftrDef:ftrDef.html,
+    titulo:out.label||'Documento'
+  };
+}
+function lcPrintCss(papel,M){
+  var wPx=lcPx(papel.w), hPx=lcPx(papel.h);
+  return '@page{size:'+papel.cssW+' '+papel.cssH+';margin:0}'+
+    'html,body{margin:0;padding:0;background:#525659}'+
+    '*{box-sizing:border-box}'+
+    'body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;line-height:1.15}'+
+    '.pg{position:relative;width:'+wPx+'px;height:'+hPx+'px;background:#fff;margin:0 auto 16px;overflow:hidden;page-break-after:always;break-after:page}'+
+    '.pg:last-child{page-break-after:auto;break-after:auto;margin-bottom:0}'+
+    '.hd{position:absolute;left:'+M.left+'px;right:'+M.right+'px;top:'+M.header+'px}'+
+    '.ft{position:absolute;left:'+M.left+'px;right:'+M.right+'px;bottom:'+M.footer+'px}'+
+    '.bd{position:absolute;left:'+M.left+'px;top:'+M.top+'px;width:'+(wPx-M.left-M.right)+'px}'+
+    'p{margin:0}'+
+    'table{border-collapse:collapse;table-layout:fixed}'+
+    'td{word-wrap:break-word}'+
+    'img{max-width:100%}'+
+    '.tb{display:inline-block;width:36px}'+
+    '@media print{html,body{background:#fff}.pg{margin:0;box-shadow:none}}'+
+    '@media screen{.pg{box-shadow:0 2px 10px rgba(0,0,0,.4)}}';
+}
+/* Reparte los bloques en páginas midiendo de verdad. Las tablas que no caben se
+   cortan POR FILA (nunca dentro de una fila) y arrastran su primera fila si es
+   de encabezado. Un párrafo con keepNext viaja con el bloque siguiente. */
+function lcPaginar(win,plan){
+  var d=win.document;
+  var wPx=lcPx(plan.papel.w), hPx=lcPx(plan.papel.h);
+  var anchoBody=wPx-plan.M.left-plan.M.right;
+  var medidor=d.getElementById('medidor');
+  medidor.style.width=anchoBody+'px';
+  var cont=d.getElementById('hojas');
+  var paginas=[], actual=null, altoUtil=0, usado=0;
+  function nuevaPagina(){
+    var pg=d.createElement('div'); pg.className='pg';
+    var hd=d.createElement('div'); hd.className='hd';
+    hd.innerHTML=paginas.length===0?plan.hdrFirst:plan.hdrDef;
+    var ft=d.createElement('div'); ft.className='ft';
+    ft.innerHTML=paginas.length===0?plan.ftrFirst:plan.ftrDef;
+    var bd=d.createElement('div'); bd.className='bd';
+    pg.appendChild(hd); pg.appendChild(bd); pg.appendChild(ft);
+    cont.appendChild(pg);
+    paginas.push(pg);
+    // El alto útil descuenta lo que ocupen de verdad el membrete y el pie.
+    var hHd=hd.offsetHeight, hFt=ft.offsetHeight;
+    var topReal=Math.max(plan.M.top, plan.M.header+hHd+6);
+    var botReal=Math.max(plan.M.bottom, plan.M.footer+hFt+6);
+    bd.style.top=topReal+'px';
+    altoUtil=hPx-topReal-botReal;
+    usado=0; actual=bd;
+    return bd;
+  }
+  function mide(html){
+    medidor.innerHTML=html;
+    var h=medidor.offsetHeight;
+    medidor.innerHTML='';
+    return h;
+  }
+  function poner(html,alto){
+    if(!actual) nuevaPagina();
+    if(usado+alto>altoUtil && usado>0) nuevaPagina();
+    var w=d.createElement('div');
+    w.innerHTML=html;
+    while(w.firstChild) actual.appendChild(w.firstChild);
+    usado+=alto;
+  }
+  // Corta una tabla en trozos que quepan, respetando filas completas.
+  function ponerTabla(html){
+    var tmp=d.createElement('div'); tmp.innerHTML=html;
+    var tabla=tmp.firstChild;
+    var filas=Array.prototype.slice.call(tabla.querySelectorAll(':scope > tbody > tr'));
+    var cabeza=tabla.outerHTML.split('<tbody>')[0]+'<tbody>';
+    var trozo=[], altoTrozo=0;
+    function vaciar(){
+      if(!trozo.length) return;
+      poner(cabeza+trozo.map(function(f){ return f.outerHTML; }).join('')+'</tbody></table>',altoTrozo);
+      trozo=[]; altoTrozo=0;
+    }
+    if(!actual) nuevaPagina();
+    for(var i=0;i<filas.length;i++){
+      var hFila=mide(cabeza+filas[i].outerHTML+'</tbody></table>');
+      var libre=altoUtil-usado-altoTrozo;
+      if(hFila>libre && (trozo.length||usado>0)){
+        vaciar();
+        if(usado>0) nuevaPagina();
+      }
+      trozo.push(filas[i]); altoTrozo+=hFila;
+    }
+    vaciar();
+  }
+  // Agrupa los bloques marcados keepNext con el que les sigue.
+  var grupos=[], pend=null;
+  plan.bloques.forEach(function(b){
+    if(pend){ pend.push(b); if(b.tipo!=='tbl'&&b.keep) return; grupos.push(pend); pend=null; return; }
+    if(b.keep){ pend=[b]; return; }
+    grupos.push([b]);
+  });
+  if(pend) grupos.push(pend);
+
+  nuevaPagina();
+  grupos.forEach(function(g){
+    // Un grupo de una sola tabla se pagina por filas; lo demás va entero.
+    if(g.length===1&&g[0].tipo==='tbl'){ ponerTabla(g[0].html); return; }
+    var html=g.map(function(b){ return b.html; }).join('');
+    var alto=mide(html);
+    if(alto>altoUtil){
+      // No cabe ni en una hoja vacía: se coloca bloque a bloque para no cortarlo mal.
+      g.forEach(function(b){
+        if(b.tipo==='tbl') ponerTabla(b.html);
+        else poner(b.html,mide(b.html));
+      });
+      return;
+    }
+    poner(html,alto);
+  });
+  // Numeración real, ya conocido el total.
+  var total=paginas.length;
+  paginas.forEach(function(pg,i){
+    Array.prototype.forEach.call(pg.querySelectorAll('.fld-num'),function(el){ el.textContent=String(i+1); });
+    Array.prototype.forEach.call(pg.querySelectorAll('.fld-tot'),function(el){ el.textContent=String(total); });
+  });
+  return total;
+}
+/* Abre la vista imprimible en un iframe (nada de ventanas nuevas: los
+   bloqueadores de pop-ups las matan en móvil) y lanza el diálogo de impresión,
+   donde el usuario elige «Guardar como PDF». */
+function lcImprimir(out){
+  var plan=lcPrintDoc(out);
+  if(!plan){ toast('No se pudo preparar la vista de impresión — descarga el .docx'); return false; }
+  var vieja=document.getElementById('lc-print-frame');
+  if(vieja) vieja.remove();
+  var f=document.createElement('iframe');
+  f.id='lc-print-frame';
+  f.setAttribute('aria-hidden','true');
+  f.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;opacity:0;border:0;pointer-events:none';
+  document.body.appendChild(f);
+  var d=f.contentDocument;
+  d.open();
+  d.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escHtml(plan.titulo)+'</title>'+
+    '<style>'+lcPrintCss(plan.papel,plan.M)+'</style></head><body>'+
+    '<div id="medidor" style="position:absolute;left:-99999px;top:0;visibility:hidden"></div>'+
+    // Precarga: el membrete se escribe ya aquí para que sus imágenes estén
+    // decodificadas ANTES de medir alturas. Si no, el logo mide 0 px al paginar
+    // y el cálculo del alto útil sale mal.
+    '<div id="precarga" style="position:absolute;left:-99999px;top:0;visibility:hidden">'+
+      plan.hdrFirst+plan.hdrDef+'</div>'+
+    '<div id="hojas"></div></body></html>');
+  d.close();
+  var lanzar=function(){
+    try{
+      var pre=d.getElementById('precarga'); if(pre) pre.remove();
+      var n=lcPaginar(f.contentWindow,plan);
+      f.contentWindow.focus();
+      f.contentWindow.print();
+      toast('Vista de impresión lista ('+n+' página'+(n===1?'':'s')+' en '+plan.papel.lbl+') — elige «Guardar como PDF»',7000);
+    }catch(e){
+      console.error('[LexCapture] vista de impresión',e);
+      toast('No se pudo abrir la vista de impresión — el .docx sí se puede descargar');
+    }
+  };
+  // Las imágenes del membrete deben estar cargadas antes de medir alturas.
+  var imgs=d.images ? Array.prototype.slice.call(d.images) : [];
+  if(!imgs.length) { setTimeout(lanzar,60); return true; }
+  var faltan=imgs.length;
+  imgs.forEach(function(im){
+    if(im.complete){ if(!--faltan) setTimeout(lanzar,30); return; }
+    im.onload=im.onerror=function(){ if(!--faltan) setTimeout(lanzar,30); };
+  });
+  setTimeout(function(){ if(faltan>0){ faltan=0; lanzar(); } },2500);   // red de seguridad
+  return true;
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   applyTheme(getTheme());

@@ -76,6 +76,22 @@ const SEL_DL = '#share-it-dl';
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 
+  // ---- 1b. Enviar es una salida más: pide formato y tamaño antes de nada ----
+  // (el resto de la suite entra por _abrirEnvioSheet, que es la mecánica del
+  // sheet ya con el papel elegido; aquí se comprueba la puerta de entrada)
+  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.waitForTimeout(250);
+  const gate = await page.evaluate(() => ({
+    dialogo: !!document.getElementById('exp-go'),
+    bloqueado: !!(document.getElementById('exp-go') || {}).disabled,
+    sheet: document.getElementById('share-sheet').classList.contains('on')
+  }));
+  log(gate.dialogo && gate.bloqueado && !gate.sheet,
+    '[1b] Enviar abre primero el dialogo de formato/tamano y no produce nada hasta elegir',
+    JSON.stringify(gate));
+  await page.evaluate(() => lcExportCancelar());
+  await page.waitForTimeout(200);
+
   // ---- 2. Android con Web Share de archivos: el .docx va ADJUNTO por la hoja ----
   await page.evaluate(() => {
     window._shared = null; window._opened = null;
@@ -87,7 +103,7 @@ const SEL_DL = '#share-it-dl';
     // window.open ya NO se usa en el flujo de envío (no hay respaldo wa.me/mailto).
     window.open = function (u) { window._opened = u; return {}; };
   });
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.evaluate((id) => _abrirEnvioSheet(id), uriId);
   await page.waitForTimeout(600);   // deja terminar la pre-generacion del .docx
   const sheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
   const coachTxt = await page.$eval('.share-coach', el => el.textContent).catch(() => '');
@@ -123,7 +139,7 @@ const SEL_DL = '#share-it-dl';
       return Promise.reject(err);
     };
   });
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.evaluate((id) => _abrirEnvioSheet(id), uriId);
   await page.waitForTimeout(600);
   const [dlFail] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
@@ -141,7 +157,7 @@ const SEL_DL = '#share-it-dl';
     window._shared = null;
     navigator.share = function (d) { window._shared = { n: d.files.length, name: d.files[0].name }; return Promise.resolve(); };
   });
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.evaluate((id) => _abrirEnvioSheet(id), uriId);
   await page.waitForTimeout(600);
   await page.click(SEL_SHARE);
   await page.waitForTimeout(400);
@@ -154,7 +170,7 @@ const SEL_DL = '#share-it-dl';
     window._shared = null; window._opened = null;
     navigator.canShare = function () { return false; };
   });
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.evaluate((id) => _abrirEnvioSheet(id), uriId);
   await page.waitForTimeout(600);
   const [dlDesk] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
@@ -167,7 +183,7 @@ const SEL_DL = '#share-it-dl';
   log(r4.opened === null, '[4] Sin Web Share: no abre ventana externa', String(r4.opened));
 
   // ---- 5. Solo descargar ----
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
+  await page.evaluate((id) => _abrirEnvioSheet(id), uriId);
   await page.waitForTimeout(400);
   const [dl1] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
@@ -187,7 +203,7 @@ const SEL_DL = '#share-it-dl';
     window._opened = null; window._shared = null;
     navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
     navigator.share = function () { window._shared = 'intentado'; return Promise.resolve(); };
-    abrirEnvioDoc(id);
+    _abrirEnvioSheet(id);
   }, badId);
   await page.waitForTimeout(400);
   const [dlBad] = await Promise.all([
@@ -212,11 +228,11 @@ const SEL_DL = '#share-it-dl';
     window._shared = null;
     navigator.canShare = function (d) { return !!(d && d.files && d.files.length); };
     navigator.share = function (d) { window._shared = { n: d.files.length, name: d.files[0].name }; return Promise.resolve(); };
-    abrirEnvioDoc(id);
+    _abrirEnvioSheet(id);
   }, ojId);
   await page.waitForTimeout(600);
   const ojTitle = await page.$eval('#share-title', el => el.textContent);
-  log(/Documento OJ/.test(ojTitle), '[7] Sheet identifica documento OJ', ojTitle);
+  log(/Oficio de disposición/.test(ojTitle), '[7] Sheet identifica el oficio de orden judicial', ojTitle);
   await page.click(SEL_SHARE);
   await page.waitForTimeout(400);
   const r7 = await page.evaluate(() => window._shared);
@@ -233,22 +249,36 @@ const SEL_DL = '#share-it-dl';
   log(/Enviar Oficio Disposición/.test(dosSendOj), '[8] Dossier OJ: boton Enviar Oficio Disposicion', dosSendOj);
   await page.click('#dos-btn-send');
   await page.waitForTimeout(300);
+  // El boton del dossier tambien pasa por el dialogo obligatorio.
+  await page.click('#exp-fmt-DOCX');
+  await page.click('#exp-papel-CARTA');
+  await page.click('#exp-go');
+  await page.waitForTimeout(400);
   const dosSheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
-  log(dosSheetOn, '[8] Boton Enviar del dossier abre el sheet');
+  log(dosSheetOn, '[8] Boton Enviar del dossier abre el sheet tras elegir formato y tamano');
   await page.evaluate(() => closeShareSheet());
 
   // ---- 9. Regresión: descarga clásica sigue funcionando ----
+  // Ahora pasa por el diálogo obligatorio: se elige Word/Carta y descarga igual.
+  const elegirExport = async (fmt = 'DOCX', papel = 'CARTA') => {
+    await page.waitForSelector('#exp-go', { timeout: 5000 });
+    await page.click('#exp-fmt-' + fmt);
+    await page.click('#exp-papel-' + papel);
+    await page.click('#exp-go');
+  };
   await page.evaluate((id) => { _dosCasoId = id; renderDossier(); }, uriId);
+  await page.evaluate(() => descargarFPJ());
   const [dl3] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.evaluate(() => descargarFPJ())
+    elegirExport()
   ]);
   log(!!dl3 && /^FPJ5_URI_.*\.docx$/.test(dl3.suggestedFilename()), '[9] descargarFPJ() sigue descargando', dl3 ? dl3.suggestedFilename() : '(sin descarga)');
+  await page.evaluate((id) => { var c = DB.getCase(id); ojDescargarOficio(c); }, ojId);
   const [dl4] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    page.evaluate((id) => { var c = DB.getCase(id); genDocOJ(c, null); }, ojId)
+    elegirExport()
   ]);
-  log(!!dl4 && /^OJ_.*\.docx$/.test(dl4.suggestedFilename()), '[9] genDocOJ() sigue descargando', dl4 ? dl4.suggestedFilename() : '(sin descarga)');
+  log(!!dl4 && /^OJ_.*\.docx$/.test(dl4.suggestedFilename()), '[9] La descarga directa de un caso OJ produce el oficio del módulo', dl4 ? dl4.suggestedFilename() : '(sin descarga)');
 
   // ---- 10. Consola sin errores INESPERADOS (Android) ----
   // El escenario [3] fuerza un rechazo de share(); el `console.error('Web Share
@@ -275,7 +305,7 @@ const SEL_DL = '#share-it-dl';
       return Promise.resolve();
     };
   });
-  await page2.evaluate((id) => abrirEnvioDoc(id), uriId2);
+  await page2.evaluate((id) => _abrirEnvioSheet(id), uriId2);
   await page2.waitForTimeout(700);
   const coachIos = await page2.$eval('.share-coach', el => el.textContent).catch(() => '');
   log(/Descargas/.test(coachIos) && /adjunt/i.test(coachIos), '[11] iOS: tarjeta guia presente (Descargas + adjuntar)', coachIos.replace(/\s+/g, ' ').slice(0, 70));
@@ -325,7 +355,7 @@ const SEL_DL = '#share-it-dl';
       }
     };
   });
-  await page4.evaluate((id) => abrirEnvioDoc(id), uriId4);
+  await page4.evaluate((id) => _abrirEnvioSheet(id), uriId4);
   await page4.waitForTimeout(600);
   const diag4 = await page4.$eval('#share-diag', el => el.textContent);
   log(/nativo:sí/.test(diag4), '[13] Diagnostico detecta el envoltorio nativo', diag4);

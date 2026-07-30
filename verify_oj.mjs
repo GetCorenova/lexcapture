@@ -54,15 +54,20 @@ await page.evaluate(() => {
   cfg.ojDependencia = 'DEPENDENCIA DE PRUEBA';
   cfg.ojCiudad = 'Ciudad Prueba';
   cfg.ojConsecutivo = 'XXX – YYY – 1.10';
+  cfg.ojPieDependencia = 'Dependencia Pie de Prueba';
   cfg.ojPieDireccion = 'Calle de prueba 1';
   cfg.ojPieTelefonos = '6040000000';
   cfg.ojPieCorreo = 'correo@prueba.test';
   cfg.ojPieWeb = 'www.prueba.test';
+  // Lugar de custodia por defecto: distinto del pie, para comprobar que la
+  // constancia de la narración usa sus propios datos y no los del pie.
+  cfg.ojCustEstacion = 'Estación de Prueba Custodia';
+  cfg.ojCustDireccion = 'Calle de custodia 9';
+  cfg.ojCustTelefono = '6041111111';
+  cfg.ojCustCorreo = 'custodia@prueba.test';
   cfg.ojCodigoFormato = '1DS-OF-0001';
   cfg.ojVersionFormato = 'VER: 6';
-  cfg.ojUbicacionTRD = 'XXX-YYY-ZZZ';
-  cfg.ojReviso = 'SI Revisor Prueba';
-  cfg.perfiles = [{ id: 'pf1', grado: 'Subintendente', nombre: 'Nombre Firmante', cedula: '1.111.111', telefono: '3000000000', correo: 'firmante@prueba.test' }];
+  cfg.perfiles = [{ id: 'pf1', grado: 'Subintendente', nombre: 'Nombre Firmante', cedula: '1.111.111', telefono: '3000000000', cargo: 'Integrante patrulla de vigilancia', correo: 'firmante@prueba.test' }];
   cfg.perfilActivo = 'pf1';
   DB.saveConfig(cfg);
 });
@@ -247,14 +252,36 @@ await page.click('button[onclick="ojListaAgregar(\'incautaciones\')"]'); await p
 await page.fill('#ojl-incautaciones-0-descripcion', 'Un teléfono móvil');
 await page.fill('#ojl-incautaciones-0-cantidad', '1');
 await page.fill('#ojl-incautaciones-0-rotulo', 'RC-0001');
+// Narración libre: el espacio nace vacío y lo escribe el usuario.
+log((await page.inputValue('#oj-a-obs')) === '', 'El espacio de narración de los hechos nace en blanco');
+await page.fill('#oj-a-obs', 'RELATO LIBRE ESCRITO POR EL FUNCIONARIO.');
+// Anexos 0, 1 y 2 del catálogo: informe, acta de derechos y copia de la orden.
+const anx2 = await page.textContent('label[for], .oj-chk:has(#oj-a-anx2)').catch(() => '');
+log(/Copia orden de captura oficio No\. 002/.test(anx2),
+  'El anexo de la copia de la orden ya muestra su número, tomado del paso 1');
 await page.check('#oj-a-anx0');
 await page.check('#oj-a-anx1');
+await page.check('#oj-a-anx2');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 log(await page.isVisible('#oj-x-nom'), 'Paso 7 — puesta a disposición');
 const sugerido = await page.inputValue('#oj-x-nom');
 log(sugerido === 'Juzgado Tercero Penal del Circuito de Conocimiento',
   'El destinatario se propone solo a partir de la finalidad de la orden', sugerido);
+await page.fill('#oj-x-dir', 'Palacio de Justicia, oficina 301');
+await page.fill('#oj-x-mun', 'Ciudad Prueba');
+await page.fill('#oj-x-dep', 'Departamento Prueba');
+// Encabezado, custodia y firma llegan solos desde Ajustes: el usuario que sí
+// configuró su equipo no vuelve a escribirlos.
+log((await page.inputValue('#oj-e-uni')) === 'UNIDAD DE PRUEBA' &&
+    (await page.inputValue('#oj-e-dep')) === 'DEPENDENCIA DE PRUEBA',
+  'La unidad y la dependencia se cargan de Ajustes');
+log((await page.inputValue('#oj-c-est')) === 'Estación de Prueba Custodia' &&
+    (await page.inputValue('#oj-c-cor')) === 'custodia@prueba.test',
+  'El lugar de custodia se carga de Ajustes y se puede cambiar aquí');
+log((await page.inputValue('#oj-f-nom')) === 'Nombre Firmante' &&
+    (await page.inputValue('#oj-f-car')) === 'Integrante patrulla de vigilancia',
+  'La firma se carga del perfil activo');
 const panel7 = await page.textContent('#wz-panels');
 log(/Destinatario propuesto/.test(panel7) && /C-042 de 2018/.test(panel7), 'La propuesta muestra su fundamento legal citado');
 log(/Faltan datos obligatorios/.test(panel7) === false, 'Sin validaciones duras pendientes al completar el formulario');
@@ -306,19 +333,34 @@ const doc = await page.evaluate(async () => {
     header: dec('word/header1.xml'),
     footer: dec('word/footer1.xml'),
     tablas: (xml.match(/<w:tbl>/g) || []).length,
-    secciones: (xml.match(/D9D9D9/g) || []).length,
+    filas: (xml.match(/<w:tr>/g) || []).length,
+    anchoTabla: (xml.match(/<w:tblW w:w="9405"/g) || []).length,
+    gridEtiqueta: (xml.match(/<w:gridCol w:w="3119"\/>/g) || []).length,
+    tramaEtiqueta: (xml.match(/EFEFEF/g) || []).length,
+    fileteSeccion: (xml.match(/<w:bottom w:val="single" w:sz="8" w:space="4" w:color="404040"\/>/g) || []).length,
+    sectPr: (xml.match(/<w:sectPr>[\s\S]*?<\/w:sectPr>/) || [''])[0],
     fuenteNoArial: /w:ascii="(?!Arial)/.test(xml)
   };
 });
 log(!doc.error, 'El oficio se genera', doc.error || doc.fname);
 log(doc.malFormado === false, 'word/document.xml es XML bien formado');
-log(doc.origen === 'plantilla base', 'Sin plantilla propia se usa la plantilla base embebida', doc.origen);
+log(doc.origen === 'formato oficial del módulo', 'El oficio sale siempre del formato del módulo', doc.origen);
 log(['[Content_Types].xml', '_rels/.rels', 'word/_rels/document.xml.rels', 'word/document.xml',
-  'word/footer1.xml', 'word/header1.xml', 'word/settings.xml', 'word/styles.xml'].every(p => doc.partes.includes(p)),
+  'word/footer1.xml', 'word/header1.xml', 'word/header2.xml', 'word/settings.xml', 'word/styles.xml'].every(p => doc.partes.includes(p)),
   'El paquete .docx trae todas las partes obligatorias', doc.partes.length + ' partes');
 log(doc.fuenteNoArial === false, 'Tipografía única de amplia compatibilidad (Arial) en todo el documento');
-log(doc.tablas >= 6, 'El documento usa tablas para los bloques de datos', doc.tablas + ' tablas');
-log(doc.secciones >= 6, 'Jerarquía visual: barras de sección numeradas', doc.secciones);
+
+/* ── Geometría del formato «Propuesta Plantilla OJ»: si uno de estos valores
+      cambia, el documento dejó de ser el formato oficial. ── */
+log(doc.tablas === 3, 'Exactamente las 3 tablas del formato (identificación, proceso, materialización)', doc.tablas);
+log(doc.filas === 23, 'Filas fijas 9 + 10 + 4: ninguna se omite aunque el dato esté vacío', doc.filas);
+log(doc.anchoTabla === 3, 'Las 3 tablas ocupan el área de contenido (9405 twips)', doc.anchoTabla);
+log(doc.gridEtiqueta === 3, 'Columna de etiquetas a 3119 twips como el formato', doc.gridEtiqueta);
+log(doc.tramaEtiqueta === 23, 'Trama EFEFEF en todas las celdas de etiqueta', doc.tramaEtiqueta);
+log(doc.fileteSeccion === 3, 'Los 3 títulos llevan el filete inferior 404040 del formato', doc.fileteSeccion);
+log(/w:pgMar w:top="1985" w:right="1134" w:bottom="1701" w:left="1701"/.test(doc.sectPr) &&
+  /w:titlePg/.test(doc.sectPr),
+  'Márgenes y primera página distinta, como el formato');
 
 const T = doc.texto;
 const tiene = s => T.indexOf(s) >= 0;
@@ -326,7 +368,6 @@ log(tiene('MINISTERIO DE PRUEBA') === false, 'El encabezado institucional NO va 
 log(/MINISTERIO DE PRUEBA/.test(doc.header) && /INSTITUCION DE PRUEBA/.test(doc.header) &&
   /UNIDAD DE PRUEBA/.test(doc.header) && /DEPENDENCIA DE PRUEBA/.test(doc.header),
   'El membrete arma las 4 líneas jerárquicas desde la configuración');
-log(/Calle de prueba 1/.test(doc.footer) && /www.prueba.test/.test(doc.footer), 'El pie toma dirección y contacto de la configuración');
 log(/PAGE/.test(doc.footer) && /NUMPAGES/.test(doc.footer), 'Numeración automática de páginas en el pie');
 log(tiene('Ciudad Prueba, ') , 'Ciudad y fecha generadas automáticamente');
 log(tiene('Asunto: ') && tiene('Deja a disposición capturado por orden judicial No. 002'), 'Asunto parametrizable resuelto');
@@ -335,9 +376,17 @@ log(tiene('PRIMERNOMBRE SEGUNDONOMBRE PRIMERAPELLIDO SEGUNDOAPELLIDO'), 'Nombres
 log(tiene('CC 1234567890'), 'Documento de identidad sin puntos en el documento');
 log(tiene('MADRE DE PRUEBA y PADRE DE PRUEBA'), 'Nombres de los padres');
 log(tiene('Cicatriz en el antebrazo izquierdo'), 'Señales particulares');
-log(tiene('I. ORDEN JUDICIAL QUE SE MATERIALIZA') && tiene('II. PROCESO JUDICIAL') &&
-  tiene('III. MATERIALIZACIÓN DE LA CAPTURA') && tiene('VI. PUESTA A DISPOSICIÓN'),
-  'Estructura documental por secciones tituladas');
+log(tiene('1.  IDENTIFICACIÓN DEL CAPTURADO') && tiene('2.  DATOS DEL PROCESO JUDICIAL') &&
+  tiene('3.  MATERIALIZACIÓN DE LA CAPTURA'),
+  'Los 3 apartados numerados del formato, con su redacción exacta');
+log(tiene('Señor(a)') && tiene('De manera atenta y respetuosa me permito dejar a disposición de ese despacho a la persona capturada que se identifica a continuación:'),
+  'Encabezamiento y presentación literales del formato');
+log(['Nombres y apellidos','Documento de identidad','Fecha y lugar de nacimiento','Edad','Profesión u ocupación',
+     'Nombres de los padres','Residencia','Teléfono','Señales particulares','No. de la orden','Fecha de expedición',
+     'Autoridad solicitante','Despacho que la libró','SPOA','Número Interno','Fecha de los Hechos',
+     'Delito(s) Imputado(s)','Marco Procesal','Motivo de la Captura','Fecha y hora','Lugar','Tipo de lugar',
+     'Forma de ubicación'].every(tiene),
+  'Las 23 etiquetas del formato, con su texto exacto');
 log(tiene('«TEXTO ÍNTEGRO DE LA ORDEN TAL COMO LA EXPIDIÓ EL DESPACHO.»'), 'El motivo de la orden se cita íntegro y literal');
 log(tiene('Hurto calificado y agravado') && tiene('Fabricación y porte de armas'), 'Los N delitos llegan al documento');
 log(tiene('Art. 240 del Código Penal'), 'Artículos del Código Penal mapeados');
@@ -345,37 +394,64 @@ log(tiene('050016000206202504471'), 'Radicado transcrito completo, sin recortar 
 log(tiene('6.244203, -75.581212'), 'Coordenadas geográficas');
 log(tiene('ACOMPANANTE DE PRUEBA'), 'Los N funcionarios participantes llegan al documento');
 log(tiene('RC-0001'), 'Rótulo de cadena de custodia del elemento incautado');
-log(tiene('Acta de derechos del capturado') && tiene('Copia de la orden de captura'), 'Lista de anexos');
 log(/artículo 303 de la Ley 906 de 2004/.test(T), 'Constancia de lectura de derechos (art. 303 CPP)');
 log(/treinta y seis \(36\) horas/.test(T) && /artículo 28 de la Constitución/.test(T), 'Vencimiento del término constitucional en el relato');
-log(tiene('Subintendente Nombre Firmante'.toUpperCase()), 'Firma del funcionario desde el perfil activo');
+log(tiene('Subintendente NOMBRE FIRMANTE'), 'Firma: grado como se escribió y nombre en mayúsculas, como el formato');
 log(tiene('XXX – YYY – 1.10'), 'Consecutivo y dependencia configurables');
-log(tiene('SI Revisor Prueba') && tiene('XXX-YYY-ZZZ'), 'Bloque Elaboró / Revisó / Ubicación');
 log(/\{\{/.test(T) === false, 'Cero marcadores sin resolver en el documento final');
-log(/SANTANDER|VIDAL|Wesner|Nelson|DAYNIS|Velásquez/i.test(T) === false, 'Cero rastros de datos de ejemplo: la plantilla base es limpia');
+log(/SANTANDER|VIDAL|Wesner|Nelson|DAYNIS|Velásquez/i.test(T) === false, 'Cero rastros de datos de ejemplo: el formato sale limpio');
 
-/* ─────────── 7. Plantilla de membrete personalizada ─────────── */
+/* ── Constancia de custodia, bloque de contacto y conteo de anexos ── */
+log(/Finalmente, se deja constancia de que el capturado quedó bajo custodia en /.test(T),
+  'La narración cierra diciendo dónde quedó el capturado');
+log(tiene('Estación de Prueba Custodia') && tiene('Calle de custodia 9') &&
+    /abonado telefónico 6041111111 y correo electrónico custodia@prueba.test/.test(T),
+  'La constancia usa la estación, dirección, teléfono y correo diligenciados');
+log(tiene('Dependencia Pie de Prueba') && tiene('Calle de prueba 1') &&
+    tiene('Teléfono: 6040000000 · correo@prueba.test') && tiene('www.prueba.test'),
+  'Bloque de contacto al pie del cuerpo, con el correo configurado');
+log(tiene('Anexos: tres (3)'), 'La app cuenta los anexos y los escribe en letras');
+log(tiene('– Informe dejando a disposición') && tiene('– Acta de derechos del capturado') &&
+    tiene('– Copia orden de captura oficio No. 002'),
+  'Anexos en el orden marcado, con el No. de la orden ya resuelto');
+log(T.indexOf('– Informe dejando a disposición') < T.indexOf('– Copia orden de captura oficio No. 002'),
+  'Se respeta el orden en que el usuario los señaló');
+
+/* ─────────── 7. Las plantillas subidas quedaron descartadas ───────────
+   Antes, una plantilla activa de tipo oj_membrete aportaba el paquete del
+   documento. Ahora el oficio sale SIEMPRE del formato del módulo: es la
+   garantía por construcción de que su diseño no se puede alterar. */
 const custom = await page.evaluate(async ([b64]) => {
-  // Se reutiliza el propio .docx generado como si fuera el membrete del usuario:
-  // trae encabezado, pie y estilos, y su cuerpo debe ser descartado por completo.
   DB.saveTemplate({ id: 'tpl_oj_test', nombre: 'Membrete de prueba', tipo: 'oj_membrete', activa: true, docxBase64: b64 });
+  DB.saveTemplate({ id: 'tpl_fpj_oj', nombre: 'FPJ-5 OJ de prueba', tipo: 'fpj5_oj', activa: true, docxBase64: b64 });
   const c = DB.getCases()[0];
   c.oj.requerido.priApe = 'APELLIDONUEVO';
   const out = await buildOficioOJBlob(c);
   const buf = new Uint8Array(await out.blob.arrayBuffer());
   const files = await _unzipBufAsync(buf);
   const xml = new TextDecoder().decode(files['word/document.xml']);
+  // Y el botón de descarga tampoco se desvía a la ruta de plantillas.
+  const tiposOfrecidos = (function () {
+    openSubirPlantilla();
+    const sel = document.getElementById('tpl-tipo');
+    const v = sel ? Array.from(sel.options).map(o => o.value) : [];
+    closeModal();
+    return v;
+  })();
   return {
     origen: out.origen,
     tieneNuevo: xml.indexOf('APELLIDONUEVO') >= 0,
     repiteViejo: (xml.match(/PRIMERAPELLIDO/g) || []).length,
-    conservaMembrete: !!files['word/header1.xml']
+    tablas: (xml.match(/<w:tbl>/g) || []).length,
+    tiposOfrecidos
   };
 }, [doc.b64]);
-log(custom.origen === 'Membrete de prueba', 'Con plantilla activa se usa su paquete', custom.origen);
-log(custom.conservaMembrete === true, 'La plantilla propia conserva su membrete y su pie');
+log(custom.origen === 'formato oficial del módulo' && custom.tablas === 3,
+  'Una plantilla subida NO altera el oficio: se ignora por completo', custom.origen);
+log(custom.tiposOfrecidos.indexOf('oj_membrete') < 0 && custom.tiposOfrecidos.indexOf('fpj5_oj') < 0,
+  'Cargar plantillas ya no ofrece los tipos de orden judicial', custom.tiposOfrecidos.join(','));
 log(custom.tieneNuevo === true && custom.repiteViejo === 0,
-  'El cuerpo lo sigue generando la app: el de la plantilla se descarta por completo');
+  'El cuerpo lo sigue generando la app con los datos del caso');
 
 /* ─────────── 8. Bloqueo por validación dura ─────────── */
 const bloqueo = await page.evaluate(async () => {
@@ -389,7 +465,18 @@ log(bloqueo.tieneV01 === true, 'Una orden vencida produce validación dura que i
 /* ─────────── 8b. Salidas del caso (descarga y envío) ─────────── */
 await page.evaluate(() => { DB.saveTemplates(DB.getTemplates().filter(t => t.id !== 'tpl_oj_test')); });
 const idCaso = await page.evaluate(() => DB.getCases()[0].id);
+/* Toda salida pasa antes por el diálogo obligatorio de formato y tamaño; el
+   helper lo atraviesa eligiendo Word/Carta, que es lo que estas pruebas miden. */
+async function elegirExport(fmt = 'DOCX', papel = 'CARTA') {
+  await page.waitForSelector('#exp-go', { timeout: 5000 });
+  await page.click('#exp-fmt-' + fmt);
+  await page.click('#exp-papel-' + papel);
+  await page.click('#exp-go');
+}
 await page.evaluate(id => abrirEnvioDoc(id), idCaso);
+await page.waitForTimeout(200);
+log(await page.isVisible('#exp-go'), 'Enviar pide primero formato y tamaño de papel');
+await elegirExport();
 await page.waitForTimeout(1200);
 const sheet = await page.evaluate(() => ({
   titulo: (document.getElementById('share-title') || {}).textContent,
@@ -417,7 +504,7 @@ await page.evaluate(() => {
   const od = window._dlDocBlob;
   window._dlDocBlob = function (b, f) { window.__dl.push(f); return od(b, f); };
 });
-const legado = await page.evaluate(async () => {
+await page.evaluate(async () => {
   const c = {
     id: 'legado1', tipo: 'OJ', fechaProc: '2026-07-01', created: Date.now(),
     capturados: [{ id: 'pl', priNom: 'JUAN', segNom: 'CARLOS', priApe: 'PEREZ', segApe: 'GOMEZ', tipoDoc: 'CC', numDoc: '1.123', dirRes: 'Calle 5', senas: 'lunar' }],
@@ -428,8 +515,13 @@ const legado = await page.evaluate(async () => {
   };
   await DB.saveCase(c);
   window.__dl = [];
-  await descargarDocCaso('legado1');
-  await new Promise(r => setTimeout(r, 900));
+  descargarDocCaso('legado1');
+  return { paso: 1 };
+});
+log(await page.isVisible('#exp-go'), 'También al descargar: nada se produce sin elegir formato y tamaño');
+await elegirExport();
+await page.waitForTimeout(900);
+const legado = await page.evaluate(async () => {
   const adaptado = ojDesdeLegado(DB.getCase('legado1'));
   return {
     descargas: window.__dl, pantalla: location.hash,
@@ -443,7 +535,7 @@ log(legado.pantalla !== '#plantillas', 'Ya no se desvía al usuario a subir una 
 log(legado.numOrden === '55' && legado.despacho === 'Juzgado X' && legado.requerido === 'JUAN CARLOS PEREZ GOMEZ' &&
   legado.hora === '09:15' && legado.func === 1, 'La adaptación del caso viejo conserva orden, despacho, persona, hora y funcionario');
 
-const incompleto = await page.evaluate(async () => {
+const semilla = await page.evaluate(async () => {
   const c = ojNuevoCaso();
   c.oj.requerido.priNom = 'ANA'; c.oj.requerido.priApe = 'GOMEZ'; c.oj.requerido.numDoc = '999';
   c.oj.orden.numero = '7'; c.oj.orden.fechaExpedicion = '2026-07-01'; c.oj.orden.finalidad = 'CONDENA';
@@ -451,24 +543,29 @@ const incompleto = await page.evaluate(async () => {
   c.capturados = [{ id: 'x', priNom: 'ANA', priApe: 'GOMEZ' }];
   await DB.saveCase(c);
   window.__dl = [];
-  await descargarDocCaso(c.id);
-  await new Promise(r => setTimeout(r, 400));
+  descargarDocCaso(c.id);
+  return { id: c.id };
+});
+// El diálogo sale primero; solo después de elegir se descubre que faltan datos.
+await elegirExport();
+await page.waitForTimeout(500);
+const incompleto = await page.evaluate((id) => {
   const txt = document.getElementById('modal-c').textContent;
-  const duras = ojDuras(DB.getCase(c.id));
+  const duras = ojDuras(DB.getCase(id));
   return {
-    id: c.id, abierto: document.getElementById('modal').classList.contains('open'),
+    id: id, abierto: document.getElementById('modal').classList.contains('open'),
     lineas: (txt.match(/Paso \d/g) || []).length, duras: duras.length,
     primerPaso: duras[0].paso, descargas: window.__dl
   };
-});
+}, semilla.id);
 log(incompleto.abierto === true && incompleto.descargas.length === 0, 'Un caso incompleto no descarga a medias: explica por qué');
 log(incompleto.lineas === incompleto.duras, 'El aviso lista TODAS las faltas, no solo la primera',
   incompleto.lineas + '/' + incompleto.duras);
 
+await page.evaluate(id => { closeModal(); abrirEnvioDoc(id); }, incompleto.id);
+await elegirExport();
+await page.waitForTimeout(900);
 const envio = await page.evaluate(async id => {
-  closeModal();
-  abrirEnvioDoc(id);
-  await new Promise(r => setTimeout(r, 900));
   return {
     sheet: document.getElementById('share-sheet').classList.contains('on'),
     modal: document.getElementById('modal').classList.contains('open'),

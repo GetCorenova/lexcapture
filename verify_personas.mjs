@@ -132,11 +132,16 @@ log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de elim
 const actAll = await page.$eval('#act-items', el => el.textContent);
 log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dossier/.test(actAll) && /Copiar Dossier/.test(actAll),
   'Sheet ofrece enviar/descargar documento y enviar/copiar dossier');
-// La 1ª acción ("Enviar FPJ-5") abre el sheet de envío del documento
+// La 1ª acción ("Enviar FPJ-5") pide formato y tamaño y luego abre el sheet
 await page.click('#act-items .sheet-item:nth-child(1)');
 await page.waitForTimeout(500);
+log(await page.isVisible('#exp-go'), 'Acción "Enviar FPJ-5" pide primero formato y tamaño de papel');
+await page.click('#exp-fmt-DOCX');
+await page.click('#exp-papel-CARTA');
+await page.click('#exp-go');
+await page.waitForTimeout(600);
 const sendOk = await page.evaluate(() => document.getElementById('share-sheet').classList.contains('on') && !!_shareCasoId);
-log(sendOk, 'Acción "Enviar FPJ-5" abre el sheet de envío del documento');
+log(sendOk, 'Y después abre el sheet de envío del documento');
 await page.evaluate(() => closeShareSheet());
 await page.screenshot({ path: OUT('09_dossier') });
 await page.evaluate(() => go('capturas'));

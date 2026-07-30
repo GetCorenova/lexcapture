@@ -273,26 +273,18 @@ documento. Comparten primitivas (cifrado, personas, zip/docx, sheet de envío) y
   jornada hábil configurable + **festivos de Colombia calculados** (Ley 51/1983, traslado al lunes;
   Pascua por algoritmo), no una lista fija que caduque.
 - **Motor documental — la decisión de arquitectura importante:** el **cuerpo del oficio lo construye
-  la app en OOXML** (`ojx*` + `ojDocCuerpo`) y **la plantilla del usuario solo aporta la capa
-  gráfica**. Del `.docx` subido (tipo `oj_membrete`) se conserva **todo menos el cuerpo**: membrete,
-  pie, logos, estilos, medios y **su `sectPr`** (de ahí salen los márgenes y las referencias a
-  header/footer). Así "una plantilla propia no puede alterar la estructura ni el mapeo" es **cierto
-  por construcción**, no por política. Sin plantilla subida se arma un **paquete base desde cero**
-  (~80 KB, 8 partes) — no hay `.docx` de 1,9 MB embebido en base64 y **la app siempre produce
-  documento**.
+  la app en OOXML** (`ojx*` + `ojDocCuerpo`); no hay `.docx` embebido en base64 y **la app siempre
+  produce documento**. ⚠️ **Superado por «OJ v2» (2026-07-29)**: la rama de plantilla subida
+  (`oj_membrete`) se eliminó por completo — el paquete lo arma siempre la app con el formato de
+  `Documentos/Propuesta Plantilla OJ.docx`.
 - **Encabezado institucional** (4 líneas jerárquicas) y pie salen **solo de `cfg`**
   (`ojMinisterio`/`ojInstitucion`/`ojUnidad`/`ojDependencia`, `ojPie*`, `ojClasificacion`…).
   ⚠️ **Ningún nombre de institución está escrito en el código** (ni en los `placeholder` de Ajustes):
   es el mismo patrón de `cfg.nombreEstacion` y lo exige el filtro de Play Store. El asunto también es
   parametrizable (`cfg.ojAsunto`, marcadores `{{TERMINO}}`, `{{ORD_NUMERO}}`, `{{REQ_NOMBRE}}`,
   `{{RADICADO}}`, `{{DESPACHO}}`). Una plantilla propia puede usar `{{ENC_UNIDAD}}`, `{{PIE_*}}`, etc.
-- **Estructura del oficio**: consecutivo · ciudad y fecha · destinatario · asunto · tabla de
-  identificación · **I** orden (tabla + transcripción textual entre comillas, íntegra y sin
-  reformular) · **II** proceso y delitos · **III** materialización (tabla + relato compuesto desde
-  campos) · **IV** garantías (art. 303) · **V** elementos y cadena de custodia · **VI** puesta a
-  disposición (con el vencimiento de las 36 h y el fundamento aplicado) · firma · anexos · Elaboró /
-  Revisó / Ubicación. Arial, justificado, márgenes institucionales, numeración automática de páginas
-  (campos `PAGE`/`NUMPAGES`), tablas solo donde ayudan.
+- **Estructura del oficio** (⚠️ **reemplazada por la del formato en «OJ v2»**, 2026-07-29): tenía
+  seis apartados romanos I–VI más el bloque Elaboró/Revisó. Ver la sección OJ v2 para la actual.
 - **Lo que la app NO hace**: no produce órdenes de captura (solo las transcribe) y **no genera el
   acta de derechos** — se diligencia aparte y viaja como anexo; el oficio deja la constancia con hora
   y lugar. Tampoco hay función de difusión de datos de la orden (C-276/2019).
@@ -328,6 +320,127 @@ de `verify_oj.mjs` (**95 checks**). Anti-caché a `?v=32` / `cache-v32`, `_BUILD
   mandar al juzgado por una vía lo que la otra consideraba inválido. Las dos comparten ahora el mismo
   chequeo, y el early-return limpia `_shareDoc`/`_shareCasoId` para no dejar vivo el `.docx`
   pre-generado de otro caso.
+
+## OJ v2 (2026-07-29) — el oficio ES «Propuesta Plantilla OJ», y modo invitado
+Rediligenciado a partir de `Documentos/Pormt OJ.docx` (instrucciones + 10 pantallazos con recuadro
+rojo numerado sobre `Documentos/Propuesta Plantilla OJ.docx`). Verificado con `verify_oj.mjs`
+(**110 checks**), `verify_invitado.mjs` (**32 checks**, nuevo) y abriendo los `.docx` en **Word real**
+(COM → PDF → render con Edge, 3 páginas).
+
+- **Se acabaron las plantillas subidas para orden judicial.** `ojPaquete()` ya no tiene rama de
+  plantilla: devuelve siempre el paquete del formato. Se eliminaron `ojTokensMembrete`, la opción
+  `oj_membrete`/`fpj5_oj` del selector de «Cargar plantilla» y el motor muerto `genDocOJ`/
+  `buildDocOJBlob`. **Todo caso `tipo==='OJ'` (v2 o legado) pasa por `ojDescargarOficio`** —
+  descargar, enviar y el botón del wizard viejo usan la misma ruta. Que el diseño no se pueda
+  alterar ya no es una política: no existe un archivo intermedio que lo altere.
+- **El cuerpo replica el formato hijo por hijo**, con sus valores de XML medidos sobre el original:
+  Arial 11 pt (`sz 22`), `line 240 atLeast`, `after 120`; tablas `tblW 9405` / `gridCol 3119+6286`,
+  bordes exteriores `sz6 #808080` e interiores `sz4 #BFBFBF`, `tblCellMar 26/113`, etiquetas con
+  trama `EFEFEF` en 10 pt; títulos con estilo `Ttulo1` + filete inferior `sz8 #404040` y **dos
+  espacios tras el punto** («1.  IDENTIFICACIÓN…»); página `pgMar 1985/1134/1701/1701` con
+  `titlePg`. Estructura: fecha · destinatario · asunto · presentación · **1** identificación (9
+  filas) · **2** proceso (10 filas) · **3** materialización (4 filas) · narración · firma · anexos ·
+  bloque de contacto. Se fueron los seis apartados romanos, las tablas de delitos/funcionarios/
+  incautaciones y el bloque Elaboró/Revisó (con sus campos `ojUbicacionTRD`/`ojReviso` de Ajustes).
+- ⚠️ **Las 23 filas son fijas y siempre se imprimen**: un dato que el usuario no registró queda **en
+  blanco**. Nada se inventa y ninguna fila se oculta — el despacho tiene que poder ver qué falta.
+- ⚠️ **Lo que salió de las tablas NO se perdió, se pasó a la narración**: el texto íntegro de la
+  orden se cita entre comillas, y los elementos incautados se relacionan **con su rótulo de cadena
+  de custodia**. Al quitar el apartado V hubo que arreglar la frase que remitía «al numeral V del
+  presente informe», que había quedado apuntando a nada.
+- **Encabezado (`cfg.ojUnidad`/`ojDependencia`) y logo.** El membrete es la tabla del formato
+  (1560 + 7845, sin bordes) con el logo a 723900 EMU a la izquierda. **La celda del logo se mantiene
+  aunque no haya logo**: el texto ocupa la misma posición con y sin él. El logo lo carga el usuario
+  en Ajustes (`cfg.ojLogoB64`, ≤400 KB) y se embebe como `word/media/logo.*`. ⚠️ **Ningún escudo ni
+  nombre institucional vive en el código** — el `.docx` de referencia trae un logo de 1,37 MB que
+  NO se embebió a propósito (filtro de Play Store).
+- **Lo que la app pide cuando el equipo no está configurado.** `caso.oj` gana `encabezado`,
+  `custodia` y `firma`, precargados de Ajustes por `ojPrellenarDeCfg()` y **diligenciables en el
+  paso 7**. Se guardan **en el caso** (`ojCfgDoc()` los antepone a la config al generar), así el
+  oficio se reimprime igual meses después aunque el usuario cambie de unidad; y `ojRecordarEncabezado()`
+  los devuelve a Ajustes como valor por defecto — se pregunta una vez, no en cada procedimiento.
+  Validaciones duras nuevas: `V26` unidad, `V27` dependencia, `V28` quién firma.
+- **Constancia de custodia** (`ojCustodiaTexto`): la narración cierra diciendo dónde quedó el
+  capturado, con dirección, abonado telefónico y correo. Solo imprime lo que exista (sin correo no
+  queda un «y correo electrónico» suelto). Los 4 datos se configuran en Ajustes y se pueden cambiar
+  por procedimiento — el capturado no siempre queda en la misma estación.
+- **Anexos**: la app cuenta y escribe la cantidad en letras («Anexos: tres (3)», `ojNumPalabra`),
+  respetando el orden del catálogo y detrás los que el usuario escriba. El catálogo trae
+  `'Copia orden de captura oficio No. {{ORD_NUMERO}}'`, resuelto con el No. de la orden del paso 1
+  (`ojAnexoTexto`) tanto en el documento como en el propio checkbox.
+- **Narración de los hechos**: el paso 6 tiene un textarea grande y limpio (mapea a
+  `actuacion.observaciones`), que se imprime al final bajo la etiqueta en negrita «Observaciones:».
+- **Modo invitado** (`_guest`, `guestEntrar()`): para el teléfono prestado. Se entra **sin el PIN del
+  dueño** desde ambas pantallas de PIN. `DB.getConfig/saveConfig/getTemplates` y `_lcEncSave` tienen
+  rama de invitado: config propia en memoria (`_cfgConDefaults({})`, extraído de `DB.getConfig`),
+  cachés en memoria y **cero escrituras en localStorage** — verificado comparando la huella completa
+  del almacenamiento antes y después. Tiene los formularios completos de OJ y flagrancia y descarga
+  los dos documentos. ⚠️ **Honestidad obligatoria** (lección del «Continuar sin PIN» borrado en la
+  Fase H): barra ámbar permanente `#guest-bar`, y `guestToastGuardado()` reemplaza «Caso guardado ✓»
+  por «Listo en esta sesión — recuerda descargar el documento».
+- El sheet de envío nombra «Oficio de disposición» para **toda** captura OJ (antes decía «Documento
+  OJ» en las del formato anterior, que ahora producen el mismo oficio).
+- Anti-caché a `?v=33` / `cache-v33`, `_BUILD=33`.
+- ⚠️ `verify_fase_g.mjs` está obsoleto igual que `verify_fase_h.mjs`: espera un servidor externo en
+  `:8080` que él no levanta. No es una regresión de este trabajo.
+
+## Exportación (2026-07-29) — formato de salida y tamaño de papel obligatorios
+Antes de producir cualquier documento final la app pide **siempre** dos cosas y no genera nada hasta
+tener ambas: **formato** (Word `.docx` / PDF) y **tamaño de papel**. La adaptación toca únicamente la
+diagramación física — el contenido es idéntico entre tamaños (comprobado comparando el texto extraído
+del `document.xml`). Verificado con `verify_export.mjs` (**44 checks**, nuevo) y abriendo los tres
+tamaños en **Word real**.
+
+- **Diálogo** `lcPedirExport(kind,nombre,cb)`: nace **sin selección** y con el botón deshabilitado;
+  el rótulo va diciendo qué falta («Elige el formato…» → «Elige el tamaño…» → «Generar Word en
+  Oficio»). Cablea **todas** las salidas: `descargarDocCaso`/`lcExportarCaso`, `descargarFPJ`,
+  `ojDescargarOficio`, `ojGenerarDesdeWizard` y `abrirEnvioDoc` (que si se elige PDF va directo a la
+  vista de impresión, porque no hay archivo que adjuntar hasta que el usuario lo guarde).
+- **Tamaños** (`LC_PAPEL`): Carta 12240×15840 · Oficio 12240×**18720** (8,5 × 13", el oficio
+  colombiano) · 8 × 13,5" 11520×19440.
+- ⚠️ **Lo que manda es el ANCHO, no el alto.** Carta y Oficio comparten 8,5": cambiar entre ellos
+  solo altera cuántas líneas caben por hoja y **no toca una sola tabla**. Solo un tamaño más angosto
+  obliga a reescalar.
+- **Márgenes constantes** en todos los tamaños (`OJX_MAR`): son medidas absolutas de impresión, no
+  proporciones. El ancho útil se recalcula (`ojxSetPapel`) y **todas** las tablas, el membrete y el
+  pie lo siguen, así ninguna se sale del margen ni se queda corta.
+- ⚠️ **La columna de etiquetas NO se escala** (`OJX_ET=min(3119, 42 % del ancho)`). Escalarla
+  proporcionalmente parte «Fecha y lugar de nacimiento» en dos líneas en cuanto la hoja se estrecha
+  — la misma lección del FPJ-5 v2.2: *recalcular anchos reintroduce wraps*. Quien absorbe el cambio
+  es la columna de valores, que sí puede fluir.
+- ⚠️ **El pie no usa tabuladores.** Con un tabulador central, en hoja angosta el texto de la
+  izquierda lo desborda y se pega al número («INFORMACIÓN PÚBLICAPágina 1 de 2»). Ahora son dos
+  líneas centradas (metadatos del formato + «Página N de M»), que se comportan igual en cualquier
+  ancho — y se parecen más al formato original, que solo lleva la línea de página.
+- **FPJ-5: solo tamaños de igual ancho.** `fpjAplicarPapel()` cambia **únicamente el alto** del
+  `pgSz`, conservando el desfase de 2 twips de la plantilla (15842 → 18722). El ancho de página no se
+  toca y sus **35 tablas siguen en 10631 twips con sus `gridCol` byte a byte idénticos**: cero riesgo
+  de partir palabras en las casillas del formato oficial de la Fiscalía. El diálogo solo ofrece Carta
+  y Oficio para este documento **y explica por qué**; `lcPapelSirveFPJ()` es además una salvaguarda
+  en el motor: si llegara otro ancho, cae a Carta en vez de deformarse.
+
+### PDF por vista de impresión — un solo origen de verdad
+El PDF **no se dibuja aparte**: se traduce a HTML el **mismo `word/document.xml`** que acabó de
+producir el `.docx` (`lcPrintDoc` → `lcPaginar` → `lcImprimir`). Así el **FPJ-5 nunca se redibuja a
+mano**: sus 35 tablas se transcriben con los anchos que ya trae el XML (`tblGrid`/`tcW`), sus bordes,
+tramas y tipografía. Lo que cambia entre `.docx` y PDF es el motor que lo pinta, no el documento.
+- Traductor OOXML→HTML del subconjunto real: `w:p` (jc, spacing/lineRule, ind+hanging, pBdr, shd,
+  keepNext), `w:r` (rFonts, b, i, caps, color, sz, u), `w:br`/`w:tab`, `w:tbl` (tblBorders,
+  tblCellMar, gridCol, gridSpan, vMerge, tcBorders, shd, vAlign) e imágenes (`a:blip` → data URI).
+- **Paginación propia**: Chrome no sabe repetir membrete/pie con numeración («Página N de M» no
+  existe en su CSS de paginación). El contenido se reparte en cajas de página de medida exacta
+  midiendo bloque por bloque; las tablas largas se cortan **por fila**, nunca dentro de una fila; los
+  párrafos con `keepNext` viajan con el bloque siguiente; y los campos `PAGE`/`NUMPAGES` (que el XML
+  trae cacheados como «1») se marcan `.fld-num`/`.fld-tot` y se rellenan al final con el número real.
+- Se imprime desde un **iframe**, no una ventana nueva: los bloqueadores de pop-ups las matan en
+  móvil. Las imágenes del membrete se precargan antes de medir (si no, el logo mide 0 px y el alto
+  útil sale mal).
+- **Fidelidad medida**: para el mismo caso, la vista pagina **igual que Word** (Carta 3 hojas, Oficio
+  2) y no falta ni una palabra del `.docx` (check [35] compara palabra por palabra).
+- ⚠️ **El PDF lo guarda el usuario** desde el diálogo de impresión del sistema («Guardar como PDF»);
+  la app no escribe el archivo. Es la única vía offline sin incrustar un motor PDF, que daría un
+  dibujo aproximado del formato en vez del formato.
+- Anti-caché a `?v=34` / `cache-v34`, `_BUILD=34`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
