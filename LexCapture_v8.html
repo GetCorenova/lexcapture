@@ -1833,7 +1833,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 36;
+var _BUILD = 37;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6898,6 +6898,43 @@ function ojLogoExt(cfg){
   if(m.indexOf('gif')>=0) return 'gif';
   return 'jpeg';
 }
+/* Marcador de logo para los casos de DEMOSTRACIÓN. Un membrete con la casilla
+   del logo vacía no enseña cómo queda el oficio, que es para lo que existe el
+   simulador. Se dibuja aquí mismo con canvas — no hay ni un byte de imagen en
+   el repositorio.
+   ⚠️ Es deliberadamente un marcador («LOGO / DEMO», recuadro punteado): NO un
+   escudo ni un emblema institucional. Ningún símbolo de una entidad real puede
+   vivir en el código (filtro de Play Store, mismo criterio que los nombres de
+   institución). El escudo de verdad lo carga el usuario en Ajustes y desde ahí
+   manda sobre esto, también en los casos simulados. */
+var _ojLogoDemo=null;
+function ojLogoDemo(){
+  if(_ojLogoDemo!==null) return _ojLogoDemo;
+  _ojLogoDemo=false;
+  try{
+    var N=240, cv=document.createElement('canvas'); cv.width=N; cv.height=N;
+    var x=cv.getContext('2d'); if(!x) return _ojLogoDemo;
+    var m=14, r=26, a=m, b=N-m;
+    x.strokeStyle='#7A7A7A'; x.lineWidth=7;
+    if(x.setLineDash) x.setLineDash([16,12]);
+    x.beginPath();
+    x.moveTo(a+r,a); x.lineTo(b-r,a); x.quadraticCurveTo(b,a,b,a+r);
+    x.lineTo(b,b-r); x.quadraticCurveTo(b,b,b-r,b);
+    x.lineTo(a+r,b); x.quadraticCurveTo(a,b,a,b-r);
+    x.lineTo(a,a+r); x.quadraticCurveTo(a,a,a+r,a);
+    x.closePath(); x.stroke();
+    if(x.setLineDash) x.setLineDash([]);
+    x.fillStyle='#5A5A5A'; x.textAlign='center'; x.textBaseline='middle';
+    x.font='bold 52px Arial, Helvetica, sans-serif';
+    x.fillText('LOGO',N/2,N/2-18);
+    x.font='30px Arial, Helvetica, sans-serif';
+    x.fillText('DEMO',N/2,N/2+34);
+    var url=cv.toDataURL('image/png');
+    _ojLogoDemo={ b64:String(url).split(',')[1]||'', mime:'image/png' };
+    if(!_ojLogoDemo.b64) _ojLogoDemo=false;
+  }catch(e){ console.error('[LexCapture OJ] no se pudo dibujar el logo de demostración',e); _ojLogoDemo=false; }
+  return _ojLogoDemo;
+}
 function ojPaqueteBase(cfg){
   var f={}, logo=cfg.ojLogoB64?ojLogoExt(cfg):'';
   f['[Content_Types].xml']=ojBytes(OJ_XMLDECL+
@@ -7041,6 +7078,15 @@ function ojCfgDoc(c,cfg){
   if(e.institucion) out.ojInstitucion=e.institucion;
   if(e.unidad) out.ojUnidad=e.unidad;
   if(e.dependencia) out.ojDependencia=e.dependencia;
+  /* Un caso de demostración enseña el membrete COMPLETO, con logo: si la
+     casilla sale vacía no se ve cómo va a quedar el oficio. El logo del usuario
+     (Ajustes) siempre manda; solo si no hay ninguno se usa el marcador.
+     ⚠️ Nunca en un caso real: un oficio que va a un despacho judicial no lleva
+     imágenes que el funcionario no cargó. Sin logo, la casilla queda vacía. */
+  if(!out.ojLogoB64&&c.isTest){
+    var d=ojLogoDemo();
+    if(d){ out.ojLogoB64=d.b64; out.ojLogoMime=d.mime; }
+  }
   return out;
 }
 /* ─────────────────────────────────────────────────────────────────────────
@@ -7878,7 +7924,12 @@ function lcPrintCss(papel,M){
   var wPx=lcPx(papel.w), hPx=lcPx(papel.h);
   return '@page{size:'+papel.cssW+' '+papel.cssH+';margin:0}'+
     'html,body{margin:0;padding:0;background:#525659}'+
-    '*{box-sizing:border-box}'+
+    /* ⚠️ Chrome NO imprime fondos por defecto («Gráficos de fondo» viene
+       desmarcado en su diálogo). Sin esto, al exportar a PDF se perdía la trama
+       gris de la columna de etiquetas de las TRES tablas y la de las barras de
+       sección: el documento salía distinto del .docx. print-color-adjust:exact
+       obliga al navegador a respetar los colores declarados. */
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
     'body{font-family:Arial,Helvetica,sans-serif;font-size:11pt;color:#000;line-height:1.15}'+
     '.pg{position:relative;width:'+wPx+'px;height:'+hPx+'px;background:#fff;margin:0 auto 16px;overflow:hidden;page-break-after:always;break-after:page}'+
     '.pg:last-child{page-break-after:auto;break-after:auto;margin-bottom:0}'+

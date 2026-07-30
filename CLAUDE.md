@@ -520,8 +520,11 @@ nuevo) y abriendo los tres `.docx` en **Word real** (COM).
 - `verify_export.mjs` [27] esperaba **35 tablas** en el FPJ-5 y le llegaban 52: no era una regresión,
   era el generador repartiendo varias personas. Ese check mide **geometría contra el patrón de
   original**, así que su semilla se fija a una persona por rol; las copias ya tienen su regresión en
-  `verify_multipersona.mjs`. Regresiones en verde: OJ 115, multipersona 61, envío 38, export 44,
+  `verify_multipersona.mjs`. Regresiones en verde: OJ 128, multipersona 61, envío 38, export 44,
   invitado 33, personas 23, DS 10.
+- ⚠️ **`verify_oj.mjs` ya exigía este cambio**: traía el check «El Simulador produce una captura del
+  módulo actual, no del formato anterior» (`sim.ojv === 2`), que hasta ahora **no se alcanzaba**
+  porque la suite abortaba antes. Con `SIM.genOJ()` en v2 la suite corre entera (128 checks).
 - Anti-caché a `?v=36` / `cache-v36`, `_BUILD=36`.
 
 ### La otra mitad: la exención de los casos legados tapaba el bug (mismo día)
@@ -548,6 +551,31 @@ cada arreglo del generador se veía igual de roto: el generador nunca era el pro
   del reporte; con Ajustes puestos el prellenado lo tapa y el fallo no se ve), comprueba que bloquea
   y explica, que al completarlo imprime las cuatro líneas del membrete + anexos contados + bloque de
   contacto, y que el Simulador entrega un caso `ojv:2` sin validaciones duras.
+
+### Logo del membrete y trama de las tablas (2026-07-30) — dos pérdidas silenciosas
+- **La casilla del logo salía vacía en los casos de demostración.** El logo sale de
+  `cfg.ojLogoB64` (lo carga el usuario en Ajustes) y el simulador corre con Ajustes en blanco, así
+  que el membrete de demostración no enseñaba cómo queda el oficio — que es para lo único que existe
+  el simulador. `ojLogoDemo()` dibuja **con canvas** un marcador («LOGO / DEMO» en recuadro
+  punteado) y `ojCfgDoc` lo inyecta **solo si `c.isTest` y no hay logo del usuario**.
+  ⚠️ Es un **marcador, no un escudo**: ningún emblema institucional puede vivir en el código (mismo
+  filtro de Play Store que los nombres de institución) y **no hay un solo byte de imagen en el
+  repositorio**. ⚠️ **Nunca en un oficio real**: un documento que va a un despacho judicial no lleva
+  imágenes que el funcionario no cargó — sin logo, la casilla queda vacía. El logo del usuario
+  siempre manda, también en los casos simulados.
+- ⚠️ **La trama gris de la columna de etiquetas se perdía al exportar a PDF.** El `.docx` la
+  conservaba y el PDF no, así que los dos formatos no coincidían — justo lo que la instrucción de
+  exportación prohíbe. Causa: **Chrome no imprime fondos por defecto** («Gráficos de fondo» viene
+  desmarcado en su diálogo), y la vista de impresión no declaraba `print-color-adjust`. Se agregó
+  `-webkit-print-color-adjust:exact; print-color-adjust:exact` en `lcPrintCss`, que obliga al
+  navegador a respetar los colores declarados aunque la casilla siga desmarcada. Cubre de una vez
+  las **tres** tablas y las barras de sección.
+  ⚠️ **Regla general: todo fondo de la vista de impresión hay que declararlo `exact`** — si no,
+  existe en pantalla y desaparece en el papel.
+- `verify_simulador.mjs` sube a **41 checks** (logo del marcador en `.docx` y en la vista, ninguna
+  imagen inventada en un oficio real, y el logo del usuario ganándole al marcador) y
+  `verify_export.mjs` a **47** (mide la trama sobre la vista ya paginada, **tabla por tabla**:
+  9 · 10 · 4 = 23 celdas). Anti-caché `?v=37` / `cache-v37`, `_BUILD=37`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

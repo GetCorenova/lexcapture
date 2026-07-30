@@ -228,6 +228,32 @@ log(impr.tablas === 3, 'Traduce las 3 tablas del formato, no las redibuja', impr
 log(impr.tieneHdr === true, 'El membrete configurado viaja a la vista de impresión');
 log(impr.tieneFtr === true, 'Y el pie con la numeración');
 
+/* ⚠️ El sombreado de la columna de etiquetas se perdía al exportar a PDF:
+   Chrome NO imprime fondos por defecto («Gráficos de fondo» viene desmarcado).
+   El .docx lo conservaba y el PDF no, así que los dos formatos no coincidían.
+   Se mide sobre la vista REAL ya paginada, tabla por tabla. */
+const trama = await page.evaluate(async () => {
+  const c = DB.getCases().find(x => x.ojv === 2);
+  const out = await buildOficioOJBlob(c, 'CARTA');
+  lcImprimir(out);
+  await new Promise(r => setTimeout(r, 1500));
+  const d = document.getElementById('lc-print-frame').contentDocument;
+  const gris = td => getComputedStyle(td).backgroundColor === 'rgb(239, 239, 239)';
+  const porTabla = [...d.querySelectorAll('#hojas table')]
+    .map(t => [...t.querySelectorAll('td')].filter(gris).length)
+    .filter(n => n > 0);
+  const r = {
+    css: /print-color-adjust:\s*exact/.test(d.querySelector('style').textContent),
+    porTabla, total: porTabla.reduce((a, b) => a + b, 0)
+  };
+  document.getElementById('lc-print-frame').remove();
+  return r;
+});
+log(trama.css === true, 'La vista declara print-color-adjust:exact — Chrome no puede descartar los fondos');
+log(trama.total === 23, 'Las 23 celdas de etiqueta conservan su trama gris en la vista de impresión', trama.total);
+log(trama.porTabla.length === 3 && trama.porTabla.join(',') === '9,10,4',
+  'Y se conserva en las TRES tablas, no solo en la primera', trama.porTabla.join(' · '));
+
 const textoDocx = await page.evaluate(async () => {
   const c = DB.getCases().find(x => x.ojv === 2);
   const out = await buildOficioOJBlob(c, 'OFICIO');

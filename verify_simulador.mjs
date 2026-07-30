@@ -265,6 +265,44 @@ log(ofi.tieneNombre && ofi.tieneOrden && ofi.tieneDespacho && ofi.tieneCustodia 
   JSON.stringify({ n: ofi.tieneNombre, o: ofi.tieneOrden, d: ofi.tieneDespacho, c: ofi.tieneCustodia, a: ofi.tieneAnexos }));
 log(ofi.membrete === true, 'Las CUATRO líneas del membrete inventado llegan al encabezado de página');
 
+/* El membrete de un caso de demostración tiene que verse COMPLETO, logo incluido:
+   con la casilla vacía no se ve cómo va a quedar el oficio. Pero el marcador es
+   solo para la demostración — un oficio real no lleva imágenes que el
+   funcionario no cargó, y el logo del usuario siempre manda sobre el marcador. */
+const logo = await page.evaluate(async () => {
+  const media = async c => {
+    const out = await buildOficioOJBlob(c, 'CARTA');
+    const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+    const parte = Object.keys(files).find(k => /^word\/media\//.test(k));
+    return {
+      parte: parte || null, bytes: parte ? files[parte].length : 0,
+      blip: /<a:blip/.test(new TextDecoder().decode(files['word/header1.xml'])),
+      vista: /<img /.test(lcPrintDoc(out).hdrFirst)
+    };
+  };
+  const demo = SIM.genOJ();
+  const real = SIM.genOJ(); real.isTest = false;
+  const sinCfg = { demo: await media(demo), real: await media(real) };
+  // Ahora el usuario carga SU logo en Ajustes.
+  const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  const x = cv.getContext('2d'); x.fillStyle = '#123456'; x.fillRect(0, 0, 64, 64);
+  const propio = cv.toDataURL('image/png').split(',')[1];
+  const cfg = DB.getConfig(); cfg.ojLogoB64 = propio; cfg.ojLogoMime = 'image/png';
+  await DB.saveConfig(cfg);
+  const conCfg = { demo: await media(demo), real: await media(real) };
+  cfg.ojLogoB64 = ''; cfg.ojLogoMime = ''; await DB.saveConfig(cfg);
+  return { sinCfg, conCfg, propioLen: propio.length };
+});
+log(logo.sinCfg.demo.parte === 'word/media/logo.png' && logo.sinCfg.demo.blip === true,
+  'Sin logo en Ajustes, el caso de demostración igual muestra la casilla ocupada', logo.sinCfg.demo.bytes + ' bytes');
+log(logo.sinCfg.demo.vista === true, 'Y también en la vista de impresión (PDF), no solo en el .docx');
+log(logo.sinCfg.real.parte === null && logo.sinCfg.real.blip === false,
+  '⚠️ En un oficio REAL sin logo cargado no se inventa ninguna imagen');
+log(logo.conCfg.demo.bytes === logo.conCfg.real.bytes && logo.conCfg.demo.bytes !== logo.sinCfg.demo.bytes,
+  'El logo del usuario manda sobre el marcador — también en los casos simulados', logo.conCfg.demo.bytes + ' bytes');
+log(logo.conCfg.real.parte === 'word/media/logo.png' && logo.conCfg.real.vista === true,
+  'Y llega al oficio real en los dos formatos');
+
 /* ═══════════════ 3. El simulador no reconfigura la app ═══════════════ */
 const cfgDespues = await page.evaluate(() => JSON.stringify(DB.getConfig()));
 log(cfgAntes === cfgDespues, 'Generar casos ficticios no escribe una sola línea en Ajustes');
