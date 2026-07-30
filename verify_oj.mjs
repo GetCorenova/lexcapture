@@ -706,6 +706,75 @@ log(/^Anexos: \w+ \(\d+\)$/.test(sim.anexos), 'Con los anexos contados', sim.ane
 log(sim.cola.every(Boolean), 'Y el bloque de contacto completo', sim.cola.join(' / '));
 await page.evaluate(() => { window._simCase = null; go('capturas'); });
 
+/* ─────────── 8ter. Reportado en campo: el logo «seguía perdido» y la línea 4
+   del membrete salía como «CANDELARIA» a secas. El logo vivía SOLO en Ajustes y
+   el paso 7 apenas lo mencionaba en una frase: quien diligencia todo en el
+   procedimiento nunca lo veía. ───────────────────────────────────────────── */
+const etiqueta = await page.evaluate(() => ({
+  soloNombre: ojEstacionLabel('CANDELARIA', true),
+  yaCompleto: ojEstacionLabel('ESTACIÓN DE POLICÍA CANDELARIA', true),
+  otroTipo: ojEstacionLabel('SECCIONAL DE INVESTIGACIÓN CRIMINAL', true),
+  cai: ojEstacionLabel('CAI Parque Bolívar', true),
+  minuscula: ojEstacionLabel('La Candelaria', false),
+  vacio: ojEstacionLabel('', true)
+}));
+log(etiqueta.soloNombre === 'ESTACIÓN DE POLICÍA CANDELARIA',
+  'Con solo el nombre, la app completa el tipo de dependencia', etiqueta.soloNombre);
+log(etiqueta.yaCompleto === 'ESTACIÓN DE POLICÍA CANDELARIA' && etiqueta.otroTipo === 'SECCIONAL DE INVESTIGACIÓN CRIMINAL' && etiqueta.cai === 'CAI Parque Bolívar',
+  '⚠️ Y NO toca lo que ya trae su tipo de unidad (seccional, CAI, o ya completo)');
+log(etiqueta.minuscula === 'Estación de Policía La Candelaria' && etiqueta.vacio === '',
+  'En la narración y el bloque de contacto va en minúscula; vacío sigue vacío', etiqueta.minuscula);
+
+const paso7 = await page.evaluate(async () => {
+  wc = ojNuevoCaso(); ws = 6;
+  go('wizard'); renderWiz();
+  await new Promise(r => setTimeout(r, 300));
+  return {
+    campoLogo: !!document.getElementById('oj-e-logo-file'),
+    blurDep: (document.getElementById('oj-e-dep') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0,
+    blurCust: (document.getElementById('oj-c-est') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0
+  };
+});
+log(paso7.campoLogo === true, 'El paso 7 ofrece cargar el logo donde pide las 4 líneas — ya no solo lo menciona');
+log(paso7.blurDep && paso7.blurCust, 'Los dos campos de estación completan el tipo al salir del campo');
+
+// Carga real del archivo por el <input type=file>, como lo haría el usuario.
+const pngTmp = join(ROOT, '_logo_tmp.png');
+await writeFile(pngTmp, Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHElEQVQ4jWNgGAWjYBSMglEwCkbBKBgFo2AUAAAGGAAB2/3ZQwAAAABJRU5ErkJggg==', 'base64'));
+await page.setInputFiles('#oj-e-logo-file', pngTmp);
+await page.waitForTimeout(700);
+const cargado = await page.evaluate(async () => {
+  const previa = !!document.querySelector('#oj-e-logo img');
+  const c = ojNuevoCaso();
+  c.oj.encabezado = { ministerio: 'MINISTERIO DE DEFENSA', institucion: 'INSTITUCIÓN DE PRUEBA',
+                      unidad: 'METROPOLITANA DE PRUEBA', dependencia: 'CANDELARIA' };
+  c.oj.custodia = { estacion: 'La Candelaria', direccion: 'Calle 48 # 55-50', telefono: '3127324069', correo: 'x@y.test', web: 'www.y.test' };
+  const out = await buildOficioOJBlob(c, 'CARTA');
+  const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+  const dec = p => new TextDecoder().decode(files[p]);
+  const T = v => (v.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || []).map(s => s.replace(/<[^>]*>/g, ''));
+  const doc = T(dec('word/document.xml'));
+  return {
+    previa, media: Object.keys(files).filter(k => /media/.test(k)),
+    header: T(dec('word/header1.xml')),
+    vista: /<img /.test(lcPrintDoc(out).hdrFirst),
+    narracion: doc.find(t => /bajo custodia en/.test(t)) || '',
+    contacto: doc.slice(-4)[0]
+  };
+});
+log(cargado.previa === true, 'Al cargarlo desde el paso 7 se ve la miniatura sin salir del formulario');
+log(cargado.media.length === 1 && cargado.vista === true,
+  'Y llega al oficio de un caso REAL, en .docx y en la vista de impresión', cargado.media[0]);
+log(cargado.header[3] === 'ESTACIÓN DE POLICÍA CANDELARIA',
+  'La línea 4 del membrete sale completa aunque se haya escrito solo «CANDELARIA»', cargado.header[3]);
+log(/custodia en Estación de Policía La Candelaria/.test(cargado.narracion) && cargado.contacto === 'Estación de Policía La Candelaria',
+  'Y también en la constancia de la narración y en el bloque de contacto');
+await page.evaluate(() => {
+  const cfg = DB.getConfig(); cfg.ojLogoB64 = ''; cfg.ojLogoMime = ''; DB.saveConfig(cfg);
+  wc = null; go('capturas');
+});
+
 /* ─────────── 9. Flagrancia intacta ─────────── */
 const flagrancia = await page.evaluate(() => {
   const c = SIM.genFlagrancia('flagrancia-uri');

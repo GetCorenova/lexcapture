@@ -577,6 +577,31 @@ cada arreglo del generador se veía igual de roto: el generador nunca era el pro
   `verify_export.mjs` a **47** (mide la trama sobre la vista ya paginada, **tabla por tabla**:
   9 · 10 · 4 = 23 celdas). Anti-caché `?v=37` / `cache-v37`, `_BUILD=37`.
 
+### El logo «seguía perdido» + la línea 4 del membrete (2026-07-30)
+- ⚠️ **El logo se pedía en un sitio distinto del que se pedía el membrete.** Desde que el encabezado
+  es obligatorio (V26–V31), el usuario diligencia las cuatro líneas **en el paso 7 del wizard** — y
+  ahí el logo era **una frase** («se carga en Ajustes → Oficio de orden judicial»), no un campo. Quien
+  nunca abre Ajustes jamás lo veía y el oficio salía sin escudo sin que nada se lo advirtiera. Ahora
+  el control (cargar · miniatura · quitar) vive **dentro del mismo bloque de las 4 líneas**.
+  `ojLogoGuardar`/`ojLogoBorrar` son las primitivas comunes de los dos sitios; `ojRefrescarLogoWiz()`
+  repinta **solo el bloque del logo** — ⚠️ volver a renderizar el paso entero borraría lo que el
+  usuario esté escribiendo en los demás campos. El logo sigue viviendo en `cfg` (es del equipo, no
+  del caso) y sigue sin haber **un solo byte de imagen en el repositorio**.
+  ⚠️ **Regla: si un dato es obligatorio en el procedimiento, se pide en el procedimiento.** Mandar al
+  usuario a otra pantalla equivale a no pedirlo.
+- **`ojEstacionLabel(t,caps)`**: «CANDELARIA» → «ESTACIÓN DE POLICÍA CANDELARIA». Mismo criterio que
+  `patrullaLabel()`. ⚠️ **No toca** lo que ya trae un tipo de unidad (`OJ_RE_TIPO_DEP`: estación,
+  subestación, CAI, seccional, comando, dirección, distrito, gaula…): ahí el nombre ya está completo
+  y anteponer algo lo estropearía. Se aplica en tres salidas —línea 4 del membrete (mayúscula),
+  constancia de custodia de la narración y bloque de contacto (minúscula)— y **también en el
+  formulario, al salir del campo** (`onblur`), en el wizard y en Ajustes: el usuario ve lo que se va
+  a imprimir y puede corregirlo, en vez de una transformación silenciosa al generar.
+  «Estación de Policía» es vocabulario del sistema judicial, no una marca — mismo criterio ya
+  aplicado en el dossier; el nombre de la institución sigue siendo un campo del usuario.
+- `verify_oj.mjs` sube a **137 checks** (tabla de `ojEstacionLabel`, el paso 7 con el campo de logo y
+  los `onblur`, y una carga **real** del archivo por `setInputFiles` que termina en `word/media/` y en
+  la vista de impresión). Anti-caché `?v=38` / `cache-v38`, `_BUILD=38`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

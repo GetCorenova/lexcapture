@@ -1470,7 +1470,7 @@ body.guest{padding-top:38px}
           </div>
           <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento de policía, dirección o especialidad"></div>
           <p class="oj-hint">Ej: METROPOLITANA DEL VALLE DE ABURRÁ · METROPOLITANA DE BOGOTÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE INVESTIGACIÓN CRIMINAL E INTERPOL · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</p>
-          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Estación, seccional o dependencia"></div>
+          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Escribe solo el nombre: CANDELARIA" onblur="ojCompletarEstacion(this,true)"></div>
           <p class="oj-hint">Ej: ESTACIÓN DE POLICÍA CANDELARIA · ESTACIÓN DE POLICÍA CAÑASGORDAS · SECCIONAL DE INVESTIGACIÓN CRIMINAL</p>
           <div class="fg"><label class="fl">Logo o escudo del membrete</label>
             <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
@@ -1482,7 +1482,7 @@ body.guest{padding-top:38px}
           <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
           <div class="st">Lugar de custodia y bloque de contacto</div>
           <p class="oj-hint">Dónde queda normalmente el capturado. Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración y en el bloque de contacto del final. Si un procedimiento termina en otro sitio, se cambian en el paso 7 del formulario.</p>
-          <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Ej: Estación de Policía La Candelaria"></div>
+          <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Escribe solo el nombre: La Candelaria" onblur="ojCompletarEstacion(this,false)"></div>
           <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Ej: Calle 48 # 55–50, barrio La Candelaria, Medellín"></div>
           <div class="fr">
             <div class="fg"><label class="fl">Abonado telefónico</label><input class="fi" id="aj-oj-ctel" placeholder="Teléfono de la unidad"></div>
@@ -1833,7 +1833,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 37;
+var _BUILD = 38;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -4777,23 +4777,68 @@ function renderLogoOJ(cfg){
     'alt="Logo del membrete" style="width:56px;height:56px;object-fit:contain;background:var(--surface-2);border-radius:8px;padding:4px">'+
     '<button class="btn bs bsm" style="color:var(--err)" onclick="ajQuitarLogoOJ()">Quitar logo</button></div>';
 }
-function ajCargarLogoOJ(input){
-  var f=input&&input.files&&input.files[0]; if(!f) return;
-  if(f.size>400*1024){ toast('La imagen es muy pesada: usa una de menos de 400 KB'); input.value=''; return; }
+/* El logo del membrete es del EQUIPO (la unidad), no del caso: se guarda en la
+   configuración y se pide una sola vez. Estas dos primitivas las comparten los
+   DOS sitios donde se puede cargar — Ajustes y el paso 7 del wizard — para que
+   no se separen nunca. */
+function ojLogoGuardar(f,hecho){
+  if(!f) return;
+  if(f.size>400*1024){ toast('La imagen es muy pesada: usa una de menos de 400 KB'); return; }
   var rd=new FileReader();
   rd.onload=function(e){
     var cfg=DB.getConfig();
     cfg.ojLogoB64=String(e.target.result).split(',')[1]||'';
     cfg.ojLogoMime=f.type||'image/png';
-    DB.saveConfig(cfg); renderLogoOJ(cfg); toast('Logo cargado ✓');
+    DB.saveConfig(cfg); toast('Logo cargado ✓'); if(hecho) hecho(cfg);
   };
   rd.readAsDataURL(f);
 }
-function ajQuitarLogoOJ(){
+function ojLogoBorrar(hecho){
   var cfg=DB.getConfig(); cfg.ojLogoB64=''; cfg.ojLogoMime='';
-  DB.saveConfig(cfg); renderLogoOJ(cfg);
+  DB.saveConfig(cfg); toast('Logo quitado'); if(hecho) hecho(cfg);
+}
+function ajCargarLogoOJ(input){
+  ojLogoGuardar(input&&input.files&&input.files[0],function(cfg){ renderLogoOJ(cfg); ojRefrescarLogoWiz(); });
+  if(input) input.value='';
+}
+function ajQuitarLogoOJ(){
+  ojLogoBorrar(function(cfg){ renderLogoOJ(cfg); ojRefrescarLogoWiz(); });
   var f=document.getElementById('aj-oj-logo-file'); if(f) f.value='';
-  toast('Logo quitado');
+}
+/* El mismo control, dentro del paso 7: ahí es donde se piden las cuatro líneas
+   del membrete y el logo es la quinta parte de ese mismo bloque. */
+function ojLogoWizHtml(){
+  var cfg=DB.getConfig();
+  return '<p class="oj-hint" style="margin:0 0 8px">'+(cfg.ojLogoB64
+      ? 'Va arriba a la izquierda del membrete. Ya quedó guardado para los siguientes oficios.'
+      : 'Sin logo, el membrete sale solo con las cuatro líneas de texto. Cárgalo una vez y queda para todos los oficios.')+'</p>'+
+    '<div class="flx g8" style="align-items:center;flex-wrap:wrap">'+
+    (cfg.ojLogoB64
+      ? '<img src="data:'+escAttr(cfg.ojLogoMime||'image/png')+';base64,'+escAttr(cfg.ojLogoB64)+'" '+
+        'alt="Logo del membrete" style="width:56px;height:56px;object-fit:contain;background:var(--surface-2);border-radius:8px;padding:4px">'
+      : '')+
+    '<input type="file" id="oj-e-logo-file" accept="image/*" class="fi" style="padding:8px;flex:1;min-width:180px" onchange="ojWizCargarLogo(this)">'+
+    (cfg.ojLogoB64?'<button class="btn bs bsm" style="color:var(--err)" onclick="ojWizQuitarLogo()">Quitar</button>':'')+
+    '</div>';
+}
+function ojWizCargarLogo(input){
+  ojLogoGuardar(input&&input.files&&input.files[0],function(cfg){ ojRefrescarLogoWiz(); renderLogoOJ(cfg); });
+  if(input) input.value='';
+}
+function ojWizQuitarLogo(){
+  ojLogoBorrar(function(cfg){ ojRefrescarLogoWiz(); renderLogoOJ(cfg); });
+}
+/* ⚠️ Solo se repinta el bloque del logo: volver a renderizar el paso entero
+   borraría lo que el usuario esté escribiendo en los demás campos. */
+function ojRefrescarLogoWiz(){
+  var el=document.getElementById('oj-e-logo'); if(el) el.innerHTML=ojLogoWizHtml();
+}
+/* Completa el tipo de dependencia AL SALIR DEL CAMPO, no en silencio al
+   imprimir: el usuario ve exactamente lo que va a salir y puede corregirlo. */
+function ojCompletarEstacion(el,caps){
+  if(!el) return;
+  var v=ojEstacionLabel(el.value,caps);
+  if(v&&v!==el.value) el.value=v;
 }
 
 /* ─── Ajustes › funcionarios que conocieron el caso (lista dinámica) ─── */
@@ -6542,8 +6587,14 @@ function ojStep7(){
       ojwF('Línea 1 — ministerio o sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece la unidad'))+
       ojwF('Línea 2 — institución',ojwIn('oj-e-ins',e.institucion,'Nombre de tu institución'))+
       ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES')+
-      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Estación, seccional o dependencia'),'Ej: ESTACIÓN DE POLICÍA CANDELARIA · SECCIONAL DE INVESTIGACIÓN CRIMINAL')+
-      '<p class="oj-hint">El logo o escudo del membrete se carga una sola vez en Ajustes → Oficio de orden judicial.</p>'+
+      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Escribe solo el nombre: CANDELARIA',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'Si escribes solo el nombre, la app completa «ESTACIÓN DE POLICÍA …». Si es otro tipo de unidad (SECCIONAL DE INVESTIGACIÓN CRIMINAL, CAI…), escríbelo completo y se respeta tal cual.')+
+      /* ⚠️ El logo vivía SOLO en Ajustes y aquí había apenas una frase que lo
+         mencionaba. Quien diligencia todo en el procedimiento —el caso normal
+         desde que el encabezado es obligatorio— nunca lo veía, y el oficio
+         salía sin escudo sin que nada se lo advirtiera. Se pide donde se piden
+         las cuatro líneas: es parte del mismo membrete. */
+      '<div class="fg"><label class="fl">Logo o escudo del membrete</label>'+
+        '<div id="oj-e-logo">'+ojLogoWizHtml()+'</div></div>'+
     '</div>'+
 
     /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
@@ -6552,7 +6603,7 @@ function ojStep7(){
       '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
       '<p class="oj-hint">Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración '+
       'y en el bloque de contacto del final. Vienen de Ajustes, pero cámbialos si esta vez quedó en otro sitio.</p>'+
-      ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Ej: Estación de Policía La Candelaria'))+
+      ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}))+
       ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'))+
       ojwR(
         ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
@@ -6892,6 +6943,19 @@ function ojB64Bytes(b64){
   return out;
 }
 // Extensión del logo a partir de su MIME (el paquete la necesita en Content_Types).
+/* «CANDELARIA» → «ESTACIÓN DE POLICÍA CANDELARIA». El usuario escribe el nombre
+   propio y la app completa el tipo de dependencia — mismo criterio que
+   patrullaLabel(), que antepone «PATRULLA» salvo que ya venga escrito.
+   ⚠️ No se toca lo que ya trae un tipo de unidad (subestación, CAI, seccional,
+   comando, dirección…): ahí el nombre ya está completo y anteponer algo lo
+   estropearía. La completación se aplica también EN EL FORMULARIO al salir del
+   campo, así el usuario ve exactamente lo que se va a imprimir. */
+var OJ_RE_TIPO_DEP=/estaci[oó]n|subestaci[oó]n|\bcai\b|comando|unidad|departamento|direcci[oó]n|seccional|\bgrupo\b|escuela|metropolitana|distrito|puesto|cuadrante|fiscal|juzgado|sijin|sipol|gaula|polfa|inspecci[oó]n|batall|brigada/i;
+function ojEstacionLabel(t,caps){
+  t=String(t||'').trim();
+  if(!t||OJ_RE_TIPO_DEP.test(t)) return t;
+  return (caps?'ESTACIÓN DE POLICÍA ':'Estación de Policía ')+t;
+}
 function ojLogoExt(cfg){
   var m=String(cfg.ojLogoMime||'').toLowerCase();
   if(m.indexOf('png')>=0) return 'png';
@@ -7006,7 +7070,7 @@ function ojPaqueteBase(cfg){
    mueve nada. Ningún nombre de institución vive en el código: las 4 líneas y el
    logo salen de Ajustes (requisito de publicación en Play Store). */
 function ojEncabezadoXml(cfg){
-  var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,cfg.ojDependencia];
+  var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,ojEstacionLabel(cfg.ojDependencia,true)];
   var txt=lineas.map(function(t,i){
     return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_TABLA}),{after:0,keepLines:false});
   }).join('');
@@ -7233,7 +7297,7 @@ function ojCustodiaTexto(c,cfg){
   ].filter(Boolean);
   return ojFrase([
     'Finalmente, se deja constancia de que el '+t.sust+' quedó bajo custodia en ',
-    cu.estacion||'la unidad policial',
+    ojEstacionLabel(cu.estacion,false)||'la unidad policial',
     cu.direccion?', ubicada en '+cu.direccion:'',
     contacto.length?', '+(contacto.length===2?contacto[0]+' y '+contacto[1]:contacto[0]):'',
     ', para atender cualquier requerimiento que formule la autoridad judicial competente.'
@@ -7386,7 +7450,7 @@ function ojDocCuerpo(c,cfg){
      pero la estructura del formato no se pierde nunca. */
   var cu=c.oj.custodia||{};
   out+=ojxFilete();
-  [[cu.estacion||'',true],
+  [[ojEstacionLabel(cu.estacion,false),true],
    [cu.direccion||'',false],
    [[cu.telefono?'Teléfono: '+cu.telefono:'',cu.correo||''].filter(Boolean).join(' · '),false],
    [cu.web||'',false]
