@@ -473,6 +473,82 @@ Reproducidas generando el documento como un usuario que no ha tocado Ajustes. `v
   Los checks nuevos generan a propósito un caso sin anexos y sin custodia para probarlo.
 - Anti-caché a `?v=35` / `cache-v35`, `_BUILD=35`.
 
+## Simulador (2026-07-30) — datos ficticios completos y dos procesos separados
+El simulador generaba casos **a medias** y, sobre todo, seguía produciendo la orden judicial con el
+**modelo anterior** (caso legado, sin `ojv`), como si OJ fuera «flagrancia con seis campos extra».
+Reescrito en dos generadores independientes. Verificado con `verify_simulador.mjs` (**36 checks**,
+nuevo) y abriendo los tres `.docx` en **Word real** (COM).
+
+- ⚠️ **Dependía de Ajustes para datos obligatorios.** `nunc` salía de `cfg.nuncUri/nuncCespa`: en un
+  equipo recién instalado el caso ficticio **no podía generar el FPJ-5** (`buildFPJBlob` exige 16
+  dígitos, issue M3). Igual el membrete del oficio (V26–V31 son DURAS). **Regla nueva: el simulador
+  no depende de Ajustes** — `rNunc()` respeta el NUNC configurado si es válido y si no lo inventa;
+  encabezado, custodia y firma se rellenan campo a campo con valores `(DEMO)` cuando faltan. Lo
+  configurado siempre manda sobre lo inventado.
+- **Campos que nunca se llenaban** y salían en blanco en el documento: `articulosCP[]` (issue M2),
+  `hayVehiculos`/`vehiculos[]` (paso 8 del wizard), `correo` de las personas, y **una sola persona
+  por rol** pese a que los apartados 4/5/6 del FPJ-5 son repetibles desde FPJ-5 v3. Ahora se sortean
+  1–4 conductas con su artículo del C.P., 1–3 capturados / 1–2 víctimas / 1–2 testigos y vehículos
+  en la mitad de los casos.
+- **Fechas reales, no `2026-mm-dd` al azar.** La captura cae dentro de las **últimas 30 h**, así el
+  badge del plazo de 36 h (Ley 906/2004) tiene algo vivo que contar y la disposición nunca queda en
+  el futuro.
+- **`SIM.genOJ()` produce ahora un caso `ojv:2` del módulo propio**, partiendo de `ojNuevoCaso()` —
+  no de una copia a mano del modelo: si `ojEstructura()` gana un campo, el simulador lo hereda.
+  Llena las siete ramas (`orden`, `despacho`, `proceso`, `requerido`, `diligencia`, `actuacion`,
+  `destino`) más encabezado/custodia/firma: **114 rutas**, todas comprobadas por el test.
+- **Seis escenarios coherentes** (`OJ_ESC`) que ejercitan el motor de destinatario: Ley 906
+  imputación y medida (R3), condena y revocatoria (R4-A/R4-B), Ley 600 indagatoria (R2) y **SRPA**
+  (R1, adolescente **al momento de los hechos** → «aprehensión», T.I. y ruta de adolescentes).
+  El escenario de Ley 600 nace con **orden antigua + prórroga**, que es lo que ejercita el cálculo
+  de vigencia.
+- ⚠️ **La orden simulada nunca nace vencida.** Sería el bloqueo más realista de todos, pero
+  `ojDuras()` impediría el oficio y el caso de demostración no serviría para lo que se creó: ver el
+  documento salir. El test exige **cero validaciones DURAS** en las 24 muestras.
+- **`ojEspejar(c)`** se extrajo de `ojGuardarCaso`: estado derivado (`vigenciaHasta`, `plazoVence`) +
+  espejo hacia `capturados[0]`/`conductas[]`/`spoa`… Lo usan los **dos** caminos que crean un caso OJ
+  — el wizard y el simulador, que arma el caso entero sin pasar por el formulario.
+- ⚠️ **Un caso ficticio no reconfigura la app**: `ojRecordarEncabezado()` ahora sale temprano si
+  `c.isTest`. Sin eso, editar y guardar un caso simulado dejaba el membrete `(DEMO)` pegado en los
+  Ajustes reales del usuario. El test compara la huella de `DB.getConfig()` antes y después.
+- **Vista previa por proceso** (`simResumenFlagrancia` / `simResumenOJ`): la de flagrancia muestra
+  NUNC y el conteo de personas/vehículos; la de OJ, número y vigencia de la orden, despacho, plazo
+  de 36 h y **qué regla** eligió el destinatario. `simSavePending`/`simEditPending`/`simShowDossier`
+  pasan a `async` (antes no esperaban a `DB.saveCase`, que es asíncrono desde la Fase H).
+- ⚠️ Ningún dato apunta a una entidad real: los nombres de institución llevan `(DEMO)` y los correos
+  usan el TLD reservado `.test` (RFC 2606) — mismo criterio del filtro de Play Store.
+- `verify_export.mjs` [27] esperaba **35 tablas** en el FPJ-5 y le llegaban 52: no era una regresión,
+  era el generador repartiendo varias personas. Ese check mide **geometría contra el patrón de
+  original**, así que su semilla se fija a una persona por rol; las copias ya tienen su regresión en
+  `verify_multipersona.mjs`. Regresiones en verde: OJ 115, multipersona 61, envío 38, export 44,
+  invitado 33, personas 23, DS 10.
+- Anti-caché a `?v=36` / `cache-v36`, `_BUILD=36`.
+
+### La otra mitad: la exención de los casos legados tapaba el bug (mismo día)
+El usuario volvió a reportar el oficio **sin encabezado**, con «Anexos:» vacío y **sin el bloque de
+contacto** — justo lo que «OJ v2.1» decía haber arreglado. No era una regresión del documento: el
+motor estaba bien y las validaciones `V26–V31` detectaban las faltas. Lo que fallaba era **quién
+llegaba al motor**. `ojProducirOficio` traía `if(!legado){ …validar… }`, así que **una captura del
+formato anterior se saltaba TODAS las preguntas** y el oficio salía con el membrete en blanco. Y el
+Simulador —la única vía por la que el usuario probaba— **producía justamente casos legados**. Por eso
+cada arreglo del generador se veía igual de roto: el generador nunca era el problema.
+- ⚠️ **La excepción estaba mal trazada.** Eximir a un caso viejo de aportar **sus datos judiciales**
+  es razonable (su formulario nunca los tuvo). Eximirlo del **membrete, la firma y la custodia** no:
+  eso no es un dato viejo, **es el formato**, y sale impreso siempre. `OJ_DURAS_DOC` =
+  `V26–V31` + `ojBloqueoDoc(caso,legado)` aplican esa distinción, y lo usan **las tres** salidas
+  (`ojProducirOficio`, `lcProducir`, `_abrirEnvioSheet`) — antes `_abrirEnvioSheet` ni siquiera
+  miraba los casos legados (`if(c.ojv===2)`).
+- El modal de faltantes explica el caso legado aparte («este formato no pedía el encabezado; se pide
+  una sola vez y queda como valor por defecto»), porque si no parece un requisito nuevo arbitrario.
+- ⚠️ **Lección de método, no de código:** verifiqué el documento generando casos **completos** desde
+  el wizard, que es el camino que ya funcionaba. El usuario probaba con el **Simulador**, y ahí el
+  caso entraba vacío. Un formato correcto alimentado por un caso vacío se ve idéntico a un formato
+  roto. **Reproducir por el mismo camino del reporte antes de tocar el motor.**
+- `verify_oj.mjs` sube a **128 checks**: siembra un caso legado **con Ajustes en blanco** (el equipo
+  del reporte; con Ajustes puestos el prellenado lo tapa y el fallo no se ve), comprueba que bloquea
+  y explica, que al completarlo imprime las cuatro líneas del membrete + anexos contados + bloque de
+  contacto, y que el Simulador entrega un caso `ojv:2` sin validaciones duras.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

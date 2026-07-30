@@ -79,6 +79,13 @@ const ids = await page.evaluate(async () => {
 
   const fpj = SIM.genFlagrancia('flagrancia-uri');
   fpj.isTest = false; fpj.nunc = '0500160002062026';
+  /* ⚠️ Una persona por rol. El simulador reparte 1..3 al azar para ejercitar los
+     apartados repetibles (FPJ-5 v3), y cada copia añade tablas: aquí se mide la
+     GEOMETRÍA del formato contra su patrón de original, que son 35 tablas.
+     Las copias tienen su propia regresión en verify_multipersona.mjs. */
+  fpj.capturados = fpj.capturados.slice(0, 1);
+  fpj.victimas = fpj.victimas.slice(0, 1);
+  fpj.testigos = fpj.testigos.slice(0, 1);
   await DB.saveCase(fpj);
   go('capturas'); renderCases();
   return { oj: oj.id, fpj: fpj.id };

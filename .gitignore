@@ -2,4 +2,7 @@ Thumbs.db
 .DS_Store
 ~$*
 verify_oj_salida.docx
+verify_simulador_oj.docx
+verify_simulador_fpj_uri.docx
+verify_simulador_fpj_cespa.docx
 ~WRL*.tmp

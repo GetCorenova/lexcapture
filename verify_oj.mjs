@@ -609,6 +609,103 @@ log(salto.hash === '#wizard' && salto.paso === salto.esperado,
   '«Completar el caso» abre el wizard justo en el paso que falla', 'paso ' + (salto.paso + 1));
 await page.evaluate(() => { wc = null; go('capturas'); });
 
+/* ─────────── 8bis. Lo reportado en campo: el oficio salía SIN encabezado,
+   con «Anexos:» vacío y sin bloque de contacto. Causa: un caso del formato
+   anterior (el que producía el Simulador) quedaba exento de TODA validación,
+   incluidas las que piden el membrete y los datos del cierre — que no son
+   datos viejos, son el formato. Estos checks fijan las dos mitades. ───────── */
+// Se reproduce el equipo REAL del reporte: recién instalado, sin nada de esto
+// configurado en Ajustes. Con la config puesta el caso legado se prellena solo
+// y no habría nada que pedir — que es justo por qué el fallo no se veía aquí.
+const cfgGuardada = await page.evaluate(() => {
+  const cfg = DB.getConfig();
+  const copia = JSON.parse(JSON.stringify(cfg));
+  ['ojMinisterio', 'ojInstitucion', 'ojUnidad', 'ojDependencia', 'ojPieWeb',
+   'ojCustEstacion', 'ojCustDireccion', 'ojCustTelefono', 'ojCustCorreo',
+   'ojPieDependencia', 'ojPieDireccion', 'ojPieTelefonos', 'ojPieCorreo'].forEach(k => { cfg[k] = ''; });
+  DB.saveConfig(cfg);
+  return copia;
+});
+
+const vieja = await page.evaluate(async () => {
+  const c = {
+    id: uid(), tipo: 'OJ', spoa: '12345', fechaProc: '2026-02-18', conductas: ['Hurto'],
+    numOrden: '735-1999', juzgadoOrden: 'Juzgado 3 Penal', delitoOrden: 'Hurto',
+    fechaOrden: '2026-01-10', autoridadSolicita: 'Juzgado 3 Penal',
+    destinoOJ: 'FISCALIA_URI', destino: 'FISCALÍA URI', recibe: 'FISCALÍA URI',
+    lugar: { depto: 'Antioquia', muni: 'Medellín', dir: 'Calle 50', barrio: 'Centro' },
+    capturados: [{ priNom: 'Juan', priApe: 'Perez', tipoDoc: 'CC', numDoc: '123' }],
+    victimas: [], testigos: [],
+    narracion: { fechaCapD: '18', fechaCapM: '02', fechaCapA: '2026', horaCapH: '10', horaCapM: '00', texto: 'relato' },
+    servidor: { grado: 'Agente', nombre: 'Usuario Demo', cargo: 'Servicio de vigilancia', tel: '3101234567', correo: 'demo@ejemplo.com' },
+    created: Date.now()
+  };
+  await DB.saveCase(c);
+  const caso = ojCasoParaDocumento(c);
+  return {
+    id: c.id, esLegado: ojEsLegado(c),
+    bloqueo: ojBloqueoDoc(caso, true).map(v => v.id),
+    // Las de datos judiciales del formato viejo siguen exentas: un caso antiguo
+    // no queda secuestrado por campos que su formulario nunca tuvo.
+    exentas: ojDuras(caso).map(v => v.id).filter(x => OJ_DURAS_DOC.indexOf(x) < 0)
+  };
+});
+log(vieja.esLegado === true, 'Se siembra una captura OJ del formato anterior (sin ojv)');
+log(['V26', 'V27', 'V28', 'V29', 'V30', 'V31'].filter(x => vieja.bloqueo.includes(x)).length === vieja.bloqueo.length && vieja.bloqueo.length > 0,
+  'Un caso legado YA NO está exento del membrete ni del cierre: eso es el formato, no un dato viejo', vieja.bloqueo.join(','));
+log(vieja.exentas.length > 0, 'Pero sus datos judiciales propios siguen exentos — el caso viejo no queda secuestrado', vieja.exentas.join(','));
+
+await page.evaluate(id => { closeModal(); descargarDocCaso(id); }, vieja.id);
+await page.waitForTimeout(250);
+await elegirExport('DOCX', 'CARTA');
+await page.waitForTimeout(500);
+const viejaUI = await page.evaluate(() => ({
+  modal: document.getElementById('modal').classList.contains('open'),
+  texto: document.getElementById('modal').innerText
+}));
+log(viejaUI.modal === true, 'Descargar un caso legado sin membrete ya no entrega un oficio en blanco: explica y bloquea');
+log(/formato anterior/.test(viejaUI.texto), 'Y le dice al usuario por qué se lo pide ahora si antes no se lo pedía');
+
+const viejaOk = await page.evaluate(async id => {
+  closeModal();
+  const caso = ojDesdeLegado(DB.getCase(id));
+  caso.oj.encabezado = { ministerio: 'MINISTERIO X', institucion: 'INSTITUCIÓN Y', unidad: 'UNIDAD Z', dependencia: 'ESTACIÓN W' };
+  caso.oj.custodia = { estacion: 'Estación W', direccion: 'Calle 48 # 55-50', telefono: '3127324069', correo: 'w@ejemplo.test', web: 'www.ejemplo.test' };
+  caso.oj.actuacion.anexos = ['Informe dejando a disposición', 'Acta de derechos del capturado', 'Copia orden de captura oficio No. {{ORD_NUMERO}}'];
+  const out = await buildOficioOJBlob(caso, 'CARTA');
+  const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+  const dec = p => new TextDecoder().decode(files[p]);
+  const T = x => (x.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || []).map(s => s.replace(/<[^>]*>/g, ''));
+  return { bloqueo: ojBloqueoDoc(caso, true).length, header: T(dec('word/header1.xml')), cola: T(dec('word/document.xml')).slice(-10) };
+}, vieja.id);
+log(viejaOk.bloqueo === 0 && viejaOk.header.join('|') === 'MINISTERIO X|INSTITUCIÓN Y|UNIDAD Z|ESTACIÓN W',
+  'Completado, el caso legado imprime las CUATRO líneas del membrete', viejaOk.header.join(' / '));
+log(viejaOk.cola.includes('Anexos: tres (3)') && viejaOk.cola.includes('– Copia orden de captura oficio No. 735-1999'),
+  'Y el bloque de anexos con la cuenta y el No. de la orden resuelto');
+log(viejaOk.cola.slice(-4).join('|') === 'Estación W|Calle 48 # 55-50|Teléfono: 3127324069 · w@ejemplo.test|www.ejemplo.test',
+  'Y las cuatro líneas del bloque de contacto del cierre');
+
+await page.evaluate(cfg => { closeModal(); DB.saveConfig(cfg); }, cfgGuardada);
+
+/* El Simulador tiene que ejercitar el módulo real: si sigue fabricando casos del
+   formato anterior, el usuario prueba con un caso que se salta las preguntas. */
+const sim = await page.evaluate(async () => {
+  const c = SIM.genOJ();
+  const out = await buildOficioOJBlob(c, 'CARTA');
+  const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+  const dec = p => new TextDecoder().decode(files[p]);
+  const T = x => (x.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || []).map(s => s.replace(/<[^>]*>/g, ''));
+  const todo = T(dec('word/document.xml'));
+  return { ojv: c.ojv, duras: ojDuras(c).map(v => v.id), header: T(dec('word/header1.xml')),
+           anexos: todo.find(t => /^Anexos:/.test(t)) || '', cola: todo.slice(-4) };
+});
+log(sim.ojv === 2, 'El Simulador produce una captura del módulo actual, no del formato anterior', 'ojv=' + sim.ojv);
+log(sim.duras.length === 0, 'Y un caso de demostración completo: nada que lo bloquee', sim.duras.join(',') || 'ninguna');
+log(sim.header.filter(Boolean).length === 4, 'Su oficio sale con el membrete de cuatro líneas', sim.header.join(' / '));
+log(/^Anexos: \w+ \(\d+\)$/.test(sim.anexos), 'Con los anexos contados', sim.anexos);
+log(sim.cola.every(Boolean), 'Y el bloque de contacto completo', sim.cola.join(' / '));
+await page.evaluate(() => { window._simCase = null; go('capturas'); });
+
 /* ─────────── 9. Flagrancia intacta ─────────── */
 const flagrancia = await page.evaluate(() => {
   const c = SIM.genFlagrancia('flagrancia-uri');

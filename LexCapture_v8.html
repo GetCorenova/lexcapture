@@ -1682,17 +1682,18 @@ body.guest{padding-top:38px}
 <div class="sheet-back" id="sim-back" onclick="closeSimSheet()"></div>
 <div class="sheet" id="sim-sheet">
   <div class="sheet-handle"></div>
+  <div class="sheet-title">Generar caso ficticio</div>
   <button class="sheet-item" onclick="closeSimSheet();runSimDemo('flagrancia-uri')">
     <div class="lic" style="background:var(--uriB);border:1px solid var(--uriBd);color:var(--uriT)"><span class="dot-ind"></span></div>
-    <div class="body"><div class="ti">Flagrancia URI</div><div class="de">Adulto, captura en flagrancia</div></div>
+    <div class="body"><div class="ti">Flagrancia URI</div><div class="de">Adulto — NUNC, lugar, capturados, víctimas, testigos, vehículos y EMP</div></div>
   </button>
   <button class="sheet-item" onclick="closeSimSheet();runSimDemo('flagrancia-cespa')">
     <div class="lic" style="background:var(--cspB);border:1px solid var(--cspBd);color:var(--cspT)"><span class="dot-ind"></span></div>
-    <div class="body"><div class="ti">Flagrancia CESPA</div><div class="de">Menor de edad, aprehensión</div></div>
+    <div class="body"><div class="ti">Flagrancia CESPA</div><div class="de">Menor de edad — mismo formato, terminología de aprehensión</div></div>
   </button>
   <button class="sheet-item" onclick="closeSimSheet();runSimDemo('oj')">
     <div class="lic" style="background:var(--ojB);border:1px solid var(--ojBd);color:var(--oj-2)"><span class="dot-ind"></span></div>
-    <div class="body"><div class="ti">Orden Judicial</div><div class="de">Captura por mandato de juez</div></div>
+    <div class="body"><div class="ti">Orden judicial</div><div class="de">Proceso distinto — orden vigente, despacho, requerido y oficio de disposición</div></div>
   </button>
 </div>
 
@@ -1832,7 +1833,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 35;
+var _BUILD = 36;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -1902,11 +1903,14 @@ function _abrirEnvioSheet(id) {
   if (!c) { toast('Caso no encontrado'); return; }
   // Mismo criterio que la descarga: lo que no se puede generar tampoco se envía.
   // Antes el sheet sí producía un oficio al que le faltaban datos obligatorios.
-  if (c.ojv === 2) {
-    var _duras = ojDuras(ojNormalizar(c));
+  // Toda captura OJ pasa por aquí, del módulo o del formato anterior: las dos
+  // producen el mismo oficio, así que las dos responden al mismo criterio.
+  if (c.tipo === 'OJ' || c.ojv === 2) {
+    var _leg = ojEsLegado(c);
+    var _duras = ojBloqueoDoc(ojCasoParaDocumento(c), _leg);
     // Se limpia el documento pre-generado de otro caso: si no, quedaría vivo un
     // .docx que no corresponde al caso que el usuario acaba de tocar.
-    if (_duras.length) { _shareDoc = null; _shareCasoId = null; ojModalFaltantes(id, _duras); return; }
+    if (_duras.length) { _shareDoc = null; _shareCasoId = null; ojModalFaltantes(id, _duras, _leg); return; }
   }
   _shareCasoId = id;
   _shareDoc = null;
@@ -2975,11 +2979,10 @@ async function lcProducir(c, sel, esOJ) {
   toast('Generando documento…');
   var out = null;
   if (esOJ) {
+    var legado = ojEsLegado(c);
     var caso = ojCasoParaDocumento(c);
-    if (!ojEsLegado(c)) {
-      var duras = ojDuras(caso);
-      if (duras.length) { ojModalFaltantes(c.id, duras); return; }
-    }
+    var duras = ojBloqueoDoc(caso, legado);
+    if (duras.length) { ojModalFaltantes(c.id, duras, legado); return; }
     out = await buildOficioOJBlob(caso, sel.papel);
   } else {
     out = buildFPJBlob(c, sel.papel);
@@ -3241,102 +3244,466 @@ function loadDefServ(){
   }); toast('Datos cargados');
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SIMULADOR — casos ficticios COMPLETOS
+   Dos procesos DISTINTOS ⇒ dos generadores distintos, sin nada en común salvo
+   los sorteadores de nombres, fechas y documentos:
+     · genFlagrancia() → el policial documenta un delito que presenció. Modelo
+       de flagrancia: NUNC, lugar, N capturados/víctimas/testigos, vehículos,
+       elementos materiales probatorios, narración y servidor.
+     · genOJ()         → el policial documenta el cumplimiento de una decisión
+       que ya tomó un juez. Modelo del módulo de orden judicial (ojv:2): orden
+       vigente, despacho que la libró, proceso, requerido, materialización,
+       actuación y disposición. NO hay víctimas, ni testigos, ni EMP.
+   ⚠️ El simulador NO depende de Ajustes: si el equipo está sin configurar,
+   inventa TODO lo que haría falta (NUNC de 16 dígitos, membrete de cuatro
+   líneas, lugar de custodia, quién firma…). Si no, el caso ficticio se quedaría
+   a medio camino y no llegaría a producir documento, que es justo lo que se
+   quiere verificar. Lo que SÍ está configurado manda sobre lo inventado.
+   ⚠️ Ningún dato apunta a una institución real: los nombres de entidad llevan
+   «(DEMO)» y los dominios usan .test (RFC 2606) — mismo criterio de la Play Store.
+═══════════════════════════════════════════════════════════════════════════ */
 var SIM={
+  /* ── Catálogos ──────────────────────────────────────────────────────── */
   N:['Carlos','Andrés','David','Santiago','Juan','Daniel','Miguel','Felipe','Luis','José','María','Laura','Andrea','Valentina','Camila','Daniela','Sofía','Paula','Natalia','Alejandra','Jhon','Brayan','Yeison','Estiven','Robinson'],
   A:['García','Rodríguez','Martínez','López','González','Hernández','Díaz','Moreno','Muñoz','Álvarez','Romero','Ruiz','Torres','Ramírez','Flores','Gómez','Sánchez','Ospina','Betancur','Restrepo','Zapata','Cardona','Giraldo','Mesa','Arias'],
-  C:['Hurto calificado y agravado','Lesiones personales','Porte ilegal de armas de fuego','Tráfico de estupefacientes','Hurto agravado','Violencia intrafamiliar','Daño en bien ajeno','Fabricación, tráfico y porte de armas','Receptación'],
+  // Conducta punible + su artículo del Código Penal: el wizard los pide juntos
+  // (issue M2) y la orden judicial los cita con artículo, inciso y numeral.
+  C:[['Hurto calificado y agravado','240'],['Hurto agravado','241'],['Lesiones personales','111'],
+     ['Fabricación, tráfico y porte de armas de fuego','365'],['Tráfico, fabricación o porte de estupefacientes','376'],
+     ['Violencia intrafamiliar','229'],['Daño en bien ajeno','265'],['Receptación','447'],
+     ['Concierto para delinquir','340'],['Extorsión','244'],['Homicidio agravado','104'],['Falsedad en documento privado','289']],
   B:['La Candelaria','Villanueva','San Benito','Guayaquil','Boston','Buenos Aires','El Chagualo','Jesús Nazareno','Prado','Colón','Niquitao','San Diego','Perpetuo Socorro'],
+  MUNI:['Medellín','Bello','Itagüí','Envigado','Sabaneta','Copacabana','La Estrella'],
   F:['Dr. Carlos Mejía','Dra. Marcela Ospina','Dr. Fernando Gómez','Dra. Paola Henao','Dr. Diego Sánchez'],
-  O:['Vendedor ambulante','Desempleado','Obrero','Estudiante','Independiente','Conductor','Comerciante','Vigilante'],
+  O:['Vendedor ambulante','Desempleado','Obrero de construcción','Estudiante','Independiente','Conductor','Comerciante','Vigilante','Mototaxista','Mesero'],
   EC:['Soltero/a','Casado/a','Unión libre','Separado/a'],
-  ES:['Primaria','Bachiller','Ninguna','Técnico'],
+  ES:['Primaria','Bachiller','Ninguna','Técnico','Tecnólogo'],
+  ALIAS:['El Mono','El Flaco','El Gordo','Pecas','El Chino','La Negra','Cachetes','El Zarco'],
+  GRADOS:['Patrullero','Subintendente','Intendente','Intendente Jefe','Subteniente','Teniente'],
   EMP:['Un (1) celular Samsung color negro','Un (1) arma blanca tipo cuchillo','Un (1) revólver calibre .38 con tres cartuchos','Una bolsa con sustancia vegetal olor a marihuana aprox 15g','Un celular Xiaomi Redmi y dinero en efectivo ($120.000)','Dos papeletas sustancia blanquecina presuntamente cocaína'],
-  TPL:['El día {f}, siendo las {h} horas, el suscrito {s}, adscrito a la Estación Candelaria Distrito 3, en patrullaje por {b}, fue alertado por {v} quien señaló que un sujeto le hurtó {o}. Al recorrer las inmediaciones se ubicó a {c}, con características coincidentes, señalado directamente por la víctima. Practicado registro se halló {e}. Se capturó en flagrancia.',
+  TEZ:['trigueña','morena','clara','blanca'],
+  CONTEX:['delgada','media','gruesa','atlética'],
+  CABELLO:['negro liso','castaño ondulado','negro crespo','castaño claro','rubio teñido'],
+  OJOS:['cafés','negros','miel','verdes'],
+  MARCAS:['Chevrolet','Renault','Mazda','Yamaha','Bajaj','Kia','Nissan','AKT'],
+  CLASES:['Automóvil','Motocicleta','Camioneta','Campero','Motocarro'],
+  COLORES:['blanco','negro','gris','rojo','azul','plateado'],
+  TPL:['El día {f}, siendo las {h} horas, el suscrito {s}, adscrito a {u}, en patrullaje por {b}, fue alertado por {v} quien señaló que un sujeto le hurtó {o}. Al recorrer las inmediaciones se ubicó a {c}, con características coincidentes, señalado directamente por la víctima. Practicado registro se halló {e}. Se capturó en flagrancia.',
     'El día {f}, a las {h} horas, el suscrito {s}, realizando control en {b}, observó a {c} en actitud sospechosa, quien al notar presencia de la autoridad intentó evadir. Abordado y registrado, se halló {e}. Se identificó a {v} como afectado. Captura en flagrancia por {cd}.',
-    'El día {f}, siendo las {h} horas, el suscrito {s}, en la jurisdicción Candelaria, atendió caso de {cd} en {l}, barrio {b}. La víctima {v} señaló directa y voluntariamente a {c} como autor. Registro: {e}. Captura en flagrancia.'],
-  OJ_DELITOS:['Homicidio agravado','Hurto agravado con violencia','Concierto para delinquir','Tráfico de estupefacientes agravado','Extorsión agravada','Receptación agravada'],
-  OJ_JUZGADOS:['Juzgado Tercero Penal Municipal con F.C.G. de Medellín','Juzgado Décimo Penal Municipal con F.C.G. de Medellín','Juzgado Vigésimo Quinto Penal Municipal con F.C.G. de Medellín','Juzgado Vigésimo Noveno Penal Municipal con F.C.G. de Medellín'],
-  OJ_AUTORIDAD:['Fiscal 10 — Sección Vida','Fiscal 28 — Sección Patrimonio','Fiscal 45 — Sección Estupefacientes'],
-  OJ_TPL:'El día {f}, siendo las {h} horas, el suscrito {s}, en cumplimiento de Orden de Captura N° {on} proferida por el {jz}, por el delito de {d}, procedió a la aprehensón de {c} identificado con CC {doc} expedida en Medellín. La persona fue informada de sus derechos constitucionales conforme al artículo 303 de la Ley 906 de 2004.',
+    'El día {f}, siendo las {h} horas, el suscrito {s}, adscrito a {u}, atendió caso de {cd} en {l}, barrio {b}. La víctima {v} señaló directa y voluntariamente a {c} como autor. Registro: {e}. Captura en flagrancia.'],
+  ORDINALES:['Primero','Segundo','Tercero','Cuarto','Quinto','Sexto','Séptimo','Octavo','Noveno','Décimo',
+    'Once','Doce','Trece','Catorce','Quince','Dieciséis','Diecisiete','Dieciocho','Diecinueve','Veinte',
+    'Veintiuno','Veintidós','Veintitrés','Veinticuatro','Veinticinco'],
+  /* Escenarios de orden judicial. Cada uno lleva a una regla distinta del motor
+     de destinatario (ojResolverDestino), que es lo que da sentido a simular OJ:
+     R1 SRPA · R2 Ley 600 · R3 fiscal que dirige · R4 juez de conocimiento/JEPMS. */
+  OJ_ESC:[
+    {tipoOrden:'LEY906',finalidad:'IMPUTACION',        despacho:'JCG',         esp:'PENAL_MUNICIPAL'},
+    {tipoOrden:'LEY906',finalidad:'MEDIDA_ASEGURAMIENTO',despacho:'JCG',       esp:'PENAL_MUNICIPAL'},
+    {tipoOrden:'LEY906',finalidad:'CONDENA',           despacho:'CONOCIMIENTO',esp:'PENAL_CIRCUITO'},
+    {tipoOrden:'LEY906',finalidad:'REVOCATORIA',       despacho:'JEPMS',       esp:'EJECUCION_PENAS'},
+    {tipoOrden:'LEY600',finalidad:'INDAGATORIA',       despacho:'FISCALIA',    esp:'OTRA', antigua:true},
+    {tipoOrden:'SRPA',  finalidad:'IMPUTACION',        despacho:'ADOLESCENTES',esp:'ADOLESCENTES', menor:true}
+  ],
+
+  /* ── Primitivas de azar y formato ───────────────────────────────────── */
   r:function(a){return a[Math.floor(Math.random()*a.length)];},
   ri:function(a,b){return Math.floor(Math.random()*(b-a+1))+a;},
-  rDoc:function(){return this.ri(1,1)+'.'+this.ri(10,19)+''+this.ri(0,9)+'.'+this.ri(100,999)+'.'+this.ri(100,999);},
-  gP:function(isMn){
-    var y=isMn?this.ri(2008,2010):this.ri(1965,2004);
-    var m=String(this.ri(1,12)).padStart(2,'0'),d=String(this.ri(1,28)).padStart(2,'0');
-    return{id:uid(),tipoDoc:isMn?'TI':'CC',numDoc:this.rDoc(),expEn:'Medellín',
-      priNom:this.r(this.N),segNom:Math.random()>.4?this.r(this.N):'',
-      priApe:this.r(this.A),segApe:this.r(this.A),
-      alias:Math.random()>.6?this.r(['El Mono','El Flaco','El Gordo','Pecas']):'N/A',
-      fn:y+'-'+m+'-'+d,edad:String(new Date().getFullYear()-y),
-      lugNac:'Medellín, Antioquia',ecivil:this.r(this.EC),escol:this.r(this.ES),ocup:this.r(this.O),
-      dirRes:'Calle '+this.ri(30,80)+' No '+this.ri(40,70)+'-'+this.ri(10,99),
-      tel:'3'+this.ri(10,32)+''+this.ri(1000000,9999999),correo:'',
-      padres:this.r(this.N)+' '+this.r(this.A)+' y '+this.r(this.N)+' '+this.r(this.A),
-      senas:'Estatura 1.'+this.ri(55,85)+', piel '+this.r(['triqueña','morena','clara'])+'.'}
+  rb:function(p){return Math.random()<(p===undefined?.5:p);},
+  // n elementos distintos del arreglo, en orden aleatorio
+  rN:function(a,n){
+    var copia=a.slice(),out=[];
+    while(out.length<n&&copia.length) out.push(copia.splice(Math.floor(Math.random()*copia.length),1)[0]);
+    return out;
   },
+  pad:function(n,l){return String(n).padStart(l||2,'0');},
+  fISO:function(d){return d.getFullYear()+'-'+this.pad(d.getMonth()+1)+'-'+this.pad(d.getDate());},
+  hHM:function(d){return this.pad(d.getHours())+':'+this.pad(d.getMinutes());},
+  hace:function(horas){return new Date(Date.now()-Math.round(horas*3600000));},
+  haceDias:function(dias){return this.hace(dias*24);},
+  enDias:function(dias){return new Date(Date.now()+dias*86400000);},
+  masMin:function(d,min){return new Date(d.getTime()+min*60000);},
+  // Fecha de nacimiento que da exactamente `edad` años en la fecha `iso`.
+  fNacPara:function(iso,edad){
+    var ref=iso?new Date(iso+'T12:00:00'):new Date();
+    var m=this.ri(0,11),d=this.ri(1,28);
+    var pasado=(m<ref.getMonth())||(m===ref.getMonth()&&d<=ref.getDate());
+    return this.fISO(new Date(ref.getFullYear()-edad-(pasado?0:1),m,d));
+  },
+  rDoc:function(){return sinPuntos(this.ri(1,1)+'.'+this.ri(10,19)+''+this.ri(0,9)+'.'+this.ri(100,999)+'.'+this.ri(100,999));},
+  rTel:function(){return '3'+this.ri(10,29)+String(this.ri(1000000,9999999));},
+  rFijo:function(){return '604'+String(this.ri(2000000,6999999));},
+  rCorreo:function(a,b){
+    var s=(a+'.'+b).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z.]/g,'');
+    return s+this.ri(10,99)+'@ejemplo.test';        // .test está reservado (RFC 2606): nunca es un dominio real
+  },
+  rPlaca:function(){
+    var L='ABCDEFGHJKLMNPQRSTUVWXYZ';
+    return this.r(L.split(''))+this.r(L.split(''))+this.r(L.split(''))+this.pad(this.ri(0,999),3);
+  },
+  /* NUNC: 16 dígitos exactos, o el FPJ-5 se niega a generarse (issue M3).
+     Si Ajustes ya trae uno válido, se respeta; si no, se inventa. */
+  rNunc:function(cfgVal){
+    var v=String(cfgVal||'').replace(/\D/g,'');
+    if(v.length===16) return v;
+    return this.pad(this.ri(1,99999),5)+String(new Date().getFullYear())+this.pad(this.ri(1,99999),5)+this.pad(this.ri(1,99),2);
+  },
+  rRadicado:function(){
+    return this.pad(this.ri(1,99999),5)+this.pad(this.ri(1,999),3)+this.pad(this.ri(1,99999),5)+
+           String(new Date().getFullYear())+this.pad(this.ri(1,99999),5);
+  },
+  rSenas:function(){
+    return 'Estatura 1.'+this.ri(55,88)+' m, contextura '+this.r(this.CONTEX)+', tez '+this.r(this.TEZ)+
+      ', cabello '+this.r(this.CABELLO)+', ojos '+this.r(this.OJOS)+'. '+
+      this.r(['Cicatriz lineal en el antebrazo derecho.','Tatuaje en el brazo izquierdo.','Lunar visible en el pómulo izquierdo.','Cicatriz en la ceja derecha.']);
+  },
+  gFuncionario:function(){
+    var n=this.r(this.N),ap=this.r(this.A);
+    return {grado:this.r(this.GRADOS),cedula:this.rDoc(),nombre:n+' '+this.r(this.N)+' '+ap+' '+this.r(this.A),placa:this.pad(this.ri(1,999999),6)};
+  },
+  gVehiculo:function(){
+    var clase=this.r(this.CLASES);
+    return {marca:this.r(this.MARCAS),clase:clase,color:this.r(this.COLORES),
+      placas:clase==='Motocicleta'?this.rPlaca().slice(0,3)+this.pad(this.ri(0,99),2)+this.r(['A','B','C','D','E','F']):this.rPlaca(),
+      prop:this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A)};
+  },
+  /* Persona completa del modelo de flagrancia. Todos los campos del formulario:
+     lo que quede vacío en el simulador saldría vacío en el FPJ-5. */
+  gP:function(opts){
+    opts=opts||{};
+    var edad=opts.edad!==undefined?opts.edad:(opts.menor?this.ri(14,17):this.ri(18,62));
+    var fn=this.fNacPara('',edad);
+    var pri=this.r(this.N),ape=this.r(this.A);
+    return {id:uid(),
+      tipoDoc:opts.menor?'TI':'CC',numDoc:this.rDoc(),expEn:this.r(this.MUNI),
+      priNom:pri,segNom:this.rb(.6)?this.r(this.N):'',
+      priApe:ape,segApe:this.r(this.A),
+      alias:this.rb(.4)?this.r(this.ALIAS):'N/A',
+      fn:fn,edad:String(calcAgeVal(fn)),
+      lugNac:this.r(this.MUNI)+', Antioquia',
+      ecivil:opts.menor?'Soltero/a':this.r(this.EC),
+      escol:opts.menor?this.r(['Primaria','Bachiller']):this.r(this.ES),
+      ocup:opts.menor?'Estudiante':this.r(this.O),
+      dirRes:'Calle '+this.ri(30,80)+' No '+this.ri(40,70)+'-'+this.ri(10,99)+', barrio '+this.r(this.B),
+      tel:this.rTel(),correo:this.rCorreo(pri,ape),
+      padres:this.r(this.N)+' '+this.r(this.A)+' y '+this.r(this.N)+' '+this.r(this.A),
+      senas:this.rSenas()};
+  },
+  /* Servidor que suscribe. Campo a campo: si Ajustes trae el dato real se usa,
+     si no se inventa — nunca se deja un hueco. */
+  gServidor:function(cfg){
+    var s=(cfg&&cfg.servidor)||{},n=this.r(this.N),ap=this.r(this.A);
+    return {grado:s.grado||this.r(this.GRADOS),
+      ident:sinPuntos(s.ident||this.rDoc()),
+      nombre:s.nombre||(n+' '+this.r(this.N)+' '+ap+' '+this.r(this.A)),
+      entidad:s.entidad||'Entidad de demostración (DEMO)',
+      cargo:s.cargo||'Integrante patrulla de vigilancia',
+      tel:s.tel||this.rTel(),
+      correo:s.correo||this.rCorreo(n,ap)};
+  },
+  gUnidad:function(cfg){
+    var u=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim();
+    return u||cfg.nombreEstacion||'Estación de demostración';
+  },
+
+  /* ── FLAGRANCIA (URI adulto / CESPA menor) ──────────────────────────── */
   genFlagrancia:function(subtipo){
-    var isMn=subtipo==='flagrancia-cespa'; var tipo=isMn?'CESPA':'URI';
+    var isMn=subtipo==='flagrancia-cespa',tipo=isMn?'CESPA':'URI';
     var cfg=DB.getConfig();
-    var cond=this.r(this.C),barr=this.r(this.B),dir='Calle '+this.ri(40,60)+' con carrera '+this.ri(40,55);
-    var hH=String(this.ri(6,23)).padStart(2,'0'),hM=String(this.ri(0,59)).padStart(2,'0');
-    var dia=String(this.ri(1,28)).padStart(2,'0'),mes=String(this.ri(1,12)).padStart(2,'0');
-    var cap=this.gP(isMn),vic=this.gP(false),test=this.gP(false);
-    var serv=cfg.servidor||{grado:'Agente',nombre:'Usuario Demo',ident:'1.000.000.000',entidad:'',cargo:'Servicio de vigilancia',tel:'3101234567',correo:'demo@ejemplo.com'};
-    var meses=['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    var emp=this.r(this.EMP);
-    var narr=this.r(this.TPL).replace(/{f}/g,dia+' de '+meses[parseInt(mes)]+' de 2026').replace(/{h}/g,hH+':'+hM).replace(/{s}/g,serv.grado+' '+serv.nombre).replace(/{b}/g,barr).replace(/{v}/g,fullName(vic)).replace(/{c}/g,fullName(cap)).replace(/{cd}/g,cond).replace(/{l}/g,dir).replace(/{e}/g,emp).replace(/{o}/g,this.r(['su celular','su bolso','dinero','su cadena']));
-    var hdH=String(Math.min(parseInt(hH)+this.ri(1,3),23)).padStart(2,'0'),hdM=String(this.ri(0,59)).padStart(2,'0');
-    return{id:uid(),tipo:tipo,nunc:isMn?(cfg.nuncCespa||''):(cfg.nuncUri||''),
-      spoa:String(this.ri(50000,99999))+String(this.ri(100,999))+String(this.ri(10000,99999))+'2026'+String(this.ri(10000,99999)),
-      fechaProc:'2026-'+mes+'-'+dia,conductas:[cond,'','',''],
+    // La captura ocurrió dentro de las últimas 30 h: así el badge del plazo de
+    // 36 h (Ley 906/2004) tiene algo real que contar en la lista de capturas.
+    var t=this.hace(this.ri(1,30)+Math.random());
+    var disp=this.masMin(t,this.ri(30,150)); if(disp>new Date()) disp=new Date();
+    var fecha=this.fISO(t),dia=this.pad(t.getDate()),mes=this.pad(t.getMonth()+1),ano=String(t.getFullYear());
+    var barr=this.r(this.B),muni=this.r(this.MUNI);
+    var dir='Calle '+this.ri(40,60)+' con carrera '+this.ri(40,55);
+    // 1 a 4 conductas con su artículo del C.P.
+    var delitos=this.rN(this.C,this.ri(1,4));
+    var conductas=['','','',''],arts=['','','',''];
+    delitos.forEach(function(d,i){conductas[i]=d[0];arts[i]=d[1];});
+    // Los apartados 4/5/6 del FPJ-5 son repetibles: se simulan varias personas.
+    var caps=[],vics=[],tests=[],i;
+    for(i=0;i<this.ri(1,isMn?2:3);i++) caps.push(this.gP({menor:isMn}));
+    for(i=0;i<this.ri(1,2);i++) vics.push(this.gP({}));
+    for(i=0;i<this.ri(1,2);i++) tests.push(this.gP({}));
+    var hayVeh=this.rb(.5),vehs=[];
+    if(hayVeh) for(i=0;i<this.ri(1,2);i++) vehs.push(this.gVehiculo());
+    var serv=this.gServidor(cfg),unidad=this.gUnidad(cfg);
+    var emp=this.rN(this.EMP,this.ri(1,2)).join('; ');
+    var narr=this.r(this.TPL)
+      .replace(/{f}/g,ojFechaLarga(fecha)).replace(/{h}/g,this.hHM(t))
+      .replace(/{s}/g,serv.grado+' '+serv.nombre).replace(/{u}/g,unidad)
+      .replace(/{b}/g,barr).replace(/{v}/g,fullName(vics[0])).replace(/{c}/g,fullName(caps[0]))
+      .replace(/{cd}/g,conductas[0]).replace(/{l}/g,dir).replace(/{e}/g,emp)
+      .replace(/{o}/g,this.r(['su celular','su bolso','dinero en efectivo','su cadena']));
+    if(hayVeh) narr+=' En el procedimiento se inmovilizó '+vehs.map(function(v){
+      return 'un vehículo clase '+v.clase.toLowerCase()+' marca '+v.marca+' color '+v.color+' de placas '+v.placas;
+    }).join(' y ')+'.';
+    return {id:uid(),tipo:tipo,
+      nunc:this.rNunc(isMn?cfg.nuncCespa:cfg.nuncUri),
+      spoa:this.rRadicado(),
+      fechaProc:fecha,conductas:conductas,articulosCP:arts,
       destino:isMn?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI'),
       numIncidente:String(this.ri(100000,999999)),recibe:this.r(this.F),
-      autoridadSolicita:'',destinoOJ:'FISCALIA_URI',numOrden:'',delitoOrden:'',juzgadoOrden:'',fechaOrden:'',
-      lugar:{depto:'Antioquia',muni:'Medellín',dir:dir,barrio:barr,caract:'Vía pública, sector '+this.r(['comercial','residencial','mixto']),localidad:'10',zona:'Urbana',vereda:'N/A'},
-      capturados:[cap],victimas:[vic],testigos:[test],sinVictima:false,sinTestigo:false,
-      narracion:{fechaCapD:dia,fechaCapM:mes,fechaCapA:'2026',horaCapH:hH,horaCapM:hM,fechaDispD:dia,fechaDispM:mes,fechaDispA:'2026',horaDispH:hdH,horaDispM:hdM,texto:narr,emp:emp},
-      servidor:serv,created:Date.now(),isTest:true,fechaDia:dia,fechaMes:mes,fechaAno:'2026'};
+      lugar:{depto:'Antioquia',muni:muni,dir:dir,barrio:barr,
+        caract:'Vía pública, sector '+this.r(['comercial','residencial','mixto'])+', con iluminación '+this.r(['artificial','natural']),
+        localidad:cfg.localidadDefault||String(this.ri(1,16)),
+        zona:cfg.zonaDefault||'Urbana',vereda:cfg.veredaDefault||'N/A'},
+      capturados:caps,victimas:vics,testigos:tests,sinVictima:false,sinTestigo:false,
+      hayVehiculos:hayVeh,vehiculos:vehs,
+      narracion:{fechaCapD:dia,fechaCapM:mes,fechaCapA:ano,horaCapH:this.pad(t.getHours()),horaCapM:this.pad(t.getMinutes()),
+        fechaDispD:this.pad(disp.getDate()),fechaDispM:this.pad(disp.getMonth()+1),fechaDispA:String(disp.getFullYear()),
+        horaDispH:this.pad(disp.getHours()),horaDispM:this.pad(disp.getMinutes()),texto:narr,emp:emp},
+      servidor:serv,created:Date.now(),isTest:true,fechaDia:dia,fechaMes:mes,fechaAno:ano};
+  },
+
+  /* ── ORDEN JUDICIAL (módulo propio, ojv:2) ──────────────────────────── */
+  ojDespacho:function(esc,muni){
+    var ord=this.r(this.ORDINALES);
+    if(esc.despacho==='FISCALIA')     return 'Fiscalía '+this.ri(1,80)+' Delegada ante los Jueces Penales del Circuito de '+muni;
+    if(esc.despacho==='JEPMS')        return 'Juzgado '+ord+' de Ejecución de Penas y Medidas de Seguridad de '+muni;
+    if(esc.despacho==='CONOCIMIENTO') return 'Juzgado '+ord+' Penal del Circuito de '+muni;
+    if(esc.despacho==='ADOLESCENTES') return 'Juzgado '+ord+' Penal para Adolescentes con Función de Control de Garantías de '+muni;
+    return 'Juzgado '+ord+' Penal Municipal con Función de Control de Garantías de '+muni;
   },
   genOJ:function(){
     var cfg=DB.getConfig();
-    var delito=this.r(this.OJ_DELITOS),jz=this.r(this.OJ_JUZGADOS);
-    var numOrden=String(this.ri(100,999))+'-'+String(this.ri(1000,9999));
-    var hH=String(this.ri(6,23)).padStart(2,'0'),hM=String(this.ri(0,59)).padStart(2,'0');
-    var dia=String(this.ri(1,28)).padStart(2,'0'),mes=String(this.ri(1,12)).padStart(2,'0');
-    var diaO=String(this.ri(1,28)).padStart(2,'0'),mesO=String(this.ri(1,12)).padStart(2,'0');
-    var cap=this.gP(false);
-    var serv=cfg.servidor||{grado:'Agente',nombre:'Usuario Demo',ident:'1.000.000.000',entidad:'',cargo:'Servicio de vigilancia',tel:'3101234567',correo:'demo@ejemplo.com'};
-    var meses=['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-    var narr=this.OJ_TPL.replace(/{f}/g,dia+' de '+meses[parseInt(mes)]+' de 2026').replace(/{h}/g,hH+':'+hM).replace(/{s}/g,serv.grado+' '+serv.nombre).replace(/{on}/g,numOrden).replace(/{jz}/g,jz).replace(/{d}/g,delito).replace(/{c}/g,fullName(cap)).replace(/{doc}/g,sinPuntos(cap.numDoc));
-    var hdH=String(Math.min(parseInt(hH)+this.ri(1,3),23)).padStart(2,'0'),hdM=String(this.ri(0,59)).padStart(2,'0');
-    return{id:uid(),tipo:'OJ',nunc:cfg.nuncUri||'',
-      spoa:String(this.ri(50000,99999))+String(this.ri(100,999))+String(this.ri(10000,99999))+'2026'+String(this.ri(10000,99999)),
-      fechaProc:'2026-'+mes+'-'+dia,conductas:[delito,'','',''],
-      numOrden:numOrden,juzgadoOrden:jz,delitoOrden:delito,fechaOrden:'2026-'+mesO+'-'+diaO,
-      autoridadSolicita:jz,destinoOJ:'FISCALIA_URI',
-      destino:cfg.destUri||'Fiscalía URI',
-      numIncidente:String(this.ri(100000,999999)),recibe:this.r(this.OJ_AUTORIDAD),
-      lugar:{depto:'Antioquia',muni:'Medellín',dir:'Calle '+this.ri(40,60)+' con carrera '+this.ri(40,55),barrio:this.r(this.B),caract:'Vía pública',localidad:'10',zona:'Urbana',vereda:'N/A'},
-      capturados:[cap],victimas:[],testigos:[],sinVictima:true,sinTestigo:true,
-      narracion:{fechaCapD:dia,fechaCapM:mes,fechaCapA:'2026',horaCapH:hH,horaCapM:hM,fechaDispD:dia,fechaDispM:mes,fechaDispA:'2026',horaDispH:hdH,horaDispM:hdM,texto:narr,emp:''},
-      servidor:serv,created:Date.now(),isTest:true,fechaDia:dia,fechaMes:mes,fechaAno:'2026'};
+    // Se parte de la estructura oficial del módulo, nunca de una copia a mano:
+    // si ojEstructura() gana un campo, el simulador lo hereda.
+    var c=ojNuevoCaso(); c.isTest=true;
+    var esc=this.r(this.OJ_ESC);
+    var o=c.oj.orden,d=c.oj.despacho,p=c.oj.proceso,r=c.oj.requerido,
+        g=c.oj.diligencia,a=c.oj.actuacion,x=c.oj.destino,
+        e=c.oj.encabezado,cu=c.oj.custodia,fi=c.oj.firma;
+
+    /* 5 · Materialización — de aquí arrancan el término de 36 h y las demás horas */
+    var t=this.hace(this.ri(1,30)+Math.random());
+    var muni=g.lugarMunicipio||this.r(this.MUNI);
+    g.fecha=this.fISO(t); g.hora=this.hHM(t);
+    g.lugarDireccion='Carrera '+this.ri(40,90)+' No '+this.ri(10,90)+'-'+this.ri(10,99);
+    g.lugarBarrio=this.r(this.B);
+    g.lugarMunicipio=muni; g.lugarDepartamento=g.lugarDepartamento||'Antioquia';
+    g.lugarTipo=this.r(['VIA_PUBLICA','RESIDENCIA','ESTABLECIMIENTO','TRANSPORTE']);
+    g.coordenadas=(6+Math.random()*.4).toFixed(6)+', -'+(75+Math.random()*.4).toFixed(6);
+    g.formaUbicacion=this.r(['PATRULLAJE','CONTROL_ANTECEDENTES','PUESTO_CONTROL','LABORES','PRESENTACION']);
+    g.formaUbicacionOtra='';
+    g.unidad=g.unidad||this.gUnidad(cfg);
+    g.patrulla=g.patrulla||String(this.ri(1,60));
+    g.vehiculo='Vehículo de patrullaje de placas '+this.rPlaca();
+    if(!Array.isArray(g.funcionarios)) g.funcionarios=[];
+    var nFun=this.ri(1,3);
+    while(g.funcionarios.length<nFun) g.funcionarios.push(this.gFuncionario());
+
+    /* 1 · La orden. SIEMPRE se genera vigente: una orden vencida bloquea la
+       salida (V01) y el caso de demostración no llegaría a producir oficio. */
+    var diasExp=esc.antigua?this.ri(700,1400):this.ri(45,300);
+    var fExp=this.haceDias(diasExp);
+    o.numero=this.pad(this.ri(1,9999),4)+'-'+fExp.getFullYear();
+    o.tipoOrden=esc.tipoOrden; o.finalidad=esc.finalidad; o.estado='VIGENTE';
+    o.fechaExpedicion=this.fISO(fExp); o.vigenciaMeses=12; o.prorrogas=[];
+    // Una orden antigua solo sigue viva con prórroga: es el caso que más vale
+    // la pena simular, porque ejercita el cálculo de vigencia con prórrogas.
+    if(esc.antigua||this.rb(.25)){
+      o.prorrogas.push({fecha:this.fISO(this.haceDias(this.ri(10,60))),
+        hasta:this.fISO(this.enDias(this.ri(120,300))),
+        oficio:'Oficio No. '+this.ri(1000,9999)+' del despacho'});
+    }
+    o.dirigidaA='Autoridades con funciones de policía judicial';
+
+    /* 2 · El despacho que la libró */
+    d.nombre=this.ojDespacho(esc,muni);
+    d.tipo=esc.despacho; d.especialidad=esc.esp;
+    d.municipio=muni; d.departamento='Antioquia';
+    d.direccion='Calle '+this.ri(40,60)+' No '+this.ri(40,60)+'-'+this.ri(10,99)+', piso '+this.ri(2,20);
+    d.telefono=this.rFijo();
+    d.correo='despacho'+this.ri(10,99)+'@ejemplo.test';
+    d.identificacion='Código de despacho '+this.pad(this.ri(1,99999),5);
+    d.juezNombre=this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A);
+    d.juezCargo=esc.despacho==='FISCALIA'?'Fiscal Delegado':'Juez';
+    d.funcionarioResponsable=this.r(this.N)+' '+this.r(this.A)+' — Secretario(a)';
+    d.firma=this.r(['MANUSCRITA','DIGITAL','ESCANEADA']);
+    o.autoridadSolicitante=(esc.finalidad==='IMPUTACION'||esc.finalidad==='MEDIDA_ASEGURAMIENTO')
+      ? 'Fiscalía '+this.ri(1,80)+' Seccional' : d.nombre;
+
+    /* 3 · El proceso */
+    var delitos=this.rN(this.C,this.ri(1,2));
+    p.radicado=this.rRadicado();
+    p.codigoInterno=this.pad(this.ri(1,9999),4)+'-'+String(fExp.getFullYear()).slice(2);
+    p.delitos=delitos.map(function(dd){
+      return {nombre:dd[0],articulo:dd[1],
+        inciso:SIM.rb(.4)?String(SIM.ri(1,3)):'',
+        numeral:SIM.rb(.4)?String(SIM.ri(1,6)):'',
+        codigo:SIM.pad(SIM.ri(1,999),3),
+        agravado:SIM.rb(.4)};
+    });
+    // Hechos anteriores a la decisión, y la decisión anterior a la orden.
+    p.fechaHechos=esc.antigua
+      ? this.fISO(new Date(this.ri(1998,2004),this.ri(0,11),this.ri(1,28)))
+      : this.fISO(this.haceDias(diasExp+this.ri(60,600)));
+    p.fechaDecision=this.fISO(this.haceDias(diasExp+this.ri(1,20)));
+    p.descripcionJuridica='Decisión proferida dentro del proceso radicado '+p.radicado+
+      ', por la cual se dispone la captura del requerido por '+delitos.map(function(dd){return dd[0].toLowerCase();}).join(' y ')+'.';
+    p.pena=esc.finalidad==='CONDENA'||esc.finalidad==='REVOCATORIA'
+      ? {descripcion:'Pena privativa de la libertad impuesta en sentencia ejecutoriada',meses:String(this.ri(24,240)),
+         accesorias:'Inhabilitación para el ejercicio de derechos y funciones públicas por el mismo término'}
+      : {descripcion:'',meses:'',accesorias:''};
+    o.motivoTextual='Líbrese orden de captura en contra de la persona requerida, identificada como se indica en esta providencia, '+
+      'por el delito de '+delitos[0][0].toLowerCase()+', dentro del proceso radicado '+p.radicado+
+      ', de conformidad con lo previsto en el artículo 297 del Código de Procedimiento Penal.';
+
+    /* 4 · El requerido. En SRPA la edad se calcula AL MOMENTO DE LOS HECHOS:
+       es lo que decide «aprehensión» vs «captura» y el destino (Ley 1098/2006). */
+    var edadHechos=esc.menor?this.ri(15,17):this.ri(19,55);
+    var fn=this.fNacPara(p.fechaHechos,edadHechos);
+    var pri=this.r(this.N),ape=this.r(this.A);
+    r.tipoDoc=esc.menor?'TI':(this.rb(.85)?'CC':this.r(['CE','PPT','PA']));
+    r.numDoc=this.rDoc(); r.expedidoEn=this.r(this.MUNI);
+    r.priNom=pri; r.segNom=this.rb(.6)?this.r(this.N):'';
+    r.priApe=ape; r.segApe=this.r(this.A);
+    r.fechaNac=fn; r.edad=String(calcAgeVal(fn));
+    r.sexo=this.r(['M','F']); r.nacionalidad='Colombiana';
+    r.estadoCivil=esc.menor?'SOLTERO':this.r(['SOLTERO','CASADO','UNION','SEPARADO']);
+    r.alias=this.rb(.5)?this.r(this.ALIAS):'';
+    r.profesion=esc.menor?'Estudiante':this.r(this.O);
+    r.resDireccion='Calle '+this.ri(30,80)+' No '+this.ri(40,70)+'-'+this.ri(10,99);
+    r.resBarrio=this.r(this.B); r.resMunicipio=this.r(this.MUNI); r.resDepartamento='Antioquia';
+    r.resTelefono=this.rTel();
+    r.nacPais='Colombia'; r.nacDepartamento='Antioquia'; r.nacMunicipio=this.r(this.MUNI);
+    r.madre=this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A);
+    r.padre=this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A);
+    r.rasgos={estatura:'1.'+this.ri(55,88)+' m',contextura:this.r(this.CONTEX),tez:this.r(this.TEZ),
+      cabello:this.r(this.CABELLO),ojos:this.r(this.OJOS)};
+    r.senales=this.r(['Cicatriz lineal en el antebrazo derecho.','Tatuaje en el brazo izquierdo.','Lunar visible en el pómulo izquierdo.','Cicatriz en la ceja derecha.']);
+    r.otrosDatos='Sin antecedentes de traslado por protección registrados en la consulta.';
+    r.identidadMetodo=this.r(['DOCUMENTO','BIOMETRICO','RESENA','BASE_DATOS']);
+    r.identidadObservacion=r.identidadMetodo==='DOCUMENTO'?''
+      :'Se contrastaron nombres, número de documento y fecha de nacimiento con los registrados en la orden, descartando homonimia.';
+
+    /* Verificación de la orden: la constancia de que se comprobó la vigencia
+       ANTES de materializar (por eso va unos minutos antes de la diligencia). */
+    var tVer=this.masMin(t,-this.ri(10,45));
+    o.verificacion={sistema:this.r(['PDA','CENTRO_RADIO','CERTIFICACION','POLICIA_JUDICIAL','DESPACHO']),
+      fecha:this.fISO(tVer),hora:this.hHM(tVer),
+      funcionario:[g.funcionarios[0].grado,g.funcionarios[0].nombre].filter(Boolean).join(' '),
+      resultado:'POSITIVO',
+      observacion:'La consulta arrojó orden de captura vigente a nombre del requerido.'};
+
+    /* 6 · La actuación */
+    var tDer=this.masMin(t,this.ri(3,20));
+    a.derechos={leidos:true,fecha:this.fISO(tDer),hora:this.hHM(tDer),lugar:ojLugarTexto(g),
+      observacion:'Manifestó comprender los derechos que le fueron leídos y se le entregó copia del acta.'};
+    var logro=this.rb(.75);
+    a.comunicacion=logro
+      ? {seLogro:true,nombre:this.r(this.N)+' '+this.r(this.A),parentesco:this.r(['MADRE','PADRE','CONYUGE','HERMANO']),
+         telefono:this.rTel(),hora:this.hHM(this.masMin(tDer,this.ri(2,25)))}
+      : {seLogro:false,nombre:'',parentesco:'',telefono:'',hora:''};
+    var defTipo=this.r(['CONFIANZA','PUBLICO','NO_DESIGNA']);
+    a.defensor=defTipo==='NO_DESIGNA'
+      ? {tipo:defTipo,nombre:'',telefono:''}
+      : {tipo:defTipo,nombre:this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A),telefono:this.rTel()};
+    var fuerza=this.rb(.5)?'NINGUNO':this.r(['VERBAL','CONTROL_FISICO','MEDIOS_RIGIDOS']);
+    a.fuerza={tipo:fuerza,descripcion:fuerza==='NINGUNO'?''
+      :'Se empleó el medio estrictamente necesario y proporcional para asegurar la diligencia.'};
+    a.lesiones={hubo:false,descripcion:''};
+    a.valoracion={realizada:true,entidad:'Instituto Nacional de Medicina Legal y Ciencias Forenses',
+      fecha:this.fISO(tDer),hora:this.hHM(this.masMin(tDer,this.ri(40,180))),renuencia:false};
+    a.hayIncautacion=this.rb(.5);
+    a.incautaciones=a.hayIncautacion?this.rN(this.EMP,this.ri(1,2)).map(function(desc,i){
+      return {descripcion:desc,cantidad:'1',
+        rotulo:SIM.pad(SIM.ri(1,999999),6)+'-'+String(new Date().getFullYear()),
+        entregadoA:'Unidad de policía judicial'};
+    }):[];
+    // Los anexos se toman del catálogo por índice: nunca se repite el literal.
+    a.anexos=[OJ_CAT.anexos[0],OJ_CAT.anexos[1],OJ_CAT.anexos[2],OJ_CAT.anexos[3]];
+    if(a.hayIncautacion) a.anexos.push(OJ_CAT.anexos[4]);
+    if(this.rb(.5)) a.anexos.push(OJ_CAT.anexos[6]);
+    a.novedades=this.rb(.25)?'Sin novedades que reportar durante el traslado.':'';
+    a.observaciones='La persona requerida fue ubicada en la dirección indicada y no opuso resistencia. '+
+      'Se verificó la vigencia de la orden antes de materializarla y se le informó el motivo de la '+
+      (esc.menor?'aprehensión':'captura')+', el despacho que la libró y el proceso al que corresponde.';
+
+    /* 7 · Encabezado, custodia y firma: lo que Ajustes no tenga, lo inventa el
+       simulador — si no, la validación dura (V26-V31) impediría el oficio. */
+    if(!e.ministerio)   e.ministerio='MINISTERIO DEL SECTOR (DEMO)';
+    if(!e.institucion)  e.institucion='INSTITUCIÓN DE SEGURIDAD (DEMO)';
+    if(!e.unidad)       e.unidad='UNIDAD DE DEMOSTRACIÓN';
+    if(!e.dependencia)  e.dependencia='DEPENDENCIA DE DEMOSTRACIÓN';
+    if(!cu.estacion)    cu.estacion='Estación de demostración';
+    if(!cu.direccion)   cu.direccion='Calle '+this.ri(40,70)+' No '+this.ri(40,70)+'-'+this.ri(10,99)+', '+muni;
+    if(!cu.telefono)    cu.telefono=this.rFijo();
+    if(!cu.correo)      cu.correo='custodia'+this.ri(10,99)+'@ejemplo.test';
+    if(!cu.web)         cu.web='www.ejemplo.test';
+    var f0=g.funcionarios[0];
+    if(!fi.grado)    fi.grado=f0.grado;
+    if(!fi.nombre)   fi.nombre=f0.nombre;
+    if(!fi.cargo)    fi.cargo='Integrante patrulla de vigilancia';
+    if(!fi.telefono) fi.telefono=this.rTel();
+    if(!fi.correo)   fi.correo=this.rCorreo(pri,ape);
+
+    /* 7 · Disposición. El motor propone el destinatario y cita su fundamento;
+       lo que no venga de Ajustes se completa aquí para que el caso esté entero. */
+    ojAplicarSugerencia(c);
+    if(!x.tipo) x.tipo=esc.despacho;
+    if(!x.nombre){
+      x.nombre = x.reglaAplicada==='R1-SRPA'
+          ? 'Centro de Servicios Judiciales para Adolescentes'
+        : x.reglaAplicada==='R3-FISCAL-INVESTIGACION'
+          ? 'Fiscalía '+this.ri(1,80)+' Seccional — Unidad de Reacción Inmediata'
+        : x.reglaAplicada==='R4-B-JUEZ-NO-DISPONIBLE'
+          ? 'Juzgado Penal Municipal con Función de Control de Garantías (turno)'
+        : d.nombre;
+    }
+    x.direccion='Calle '+this.ri(40,60)+' No '+this.ri(40,60)+'-'+this.ri(10,99);
+    x.municipio=muni; x.departamento='Antioquia';
+    x.telefono=this.rFijo(); x.correo='reparto'+this.ri(10,99)+'@ejemplo.test';
+    var tEnt=new Date();
+    x.fechaEntrega=this.fISO(tEnt); x.horaEntrega=this.hHM(tEnt);
+    x.recibeNombre=this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A);
+    x.recibeCargo=this.r(['Asistente de reparto','Secretario(a)','Funcionario de turno']);
+    x.motivoCambio='';
+
+    ojEspejar(c);   // misma proyección que usa el wizard al guardar
+    return c;
   }
 };
 
+/* Resumen del caso ficticio. Cada proceso enseña lo suyo: la flagrancia, cuánta
+   gente y qué se incautó; la orden judicial, si está vigente, quién la libró y
+   a dónde va el capturado. */
+function simResumenFlagrancia(c){
+  var cap=c.capturados[0]||{};
+  return '<h3>'+escHtml(c.tipo)+' — '+escHtml((c.conductas||[]).filter(Boolean).join(' · '))+'</h3>'+
+    '<div class="txs txd">'+escHtml(fmtDate(c.fechaProc))+' · '+escHtml(c.narracion.horaCapH+':'+c.narracion.horaCapM)+
+      ' · NUNC '+escHtml(c.nunc)+'</div>'+
+    '<div class="txs txd" style="margin-top:4px">'+escHtml(c.lugar.dir+', '+c.lugar.barrio+', '+c.lugar.muni)+'</div>'+
+    '<div class="txs" style="margin-top:4px">'+escHtml(fullName(cap))+' — '+escHtml((cap.tipoDoc||'CC')+' '+(cap.numDoc||''))+'</div>'+
+    '<div class="txs txd" style="margin-top:4px">'+(c.capturados||[]).length+' capturado(s) · '+
+      (c.victimas||[]).length+' víctima(s) · '+(c.testigos||[]).length+' testigo(s) · '+
+      (c.vehiculos||[]).length+' vehículo(s)</div>'+
+    '<div class="txs txd" style="margin-top:6px;max-height:80px;overflow-y:auto">'+escHtml(c.narracion.texto.substring(0,220))+'…</div>';
+}
+function simResumenOJ(c){
+  var o=c.oj.orden,r=c.oj.requerido,g=c.oj.diligencia;
+  var vig=ojVigencia(o),plazo=ojPlazo36(c),t=ojTermino(c);
+  return '<h3>Orden judicial — '+escHtml((c.conductas||[]).join(' · '))+'</h3>'+
+    '<div class="txs txd">Orden No. '+escHtml(o.numero)+' del '+escHtml(ojFechaCorta(o.fechaExpedicion))+
+      ' · '+escHtml(ojLbl('estadoOrden',vig.estado))+' hasta '+escHtml(ojFechaCorta(vig.hasta))+'</div>'+
+    '<div class="txs txd" style="margin-top:4px">'+escHtml(c.oj.despacho.nombre)+'</div>'+
+    '<div class="txs" style="margin-top:4px">'+escHtml(ojNombreRequerido(r))+' — '+escHtml(ojDocRequerido(r))+
+      ' · '+escHtml(r.edad)+' años</div>'+
+    '<div class="txs txd" style="margin-top:4px">'+escHtml(t.Acc)+' '+escHtml(ojFechaHora(g.fecha,g.hora))+
+      ' · 36 h vencen '+escHtml(plazo.vence)+'</div>'+
+    '<div class="txs txd" style="margin-top:4px">A disposición de '+escHtml(c.oj.destino.nombre)+
+      ' <span class="mono">('+escHtml(c.oj.destino.reglaAplicada)+')</span></div>'+
+    '<div class="txs txd" style="margin-top:6px;max-height:80px;overflow-y:auto">'+escHtml(c.oj.actuacion.observaciones.substring(0,220))+'…</div>';
+}
 function runSimDemo(tipo){
   closeSimSheet();
   var c=tipo==='oj'?SIM.genOJ():SIM.genFlagrancia(tipo);
   window._simCase=c;
-  var cap=c.capturados[0]||{};
-  var tipoLbl=c.tipo==='OJ'?'OJ':c.tipo==='CESPA'?'CESPA':'URI';
   var el=document.getElementById('sim-res');el.classList.remove('hid');
-  el.innerHTML='<div class="simr"><h3>'+tipoLbl+' — '+(c.conductas[0]||c.delitoOrden||'')+'</h3>'+
-    '<div class="txs txd">'+fmtDate(c.fechaProc)+' · '+c.narracion.horaCapH+':'+c.narracion.horaCapM+'</div>'+
-    '<div class="txs txd" style="margin-top:4px">'+c.lugar.dir+', '+c.lugar.barrio+'</div>'+
-    '<div class="txs" style="margin-top:4px">Cap: '+fullName(cap)+' — '+(cap.tipoDoc||'CC')+': '+(cap.numDoc||'')+'</div>'+
-    '<div class="txs txd" style="margin-top:6px;max-height:80px;overflow-y:auto">'+c.narracion.texto.substring(0,220)+'…</div>'+
-    '</div>'+
+  el.innerHTML='<div class="simr">'+(c.ojv===2?simResumenOJ(c):simResumenFlagrancia(c))+'</div>'+
     '<div class="flx g8" style="flex-wrap:wrap;margin-top:8px">'+
     '<button class="btn bp bsm" onclick="simSavePending()">Guardar</button>'+
     '<button class="btn bs bsm" onclick="simEditPending()">Editar en wizard</button>'+
@@ -3345,23 +3712,41 @@ function runSimDemo(tipo){
     '</div>';
 }
 
-function simSavePending(){
+/* Un caso OJ ya trae su persona en capturados[0] (el espejo de ojEspejar) y no
+   tiene víctimas ni testigos: son procesos distintos, no un flujo con campos
+   apagados. */
+async function simSavePending(){
   if(!window._simCase) return;
   var c=window._simCase;
-  DB.saveCase(c);
-  (c.capturados||[]).forEach(function(p){DB.savePerson(Object.assign({},p,{rol:'Capturado'}));});
-  (c.victimas||[]).forEach(function(p){DB.savePerson(Object.assign({},p,{rol:'Víctima'}));});
-  (c.testigos||[]).forEach(function(p){DB.savePerson(Object.assign({},p,{rol:'Testigo'}));});
-  toast('Caso guardado ✓');
+  try{
+    await DB.saveCase(c);
+    var jobs=(c.capturados||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Capturado'}));});
+    if(c.ojv!==2){
+      jobs=jobs.concat((c.victimas||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Víctima'}));}));
+      jobs=jobs.concat((c.testigos||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Testigo'}));}));
+    }
+    await Promise.all(jobs);
+  }catch(e){
+    console.error('[LexCapture] error guardando caso simulado',e);
+    toast('⚠️ Error guardando el caso simulado — vuelve a intentarlo.');
+    return;
+  }
+  guestToastGuardado('Caso guardado ✓');
   document.getElementById('sim-res').classList.add('hid');
   window._simCase=null; go('capturas');
 }
 
-function simEditPending(){
+async function simEditPending(){
   if(!window._simCase) return;
   var c=window._simCase;
-  DB.saveCase(c);
-  (c.capturados||[]).forEach(function(p){DB.savePerson(Object.assign({},p,{rol:'Capturado'}));});
+  try{
+    await DB.saveCase(c);
+    await Promise.all((c.capturados||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Capturado'}));}));
+  }catch(e){
+    console.error('[LexCapture] error guardando caso simulado',e);
+    toast('⚠️ Error guardando el caso simulado — vuelve a intentarlo.');
+    return;
+  }
   window._simCase=null; editCase(c.id);
 }
 
@@ -3917,10 +4302,12 @@ function buildFPJBlob(c,papel){
             files:files,papel:(lcPapelSirveFPJ(papel||'CARTA')?(papel||'CARTA'):'CARTA')};
   }catch(e){console.error(e);toast("Error generando FPJ-5: "+e.message);return null;}
 }
-function simShowDossier(){
+async function simShowDossier(){
   if(!window._simCase) return;
-  DB.saveCase(window._simCase);
-  _dosCasoId=window._simCase.id;
+  var c=window._simCase;
+  try{ await DB.saveCase(c); }
+  catch(e){ console.error('[LexCapture] error guardando caso simulado',e); toast('⚠️ Error guardando el caso simulado'); return; }
+  _dosCasoId=c.id;
   go('dossier');
 }
 
@@ -5463,6 +5850,19 @@ function ojValidar(c){
   return v;
 }
 function ojDuras(c){ return ojValidar(c).filter(function(x){return x.nivel==='DURA';}); }
+/* ⚠️ V26–V31 no hablan de la orden judicial: son las partes que el formato
+   IMPRIME SIEMPRE — las cuatro líneas del membrete, quién firma y el lugar de
+   custodia (de ahí salen la constancia y el bloque de contacto del cierre).
+   Por eso NO entran en la excepción de los casos del formato anterior. Cuando
+   sí entraban, un caso legado se saltaba todas las preguntas y el oficio salía
+   con el encabezado en blanco, «Anexos:» sin nada y el bloque de contacto
+   vacío. Eximir a un caso viejo de aportar SUS datos judiciales es razonable;
+   eximirlo de tener membrete no lo es: eso no es un dato viejo, es el formato. */
+var OJ_DURAS_DOC=['V26','V27','V28','V29','V30','V31'];
+function ojBloqueoDoc(caso,legado){
+  var d=ojDuras(caso);
+  return legado?d.filter(function(x){ return OJ_DURAS_DOC.indexOf(x.id)>=0; }):d;
+}
 /* ─────────────────────────────────────────────────────────────────────────
    I.6 · WIDGETS Y LISTAS REPETIBLES DEL FORMULARIO
    Un único motor de listas (delitos, funcionarios, prórrogas, elementos):
@@ -7037,7 +7437,7 @@ function ojCasoParaDocumento(c){ return ojEsLegado(c)?ojDesdeLegado(c):ojNormali
 
 /* Un bloqueo tiene que explicarse: antes era un toast que nombraba UNA de las
    faltas y se iba. Ahora se listan todas y se puede saltar al paso exacto. */
-function ojModalFaltantes(id,duras){
+function ojModalFaltantes(id,duras,legado){
   var filas=duras.map(function(v){
     return '<div class="oj-kv" style="align-items:flex-start">'+
       '<span style="min-width:78px">Paso '+(v.paso+1)+'</span>'+
@@ -7047,6 +7447,7 @@ function ojModalFaltantes(id,duras){
     '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<div class="oj-alert dura"><b>No se puede generar todavía</b>'+
     'El oficio de puesta a disposición es un documento legal: sin estos datos saldría incompleto ante el despacho judicial.</div>'+
+    (legado?'<div class="oj-hint" style="margin:0 0 12px">Esta captura viene del formato anterior, que no pedía el encabezado ni los datos del cierre. Se piden una sola vez: al guardarlos quedan como valor por defecto para los siguientes procedimientos.</div>':'')+
     filas+
     (id?'<button class="btn bp bbl" style="margin-top:16px" onclick="ojCompletarCaso(\''+id+'\','+duras[0].paso+')">Completar el caso</button>':'')
   );
@@ -7077,10 +7478,8 @@ function ojDescargarOficio(ref){
 async function ojProducirOficio(c,sel){
   var legado=ojEsLegado(c);
   var caso=ojCasoParaDocumento(c);
-  if(!legado){
-    var duras=ojDuras(caso);
-    if(duras.length){ ojModalFaltantes(c.id,duras); return; }
-  }
+  var duras=ojBloqueoDoc(caso,legado);
+  if(duras.length){ ojModalFaltantes(c.id,duras,legado); return; }
   toast('Generando oficio…');
   var out=await buildOficioOJBlob(caso,sel.papel);
   if(!out) return;
@@ -7106,6 +7505,10 @@ async function ojProducirOficio(c,sel){
    el equipo no estaba configurado, se guardan como valor por defecto: la app le
    pidió el dato una vez, no en cada procedimiento. */
 function ojRecordarEncabezado(c){
+  // ⚠️ Un caso ficticio jamás reconfigura la app: si el simulador inventó el
+  // membrete («(DEMO)») y el usuario edita ese caso, no debe quedarse con esos
+  // valores en Ajustes.
+  if(c.isTest) return;
   var cfg=DB.getConfig(), e=c.oj.encabezado||{}, cu=c.oj.custodia||{}, cambio=false;
   if(e.ministerio&&cfg.ojMinisterio!==e.ministerio){ cfg.ojMinisterio=e.ministerio; cambio=true; }
   if(e.institucion&&cfg.ojInstitucion!==e.institucion){ cfg.ojInstitucion=e.institucion; cambio=true; }
@@ -7132,27 +7535,34 @@ function ojPersonaEspejo(c){
     senas:r.senales||''
   };
 }
+/* Estado derivado + espejo hacia el modelo compartido. La lista de capturas, el
+   buscador, Personas y el dossier leen de aquí y no saben nada del módulo OJ.
+   Vive aparte porque lo usan DOS caminos: guardar desde el wizard y el
+   simulador, que arma el caso entero sin pasar por el formulario. */
+function ojEspejar(c){
+  c.oj.orden.vigenciaHasta=ojVigencia(c.oj.orden).hasta;
+  var plazo=ojPlazo36(c);
+  c.oj.destino.plazoVence=plazo.venceISO?plazo.venceISO+' '+plazo.venceHora:'';
+  var persona=ojPersonaEspejo(c);
+  c.oj.requerido.personaId=persona.id;
+  c.capturados=[persona];
+  c.conductas=(c.oj.proceso.delitos||[]).map(function(d){ return d.nombre; }).filter(Boolean);
+  c.victimas=[]; c.testigos=[]; c.sinVictima=true; c.sinTestigo=true;
+  c.fechaProc=c.oj.diligencia.fecha||c.fechaProc;
+  c.spoa=c.oj.proceso.radicado||'';
+  c.numOrden=c.oj.orden.numero||'';
+  c.juzgadoOrden=c.oj.despacho.nombre||'';
+  c.delitoOrden=(c.conductas[0]||'');
+  c.destino=c.oj.destino.nombre||'';
+  return persona;
+}
 async function ojGuardarCaso(silencioso){
   ojCollect();
   var r=wc.oj.requerido;
   if(!r.priNom||!r.priApe){ toast('Registra al menos el nombre y el apellido de la persona requerida'); return false; }
   ojAplicarSugerencia(wc);
   ojRecordarEncabezado(wc);
-  wc.oj.orden.vigenciaHasta=ojVigencia(wc.oj.orden).hasta;
-  var plazo=ojPlazo36(wc);
-  wc.oj.destino.plazoVence=plazo.venceISO?plazo.venceISO+' '+plazo.venceHora:'';
-  // Espejo para las pantallas compartidas (lista, personas, dossier)
-  var persona=ojPersonaEspejo(wc);
-  wc.oj.requerido.personaId=persona.id;
-  wc.capturados=[persona];
-  wc.conductas=(wc.oj.proceso.delitos||[]).map(function(d){ return d.nombre; }).filter(Boolean);
-  wc.victimas=[]; wc.testigos=[]; wc.sinVictima=true; wc.sinTestigo=true;
-  wc.fechaProc=wc.oj.diligencia.fecha||wc.fechaProc;
-  wc.spoa=wc.oj.proceso.radicado||'';
-  wc.numOrden=wc.oj.orden.numero||'';
-  wc.juzgadoOrden=wc.oj.despacho.nombre||'';
-  wc.delitoOrden=(wc.conductas[0]||'');
-  wc.destino=wc.oj.destino.nombre||'';
+  var persona=ojEspejar(wc);
   wc.updated=Date.now();
   try{
     await DB.saveCase(wc);
