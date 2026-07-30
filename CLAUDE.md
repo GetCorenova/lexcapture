@@ -591,7 +591,8 @@ cada arreglo del generador se veía igual de roto: el generador nunca era el pro
   usuario a otra pantalla equivale a no pedirlo.
 - **`ojEstacionLabel(t,caps)`**: «CANDELARIA» → «ESTACIÓN DE POLICÍA CANDELARIA». Mismo criterio que
   `patrullaLabel()`. ⚠️ **No toca** lo que ya trae un tipo de unidad (`OJ_RE_TIPO_DEP`: estación,
-  subestación, CAI, seccional, comando, dirección, distrito, gaula…): ahí el nombre ya está completo
+  subestación, CAI, seccional, comando, dependencia, dirección, distrito, policía, gaula, URI,
+  CESPA…): ahí el nombre ya está completo
   y anteponer algo lo estropearía. Se aplica en tres salidas —línea 4 del membrete (mayúscula),
   constancia de custodia de la narración y bloque de contacto (minúscula)— y **también en el
   formulario, al salir del campo** (`onblur`), en el wizard y en Ajustes: el usuario ve lo que se va
@@ -600,7 +601,29 @@ cada arreglo del generador se veía igual de roto: el generador nunca era el pro
   aplicado en el dossier; el nombre de la institución sigue siendo un campo del usuario.
 - `verify_oj.mjs` sube a **137 checks** (tabla de `ojEstacionLabel`, el paso 7 con el campo de logo y
   los `onblur`, y una carga **real** del archivo por `setInputFiles` que termina en `word/media/` y en
-  la vista de impresión). Anti-caché `?v=38` / `cache-v38`, `_BUILD=38`.
+  la vista de impresión). Anti-caché `?v=39` / `cache-v39`, `_BUILD=39`.
+
+### Escudo embebido (2026-07-30) — DECISIÓN EXPLÍCITA DEL USUARIO que revierte parte del de-branding
+⚠️ **Leer junto con «Publicación en Play Store (2026-07-14) — de-branding institucional».** Aquella
+sección prohíbe incrustar emblemas institucionales en el código. El usuario, tras advertírselo dos
+veces, ordenó lo contrario: *«la aplicación no debe de pedir logo. esto se debe de cargar
+automáticamente, el logo tiene que ser exactamente como el de la plantilla OJ»*. Es su decisión y su
+riesgo; queda registrada aquí para que nadie la revierta por error **ni la extienda sin preguntar**.
+- **`OJ_LOGO_B64`** = el escudo de `Documentos/Propuesta Plantilla OJ.docx` (`word/media/image1.png`,
+  1082×1052, **1,37 MB**), **resampleado a 400×389 JPEG q0.9 = 85 KB de base64**. El membrete lo
+  imprime a 723900 EMU (≈2 cm) → **~500 dpi**: se ve idéntico al del formato. ⚠️ Incrustar el PNG
+  original habría sumado **1,8 MB de base64** al HTML (que ya pesa 5,2 MB) en cada arranque, para
+  imprimirlo a 2 cm.
+- **La app ya no pide logo.** Se quitó el campo del paso 7 (`ojLogoWizHtml`, `ojWizCargarLogo`,
+  `ojWizQuitarLogo`, `ojRefrescarLogoWiz`) y el marcador dibujado con canvas (`ojLogoDemo`), que
+  existía justamente porque no había escudo embebido. `ojCfgDoc` inyecta `OJ_LOGO_B64` cuando no hay
+  `cfg.ojLogoB64`, **sin distinguir caso real de caso de demostración**.
+- **El reemplazo sigue existiendo, pero no pregunta**: Ajustes → Oficio de orden judicial muestra cuál
+  está en uso y permite cargar otro («Volver al del formato» restaura el embebido). Una unidad de otra
+  institución puede poner el suyo.
+- ⚠️ **Lo que sigue vigente del de-branding**: el nombre de la institución **no** está en el código
+  (las 4 líneas del membrete las escribe el usuario), y el **ícono de la app** sigue siendo el
+  monograma «L», no un escudo. Lo único que cambió es el logo **dentro del documento generado**.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

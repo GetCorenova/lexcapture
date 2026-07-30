@@ -715,6 +715,9 @@ const etiqueta = await page.evaluate(() => ({
   yaCompleto: ojEstacionLabel('ESTACIÓN DE POLICÍA CANDELARIA', true),
   otroTipo: ojEstacionLabel('SECCIONAL DE INVESTIGACIÓN CRIMINAL', true),
   cai: ojEstacionLabel('CAI Parque Bolívar', true),
+  // ⚠️ La palabra genérica ya nombra el tipo de unidad: no se le antepone nada.
+  generica: ojEstacionLabel('DEPENDENCIA DE PRUEBA', true),
+  yaDicePolicia: ojEstacionLabel('POLICÍA CANDELARIA', true),
   minuscula: ojEstacionLabel('La Candelaria', false),
   vacio: ojEstacionLabel('', true)
 }));
@@ -722,6 +725,8 @@ log(etiqueta.soloNombre === 'ESTACIÓN DE POLICÍA CANDELARIA',
   'Con solo el nombre, la app completa el tipo de dependencia', etiqueta.soloNombre);
 log(etiqueta.yaCompleto === 'ESTACIÓN DE POLICÍA CANDELARIA' && etiqueta.otroTipo === 'SECCIONAL DE INVESTIGACIÓN CRIMINAL' && etiqueta.cai === 'CAI Parque Bolívar',
   '⚠️ Y NO toca lo que ya trae su tipo de unidad (seccional, CAI, o ya completo)');
+log(etiqueta.generica === 'DEPENDENCIA DE PRUEBA' && etiqueta.yaDicePolicia === 'POLICÍA CANDELARIA',
+  '⚠️ Ni lo que ya nombra su tipo de otra forma — nada de «ESTACIÓN DE POLICÍA DEPENDENCIA…»');
 log(etiqueta.minuscula === 'Estación de Policía La Candelaria' && etiqueta.vacio === '',
   'En la narración y el bloque de contacto va en minúscula; vacío sigue vacío', etiqueta.minuscula);
 
@@ -730,22 +735,16 @@ const paso7 = await page.evaluate(async () => {
   go('wizard'); renderWiz();
   await new Promise(r => setTimeout(r, 300));
   return {
-    campoLogo: !!document.getElementById('oj-e-logo-file'),
+    // ⚠️ La app NO pide logo: el escudo del formato viene embebido.
+    pideLogo: !!document.getElementById('oj-e-logo-file'),
     blurDep: (document.getElementById('oj-e-dep') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0,
     blurCust: (document.getElementById('oj-c-est') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0
   };
 });
-log(paso7.campoLogo === true, 'El paso 7 ofrece cargar el logo donde pide las 4 líneas — ya no solo lo menciona');
+log(paso7.pideLogo === false, 'El paso 7 NO pide logo: el escudo del formato viene embebido y se pone solo');
 log(paso7.blurDep && paso7.blurCust, 'Los dos campos de estación completan el tipo al salir del campo');
 
-// Carga real del archivo por el <input type=file>, como lo haría el usuario.
-const pngTmp = join(ROOT, '_logo_tmp.png');
-await writeFile(pngTmp, Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAHElEQVQ4jWNgGAWjYBSMglEwCkbBKBgFo2AUAAAGGAAB2/3ZQwAAAABJRU5ErkJggg==', 'base64'));
-await page.setInputFiles('#oj-e-logo-file', pngTmp);
-await page.waitForTimeout(700);
 const cargado = await page.evaluate(async () => {
-  const previa = !!document.querySelector('#oj-e-logo img');
   const c = ojNuevoCaso();
   c.oj.encabezado = { ministerio: 'MINISTERIO DE DEFENSA', institucion: 'INSTITUCIÓN DE PRUEBA',
                       unidad: 'METROPOLITANA DE PRUEBA', dependencia: 'CANDELARIA' };
@@ -755,17 +754,30 @@ const cargado = await page.evaluate(async () => {
   const dec = p => new TextDecoder().decode(files[p]);
   const T = v => (v.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || []).map(s => s.replace(/<[^>]*>/g, ''));
   const doc = T(dec('word/document.xml'));
+  // El mismo caso, con un logo propio cargado en Ajustes: debe ganar.
+  const cfg = DB.getConfig();
+  const cv = document.createElement('canvas'); cv.width = cv.height = 48;
+  const cx = cv.getContext('2d'); cx.fillStyle = '#B00020'; cx.fillRect(0, 0, 48, 48);
+  cfg.ojLogoB64 = cv.toDataURL('image/png').split(',')[1]; cfg.ojLogoMime = 'image/png';
+  await DB.saveConfig(cfg);
+  const out2 = await buildOficioOJBlob(c, 'CARTA');
+  const files2 = await _unzipBufAsync(new Uint8Array(await out2.blob.arrayBuffer()));
+  cfg.ojLogoB64 = ''; cfg.ojLogoMime = ''; await DB.saveConfig(cfg);
+  const propio = Object.keys(files2).find(k => /media/.test(k));
   return {
-    previa, media: Object.keys(files).filter(k => /media/.test(k)),
+    media: Object.keys(files).filter(k => /media/.test(k)),
+    bytes: files[Object.keys(files).find(k => /media/.test(k))].length,
     header: T(dec('word/header1.xml')),
     vista: /<img /.test(lcPrintDoc(out).hdrFirst),
     narracion: doc.find(t => /bajo custodia en/.test(t)) || '',
-    contacto: doc.slice(-4)[0]
+    contacto: doc.slice(-4)[0],
+    propio: propio || null, propioBytes: propio ? files2[propio].length : 0
   };
 });
-log(cargado.previa === true, 'Al cargarlo desde el paso 7 se ve la miniatura sin salir del formulario');
 log(cargado.media.length === 1 && cargado.vista === true,
-  'Y llega al oficio de un caso REAL, en .docx y en la vista de impresión', cargado.media[0]);
+  'Sin tocar nada, el oficio sale con el escudo — en .docx y en la vista de impresión', cargado.media[0] + ' · ' + cargado.bytes + ' bytes');
+log(cargado.propio !== null && cargado.propioBytes !== cargado.bytes,
+  'Y un logo propio cargado en Ajustes sigue ganándole al embebido', cargado.propioBytes + ' bytes');
 log(cargado.header[3] === 'ESTACIÓN DE POLICÍA CANDELARIA',
   'La línea 4 del membrete sale completa aunque se haya escrito solo «CANDELARIA»', cargado.header[3]);
 log(/custodia en Estación de Policía La Candelaria/.test(cargado.narracion) && cargado.contacto === 'Estación de Policía La Candelaria',

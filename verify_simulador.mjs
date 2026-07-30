@@ -265,10 +265,9 @@ log(ofi.tieneNombre && ofi.tieneOrden && ofi.tieneDespacho && ofi.tieneCustodia 
   JSON.stringify({ n: ofi.tieneNombre, o: ofi.tieneOrden, d: ofi.tieneDespacho, c: ofi.tieneCustodia, a: ofi.tieneAnexos }));
 log(ofi.membrete === true, 'Las CUATRO líneas del membrete inventado llegan al encabezado de página');
 
-/* El membrete de un caso de demostración tiene que verse COMPLETO, logo incluido:
-   con la casilla vacía no se ve cómo va a quedar el oficio. Pero el marcador es
-   solo para la demostración — un oficio real no lleva imágenes que el
-   funcionario no cargó, y el logo del usuario siempre manda sobre el marcador. */
+/* El escudo del formato viene EMBEBIDO: la app no lo pide y sale solo, igual en
+   un caso de demostración que en uno real. Lo que el usuario cargue en Ajustes
+   sigue mandando sobre el embebido. */
 const logo = await page.evaluate(async () => {
   const media = async c => {
     const out = await buildOficioOJBlob(c, 'CARTA');
@@ -293,13 +292,13 @@ const logo = await page.evaluate(async () => {
   cfg.ojLogoB64 = ''; cfg.ojLogoMime = ''; await DB.saveConfig(cfg);
   return { sinCfg, conCfg, propioLen: propio.length };
 });
-log(logo.sinCfg.demo.parte === 'word/media/logo.png' && logo.sinCfg.demo.blip === true,
-  'Sin logo en Ajustes, el caso de demostración igual muestra la casilla ocupada', logo.sinCfg.demo.bytes + ' bytes');
+log(logo.sinCfg.demo.parte === 'word/media/logo.jpeg' && logo.sinCfg.demo.blip === true,
+  'Sin nada configurado, el escudo del formato sale solo', logo.sinCfg.demo.bytes + ' bytes');
 log(logo.sinCfg.demo.vista === true, 'Y también en la vista de impresión (PDF), no solo en el .docx');
-log(logo.sinCfg.real.parte === null && logo.sinCfg.real.blip === false,
-  '⚠️ En un oficio REAL sin logo cargado no se inventa ninguna imagen');
+log(logo.sinCfg.real.parte === 'word/media/logo.jpeg' && logo.sinCfg.real.bytes === logo.sinCfg.demo.bytes,
+  'Un oficio REAL lleva exactamente el mismo escudo: no se distingue de la demostración');
 log(logo.conCfg.demo.bytes === logo.conCfg.real.bytes && logo.conCfg.demo.bytes !== logo.sinCfg.demo.bytes,
-  'El logo del usuario manda sobre el marcador — también en los casos simulados', logo.conCfg.demo.bytes + ' bytes');
+  'El logo propio de la unidad manda sobre el embebido', logo.conCfg.demo.bytes + ' bytes');
 log(logo.conCfg.real.parte === 'word/media/logo.png' && logo.conCfg.real.vista === true,
   'Y llega al oficio real en los dos formatos');
 
