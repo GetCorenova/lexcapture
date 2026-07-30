@@ -132,9 +132,11 @@ log(/Sin perfil cargado/.test(panel7), 'Y avisa que no hay perfil para la firma'
 log((await page.inputValue('#oj-e-uni')) === '', 'La unidad llega vacía: no hereda la del dueño');
 
 const durasAntes = await page.evaluate(() => { ojCollect(); return ojDuras(wc).map(v => v.id); });
-log(durasAntes.includes('V26') && durasAntes.includes('V27') && durasAntes.includes('V28'),
-  'Sin encabezado ni firma no se puede generar el oficio', durasAntes.join(','));
+log(['V30', 'V31', 'V26', 'V27', 'V28'].every(id => durasAntes.includes(id)),
+  'Sin las 4 líneas del membrete ni la firma no se puede generar el oficio', durasAntes.join(','));
 
+await page.fill('#oj-e-min', 'MINISTERIO DE PRUEBA INVITADO');
+await page.fill('#oj-e-ins', 'INSTITUCION DE PRUEBA INVITADO');
 await page.fill('#oj-e-uni', 'METROPOLITANA DE PRUEBA INVITADO');
 await page.fill('#oj-e-dep', 'ESTACION DE PRUEBA INVITADO');
 await page.fill('#oj-c-est', 'Estacion de Policia Invitado');

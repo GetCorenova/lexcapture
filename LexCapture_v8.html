@@ -1477,37 +1477,18 @@ body.guest{padding-top:38px}
           </div>
           <div id="aj-oj-logo-prev"></div>
           <p class="oj-hint">Imagen cuadrada, se imprime a 1,9 cm a la izquierda de las cuatro líneas. Si no cargas ninguna, el texto queda exactamente en la misma posición.</p>
-          <div class="fr">
-            <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
-            <div class="fg"><label class="fl">Consecutivo / dependencia</label><input class="fi" id="aj-oj-cons" placeholder="Ej: MEVAL – ESCAN – 1.10"></div>
-          </div>
+          <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
           <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
-          <div class="st">Bloque de contacto al pie del oficio</div>
-          <p class="oj-hint">Cierra el documento con los datos de la dependencia que lo emite.</p>
-          <div class="fg"><label class="fl">Dependencia (como debe verse en el pie)</label><input class="fi" id="aj-oj-pdep" placeholder="Ej: Estación de Policía La Candelaria"></div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-pdir" placeholder="Dirección de la dependencia"></div>
-            <div class="fg"><label class="fl">Teléfonos</label><input class="fi" id="aj-oj-ptel" placeholder="Teléfonos de contacto"></div>
-          </div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-oj-pcor" placeholder="Correo institucional"></div>
-            <div class="fg"><label class="fl">Sitio web</label><input class="fi" id="aj-oj-pweb" placeholder="Sitio web institucional"></div>
-          </div>
-          <div class="st">Lugar de custodia por defecto</div>
-          <p class="oj-hint">Dónde queda normalmente el capturado. El oficio lo deja por escrito para que el despacho sepa a dónde dirigir sus requerimientos. Si un procedimiento termina en otro sitio, se cambia en el paso 7 del formulario.</p>
-          <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Si se deja vacío se usa la dependencia del pie"></div>
-          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Dirección donde queda el capturado"></div>
+          <div class="st">Lugar de custodia y bloque de contacto</div>
+          <p class="oj-hint">Dónde queda normalmente el capturado. Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración y en el bloque de contacto del final. Si un procedimiento termina en otro sitio, se cambian en el paso 7 del formulario.</p>
+          <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Ej: Estación de Policía La Candelaria"></div>
+          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Ej: Calle 48 # 55–50, barrio La Candelaria, Medellín"></div>
           <div class="fr">
             <div class="fg"><label class="fl">Abonado telefónico</label><input class="fi" id="aj-oj-ctel" placeholder="Teléfono de la unidad"></div>
             <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-oj-ccor" placeholder="Correo de la unidad"></div>
           </div>
-          <div class="fr3">
-            <div class="fg"><label class="fl">Código de formato</label><input class="fi" id="aj-oj-cod" placeholder="Ej: 1DS–OF–0001"></div>
-            <div class="fg"><label class="fl">Versión</label><input class="fi" id="aj-oj-ver" placeholder="Ej: VER: 6"></div>
-            <div class="fg"><label class="fl">Clasificación</label><input class="fi" id="aj-oj-clas" placeholder="Ej: INFORMACIÓN PÚBLICA"></div>
-          </div>
-          <p class="oj-hint">Se imprimen a la izquierda del pie, junto al número de página. Déjalos vacíos si tu unidad no los usa.</p>
+          <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-oj-pweb" placeholder="Última línea del bloque de contacto"></div>
           <div class="st">Jornada judicial hábil</div>
           <p class="oj-hint">Se usa para calcular si el juzgado está disponible dentro del término de 36 horas. Los festivos de Colombia se calculan solos.</p>
           <div class="fr">
@@ -1851,7 +1832,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 34;
+var _BUILD = 35;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2407,7 +2388,11 @@ function _cfgConDefaults(stored) {
          en el código, cada unidad configura el suyo. */
       ojMinisterio:'',ojInstitucion:'',ojUnidad:'',ojDependencia:'',ojCiudad:'',
       ojAsunto:'Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}',
-      ojConsecutivo:'',ojCodigoFormato:'',ojVersionFormato:'',ojClasificacion:'INFORMACIÓN PÚBLICA',
+      /* ⚠️ Ya no se imprimen: el formato no lleva consecutivo antes de la fecha
+         ni código/versión/clasificación en el pie. Se conservan como claves para
+         no romper configuraciones ya guardadas, pero ninguna llega al documento
+         y no tienen campo en Ajustes. NO reintroducirlas. */
+      ojConsecutivo:'',ojCodigoFormato:'',ojVersionFormato:'',ojClasificacion:'',
       ojPieDireccion:'',ojPieTelefonos:'',ojPieCorreo:'',ojPieWeb:'',ojUbicacionTRD:'',ojReviso:'',
       /* Bloque de contacto al pie del oficio y lugar donde queda el capturado.
          El pie imprime la dependencia tal como debe verse (ojPieDependencia);
@@ -4383,12 +4368,9 @@ function loadAjustesFields() {
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
     'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa,
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,'aj-oj-dep':cfg.ojDependencia,
-    'aj-oj-ciu':cfg.ojCiudad,'aj-oj-cons':cfg.ojConsecutivo,'aj-oj-asunto':cfg.ojAsunto,
-    'aj-oj-pdep':cfg.ojPieDependencia,
-    'aj-oj-pdir':cfg.ojPieDireccion,'aj-oj-ptel':cfg.ojPieTelefonos,'aj-oj-pcor':cfg.ojPieCorreo,'aj-oj-pweb':cfg.ojPieWeb,
+    'aj-oj-ciu':cfg.ojCiudad,'aj-oj-asunto':cfg.ojAsunto,'aj-oj-pweb':cfg.ojPieWeb,
     'aj-oj-cest':cfg.ojCustEstacion,'aj-oj-cdir':cfg.ojCustDireccion,
     'aj-oj-ctel':cfg.ojCustTelefono,'aj-oj-ccor':cfg.ojCustCorreo,
-    'aj-oj-cod':cfg.ojCodigoFormato,'aj-oj-ver':cfg.ojVersionFormato,'aj-oj-clas':cfg.ojClasificacion,
     'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
@@ -4477,15 +4459,11 @@ function saveAjustes() {
   if(document.getElementById('aj-oj-min')){
     cfg.ojMinisterio=v('aj-oj-min'); cfg.ojInstitucion=v('aj-oj-inst');
     cfg.ojUnidad=v('aj-oj-uni'); cfg.ojDependencia=v('aj-oj-dep');
-    cfg.ojCiudad=v('aj-oj-ciu'); cfg.ojConsecutivo=v('aj-oj-cons');
+    cfg.ojCiudad=v('aj-oj-ciu');
     cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
-    cfg.ojPieDependencia=v('aj-oj-pdep');
-    cfg.ojPieDireccion=v('aj-oj-pdir'); cfg.ojPieTelefonos=v('aj-oj-ptel');
-    cfg.ojPieCorreo=v('aj-oj-pcor'); cfg.ojPieWeb=v('aj-oj-pweb');
     cfg.ojCustEstacion=v('aj-oj-cest'); cfg.ojCustDireccion=v('aj-oj-cdir');
     cfg.ojCustTelefono=v('aj-oj-ctel'); cfg.ojCustCorreo=v('aj-oj-ccor');
-    cfg.ojCodigoFormato=v('aj-oj-cod'); cfg.ojVersionFormato=v('aj-oj-ver');
-    cfg.ojClasificacion=v('aj-oj-clas');
+    cfg.ojPieWeb=v('aj-oj-pweb');
     cfg.ojJornadaIni=v('aj-oj-jini')||'08:00'; cfg.ojJornadaFin=v('aj-oj-jfin')||'17:00';
   }
   DB.saveConfig(cfg); toast('Ajustes guardados ✓');
@@ -5097,12 +5075,15 @@ function ojNuevoCaso(){
 function ojPrellenarDeCfg(c,cfg){
   cfg=cfg||DB.getConfig();
   var perfil=ojPerfilActivo(cfg), e=c.oj.encabezado, cu=c.oj.custodia, fi=c.oj.firma;
+  if(!e.ministerio) e.ministerio=cfg.ojMinisterio||'';
+  if(!e.institucion) e.institucion=cfg.ojInstitucion||'';
   if(!e.unidad) e.unidad=cfg.ojUnidad||'';
   if(!e.dependencia) e.dependencia=cfg.ojDependencia||'';
   if(!cu.estacion) cu.estacion=cfg.ojCustEstacion||cfg.ojPieDependencia||cfg.ojDependencia||'';
   if(!cu.direccion) cu.direccion=cfg.ojCustDireccion||cfg.ojPieDireccion||'';
   if(!cu.telefono) cu.telefono=cfg.ojCustTelefono||cfg.ojPieTelefonos||'';
   if(!cu.correo) cu.correo=cfg.ojCustCorreo||cfg.ojPieCorreo||'';
+  if(!cu.web) cu.web=cfg.ojPieWeb||'';
   if(!fi.grado) fi.grado=perfil.grado||(cfg.servidor&&cfg.servidor.grado)||'';
   if(!fi.nombre) fi.nombre=perfil.nombre||(cfg.servidor&&cfg.servidor.nombre)||'';
   if(!fi.cargo) fi.cargo=perfil.cargo||(cfg.servidor&&cfg.servidor.cargo)||'';
@@ -5162,13 +5143,16 @@ function ojEstructura(){
       sugeridoTipo:'', sugeridoNombre:'', reglaAplicada:'', fundamento:'', motivoCambio:'',
       fechaEntrega:'', horaEntrega:'', recibeNombre:'', recibeCargo:''
     },
-    /* Encabezado del oficio (líneas 3 y 4 del membrete). Sale de Ajustes, pero se
-       guarda EN EL CASO: así el documento se puede volver a generar meses después
-       igual que se emitió, aunque la unidad del usuario haya cambiado. */
-    encabezado:{ unidad:'', dependencia:'' },
-    /* Lugar donde queda el capturado. Se imprime como constancia dentro de la
-       narración: el despacho tiene que saber a dónde dirigir sus requerimientos. */
-    custodia:{ estacion:'', direccion:'', telefono:'', correo:'' },
+    /* Las CUATRO líneas del membrete. Salen de Ajustes, pero se guardan EN EL
+       CASO: así el documento se puede volver a generar meses después igual que
+       se emitió, aunque la unidad del usuario haya cambiado.
+       ⚠️ Las cuatro se piden en el formulario si faltan: un oficio sin membrete
+       completo no es el formato. */
+    encabezado:{ ministerio:'', institucion:'', unidad:'', dependencia:'' },
+    /* Lugar donde queda el capturado. Se usa DOS veces en el documento: en la
+       constancia dentro de la narración y en el bloque de contacto del final
+       (que en el formato son los mismos datos). */
+    custodia:{ estacion:'', direccion:'', telefono:'', correo:'', web:'' },
     /* Quien firma. Se precarga del perfil activo; se puede diligenciar a mano
        (equipo prestado o modo invitado, donde no hay perfil configurado). */
     firma:{ grado:'', nombre:'', cargo:'', telefono:'', correo:'' }
@@ -5463,10 +5447,14 @@ function ojValidar(c){
   if(!de.nombre) add('V22','DURA',6,'Falta el destinatario confirmado del informe.');
   // Encabezado y firma: sin ellos el oficio sale sin membrete o sin quien lo suscriba.
   var en=c.oj.encabezado||{}, fi=c.oj.firma||{}, cu=c.oj.custodia||{};
+  // El membrete son cuatro líneas: con una vacía, el oficio ya no es el formato.
+  if(!en.ministerio) add('V30','DURA',6,'Falta la línea 1 del encabezado (ministerio o sector al que pertenece la unidad).');
+  if(!en.institucion) add('V31','DURA',6,'Falta la línea 2 del encabezado (nombre de la institución).');
   if(!en.unidad) add('V26','DURA',6,'Falta la unidad del encabezado (metropolitana, departamento o dirección). Configúrala en Ajustes o diligénciala en este paso.');
   if(!en.dependencia) add('V27','DURA',6,'Falta la estación o dependencia del encabezado.');
   if(!fi.nombre) add('V28','DURA',6,'Falta quién firma el oficio: cárgalo del perfil activo o diligéncialo en este paso.');
-  if(!cu.estacion&&!cu.direccion) add('V29','BLANDA',6,'No se indicó dónde queda el '+ojTermino(c).sust+'. El oficio deja esa constancia para que el despacho sepa a dónde dirigir sus requerimientos.');
+  // El bloque de contacto del final del oficio sale de estos mismos datos.
+  if(!cu.estacion&&!cu.direccion) add('V29','DURA',6,'Falta dónde queda el '+ojTermino(c).sust+'. Con eso el oficio arma la constancia de custodia y el bloque de contacto del final.');
   if(de.sugeridoNombre&&de.nombre&&de.nombre!==de.sugeridoNombre&&!de.motivoCambio)
     add('V23','BLANDA',6,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
   var plazo=ojPlazo36(c);
@@ -6108,7 +6096,7 @@ function ojStep7(){
     }).join('<br>')+'</div>';
   };
   var e=wc.oj.encabezado, cu=wc.oj.custodia, fi=wc.oj.firma, t=ojTermino(wc);
-  var faltaEnc=(!e.unidad||!e.dependencia);
+  var faltaEnc=(!e.ministerio||!e.institucion||!e.unidad||!e.dependencia);
   return '<div class="st" style="margin-top:0">7 · Puesta a disposición</div>'+
     ojReloj36Html()+
     sug+
@@ -6146,27 +6134,31 @@ function ojStep7(){
     /* Encabezado del oficio (selecciones 1 y 2). Normalmente ya viene de Ajustes;
        si el equipo no está configurado se pide aquí y no se vuelve a preguntar. */
     '<div class="oj-blk">'+
-      '<div class="st">Encabezado del oficio</div>'+
+      '<div class="st">Encabezado del oficio (las 4 líneas del membrete)</div>'+
       (faltaEnc
-        ? '<div class="oj-alert blanda"><b>Falta el encabezado</b>Este equipo no tiene configurada la unidad ni la '+
-          'dependencia. Diligéncialas aquí: quedan guardadas como valor por defecto y no se te vuelven a pedir.</div>'
+        ? '<div class="oj-alert dura"><b>Falta el encabezado</b>El oficio se imprime con estas cuatro líneas arriba. '+
+          'Diligéncialas aquí: quedan guardadas como valor por defecto y no se te vuelven a pedir.</div>'
         : '<p class="oj-hint">Viene de Ajustes → Oficio de orden judicial. Si lo cambias aquí, queda como nuevo valor por defecto.</p>')+
-      ojwF('Unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES')+
-      ojwF('Estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Estación, seccional o dependencia'),'Ej: ESTACIÓN DE POLICÍA CANDELARIA · SECCIONAL DE INVESTIGACIÓN CRIMINAL')+
+      ojwF('Línea 1 — ministerio o sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece la unidad'))+
+      ojwF('Línea 2 — institución',ojwIn('oj-e-ins',e.institucion,'Nombre de tu institución'))+
+      ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES')+
+      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Estación, seccional o dependencia'),'Ej: ESTACIÓN DE POLICÍA CANDELARIA · SECCIONAL DE INVESTIGACIÓN CRIMINAL')+
+      '<p class="oj-hint">El logo o escudo del membrete se carga una sola vez en Ajustes → Oficio de orden judicial.</p>'+
     '</div>'+
 
     /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
        narración. No siempre es la misma estación, por eso se puede cambiar aquí. */
     '<div class="oj-blk">'+
       '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
-      '<p class="oj-hint">El oficio cierra la narración diciéndole al despacho dónde está el '+escHtml(t.sust)+' y cómo '+
-      'contactar esa unidad. Viene de Ajustes, pero cámbialo si esta vez quedó en otro sitio.</p>'+
+      '<p class="oj-hint">Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración '+
+      'y en el bloque de contacto del final. Vienen de Ajustes, pero cámbialos si esta vez quedó en otro sitio.</p>'+
       ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Ej: Estación de Policía La Candelaria'))+
       ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'))+
       ojwR(
         ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
         ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
       )+
+      ojwF('Sitio web institucional',ojwIn('oj-c-web',cu.web,'Última línea del bloque de contacto'))+
     '</div>'+
 
     /* Firma (selección 8): del perfil activo, o a mano si no hay perfil. */
@@ -6294,9 +6286,10 @@ function ojCollect(){
     x.municipio=ojV('oj-x-mun'); x.departamento=ojV('oj-x-dep'); x.motivoCambio=ojV('oj-x-mot');
     x.fechaEntrega=ojV('oj-x-fec'); x.horaEntrega=ojV('oj-x-hor');
     x.recibeNombre=ojV('oj-x-rec'); x.recibeCargo=ojV('oj-x-rcar');
-    wc.oj.encabezado={unidad:ojV('oj-e-uni'),dependencia:ojV('oj-e-dep')};
+    wc.oj.encabezado={ministerio:ojV('oj-e-min'),institucion:ojV('oj-e-ins'),
+      unidad:ojV('oj-e-uni'),dependencia:ojV('oj-e-dep')};
     wc.oj.custodia={estacion:ojV('oj-c-est'),direccion:ojV('oj-c-dir'),
-      telefono:ojV('oj-c-tel'),correo:ojV('oj-c-cor')};
+      telefono:ojV('oj-c-tel'),correo:ojV('oj-c-cor'),web:ojV('oj-c-web')};
     wc.oj.firma={grado:ojV('oj-f-gra'),nombre:ojV('oj-f-nom'),cargo:ojV('oj-f-car'),
       telefono:ojV('oj-f-tel'),correo:ojV('oj-f-cor')};
   }
@@ -6623,13 +6616,11 @@ function ojEncabezadoXml(cfg){
 function ojPieXml(cfg){
   var out=ojxP('',{keepLines:false,after:80,line:60,lineRule:'exact',jc:'center',
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
-  /* Código, versión y clasificación van en su propia línea centrada, y el número
-     de página en la siguiente — como en el formato. ⚠️ No se usan tabuladores:
-     en una hoja angosta el texto de la izquierda desborda el tabulador y se pega
-     al «Página N de M» («INFORMACIÓN PÚBLICAPágina 1 de 2»). Dos líneas
-     centradas se comportan igual en cualquier ancho. */
-  var meta=[cfg.ojCodigoFormato,cfg.ojVersionFormato,cfg.ojClasificacion].filter(Boolean).join('   ');
-  if(meta) out+=ojxP(ojxRun(meta,{sz:OJX_SZ_PIE,color:'404040'}),{keepLines:false,after:0,line:200,jc:'center'});
+  /* ⚠️ El pie del formato lleva EXCLUSIVAMENTE «Página N de M» centrado, en 9 pt
+     gris, bajo un filete fino. Nada más. Antes se imprimía además una línea con
+     código de formato, versión y clasificación («INFORMACIÓN PÚBLICA»): eso no
+     está en «Propuesta Plantilla OJ» y era una adición heredada del módulo
+     anterior. No volver a agregar nada aquí. */
   out+=ojxP(ojxRun('Página ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoNum()+
             ojxRun(' de ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoTot(),
             {keepLines:false,after:30,line:220,jc:'center'});
@@ -6646,6 +6637,8 @@ function ojPaquete(cfg){
 function ojCfgDoc(c,cfg){
   var out={}; for(var k in cfg) out[k]=cfg[k];
   var e=(c.oj&&c.oj.encabezado)||{};
+  if(e.ministerio) out.ojMinisterio=e.ministerio;
+  if(e.institucion) out.ojInstitucion=e.institucion;
   if(e.unidad) out.ojUnidad=e.unidad;
   if(e.dependencia) out.ojDependencia=e.dependencia;
   return out;
@@ -6842,8 +6835,10 @@ function ojDocCuerpo(c,cfg){
   var t=ojTermino(c), out='';
   var J={jc:'both'};                       // párrafo de texto corrido, justificado
 
-  // ── Ciudad y fecha del procedimiento (selección 3) ──
-  if(cfg.ojConsecutivo) out+=ojxP(ojxRun('No. ________ / '+cfg.ojConsecutivo),{after:160});
+  /* ── Ciudad y fecha del procedimiento (selección 3) ──
+     ⚠️ El documento ABRE con esta línea. No va antes ningún consecutivo
+     («No. ____ / MEVAL – ESCAN – 1.10»): eso no está en el formato y era una
+     adición heredada del módulo anterior. */
   var ciudad=cfg.ojCiudad||g.lugarMunicipio||d.municipio||'';
   out+=ojxP(ojxRun([ciudad,ojFechaLarga(g.fecha||c.fechaProc)].filter(Boolean).join(', ')),{after:240});
 
@@ -6926,29 +6921,32 @@ function ojDocCuerpo(c,cfg){
   out+=ojxP(ojxRun(fi.cargo||'',{sz:OJX_SZ_TABLA}),{after:0});
   out+=ojxP(ojxRun([fi.telefono?'Celular: '+fi.telefono:'',fi.correo||''].filter(Boolean).join(' · '),{sz:OJX_SZ_TABLA}),{after:320});
 
-  // ── Anexos: la app cuenta, el usuario solo marca o escribe (selección 9) ──
+  /* ── Anexos: la app cuenta, el usuario solo marca o escribe (selección 9) ──
+     ⚠️ El bloque SIEMPRE se imprime, aunque no se haya marcado ninguno: es parte
+     de la estructura del formato, no un extra. Antes desaparecía entero cuando
+     la lista venía vacía, que es excluir información del documento. */
   var anexos=(a.anexos||[]).map(function(s){ return ojAnexoTexto(s,c); }).filter(Boolean);
-  if(anexos.length){
-    out+=ojxP(ojxRun('Anexos: '+ojNumPalabra(anexos.length)+' ('+anexos.length+')',{b:true,sz:OJX_SZ_TABLA}),
-      {keepNext:true,after:60});
-    anexos.forEach(function(an,i){
-      out+=ojxP(ojxRun('– '+an,{sz:OJX_SZ_TABLA}),{after:(i===anexos.length-1)?0:40,indL:284,hang:284});
-    });
-  }
+  out+=ojxP(ojxRun('Anexos:'+(anexos.length?' '+ojNumPalabra(anexos.length)+' ('+anexos.length+')':''),
+    {b:true,sz:OJX_SZ_TABLA}),{keepNext:true,after:60});
+  anexos.forEach(function(an,i){
+    out+=ojxP(ojxRun('– '+an,{sz:OJX_SZ_TABLA}),{after:(i===anexos.length-1)?0:40,indL:284,hang:284});
+  });
 
-  // ── Bloque de contacto al pie del cuerpo (selección 10) ──
-  var pieLineas=[
-    [cfg.ojPieDependencia||cfg.ojDependencia||'',true],
-    [cfg.ojPieDireccion||'',false],
-    [[cfg.ojPieTelefonos?'Teléfono: '+cfg.ojPieTelefonos:'',cfg.ojPieCorreo||''].filter(Boolean).join(' · '),false],
-    [cfg.ojPieWeb||'',false]
-  ].filter(function(l){ return l[0]; });
-  if(pieLineas.length){
-    out+=ojxFilete();
-    pieLineas.forEach(function(l){
-      out+=ojxP(ojxRun(l[0],{b:l[1],sz:OJX_SZ_PIE}),{after:0,jc:'center'});
-    });
-  }
+  /* ── Bloque de contacto al pie del cuerpo (selección 10) ──
+     Son los mismos datos de la unidad donde queda el capturado, que ya se piden
+     en el paso 7: el formato los repite aquí para que el despacho sepa a dónde
+     dirigirse. ⚠️ TAMBIÉN se imprime siempre, con sus cuatro renglones: lo que
+     el usuario no haya diligenciado queda en blanco, igual que en las tablas —
+     pero la estructura del formato no se pierde nunca. */
+  var cu=c.oj.custodia||{};
+  out+=ojxFilete();
+  [[cu.estacion||'',true],
+   [cu.direccion||'',false],
+   [[cu.telefono?'Teléfono: '+cu.telefono:'',cu.correo||''].filter(Boolean).join(' · '),false],
+   [cu.web||'',false]
+  ].forEach(function(l){
+    out+=ojxP(ojxRun(l[0],{b:l[1],sz:OJX_SZ_PIE}),{after:0,jc:'center'});
+  });
   return out+ojxCierre();
 }
 
@@ -7109,12 +7107,15 @@ async function ojProducirOficio(c,sel){
    pidió el dato una vez, no en cada procedimiento. */
 function ojRecordarEncabezado(c){
   var cfg=DB.getConfig(), e=c.oj.encabezado||{}, cu=c.oj.custodia||{}, cambio=false;
+  if(e.ministerio&&cfg.ojMinisterio!==e.ministerio){ cfg.ojMinisterio=e.ministerio; cambio=true; }
+  if(e.institucion&&cfg.ojInstitucion!==e.institucion){ cfg.ojInstitucion=e.institucion; cambio=true; }
   if(e.unidad&&cfg.ojUnidad!==e.unidad){ cfg.ojUnidad=e.unidad; cambio=true; }
   if(e.dependencia&&cfg.ojDependencia!==e.dependencia){ cfg.ojDependencia=e.dependencia; cambio=true; }
   if(cu.estacion&&!cfg.ojCustEstacion){ cfg.ojCustEstacion=cu.estacion; cambio=true; }
   if(cu.direccion&&!cfg.ojCustDireccion){ cfg.ojCustDireccion=cu.direccion; cambio=true; }
   if(cu.telefono&&!cfg.ojCustTelefono){ cfg.ojCustTelefono=cu.telefono; cambio=true; }
   if(cu.correo&&!cfg.ojCustCorreo){ cfg.ojCustCorreo=cu.correo; cambio=true; }
+  if(cu.web&&!cfg.ojPieWeb){ cfg.ojPieWeb=cu.web; cambio=true; }
   if(cambio) DB.saveConfig(cfg);
 }
 function ojPersonaEspejo(c){

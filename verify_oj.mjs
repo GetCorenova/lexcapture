@@ -53,20 +53,13 @@ await page.evaluate(() => {
   cfg.ojUnidad = 'UNIDAD DE PRUEBA';
   cfg.ojDependencia = 'DEPENDENCIA DE PRUEBA';
   cfg.ojCiudad = 'Ciudad Prueba';
-  cfg.ojConsecutivo = 'XXX – YYY – 1.10';
-  cfg.ojPieDependencia = 'Dependencia Pie de Prueba';
-  cfg.ojPieDireccion = 'Calle de prueba 1';
-  cfg.ojPieTelefonos = '6040000000';
-  cfg.ojPieCorreo = 'correo@prueba.test';
   cfg.ojPieWeb = 'www.prueba.test';
-  // Lugar de custodia por defecto: distinto del pie, para comprobar que la
-  // constancia de la narración usa sus propios datos y no los del pie.
+  // Los mismos datos de custodia alimentan la constancia de la narración Y el
+  // bloque de contacto del final del oficio (en el formato son los mismos).
   cfg.ojCustEstacion = 'Estación de Prueba Custodia';
   cfg.ojCustDireccion = 'Calle de custodia 9';
   cfg.ojCustTelefono = '6041111111';
   cfg.ojCustCorreo = 'custodia@prueba.test';
-  cfg.ojCodigoFormato = '1DS-OF-0001';
-  cfg.ojVersionFormato = 'VER: 6';
   cfg.perfiles = [{ id: 'pf1', grado: 'Subintendente', nombre: 'Nombre Firmante', cedula: '1.111.111', telefono: '3000000000', cargo: 'Integrante patrulla de vigilancia', correo: 'firmante@prueba.test' }];
   cfg.perfilActivo = 'pf1';
   DB.saveConfig(cfg);
@@ -397,7 +390,12 @@ log(tiene('RC-0001'), 'Rótulo de cadena de custodia del elemento incautado');
 log(/artículo 303 de la Ley 906 de 2004/.test(T), 'Constancia de lectura de derechos (art. 303 CPP)');
 log(/treinta y seis \(36\) horas/.test(T) && /artículo 28 de la Constitución/.test(T), 'Vencimiento del término constitucional en el relato');
 log(tiene('Subintendente NOMBRE FIRMANTE'), 'Firma: grado como se escribió y nombre en mayúsculas, como el formato');
-log(tiene('XXX – YYY – 1.10'), 'Consecutivo y dependencia configurables');
+/* El formato NO lleva consecutivo antes de la fecha ni código/versión/
+   clasificación en el pie: eran adiciones del módulo anterior. */
+log(T.trim().indexOf('Ciudad Prueba,') === 0, 'El documento ABRE con la ciudad y la fecha, sin consecutivo delante',
+  T.trim().slice(0, 34));
+log(/INFORMACIÓN PÚBLICA/.test(doc.footer) === false && /1DS-OF/.test(doc.footer) === false,
+  'El pie lleva SOLO «Página N de M», como el formato');
 log(/\{\{/.test(T) === false, 'Cero marcadores sin resolver en el documento final');
 log(/SANTANDER|VIDAL|Wesner|Nelson|DAYNIS|Velásquez/i.test(T) === false, 'Cero rastros de datos de ejemplo: el formato sale limpio');
 
@@ -407,15 +405,40 @@ log(/Finalmente, se deja constancia de que el capturado quedó bajo custodia en 
 log(tiene('Estación de Prueba Custodia') && tiene('Calle de custodia 9') &&
     /abonado telefónico 6041111111 y correo electrónico custodia@prueba.test/.test(T),
   'La constancia usa la estación, dirección, teléfono y correo diligenciados');
-log(tiene('Dependencia Pie de Prueba') && tiene('Calle de prueba 1') &&
-    tiene('Teléfono: 6040000000 · correo@prueba.test') && tiene('www.prueba.test'),
-  'Bloque de contacto al pie del cuerpo, con el correo configurado');
+log(tiene('Teléfono: 6041111111 · custodia@prueba.test') && tiene('www.prueba.test'),
+  'El bloque de contacto del final usa los mismos datos de la custodia');
 log(tiene('Anexos: tres (3)'), 'La app cuenta los anexos y los escribe en letras');
 log(tiene('– Informe dejando a disposición') && tiene('– Acta de derechos del capturado') &&
     tiene('– Copia orden de captura oficio No. 002'),
   'Anexos en el orden marcado, con el No. de la orden ya resuelto');
 log(T.indexOf('– Informe dejando a disposición') < T.indexOf('– Copia orden de captura oficio No. 002'),
   'Se respeta el orden en que el usuario los señaló');
+
+/* ── Nada del formato se excluye nunca ──────────────────────────────────────
+   Antes, el bloque de anexos desaparecía entero si no se marcaba ninguno, y el
+   de contacto si no se habían llenado sus campos en Ajustes. Excluir parte del
+   documento está prohibido: la estructura va siempre, con los datos en blanco. */
+const sinDatos = await page.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCases()[0]));
+  c.oj.actuacion.anexos = [];                       // el usuario no marcó ninguno
+  c.oj.custodia = { estacion: '', direccion: '', telefono: '', correo: '', web: '' };
+  const out = await buildOficioOJBlob(c, 'CARTA');
+  const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+  const xml = new TextDecoder().decode(files['word/document.xml']);
+  const ts = [...xml.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g)].map(m => m[1]);
+  return {
+    texto: ts.join('\n'),
+    // El filete que separa el bloque de contacto sigue ahí
+    filete: /<w:bottom w:val="single" w:sz="6" w:space="1" w:color="BFBFBF"\/>/.test(xml),
+    // Y sus 4 renglones centrados también
+    centrados: (xml.match(/<w:jc w:val="center"\/>/g) || []).length
+  };
+});
+log(/Anexos:/.test(sinDatos.texto),
+  'Sin marcar anexos, el bloque «Anexos:» sigue en el documento (no se excluye)');
+log(sinDatos.filete === true && sinDatos.centrados >= 4,
+  'Sin datos de custodia, el bloque de contacto conserva su filete y sus 4 renglones',
+  sinDatos.centrados + ' renglones centrados');
 
 /* ─────────── 7. Las plantillas subidas quedaron descartadas ───────────
    Antes, una plantilla activa de tipo oj_membrete aportaba el paquete del

@@ -442,6 +442,37 @@ tramas y tipografía. Lo que cambia entre `.docx` y PDF es el motor que lo pinta
   dibujo aproximado del formato en vez del formato.
 - Anti-caché a `?v=34` / `cache-v34`, `_BUILD=34`.
 
+## OJ v2.1 (2026-07-29) — cuatro desviaciones del formato, reportadas en campo
+El usuario detectó que el oficio **no respetaba 100 %** «Propuesta Plantilla OJ»: agregaba cosas que
+el formato no tiene y **excluía** bloques que sí tiene. Las cuatro venían del mismo error de criterio:
+hacer **condicional** lo que en el formato es **fijo**, y arrastrar añadidos del módulo anterior.
+Reproducidas generando el documento como un usuario que no ha tocado Ajustes. `verify_oj.mjs` sube a
+**115 checks**.
+
+- **El membrete salía mutilado.** `ojMinisterio` y `ojInstitucion` (líneas 1 y 2) solo existían en
+  Ajustes y nacían vacías: **nunca se le pedían a nadie**, así que el oficio salía con dos renglones
+  en blanco arriba — o sin encabezado visible si tampoco había logo. Ahora `caso.oj.encabezado`
+  guarda **las cuatro** líneas, el paso 7 las pide todas y hay validación dura por cada una
+  (`V30` ministerio, `V31` institución, además de `V26`/`V27`).
+- **«INFORMACIÓN PÚBLICA» en el pie.** Venía de `ojClasificacion`, que tenía ese **valor por
+  defecto**, junto a código y versión del formato. ⚠️ El pie de «Propuesta Plantilla OJ» lleva
+  **exclusivamente** «Página N de M» centrado. Se quitó la línea entera y sus tres campos de Ajustes.
+- **Consecutivo antes de la fecha.** El documento abría con `No. ____ / MEVAL – ESCAN – 1.10`; el
+  formato abre con la ciudad y la fecha. Eliminado, con su campo de Ajustes.
+- **Anexos y bloque de contacto se excluían.** El bloque de anexos desaparecía entero si no se
+  marcaba ninguno, y el de contacto si sus campos de Ajustes estaban vacíos (que es lo normal en un
+  equipo recién configurado). ⚠️ **Ambos se imprimen SIEMPRE**, con sus renglones en blanco si no hay
+  dato — misma regla que las 23 filas de las tablas. Excluir parte del documento está prohibido.
+- **El bloque de contacto ya no depende de Ajustes**: usa los **mismos datos de custodia** que se
+  piden en el paso 7 (en el formato son los mismos), más el sitio web. Se eliminaron los campos
+  duplicados `ojPieDependencia/ojPieDireccion/ojPieTelefonos/ojPieCorreo` de la UI y `custodia` gana
+  `web`. Sin datos de custodia ahora hay validación **dura** (`V29`), porque de ahí salen dos partes
+  del documento.
+- ⚠️ **Regla que quedó clara**: en este oficio, *condicional = excluido*. Si un elemento está en el
+  formato, va siempre; lo que falta se deja **en blanco**, nunca se omite el elemento ni se rellena.
+  Los checks nuevos generan a propósito un caso sin anexos y sin custodia para probarlo.
+- Anti-caché a `?v=35` / `cache-v35`, `_BUILD=35`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
