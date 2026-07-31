@@ -135,8 +135,10 @@ log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dos
 // La 1ª acción ("Enviar FPJ-5") pide formato y tamaño y luego abre el sheet
 await page.click('#act-items .sheet-item:nth-child(1)');
 await page.waitForTimeout(500);
-log(await page.isVisible('#exp-go'), 'Acción "Enviar FPJ-5" pide primero formato y tamaño de papel');
-await page.click('#exp-fmt-DOCX');
+// El FPJ-5 no tiene formato que elegir (solo Word); la primera vez sí se pide
+// el tamaño de papel, que es del equipo y a partir de ahí queda recordado.
+log(await page.isVisible('#exp-papel-CARTA'), 'Acción "Enviar FPJ-5" pide primero el tamaño de papel');
+log(!(await page.isVisible('#exp-fmt-PDF').catch(() => false)), 'Y no ofrece PDF para el formato de la Fiscalía');
 await page.click('#exp-papel-CARTA');
 await page.click('#exp-go');
 await page.waitForTimeout(600);

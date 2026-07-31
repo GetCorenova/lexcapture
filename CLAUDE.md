@@ -385,6 +385,11 @@ rojo numerado sobre `Documentos/Propuesta Plantilla OJ.docx`). Verificado con `v
   `:8080` que él no levanta. No es una regresión de este trabajo.
 
 ## Exportación (2026-07-29) — formato de salida y tamaño de papel obligatorios
+⚠️ **Superado en parte por «Exportación v2» (2026-07-31)**: el FPJ-5 ya **no se ofrece en PDF**, y el
+tamaño de papel se pregunta **una sola vez** (`cfg.papel`) en vez de en cada exportación. Todo lo que
+sigue sobre **cómo** se aplica el papel a cada motor (anchos, márgenes, `pgSz`) y sobre la vista de
+impresión del oficio OJ **sigue vigente**.
+
 Antes de producir cualquier documento final la app pide **siempre** dos cosas y no genera nada hasta
 tener ambas: **formato** (Word `.docx` / PDF) y **tamaño de papel**. La adaptación toca únicamente la
 diagramación física — el contenido es idéntico entre tamaños (comprobado comparando el texto extraído
@@ -441,6 +446,78 @@ tramas y tipografía. Lo que cambia entre `.docx` y PDF es el motor que lo pinta
   la app no escribe el archivo. Es la única vía offline sin incrustar un motor PDF, que daría un
   dibujo aproximado del formato en vez del formato.
 - Anti-caché a `?v=34` / `cache-v34`, `_BUILD=34`.
+
+## Exportación v2 (2026-07-31) — el FPJ-5 sale solo en Word, y el papel se pregunta UNA vez
+Reportado en campo: «los formatos en PDF salen con demasiados errores, cosa que no ocurre con Word».
+Se midió en vez de opinarlo: extrayendo `TPL_URI`/`TPL_CESPA` del base64 y comparando lo que las
+plantillas usan contra lo que implementa el traductor OOXML→HTML (`lcRunHtml`/`lcParHtml`/`lcTablaHtml`).
+Verificado con `verify_export.mjs` (**74 checks**, antes 47).
+
+| Construcción | El FPJ-5 la usa | ¿Traductor? | Efecto en el PDF |
+|---|---|---|---|
+| `w:trHeight` | **30 filas** (63–629 twips) | **No** (ni lee `trPr`) | Las casillas colapsan al alto del texto |
+| `w:vMerge` | 3 | **No** — salta la continuación sin poner `rowspan` | Esas filas quedan con **una celda de menos** |
+| `w:tblHeader` | **55** (CESPA) | **No** (el comentario decía que sí) | No repite encabezado al cortar tabla |
+| `w:noWrap` | 2 | **No** | Parte texto donde Word no lo parte |
+| `w:numPr` | 2 | **No** | Se pierde el marcador |
+| `w:tabs`/`w:tab` | 2 / 6 | Tabulador fijo de 36 px | Ignora las paradas reales |
+| `w:tcW` | **308 celdas** | **No** — solo `tblGrid` | Donde difieran, Word obedece `tcW` |
+| Borde `sz=4` vs `sz=8` | ambos | Se aplastan **los dos a 1 px** | Se pierde la distinción del pase v2.2 |
+
+- ⚠️ **Diagnóstico de raíz: dos motores para un mismo documento.** El comentario «un solo origen de
+  verdad» es cierto para el **contenido** (se traduce el mismo `word/document.xml`), pero el origen de
+  verdad de un formato oficial es la **geometría**, y ahí hay dos motores: Word, y Chrome + el
+  traductor. El FPJ-5 se calibró a nivel de twip en tres pases (v2.1–v2.3); el PDF **repetía esa
+  calibración desde cero en un motor que no lee el 40 % de las instrucciones de la plantilla**. Ese
+  trabajo no tiene final: cada construcción que se implemente destapa la siguiente, y el salto de
+  línea del navegador nunca va a coincidir con el de Word.
+- **El FPJ-5 ya no se ofrece en PDF.** Un PDF que se *parece* al formato oficial de la Fiscalía es
+  **peor** que no tener PDF: quien lo recibe no puede distinguirlo del bueno. Sale en `.docx` y se
+  imprime desde Word, que sí lo maqueta. La guarda es **estructural**, no de UI: `buildFPJBlob`
+  marca `out.noPDF` y `lcImprimir()` lo rechaza, así ninguna ruta futura puede imprimirlo por
+  descuido. `lcExportSoloWord(kind)` es el único punto que decide qué documento tiene PDF.
+- **El oficio OJ conserva el PDF** y es defendible: lo compone la app y está **dentro del subconjunto
+  por construcción** — cero `trHeight`, `vMerge`, `noWrap`, `tblHeader`, `numPr` y tabuladores
+  (comprobado). Sus `docDefaults` (Arial 11 pt, `after 120`) coinciden con los del CSS de impresión.
+  ⚠️ Al tocar `ojx*`, **no introducir ninguna de esas construcciones**: romperían el PDF en silencio.
+- ⚠️ **El tamaño de papel NO es diferible al momento de imprimir.** Queda escrito dentro del `.docx`
+  (`w:pgSz`), Word imprime a tamaño real por defecto, y un documento de Oficio impreso en Carta **se
+  corta**. Dejarlo «para la impresora» es más trabajo y más frágil, al final de la cadena.
+- **Pero se pregunta UNA vez.** Es propiedad del **equipo** (el papel de su impresora), no del caso —
+  la misma lección de la Ola 4 con el membrete, la custodia y la firma, que a la auditoría se le
+  escapó. Nuevo `cfg.papel` + `lcPapelCfg()`/`lcGuardarPapel()`/`lcPapelEfectivo(kind)` como **único
+  punto que lo resuelve**, para que descargar, enviar y el botón del wizard no puedan discrepar.
+  `lcPapelEfectivo('FPJ')` nunca devuelve un ancho que las casillas no admiten: cae a Carta.
+- **El diálogo quedó en una sola pregunta legítima: Word o PDF.** El papel se ve en una línea
+  («Papel: Oficio · Cambiar») y se cambia sin salir. ⚠️ Si no queda **ninguna** pregunta (FPJ-5 con
+  papel ya elegido) **no se abre diálogo**: se genera. El tamaño usado se nombra siempre en el aviso
+  final, así la decisión recordada nunca es invisible. Se añadió **Ajustes → Documentos**, que aplica
+  al instante sin pasar por «Guardar ajustes» (igual que el tema).
+- ⚠️ **Esto revisa una decisión deliberada** documentada en el código: *«se arranca SIEMPRE sin
+  selección: la elección tiene que ser un acto del usuario, no un valor por defecto que se cuela sin
+  que lo mire»*. Se revisó porque un valor **que el usuario eligió una vez, ve y puede cambiar** no es
+  un default que se cuela — el riesgo que esa regla evitaba no aparece. La regla **sigue vigente para
+  el formato**, que nace sin selección.
+- **El recorte silencioso, corregido.** `.pg` lleva `overflow:hidden`: un bloque más alto que la hoja
+  se colocaba igual y el navegador lo **cortaba sin avisar**. En un documento legal, perder texto sin
+  señal es el peor resultado posible. `lcPaginar` ahora cuenta los desbordes y **devuelve
+  `{paginas, desbordes}`** (⚠️ antes devolvía un número: hay dos llamadores), y `lcImprimir` lo
+  convierte en aviso con la salida por el Word. La cuenta la lleva solo `poner()` — `ponerTabla` no
+  suma para no duplicar, porque una fila demasiado alta llega sola a `vaciar()` → `poner()`.
+- ⚠️ **Las suites tenían un helper `elegirExport` que daba por hecho dos preguntas siempre.** Ahora es
+  tolerante en las cuatro (`oj`, `envio_doc`, `personas`, `export`): pulsa lo que se ofrezca y es
+  no-op si no hay diálogo. Y en `verify_envio_doc` el disparo tuvo que entrar **dentro del
+  `Promise.all`**: sin diálogo, la descarga del FPJ-5 sale **síncrona** dentro del `evaluate` y
+  `waitForEvent` se enganchaba tarde.
+- **Lo que sigue pendiente** si el PDF del FPJ-5 llega a hacer falta de verdad (en el teléfono un
+  `.docx` es opaco): el patrón canónico para un formato de tamaño fijo es un **PDF AcroForm** del
+  formato oficial relleno con pdf-lib — riesgo de maquetación **cero**, offline, porque la
+  maquetación *es* el archivo original. Es un proyecto aparte, pero acotado y con final. ⚠️ La vía
+  habitual de la industria (conversión con LibreOffice/Word en servidor) **está vedada aquí**: exige
+  subir datos de un capturado, de un menor en CESPA — Habeas Data y operación offline.
+- Regresiones en verde: **export 74** · OJ 138 · envío 39 · personas 24 · invitado 33 · simulador 41 ·
+  multipersona 61 · ola1 38 · ola2 34 · ola3 33 · ola4 21 · DS 10.
+  Anti-caché `?v=42` / `cache-v42`, `_BUILD=42`.
 
 ## OJ v2.1 (2026-07-29) — cuatro desviaciones del formato, reportadas en campo
 El usuario detectó que el oficio **no respetaba 100 %** «Propuesta Plantilla OJ»: agregaba cosas que

@@ -76,19 +76,34 @@ const SEL_DL = '#share-it-dl';
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 
-  // ---- 1b. Enviar es una salida más: pide formato y tamaño antes de nada ----
+  /* Atraviesa el dialogo de salida eligiendo lo que se ofrezca. Ya no siempre
+     hay dos preguntas: el papel es del EQUIPO y solo se pregunta la primera vez,
+     y el FPJ-5 no tiene formato que elegir (solo Word). Si no queda ninguna
+     pregunta, no hay dialogo y esto es un no-op. */
+  const elegirExport = async (fmt = 'DOCX', papel = 'CARTA') => {
+    if (!(await page.isVisible('#exp-go').catch(() => false))) return;
+    if (await page.isVisible('#exp-fmt-' + fmt).catch(() => false)) await page.click('#exp-fmt-' + fmt);
+    if (await page.isVisible('#exp-papel-' + papel).catch(() => false)) await page.click('#exp-papel-' + papel);
+    await page.click('#exp-go');
+  };
+
+  // ---- 1b. Enviar es una salida más: pide lo que falte antes de nada ----
   // (el resto de la suite entra por _abrirEnvioSheet, que es la mecánica del
   // sheet ya con el papel elegido; aquí se comprueba la puerta de entrada)
+  // El equipo todavia no ha elegido papel, asi que aqui SI se pregunta.
   await page.evaluate((id) => abrirEnvioDoc(id), uriId);
   await page.waitForTimeout(250);
   const gate = await page.evaluate(() => ({
     dialogo: !!document.getElementById('exp-go'),
     bloqueado: !!(document.getElementById('exp-go') || {}).disabled,
+    papel: !!document.getElementById('exp-papel-CARTA'),
+    pdf: !!document.getElementById('exp-fmt-PDF'),
     sheet: document.getElementById('share-sheet').classList.contains('on')
   }));
-  log(gate.dialogo && gate.bloqueado && !gate.sheet,
-    '[1b] Enviar abre primero el dialogo de formato/tamano y no produce nada hasta elegir',
+  log(gate.dialogo && gate.bloqueado && gate.papel && !gate.sheet,
+    '[1b] Enviar pregunta el tamano de papel la primera vez y no produce nada hasta elegir',
     JSON.stringify(gate));
+  log(!gate.pdf, '[1b] Y al FPJ-5 nunca se le ofrece PDF: solo Word conserva el formato de la Fiscalia');
   await page.evaluate(() => lcExportCancelar());
   await page.waitForTimeout(200);
 
@@ -249,34 +264,29 @@ const SEL_DL = '#share-it-dl';
   log(/Enviar Oficio Disposición/.test(dosSendOj), '[8] Dossier OJ: boton Enviar Oficio Disposicion', dosSendOj);
   await page.click('#dos-btn-send');
   await page.waitForTimeout(300);
-  // El boton del dossier tambien pasa por el dialogo obligatorio.
-  await page.click('#exp-fmt-DOCX');
-  await page.click('#exp-papel-CARTA');
-  await page.click('#exp-go');
+  // El boton del dossier tambien pasa por el dialogo de salida.
+  await elegirExport('DOCX', 'CARTA');
   await page.waitForTimeout(400);
   const dosSheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
   log(dosSheetOn, '[8] Boton Enviar del dossier abre el sheet tras elegir formato y tamano');
   await page.evaluate(() => closeShareSheet());
 
   // ---- 9. Regresión: descarga clásica sigue funcionando ----
-  // Ahora pasa por el diálogo obligatorio: se elige Word/Carta y descarga igual.
-  const elegirExport = async (fmt = 'DOCX', papel = 'CARTA') => {
-    await page.waitForSelector('#exp-go', { timeout: 5000 });
-    await page.click('#exp-fmt-' + fmt);
-    await page.click('#exp-papel-' + papel);
-    await page.click('#exp-go');
-  };
+  /* ⚠️ El disparo va DENTRO del Promise.all: con el papel ya elegido, el FPJ-5
+     no abre dialogo y la descarga sale de forma sincrona dentro del evaluate.
+     Si el evaluate fuera antes, waitForEvent se engancharia tarde y la perderia. */
   await page.evaluate((id) => { _dosCasoId = id; renderDossier(); }, uriId);
-  await page.evaluate(() => descargarFPJ());
   const [dl3] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    elegirExport()
+    (async () => { await page.evaluate(() => descargarFPJ()); await elegirExport(); })()
   ]);
   log(!!dl3 && /^FPJ5_URI_.*\.docx$/.test(dl3.suggestedFilename()), '[9] descargarFPJ() sigue descargando', dl3 ? dl3.suggestedFilename() : '(sin descarga)');
-  await page.evaluate((id) => { var c = DB.getCase(id); ojDescargarOficio(c); }, ojId);
   const [dl4] = await Promise.all([
     page.waitForEvent('download', { timeout: 8000 }).catch(() => null),
-    elegirExport()
+    (async () => {
+      await page.evaluate((id) => { var c = DB.getCase(id); ojDescargarOficio(c); }, ojId);
+      await elegirExport();
+    })()
   ]);
   log(!!dl4 && /^OJ_.*\.docx$/.test(dl4.suggestedFilename()), '[9] La descarga directa de un caso OJ produce el oficio del módulo', dl4 ? dl4.suggestedFilename() : '(sin descarga)');
 

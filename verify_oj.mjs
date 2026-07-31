@@ -493,12 +493,15 @@ log(bloqueo.tieneV01 === true, 'Una orden vencida produce validación dura que i
 /* ─────────── 8b. Salidas del caso (descarga y envío) ─────────── */
 await page.evaluate(() => { DB.saveTemplates(DB.getTemplates().filter(t => t.id !== 'tpl_oj_test')); });
 const idCaso = await page.evaluate(() => DB.getCases()[0].id);
-/* Toda salida pasa antes por el diálogo obligatorio de formato y tamaño; el
-   helper lo atraviesa eligiendo Word/Carta, que es lo que estas pruebas miden. */
+/* Toda salida pasa antes por el diálogo de salida; el helper lo atraviesa
+   eligiendo Word/Carta, que es lo que estas pruebas miden.
+   ⚠️ Ya no siempre hay dos preguntas: el tamaño de papel es propiedad del EQUIPO
+   y solo se pregunta la primera vez; el FPJ-5 tampoco tiene formato que elegir.
+   Si no queda nada que preguntar no hay diálogo, y esto es un no-op. */
 async function elegirExport(fmt = 'DOCX', papel = 'CARTA') {
-  await page.waitForSelector('#exp-go', { timeout: 5000 });
-  await page.click('#exp-fmt-' + fmt);
-  await page.click('#exp-papel-' + papel);
+  if (!(await page.isVisible('#exp-go').catch(() => false))) return;
+  if (await page.isVisible('#exp-fmt-' + fmt).catch(() => false)) await page.click('#exp-fmt-' + fmt);
+  if (await page.isVisible('#exp-papel-' + papel).catch(() => false)) await page.click('#exp-papel-' + papel);
   await page.click('#exp-go');
 }
 await page.evaluate(id => abrirEnvioDoc(id), idCaso);

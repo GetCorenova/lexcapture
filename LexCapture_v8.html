@@ -1476,6 +1476,19 @@ body.guest{padding-top:38px}
         </div>
       </div>
 
+      <!-- 0b. Documentos — el papel es del EQUIPO, se elige una vez -->
+      <div class="aj-section">
+        <div class="aj-sec-hdr" onclick="toggleAjSec('docs-sec')">
+          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>Documentos</span><span class="aj-sec-arr" id="aj-arr-docs-sec">▶</span>
+        </div>
+        <div class="aj-sec-body" id="aj-body-docs-sec" style="display:none;padding-top:12px">
+          <label class="fl">Tamaño del papel</label>
+          <div class="exp-grid" id="aj-papel-grid"></div>
+          <p style="font-size:.72rem;color:var(--txM);margin-top:-6px">El papel de tu impresora. Queda escrito dentro del documento, así que se elige al generarlo — no al imprimir. Se aplica de inmediato y se recuerda.</p>
+          <p style="font-size:.72rem;color:var(--txM);margin-top:10px">El FPJ-5 solo admite Carta y Oficio: sus casillas están calibradas a 8,5" de ancho. Si eliges otro tamaño, ese formato saldrá en Carta.</p>
+        </div>
+      </div>
+
       <!-- 1. Estación -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('estacion-sec')">
@@ -1915,7 +1928,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 41;
+var _BUILD = 42;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2175,65 +2188,135 @@ var LC_FPJ_ANCHO = 12240;
 function lcPapelSirveFPJ(id){ return lcPapel(id).w === LC_FPJ_ANCHO; }
 function lcPapelesFPJ(){ return LC_PAPEL_ORDEN.filter(lcPapelSirveFPJ); }
 
-/* Diálogo obligatorio. No devuelve nada hasta que el usuario elige AMBAS
-   opciones: el botón de generar nace deshabilitado. `kind` es 'OJ' o 'FPJ'
-   (el FPJ-5 restringe la lista de tamaños y lo explica en pantalla). */
+/* ⚠️ El tamaño de papel NO se puede dejar «para el momento de imprimir»: queda
+   escrito dentro del .docx (w:pgSz). Un documento de Oficio impreso en Carta se
+   corta, y corregirlo obliga a entrar a Diseño → Configurar página en cada
+   documento. Por eso se sigue decidiendo al generar — pero es propiedad del
+   EQUIPO (el papel de la impresora de la unidad), no del caso: se pregunta UNA
+   vez y se recuerda. Estos tres helpers son el único punto que lo resuelve, así
+   descargar, enviar y el botón del wizard no pueden discrepar. */
+function lcPapelCfg(){
+  try { var p = DB.getConfig().papel; return LC_PAPEL[p] ? p : ''; } catch(e){ return ''; }
+}
+function lcGuardarPapel(id){
+  if(!LC_PAPEL[id]) return false;
+  try { var cfg = DB.getConfig(); cfg.papel = id; DB.saveConfig(cfg); return true; } catch(e){ return false; }
+}
+/* Tamaño con el que se va a producir de verdad. Al FPJ-5 nunca se le entrega un
+   ancho que sus casillas no admiten: cae a Carta, igual que la salvaguarda del
+   motor. Devuelve '' si el equipo todavía no ha elegido nunca. */
+function lcPapelEfectivo(kind){
+  var p = lcPapelCfg();
+  if(!p) return '';
+  if(kind === 'FPJ' && !lcPapelSirveFPJ(p)) return 'CARTA';
+  return p;
+}
+
+/* Diálogo de salida. Solo pregunta lo que de verdad es una decisión de ESTE
+   momento; lo que es del equipo se pregunta una vez y se recuerda:
+
+   · Formato — sí es por-momento (¿lo mando o lo imprimo?). Solo para el oficio
+     de orden judicial, que lo compone la app.
+   · Tamaño de papel — es del equipo. La primera vez se pregunta; después se ve
+     y se cambia desde aquí mismo o en Ajustes → Documentos.
+
+   ⚠️ El FPJ-5 NO se ofrece en PDF. Es el formato oficial de la Fiscalía y su
+   maquetación no es de la app: usa altos de fila fijos, celdas fusionadas en
+   vertical, anchos por celda y filas de encabezado repetidas que la vista de
+   impresión del navegador no reproduce. Un PDF que se PARECE al formato oficial
+   es peor que no tener PDF, porque quien lo recibe no puede distinguirlo del
+   bueno. Sale en .docx y se imprime desde Word, que sí lo maqueta.
+
+   Si no queda ninguna pregunta que hacer, no se abre un diálogo para no
+   preguntar nada: se genera. El tamaño usado se nombra siempre en el aviso
+   final, así la decisión recordada nunca es invisible. */
 var _lcExportCb = null, _lcExportKind = 'OJ', _lcExportSel = { fmt:'', papel:'' };
+var _lcExportNombre = '', _lcExportPidePapel = false;
+function lcExportSoloWord(kind){ return kind === 'FPJ'; }
 function lcPedirExport(kind, nombreDoc, cb){
-  _lcExportCb = cb; _lcExportKind = kind;
-  // Se arranca SIEMPRE sin selección: la elección tiene que ser un acto del
-  // usuario, no un valor por defecto que se cuela sin que lo mire.
-  _lcExportSel = { fmt:'', papel:'' };
+  var papel = lcPapelEfectivo(kind);
+  var soloWord = lcExportSoloWord(kind);
+  _lcExportCb = cb; _lcExportKind = kind; _lcExportNombre = nombreDoc || '';
+  _lcExportSel = { fmt: soloWord ? 'DOCX' : '', papel: papel || '' };
+  _lcExportPidePapel = !papel;
+  if (papel && soloWord) { _lcExportEntregar(); return; }   // nada que preguntar
+  _lcExportPintar();
+}
+function _lcExportOpt(grupo, id, lbl, sub){
+  return '<button type="button" class="exp-opt" id="exp-'+grupo+'-'+id+'" '+
+    'onclick="lcExportElegir(\''+grupo+'\',\''+id+'\')">'+
+    '<span class="exp-opt-lbl">'+escHtml(lbl)+'</span>'+
+    (sub?'<span class="exp-opt-sub">'+escHtml(sub)+'</span>':'')+'</button>';
+}
+function _lcExportPintar(){
+  var kind = _lcExportKind, soloWord = lcExportSoloWord(kind);
   var papeles = (kind==='FPJ') ? lcPapelesFPJ() : LC_PAPEL_ORDEN;
-  var opt = function(grupo, id, lbl, sub){
-    return '<button type="button" class="exp-opt" id="exp-'+grupo+'-'+id+'" '+
-      'onclick="lcExportElegir(\''+grupo+'\',\''+id+'\')">'+
-      '<span class="exp-opt-lbl">'+escHtml(lbl)+'</span>'+
-      (sub?'<span class="exp-opt-sub">'+escHtml(sub)+'</span>':'')+'</button>';
-  };
-  openModal(
-    '<div class="mh"><h2>Exportar documento</h2><button class="mx" onclick="lcExportCancelar()">✕</button></div>'+
-    (nombreDoc?'<p class="oj-hint" style="margin-top:0">'+escHtml(nombreDoc)+'</p>':'')+
-    '<div class="st" style="margin-top:12px">1 · Formato de salida</div>'+
-    '<div class="exp-grid">'+
-      opt('fmt','DOCX','Word','.docx — editable')+
-      opt('fmt','PDF','PDF','.pdf — listo para imprimir')+
-    '</div>'+
-    '<div class="st">2 · Tamaño del papel</div>'+
-    '<div class="exp-grid">'+
-      papeles.map(function(p){ return opt('papel',p,LC_PAPEL[p].lbl,LC_PAPEL[p].sub); }).join('')+
-    '</div>'+
-    (kind==='FPJ'
-      ? '<p class="oj-hint">El FPJ-5 es el formato oficial de la Fiscalía: sus casillas están calibradas a 8,5" '+
-        'de ancho, así que solo se ofrecen los tamaños que las respetan. Cambia el alto de la hoja, no el formato.</p>'
-      : '')+
-    '<button class="btn bp bbl" id="exp-go" disabled style="margin-top:18px" onclick="lcExportConfirmar()">'+
-      'Elige formato y tamaño</button>'
-  );
+  var paso = 1;
+  var h = '<div class="mh"><h2>Exportar documento</h2><button class="mx" onclick="lcExportCancelar()">✕</button></div>'+
+    (_lcExportNombre?'<p class="oj-hint" style="margin-top:0">'+escHtml(_lcExportNombre)+'</p>':'');
+  if(!soloWord){
+    h += '<div class="st" style="margin-top:12px">'+(paso++)+' · Formato de salida</div>'+
+      '<div class="exp-grid">'+
+        _lcExportOpt('fmt','DOCX','Word','.docx — editable')+
+        _lcExportOpt('fmt','PDF','PDF','.pdf — listo para imprimir')+
+      '</div>';
+  }
+  if(_lcExportPidePapel){
+    h += '<div class="st" style="margin-top:12px">'+(paso++)+' · Tamaño del papel</div>'+
+      '<div class="exp-grid">'+
+        papeles.map(function(p){ return _lcExportOpt('papel',p,LC_PAPEL[p].lbl,LC_PAPEL[p].sub); }).join('')+
+      '</div>'+
+      '<p class="oj-hint">Es el papel de tu impresora: se pregunta una vez y queda recordado. '+
+      'Se cambia cuando quieras en Ajustes → Documentos.</p>';
+  } else {
+    h += '<p class="oj-hint" id="exp-papel-actual" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">'+
+      '<span>Papel: <strong>'+escHtml(lcPapel(_lcExportSel.papel).lbl)+'</strong></span>'+
+      '<button type="button" class="btn bs bsm" id="exp-papel-cambiar" onclick="lcExportCambiarPapel()">Cambiar</button></p>';
+  }
+  if(soloWord){
+    h += '<p class="oj-hint">El FPJ-5 es el formato oficial de la Fiscalía'+
+      (_lcExportPidePapel ? ': sus casillas están calibradas a 8,5" de ancho, así que solo se ofrecen los tamaños que las respetan. Cambia el alto de la hoja, no el formato.' : '.')+
+      ' Sale en Word para conservarlo exacto; para PDF, ábrelo e imprime desde Word.</p>';
+  }
+  h += '<button class="btn bp bbl" id="exp-go" disabled style="margin-top:18px" onclick="lcExportConfirmar()">Elige</button>';
+  openModal(h);
+  _lcExportRefrescar();
+}
+function _lcExportRefrescar(){
+  ['DOCX','PDF'].forEach(function(x){
+    var el=document.getElementById('exp-fmt-'+x); if(el) el.classList.toggle('on', x===_lcExportSel.fmt);
+  });
+  LC_PAPEL_ORDEN.forEach(function(x){
+    var el=document.getElementById('exp-papel-'+x); if(el) el.classList.toggle('on', x===_lcExportSel.papel);
+  });
+  var go=document.getElementById('exp-go'); if(!go) return;
+  var listo=!!(_lcExportSel.fmt && _lcExportSel.papel);
+  go.disabled=!listo;
+  go.textContent = listo
+    ? 'Generar '+(_lcExportSel.fmt==='PDF'?'PDF':'Word')+' en '+lcPapel(_lcExportSel.papel).lbl
+    : (!_lcExportSel.fmt ? 'Elige el formato de salida' : 'Elige el tamaño del papel');
 }
 function lcExportElegir(grupo, id){
-  var lista = grupo==='fmt' ? ['DOCX','PDF'] : LC_PAPEL_ORDEN;
-  lista.forEach(function(x){
-    var el=document.getElementById('exp-'+grupo+'-'+x);
-    if(el) el.classList.toggle('on', x===id);
-  });
   _lcExportSel[grupo==='fmt'?'fmt':'papel']=id;
-  var go=document.getElementById('exp-go');
-  if(go){
-    var listo=!!(_lcExportSel.fmt && _lcExportSel.papel);
-    go.disabled=!listo;
-    go.textContent = listo
-      ? 'Generar '+(_lcExportSel.fmt==='PDF'?'PDF':'Word')+' en '+lcPapel(_lcExportSel.papel).lbl
-      : (!_lcExportSel.fmt ? 'Elige el formato de salida' : 'Elige el tamaño del papel');
-  }
+  _lcExportRefrescar();
+}
+/* Cambiar el papel desde el diálogo cambia el del EQUIPO, no el de este
+   documento suelto: es la misma impresora la próxima vez. */
+function lcExportCambiarPapel(){
+  _lcExportPidePapel = true; _lcExportSel.papel = '';
+  _lcExportPintar();
 }
 function lcExportCancelar(){ _lcExportCb=null; closeModal(); }
-function lcExportConfirmar(){
-  if(!_lcExportSel.fmt || !_lcExportSel.papel) return;   // no se genera nada a medias
+function _lcExportEntregar(){
   var cb=_lcExportCb; _lcExportCb=null;
   var sel={ fmt:_lcExportSel.fmt, papel:_lcExportSel.papel };
-  closeModal();
+  if(sel.papel) lcGuardarPapel(sel.papel);      // queda como el papel del equipo
   if(cb) cb(sel);
+}
+function lcExportConfirmar(){
+  if(!_lcExportSel.fmt || !_lcExportSel.papel) return;   // no se genera nada a medias
+  closeModal();
+  _lcExportEntregar();
 }
 
 /* ═══ MODO INVITADO ═══
@@ -2505,7 +2588,13 @@ function _cfgConDefaults(stored) {
          queda en la misma estación. */
       ojPieDependencia:'',ojCustEstacion:'',ojCustDireccion:'',ojCustTelefono:'',ojCustCorreo:'',
       ojLogoB64:'',ojLogoMime:'',
-      ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[]};
+      ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[],
+      /* Tamaño del papel de la impresora de la unidad. Es propiedad del EQUIPO,
+         no del caso: no cambia entre un procedimiento y el siguiente. Nace vacío
+         y se pregunta UNA vez (la primera exportación); desde ahí se recuerda y
+         se cambia en Ajustes → Documentos. Mismo criterio que el membrete y la
+         custodia del oficio (Ola 4): lo del equipo se pide una vez. */
+      papel:''};
     var out={}; for(var k in def) out[k]=stored[k]!==undefined?stored[k]:def[k]; for(var k in stored) if(!(k in out)) out[k]=stored[k]; return out;
 }
 
@@ -4634,8 +4723,15 @@ function buildFPJBlob(c,papel){
     zf.sort(function(a,b){return a.name==="[Content_Types].xml"?-1:b.name==="[Content_Types].xml"?1:a.name.localeCompare(b.name);});
     var blob=new Blob([_buildZip(zf)],{type:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
     var fname="FPJ5_"+tf+"_"+(cap.priApe||"caso")+"_"+(cap.priNom||"")+".docx";
+    /* ⚠️ noPDF: este documento NO se traduce a la vista de impresión. Su
+       maquetación es la del formato oficial de la Fiscalía —altos de fila
+       fijos, celdas fusionadas en vertical, anchos por celda, filas de
+       encabezado repetidas— y el traductor OOXML→HTML no implementa nada de
+       eso, así que el PDF saldría PARECIDO al formato pero no igual. La marca
+       viaja en el propio documento para que ninguna ruta futura pueda
+       imprimirlo por descuido: la guarda vive en lcImprimir(). */
     return {blob:blob,fname:fname,label:(tf==="CESPA"?"Informe aprehension CESPA":"FPJ-5 URI"),
-            files:files,papel:(lcPapelSirveFPJ(papel||'CARTA')?(papel||'CARTA'):'CARTA')};
+            files:files,noPDF:true,papel:(lcPapelSirveFPJ(papel||'CARTA')?(papel||'CARTA'):'CARTA')};
   }catch(e){console.error(e);toast("Error generando FPJ-5: "+e.message);return null;}
 }
 async function simShowDossier(){
@@ -5237,7 +5333,27 @@ function loadAjustesFields() {
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
   renderLogoOJ(cfg);
+  renderPapelAj(cfg);
   renderConocieronRows(getConocieronList(cfg));
+}
+/* Tamaño del papel. Se aplica al instante y no depende de «Guardar ajustes»,
+   igual que el tema: es una preferencia del equipo, no un formulario. */
+function renderPapelAj(cfg){
+  var g=document.getElementById('aj-papel-grid'); if(!g) return;
+  cfg=cfg||DB.getConfig();
+  var sel=lcPapelCfg();
+  g.innerHTML=LC_PAPEL_ORDEN.map(function(p){
+    var d=LC_PAPEL[p];
+    return '<button type="button" class="exp-opt'+(p===sel?' on':'')+'" id="aj-papel-'+p+'" '+
+      'onclick="ajSetPapel(\''+p+'\')">'+
+      '<span class="exp-opt-lbl">'+escHtml(d.lbl)+'</span>'+
+      '<span class="exp-opt-sub">'+escHtml(d.sub)+'</span></button>';
+  }).join('');
+}
+function ajSetPapel(id){
+  if(!lcGuardarPapel(id)) return;
+  renderPapelAj();
+  toast('Papel: '+lcPapel(id).lbl+' — se usará en los documentos que generes');
 }
 /* Logo del membrete. Se guarda en la configuración como base64 y se embebe en el
    .docx: ningún escudo ni logotipo institucional viaja dentro del código de la
@@ -8715,6 +8831,12 @@ function lcPaginar(win,plan){
   medidor.style.width=anchoBody+'px';
   var cont=d.getElementById('hojas');
   var paginas=[], actual=null, altoUtil=0, usado=0;
+  /* ⚠️ Un bloque más alto que la hoja entera no se puede repartir aquí (la caja
+     de página tiene medida fija y `overflow:hidden`), así que el navegador lo
+     RECORTA. Antes eso ocurría en silencio: en un documento legal, perder texto
+     sin ninguna señal es el peor resultado posible — peor que no generar nada.
+     Se cuentan y quien llama avisa. */
+  var desbordes=0;
   function nuevaPagina(){
     var pg=d.createElement('div'); pg.className='pg';
     var hd=d.createElement('div'); hd.className='hd';
@@ -8743,6 +8865,7 @@ function lcPaginar(win,plan){
   function poner(html,alto){
     if(!actual) nuevaPagina();
     if(usado+alto>altoUtil && usado>0) nuevaPagina();
+    if(alto>altoUtil) desbordes++;              // no cabe ni en una hoja vacía
     var w=d.createElement('div');
     w.innerHTML=html;
     while(w.firstChild) actual.appendChild(w.firstChild);
@@ -8768,6 +8891,8 @@ function lcPaginar(win,plan){
         vaciar();
         if(usado>0) nuevaPagina();
       }
+      /* Una sola fila más alta que la hoja tampoco se puede partir. No se cuenta
+         aquí: llega sola a vaciar() → poner(), que es quien lleva la cuenta. */
       trozo.push(filas[i]); altoTrozo+=hFila;
     }
     vaciar();
@@ -8803,12 +8928,19 @@ function lcPaginar(win,plan){
     Array.prototype.forEach.call(pg.querySelectorAll('.fld-num'),function(el){ el.textContent=String(i+1); });
     Array.prototype.forEach.call(pg.querySelectorAll('.fld-tot'),function(el){ el.textContent=String(total); });
   });
-  return total;
+  return {paginas:total, desbordes:desbordes};
 }
 /* Abre la vista imprimible en un iframe (nada de ventanas nuevas: los
    bloqueadores de pop-ups las matan en móvil) y lanza el diálogo de impresión,
    donde el usuario elige «Guardar como PDF». */
 function lcImprimir(out){
+  /* Guarda estructural: hay documentos que no se traducen a esta vista porque
+     su maquetación no es de la app (el FPJ-5 de la Fiscalía). Ninguna ruta
+     puede imprimirlos, ni las que se añadan después. */
+  if(out && out.noPDF){
+    toast('Este formato solo sale en Word para conservarlo exacto — ábrelo e imprime a PDF desde Word', 7000);
+    return false;
+  }
   var plan=lcPrintDoc(out);
   if(!plan){ toast('No se pudo preparar la vista de impresión — descarga el .docx'); return false; }
   var vieja=document.getElementById('lc-print-frame');
@@ -8833,10 +8965,20 @@ function lcImprimir(out){
   var lanzar=function(){
     try{
       var pre=d.getElementById('precarga'); if(pre) pre.remove();
-      var n=lcPaginar(f.contentWindow,plan);
+      var r=lcPaginar(f.contentWindow,plan);
+      var n=r.paginas;
       f.contentWindow.focus();
       f.contentWindow.print();
-      toast('Vista de impresión lista ('+n+' página'+(n===1?'':'s')+' en '+plan.papel.lbl+') — elige «Guardar como PDF»',7000);
+      /* ⚠️ Si algo no cabe en una hoja, la caja de página lo recorta. Se dice,
+         con la salida: el .docx no tiene ese límite. Callarlo sería entregar un
+         documento legal al que le falta texto sin que nadie lo sepa. */
+      if(r.desbordes){
+        toast('⚠️ '+r.desbordes+' bloque'+(r.desbordes===1?'':'s')+' no cabe'+(r.desbordes===1?'':'n')+
+              ' en una hoja de '+plan.papel.lbl+' y sale'+(r.desbordes===1?'':'n')+' recortado'+(r.desbordes===1?'':'s')+
+              ' — descarga el Word o elige un papel más alto',10000);
+      } else {
+        toast('Vista de impresión lista ('+n+' página'+(n===1?'':'s')+' en '+plan.papel.lbl+') — elige «Guardar como PDF»',7000);
+      }
     }catch(e){
       console.error('[LexCapture] vista de impresión',e);
       toast('No se pudo abrir la vista de impresión — el .docx sí se puede descargar');
