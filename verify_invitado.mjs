@@ -98,10 +98,8 @@ const fechaDil = hoy.toISOString().slice(0, 10);
 await page.fill('#oj-o-num', '778');
 await page.selectOption('#oj-o-fin', 'MEDIDA_ASEGURAMIENTO');
 await page.fill('#oj-o-fexp', exp);
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-d-nom', 'Juzgado Treinta y Seis Penal Municipal de Conocimiento de Medellin');
 await page.fill('#oj-d-mun', 'Medellin');
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-p-rad', '050016000206202599999');
 await page.click('button[onclick="ojListaAgregar(\'delitos\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-delitos-0-nombre', 'Hurto agravado con violencia');
@@ -118,7 +116,8 @@ await page.fill('#oj-g-dir', 'Calle 59 con carrera 52');
 await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-funcionarios-0-grado', 'Patrullero');
 await page.fill('#ojl-funcionarios-0-nombre', 'FUNCIONARIO INVITADO');
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
+// Ola 4: los anexos viajan plegados; el test los abre para marcarlos.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 await page.check('#oj-a-dler');
 await page.fill('#oj-a-dhor', '10:40');
 await page.check('#oj-a-anx0');
@@ -127,7 +126,7 @@ await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
 
 /* El equipo no está configurado: la app pide unidad, dependencia y firma. */
 const panel7 = await page.textContent('#wz-panels');
-log(/Falta el encabezado/.test(panel7), 'Sin configuración, el paso 7 pide la unidad y la dependencia');
+log(/Falta el encabezado/.test(panel7), 'Sin configuración, la pantalla de revisión pide la unidad y la dependencia');
 log(/Sin perfil cargado/.test(panel7), 'Y avisa que no hay perfil para la firma');
 log((await page.inputValue('#oj-e-uni')) === '', 'La unidad llega vacía: no hereda la del dueño');
 

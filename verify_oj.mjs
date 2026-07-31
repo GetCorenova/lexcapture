@@ -158,7 +158,7 @@ await page.evaluate(() => go('nueva'));
 await page.click('button[onclick="startWizard(\'OJ\')"]');
 await page.waitForTimeout(250);
 const pasos = await page.$$eval('#wz-prog .wd', els => els.length);
-log(pasos === 7, 'El wizard de orden judicial tiene 7 pasos', pasos);
+log(pasos === 4, 'El wizard de orden judicial tiene 4 pantallas (Ola 4: agrupadas por fuente del dato)', pasos);
 log(await page.isVisible('#oj-o-num'), 'Paso 1 muestra los campos de la orden');
 
 await page.fill('#oj-o-num', '002');
@@ -172,24 +172,21 @@ await page.waitForTimeout(150);
 const vigTxt = await page.textContent('#oj-vig-box');
 log(/Vigente hasta/.test(vigTxt), 'El semáforo de vigencia se calcula en vivo', vigTxt.slice(0, 60));
 
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-d-nom'), 'Paso 2 — despacho judicial');
+log(await page.isVisible('#oj-d-nom'), 'Pantalla A · el despacho va en la misma pantalla que la orden');
+// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 await page.fill('#oj-d-nom', 'Juzgado Tercero Penal del Circuito de Conocimiento');
 await page.selectOption('#oj-d-tipo', 'CONOCIMIENTO');
 await page.fill('#oj-d-mun', 'Ciudad Prueba');
 await page.fill('#oj-d-dep', 'Departamento Prueba');
 await page.fill('#oj-d-dir', 'Palacio de Justicia, oficina 301');
-await page.fill('#oj-d-juez', 'Juez de Prueba');
-await page.fill('#oj-d-cargo', 'Juez');
 await page.click('button[onclick="ojGuardarDespacho()"]'); await page.waitForTimeout(150);
 const guardados = await page.evaluate(() => (DB.getConfig().despachosPropios || []).length);
 log(guardados === 1, 'El despacho diligenciado a mano queda guardado para reutilizarlo', guardados);
 
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-p-rad'), 'Paso 3 — proceso');
+log(await page.isVisible('#oj-p-rad'), 'Pantalla A · y el proceso también: las tres salen del mismo papel');
 await page.fill('#oj-p-rad', '050016000206202504471');
 await page.fill('#oj-p-fhec', '2024-03-15');
-await page.fill('#oj-p-fdec', '2025-11-20');
 await page.click('button[onclick="ojListaAgregar(\'delitos\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-delitos-0-nombre', 'Hurto calificado y agravado');
 await page.fill('#ojl-delitos-0-articulo', '240');
@@ -200,13 +197,18 @@ const nDelitos = await page.$$eval('#oj-list-delitos .oj-row', e => e.length);
 log(nDelitos === 2, 'La lista de delitos admite N registros', nDelitos);
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-r-pn'), 'Paso 4 — persona requerida');
+log(await page.isVisible('#oj-r-pn'), 'Pantalla B · la persona requerida');
+// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 await page.fill('#oj-r-pn', 'PRIMERNOMBRE');
 await page.fill('#oj-r-sn', 'SEGUNDONOMBRE');
 await page.fill('#oj-r-pa', 'PRIMERAPELLIDO');
 await page.fill('#oj-r-sa', 'SEGUNDOAPELLIDO');
 await page.fill('#oj-r-nd', '1.234.567.890');
 await page.fill('#oj-r-fn', '1992-08-14');
+// Sexo, estado civil, nacionalidad y alias viven plegados desde la Ola 3: no
+// salen en el oficio, alimentan el registro de Personas.
+await page.evaluate(() => { const d = document.querySelector('.oj-mas'); if (d) d.open = true; });
 await page.selectOption('#oj-r-sx', 'M');
 await page.fill('#oj-r-madre', 'MADRE DE PRUEBA');
 await page.fill('#oj-r-padre', 'PADRE DE PRUEBA');
@@ -215,7 +217,9 @@ await page.fill('#oj-r-sen', 'Cicatriz en el antebrazo izquierdo');
 await page.selectOption('#oj-r-imet', 'BIOMETRICO');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-g-fec'), 'Paso 5 — materialización');
+log(await page.isVisible('#oj-g-fec'), 'Pantalla C · la materialización');
+// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 const fechaDil = hoy.toISOString().slice(0, 10);
 await page.fill('#oj-g-fec', fechaDil);
 await page.fill('#oj-g-hor', '07:11');
@@ -231,8 +235,7 @@ await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
 const reloj = await page.textContent('#wz-panels');
 log(/Término de 36 horas/.test(reloj), 'El reloj de 36 horas aparece desde el paso de materialización');
 
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-a-dhor'), 'Paso 6 — actuación policial');
+log(await page.isVisible('#oj-a-dhor'), 'Pantalla C · y la actuación: todo lo que acaba de pasar, junto');
 await page.check('#oj-a-dler');
 await page.fill('#oj-a-dfec', fechaDil);
 await page.fill('#oj-a-dhor', '08:40');
@@ -257,7 +260,9 @@ await page.check('#oj-a-anx1');
 await page.check('#oj-a-anx2');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
-log(await page.isVisible('#oj-x-nom'), 'Paso 7 — puesta a disposición');
+log(await page.isVisible('#oj-x-nom'), 'Pantalla D · revisión y puesta a disposición');
+// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 const sugerido = await page.inputValue('#oj-x-nom');
 log(sugerido === 'Juzgado Tercero Penal del Circuito de Conocimiento',
   'El destinatario se propone solo a partir de la finalidad de la orden', sugerido);
@@ -731,8 +736,9 @@ log(etiqueta.minuscula === 'Estación de Policía La Candelaria' && etiqueta.vac
   'En la narración y el bloque de contacto va en minúscula; vacío sigue vacío', etiqueta.minuscula);
 
 const paso7 = await page.evaluate(async () => {
-  wc = ojNuevoCaso(); ws = 6;
+  wc = ojNuevoCaso(); ws = 3;          // pantalla D (Revisión) desde la Ola 4
   go('wizard'); renderWiz();
+  document.querySelectorAll('#wz-panels details').forEach(d => d.open = true);
   await new Promise(r => setTimeout(r, 300));
   return {
     // ⚠️ La app NO pide logo: el escudo del formato viene embebido.
@@ -741,7 +747,7 @@ const paso7 = await page.evaluate(async () => {
     blurCust: (document.getElementById('oj-c-est') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0
   };
 });
-log(paso7.pideLogo === false, 'El paso 7 NO pide logo: el escudo del formato viene embebido y se pone solo');
+log(paso7.pideLogo === false, 'La pantalla de revisión NO pide logo: el escudo del formato viene embebido y se pone solo');
 log(paso7.blurDep && paso7.blurCust, 'Los dos campos de estación completan el tipo al salir del campo');
 
 const cargado = await page.evaluate(async () => {

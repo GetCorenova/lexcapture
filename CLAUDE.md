@@ -625,6 +625,172 @@ riesgo; queda registrada aquí para que nadie la revierta por error **ni la exti
   (las 4 líneas del membrete las escribe el usuario), y el **ícono de la app** sigue siendo el
   monograma «L», no un escudo. Lo único que cambió es el logo **dentro del documento generado**.
 
+## Auditoría del módulo OJ (2026-07-30) — hallazgos y OLA 1 ejecutada
+Auditoría de arquitectura de flujo, UX y eficiencia del módulo «Captura por Orden Judicial»,
+**medida** sobre un teléfono (384×800, Playwright con touch), no estimada. Cifras del estado previo:
+
+| Medición | Valor |
+|---|---|
+| Controles visibles en los 7 pasos | **131** (120 campos + 11 casillas) |
+| Scroll vertical de un procedimiento | **32 pantallas de teléfono** (el paso 7 solo: 8) |
+| Campos a diligenciar a mano, equipo **sin configurar** | **102** |
+| Campos a diligenciar a mano, equipo **totalmente configurado** | **86** (el prellenado cubre 38 de 124) |
+| Prosa (hints + alertas) que hay que leer | **6 032 caracteres** ≈ 6 min |
+| Rutas del modelo `caso.oj` | **145** |
+| Campos que se piden y **no salen en ningún entregable** | **36** |
+| Municipio / departamento / dirección pedidos por separado | **5× cada uno**, sin enlazar |
+| Fechas / horas / teléfonos / nombre de funcionario | 9× / 6× / 7× / 4× |
+| Toques para corregir un dato del paso 1 estando en el 7 | **12** (los puntos no eran botones) |
+
+**Diagnóstico de raíz (tres tesis):** (1) *el formulario no es la preimagen del documento* — pide datos
+del acta de derechos y del informe ejecutivo, que la app no genera, de ahí los 36 campos huérfanos;
+(2) *los pasos siguen la taxonomía jurídica, no la línea de tiempo del funcionario* — en campo hay
+**tres** fuentes físicas (el papel de la orden, la persona, lo que pasó) repartidas en siete pantallas
+entrelazadas; (3) *la configuración se coló en el procedimiento* — 14 de los 24 campos del paso 7
+(membrete, custodia, firma) son propiedades del equipo, no del caso.
+⚠️ **Lo que NO se toca**: `ojVigencia`, `ojPlazo36`, `ojResolverDestino` con sus 7 reglas y fundamentos,
+`ojEsAdolescente`/`ojTermino`, el constructor OOXML y la regla «condicional = excluido» del formato.
+Ese es el activo del módulo; la auditoría es sobre **cómo se piden los datos**, no sobre qué hace con ellos.
+
+### OLA 1 — riesgo de pérdida de trabajo y ceguera de obligatorios (ejecutada)
+El hallazgo más grave no era la longitud del formulario sino que **se podía perder entero**. El wizard
+solo persistía en el ÚLTIMO paso: los **dos** botones del topbar (← y ✕) llamaban a `cancelWiz()`, que
+hacía `wc=null` **sin preguntar**; `go()` usaba `replaceState` sin manejador de `popstate`, así que el
+**botón atrás de Android salía de la app**; y no había `beforeunload`. 30-40 minutos de diligenciamiento
+se evaporaban con un gesto. Verificado con `verify_ola1.mjs` (**38 checks**, nuevo).
+- **Borrador automático** en clave propia `lc_draft`, **cifrada igual que las capturas** (contiene datos
+  de una persona, y en CESPA de un menor). ⚠️ **Fuera de `lc_cases` a propósito**: una captura a medias
+  no debe salir en la lista, ni en estadísticas, ni crear una persona en el registro. Se guarda al
+  cambiar de paso y **2,5 s después de la última tecla** (`wizAutoguardar`) — el paso 4 tiene 33 campos
+  y ahí se pueden pasar diez minutos sin cambiar de pantalla. En **modo invitado** funciona en memoria
+  y no escribe un byte (`_lcEncSave` ya cortaba para invitado; la huella de `localStorage` se comprueba).
+- ⚠️ **«Sucio» se mide contra una foto inicial** (`_wizBase`), no contra «hay campos no vacíos»: el
+  wizard **nace precargado** (fecha, hora, NUNC, perfil, unidad, membrete…). Sin esa foto, abrir y
+  cerrar el wizard sin tocar nada dejaría un borrador fantasma en cada intento.
+- **Recuperación visible**: tarjeta en la pantalla Capturas con nombre, tipo, paso y antigüedad, y dos
+  salidas (Continuar / Descartar). Un borrador invisible no sirve de nada.
+- **Salir del wizard pregunta**: diálogo con tres salidas explícitas — seguir diligenciando, guardar
+  borrador y salir, descartar y salir. **El botón atrás de Android** se intercepta con `popstate` (`go`
+  hace `pushState` solo para `wizard`) y entra por el mismo diálogo.
+- **Puntos del progreso navegables** (`wizGoto`): eran `<div>` sin `onclick`; ahora son `<button>`.
+  ⚠️ **Estaban ocultos por debajo de 580px** (`.wz-dots{display:none}`), o sea que la navegación habría
+  quedado **solo en escritorio, justo donde no se diligencia**. Ahora se ven siempre y se retiró la
+  barra de relleno, redundante con ellos. Se mantiene la guarda del NUNC al salir del paso 1 (issue M3).
+- **Obligatorios marcados en su propio paso**: `ojwF(...,req)` pinta el asterisco, la barra de progreso
+  cuenta cuántos faltan en el paso actual y **cada punto se marca en rojo** si su paso tiene faltas
+  (`wizFaltasPorPaso` lee `ojValidar`). Antes no había señal alguna en los pasos 1-6.
+- **El resumen de faltantes subió al INICIO del paso 7** (medía 8 pantallas de scroll) y **cada falta
+  trae su botón «Ir al paso N»**.
+- ⚠️ **Bug que destapó esta ola y que la regresión atrapó**: guardar el borrador **después** de
+  `renderWiz()` recolectaba las listas repetibles (funcionarios, delitos, prórrogas, elementos) cuando
+  su contenedor aún estaba vacío — se pintan de forma **diferida** (`ojPost`) — y `ojListaLeer` **las
+  borraba del modelo**. Corregido en dos niveles: `wizGuardarBorrador(true)` cuando ya se recolectó, y
+  `ojListaLeer` ignora un contenedor sin filas si el modelo sí las tiene. **Era un peligro latente
+  anterior a este cambio**: cualquier `ojCollect()` en esa ventana borraba las filas.
+- Regresiones en verde: OJ 138 · multipersona 61 · envío 38 · export 47 · invitado 33 · simulador 41 ·
+  personas 23 · DS 10 · **ola1 38**. Anti-caché `?v=40` / `cache-v40`, `_BUILD=40`.
+
+### OLA 2 — redundancia e inferencia automática (ejecutada, 2026-07-31)
+`verify_ola2.mjs` (**34 checks**, nuevo). Regla transversal: **lo que la app puede saber no se
+pregunta**, y **lo que el usuario escribió no se pisa nunca**.
+- **Catálogo geográfico `LC_GEO` + aprendizaje.** El modelo pedía municipio y departamento por
+  separado **cinco veces** sin enlazarlos. Ahora el departamento se infiere del municipio.
+  ⚠️ **No se embeben los 1 122 municipios**: una tabla larga escrita de memoria es una tabla con
+  errores, y aquí el error se imprime en un documento judicial. Se embeben los verificables sin duda
+  (32 capitales + Valle de Aburrá) y **el resto lo aprende la app**: el primer par que el usuario
+  diligencia queda en `cfg.geoPropios` (mismo patrón que `despachosPropios`). ⚠️ **Homónimos**
+  (Barbosa está en Antioquia y Santander; La Unión en cuatro) se declaran con lista y **no se
+  autocompletan** — preguntar es correcto, adivinar no; lo aprendido por el usuario sí los resuelve
+  para su jurisdicción.
+- ⚠️ **La inferencia se dispara en el `input` del campo ORIGEN, jamás en su `blur`.** En el blur el
+  foco todavía no ha llegado al destino (`document.activeElement` es el body), así que rellenar ahí
+  escribe en el campo al que el usuario está entrando y **lo que teclea se concatena** con la
+  sugerencia: salía «239, 240 y 241240» en el oficio. Lo atrapó `verify_oj.mjs`, no la vista.
+  `lcAutoRellenar` marca lo que puso la app (`data-lc-auto`) y solo se pisa a sí mismo.
+- **Herencia despacho ⇒ destinatario**: en R2 (Ley 600) y R4-A (condena) el destinatario **es** el
+  despacho que libró la orden, pero `ojAplicarSugerencia` copiaba **solo el nombre** y el funcionario
+  retecleaba dirección, ciudad y teléfono de un juzgado que la app ya tenía. Ahora hereda todo lo que
+  esté vacío — y **no hereda** cuando el destinatario es otra autoridad (R3: el fiscal).
+- **T.I. automática** cuando `ojEsAdolescente` (el FPJ-5 ya lo hacía con `markDocType`; OJ no) salvo
+  que el usuario haya elegido a mano (`tipoDocManual`). **Edad calculada** y de solo lectura cuando
+  hay fecha de nacimiento; editable si no la hay (hay órdenes que solo traen la edad).
+- **Derechos**: hora, lugar y fecha se proponen desde la diligencia. **Anexos automáticos** según lo
+  registrado (`ojAnexosAuto`); en cuanto el usuario toca una casilla (`anexosManual`) la app deja de
+  proponer. **Delito ⇒ artículo del C.P.** (`OJ_ART_CP`) reutilizando el datalist `dl-cond` de
+  flagrancia. **Funcionario que verifica** desde el perfil activo.
+- **«Cargar desde Personas» con buscador** (listaba 60 sin filtro) y **viaje de vuelta simétrico**:
+  `ojPersonaEspejo` guardaba padres, estado civil y lugar de nacimiento y `ojUsarPersona` **no los
+  releía** — una persona capturada dos veces perdía datos que la app ya tenía suyos.
+- **Línea 3 del membrete desde el perfil regional** (`reg.unidad`). ⚠️ **No se puede embeber una
+  tabla municipio→unidad**: los nombres de unidad son nombres institucionales y el filtro de Play
+  Store los prohíbe en el código. Lo escribe el usuario una vez, como las otras tres líneas.
+- **Medido**: un caso real de captura por condena se completa **tecleando 22 campos** y sale con
+  **cero validaciones duras**; el resto (departamentos, destinatario, edad, derechos, anexos,
+  funcionario) lo pone la app.
+
+### OLA 3 — los 36 campos huérfanos (ejecutada, 2026-07-31)
+`verify_ola3.mjs` (**33 checks**, nuevo). Cada campo que no salía en ningún entregable se
+**imprime**, se **pliega** o se **elimina**.
+- **Eliminados (13)**: `dirigidaA`, especialidad / identificación / funcionario responsable / nombre
+  y cargo del juez del despacho, fecha de la decisión, descripción jurídica, pena (3 campos),
+  «demás datos identificativos» y vehículo institucional. Ninguno salía en el oficio ni sostenía una
+  validación o una decisión. La **firma de la orden se queda**: sostiene V19 (art. 28 C.P.).
+- **Plegados (4)**: sexo, estado civil, nacionalidad y alias — no salen en este oficio pero alimentan
+  el registro de Personas y el FPJ-5. Siguen ahí, dejan de costar scroll.
+  ⚠️ **Un `<details>` no pliega si una regla de autor fija el `display` de sus hijos**: la regla del
+  navegador que oculta el contenido de un `<details>` cerrado es de *user-agent* y pierde contra
+  cualquier regla propia — `.fr{display:grid}` la anulaba y los cuatro campos seguían ocupando
+  pantalla con el bloque «cerrado». Hace falta `.oj-mas:not([open])>*:not(summary){display:none}`.
+- **Impresos (14)**: comunicación a un tercero (art. 303.1 CPP, con su fundamento), defensor,
+  valoración médica, constancia de entrega (fecha, hora, quién recibe y su cargo) y el resultado de
+  la verificación cuando no fue positivo. Su ausencia en el informe es un **defecto del documento**,
+  no un dato de relleno.
+  ⚠️ **Van DENTRO de la narración**, que es el espacio que el formato tiene para los hechos — igual
+  que ya se hacía con la fuerza, las lesiones y las incautaciones. **No se añadió ni un apartado, ni
+  una tabla, ni una fila**: el oficio conserva sus 3 tablas y sus 23 filas fijas (regla «el oficio ES
+  el formato», OJ v2.1). Hay un check que lo mide.
+
+### OLA 4 — tres pantallas + revisión (ejecutada, 2026-07-31)
+`verify_ola4.mjs` (**21 checks**, nuevo). Los siete pasos seguían la taxonomía jurídica; en la calle
+el funcionario tiene **tres fuentes** delante (el papel de la orden, la persona, lo que acaba de
+pasar) y el formulario le hacía recorrerlas en siete pantallas entrelazadas.
+- `OJ_STEPS` pasa a **`['La orden','El requerido','El procedimiento','Revisión']`**. Los bloques no
+  se tocaron: se componen (`ojPantallaA` = orden + despacho + proceso; `ojPantallaC` = diligencia +
+  actuación). `OJ_PANT` mapea bloque→pantalla y **`ojValidar` etiqueta sus faltas con ese mapa**, así
+  que el punto rojo del progreso, el modal de faltantes y «Ir al paso N» siguen funcionando.
+- ⚠️ **`ojCollect` recolecta por PRESENCIA EN EL DOM**, no por índice ni por nombre de paso: siete
+  recolectores independientes que se autolimitan comprobando su primer campo. Antes bastaba mirar el
+  paso activo porque cada bloque tenía su pantalla; ahora una pantalla trae varios. **Fusionar o
+  partir pantallas ya no obliga a tocar esa función.**
+- ⚠️ **Plegar no es borrar**: cada recolector comprueba si su bloque está en pantalla antes de leerlo.
+  Sin eso, recolectar con un `<details>` cerrado habría vaciado sexo/alias, comunicación y valoración.
+  Hay tres checks dedicados a esto.
+- **Divulgación progresiva**: verificación de la orden, comunicación y defensa, fuerza/salud/novedades,
+  incautaciones, anexos, constancia de entrega y el bloque de membrete/custodia/firma viajan plegados
+  y se abren solos si ya traen datos o si faltan obligatorios. **El membrete, la custodia y la firma
+  son propiedades del equipo**, no del caso: se piden una vez y desde la segunda captura no estorban.
+- **Medido (mismo teléfono de la auditoría)**: **131 → 89 controles**, **120 → 74 campos visibles**,
+  **32 → 26 pantallas de scroll**, y **6 toques de «Siguiente» → 3**. El paso 7 dejó de ser un
+  formulario de 24 campos: es una revisión de 19 con el resumen de faltantes arriba.
+- ⚠️ Las suites que recorrían siete pasos (`verify_oj`, `verify_ola1`, `verify_ola2`, `verify_ola3`,
+  `verify_invitado`) se adaptaron al recorrido de cuatro y a abrir los bloques plegados. **Ninguna
+  bajó su número de comprobaciones.**
+- Regresiones en verde: OJ 138 · ola1 38 · ola2 34 · ola3 33 · **ola4 21** · multipersona 61 ·
+  envío 38 · export 47 · invitado 33 · simulador 41 · personas 23 · DS 10.
+  Anti-caché `?v=41` / `cache-v41`, `_BUILD=41`.
+
+### Lo que queda por delante
+Las cuatro olas de la auditoría están ejecutadas. Pendientes de otro orden:
+- **Un «Modo 36 horas» explícito**: hoy la divulgación progresiva ya deja a la vista casi solo lo
+  obligatorio, pero no hay un botón que diga «emite el oficio con lo mínimo y completa el resto antes
+  de enviarlo». Las validaciones DURAS por caso son exactamente **14 datos**.
+- **Flagrancia (URI/CESPA) no recibió ninguna de las cuatro olas**: sigue en 8 pasos, con
+  `lugar.muni`/`lugar.depto` fijos en Medellín/Antioquia (issue A1) y sin catálogo geográfico. El
+  borrador automático y los puntos navegables de la Ola 1 sí la cubren (viven en el wizard común).
+- **Los 5 pares municipio/departamento del modelo siguen existiendo** aunque ya no se tecleen: son
+  datos distintos (despacho, residencia, nacimiento, lugar de la diligencia, destinatario) y el
+  formato los imprime por separado. No se fusionan.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

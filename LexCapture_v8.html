@@ -693,9 +693,15 @@ body.guest{padding-top:38px}
 .wz-mob{display:block;margin-bottom:4px}
 .wz-mob .wz-lbl{font-size:13px;color:var(--text-2);margin-bottom:8px;line-height:1.4}
 .wz-mob .wz-lbl strong{color:var(--text);font-weight:650}
-.wz-mob .wz-bar{height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden}
+/* La barra de relleno era redundante con la fila de puntos, que además dice en
+   qué paso falta algo. Se retira: son ~14px menos de alto en cada pantalla. */
+.wz-mob .wz-bar{display:none;height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden}
 .wz-mob .wz-fill{height:100%;background:var(--acc);border-radius:2px;transition:width var(--d3) var(--ease)}
-.wz-dots{display:none;align-items:center;gap:0;overflow-x:auto;padding:6px 0}
+/* ⚠️ Los puntos se ven SIEMPRE, también en teléfono: desde que son botones son
+   la única forma de saltar entre pasos, y el teléfono es el equipo de campo.
+   Estaban ocultos por debajo de 580px, así que la navegación existía solo en
+   escritorio — justo donde no se diligencia. */
+.wz-dots{display:flex;align-items:center;gap:0;overflow-x:auto;padding:6px 0}
 .wd{
   width:28px;height:28px;min-width:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
@@ -705,8 +711,46 @@ body.guest{padding-top:38px}
 }
 .wd.on{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
 .wd.ok{background:var(--accG);border-color:var(--accD);color:var(--acc)}
+/* Los puntos son botones: se salta a cualquier paso sin recorrer los de en medio.
+   El área táctil se agranda con un pseudo-elemento para no descuadrar la fila. */
+.wd{position:relative;cursor:pointer;padding:0;font-family:inherit;appearance:none;-webkit-appearance:none}
+.wd::after{content:"";position:absolute;inset:-8px;border-radius:50%}
+.wd:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+/* Paso con datos obligatorios pendientes: se ve DESDE EL PASO 1, no al final. */
+.wd.falta{border-color:var(--danger);color:var(--danger);border-style:dashed}
+.wd.on.falta{background:var(--acc);border-color:var(--danger);color:var(--acc-fg);border-style:solid;box-shadow:0 0 0 2px var(--errB)}
 .wl{flex:1;height:2px;background:var(--border-strong);min-width:8px;transition:background var(--d3) var(--ease)}
 .wl.ok{background:var(--accD)}
+/* Marcador de campo obligatorio (bloquea la generación del documento). */
+.req{color:var(--danger);font-weight:700;margin-left:3px}
+/* Destello breve cuando la app rellena un campo sola: el usuario ve QUE se
+   rellenó y QUÉ se rellenó, en vez de encontrárselo escrito sin explicación. */
+.fi-auto{border-color:var(--ok)!important;background:var(--ok-bg)!important;transition:background .5s,border-color .5s}
+.fg-auto{font-size:11.5px;color:var(--ok);margin-top:4px}
+.wz-falta,.wz-ok{
+  display:block;margin-top:6px;padding:7px 10px;
+  border-radius:var(--radius-sm);font-size:12px;line-height:1.4;color:var(--text)
+}
+.wz-falta{background:var(--errB);border:1px solid var(--danger)}
+.wz-falta b{color:var(--danger)}
+.wz-ok{background:var(--ok-bg);border:1px solid var(--ok)}
+/* Borrador sin terminar — tarjeta de recuperación en la pantalla Capturas. */
+.draft-card{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;
+  border-radius:var(--radius-md);background:var(--warn-bg);border:1px solid var(--warn)
+}
+.draft-card .dc-ic{flex:0 0 auto;width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--surface-2);color:var(--warn)}
+.draft-card .dc-ic svg{width:18px;height:18px;stroke-width:2}
+.draft-card .dc-b{flex:1;min-width:0}
+.draft-card .dc-t{font-size:13.5px;font-weight:650;color:var(--text);line-height:1.3}
+.draft-card .dc-s{font-size:12px;color:var(--text-3);margin-top:2px;line-height:1.35}
+.draft-card .dc-a{display:flex;gap:8px;flex-shrink:0}
+@media(max-width:520px){
+  .draft-card{flex-wrap:wrap}
+  .draft-card .dc-a{width:100%;margin-top:2px}
+  .draft-card .dc-a .btn{flex:1}
+}
 .wpn{display:none;animation:fadeIn var(--d2) var(--ease);padding-bottom:130px}
 .wpn.on{display:block}
 .wnav{
@@ -1121,6 +1165,21 @@ body.guest{padding-top:38px}
 .oj-kv span:first-child{color:var(--text-3);flex:0 0 auto}
 .oj-kv span:last-child{text-align:right;color:var(--text)}
 .oj-fund{font-size:11.5px;color:var(--text-3);margin-top:6px;font-style:italic}
+/* Bloque plegable: datos que no salen en el oficio y no deben costar scroll. */
+.oj-mas>summary{
+  cursor:pointer;list-style:none;font-size:12.5px;font-weight:650;color:var(--text-2);
+  padding:2px 0;display:flex;align-items:center;gap:6px
+}
+.oj-mas>summary::-webkit-details-marker{display:none}
+/* ⚠️ Sin esta regla el bloque NO se pliega: el navegador oculta los hijos de un
+   <details> cerrado con una regla de user-agent, que pierde contra CUALQUIER
+   regla de autor — y `.fr{display:grid}` es una de ellas. Los cuatro campos
+   seguían ocupando pantalla con el bloque «cerrado». */
+.oj-mas:not([open])>*:not(summary){display:none!important}
+.oj-mas>summary::before{content:"+";font-size:15px;color:var(--text-3);line-height:1}
+.oj-mas[open]>summary::before{content:"–"}
+.oj-mas>summary small{font-weight:400;color:var(--text-3)}
+.oj-mas[open]>summary{margin-bottom:10px}
 
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
@@ -1228,6 +1287,9 @@ body.guest{padding-top:38px}
       </div>
     </header>
     <div class="pane">
+      <!-- Captura sin terminar: se pinta desde renderCases() y es la vía de
+           recuperación del borrador automático del wizard. -->
+      <div id="draft-slot"></div>
       <div class="flt">
         <button class="fc on" onclick="filterCasos('all',this)">Todas</button>
         <button class="fc" onclick="filterCasos('FLAG',this)">Flagrancia</button>
@@ -1744,6 +1806,9 @@ body.guest{padding-top:38px}
   <option value="Receptación"><option value="Concierto para delinquir"><option value="Extorsión">
   <option value="Homicidio agravado"><option value="Hurto agravado con violencia"><option value="Tráfico de estupefacientes agravado">
 </datalist>
+<!-- Municipios: base embebida + los que el usuario haya diligenciado en su zona.
+     Lo pinta lcGeoPintarDatalist() en cada render del wizard. -->
+<datalist id="dl-muni"></datalist>
 <datalist id="dl-barrio">
   <option value="La Candelaria"><option value="Villanueva"><option value="San Benito"><option value="Guayaquil">
   <option value="Boston"><option value="Buenos Aires"><option value="El Chagualo"><option value="Jesús Nazareno">
@@ -1778,8 +1843,24 @@ function go(name) {
   // (p.ej. un NUNC de 16 dígitos escrito en el wizard). Si eso pasa, el filtro
   // deja la lista vacía y parece que no hay personas. Se limpia al entrar.
   if (name === 'personas') { clearPersonSearch(); renderPersonas(); }
-  try { history.replaceState({screen: name}, '', '#' + name); } catch(e) {}
+  /* El wizard SÍ empuja una entrada de historial: así el botón atrás de Android
+     (y el gesto de deslizar) tienen algo que consumir y los intercepta el
+     manejador de abajo, en vez de cerrar la app con el caso a medias. */
+  try {
+    if (name === 'wizard') history.pushState({screen: name}, '', '#' + name);
+    else history.replaceState({screen: name}, '', '#' + name);
+  } catch(e) {}
 }
+
+/* Botón atrás / gesto de retroceso estando en el wizard: antes salía de la
+   aplicación (no había manejador y `go` solo hacía replaceState), y con ella se
+   iba todo lo diligenciado. Ahora se trata igual que el botón ✕: se pregunta. */
+window.addEventListener('popstate', function() {
+  var wiz = document.getElementById('screen-wizard');
+  if (!wiz || !wiz.classList.contains('on') || !wc) return;
+  try { history.pushState({screen:'wizard'}, '', '#wizard'); } catch(e) {}
+  cancelWiz();
+});
 
 function markActive(name) {
   document.querySelectorAll('.sb-item[data-screen], .bn-item[data-screen]').forEach(function(it) {
@@ -1834,7 +1915,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 39;
+var _BUILD = 41;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2332,6 +2413,11 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_persons');
   if (enc) { try { _personsCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _personsCache = []; } }
   else { _personsCache = []; }
+  // El borrador del wizard viaja cifrado igual que las capturas: contiene datos
+  // de una persona (y en CESPA, de un menor) tanto como un caso guardado.
+  enc = localStorage.getItem('lc_draft');
+  if (enc) { try { _draftCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _draftCache = null; } }
+  else { _draftCache = null; }
   _syncPersonsFromCases();
 }
 
@@ -2358,7 +2444,21 @@ function _syncPersonsFromCases() {
   if (added) { _personsCache = existing; _lcEncSave('persons', existing); }
 }
 
+/* Borrador del wizard. Vive en su propia clave (`lc_draft`) y NO en `lc_cases`:
+   una captura a medias no debe aparecer en la lista, ni en estadísticas, ni
+   crear una persona en el registro. En modo invitado `_lcEncSave` no escribe
+   nada, así que el borrador solo existe en memoria mientras dure la sesión. */
+var _draftCache = null;
 var DB = {
+  getDraft: function() { return _draftCache; },
+  saveDraft: function(d) { _draftCache = d; return _lcEncSave('draft', d); },
+  clearDraft: function() {
+    if (_draftCache === null) return Promise.resolve();
+    _draftCache = null;
+    if (_guest) return Promise.resolve();
+    try { localStorage.removeItem('lc_draft'); } catch(e) {}
+    return Promise.resolve();
+  },
   getCases: function() { return _casesCache !== null ? _casesCache : []; },
   saveCases: function(c) { _casesCache = c; return _lcEncSave('cases', c); },
   getCase: function(id) { var a=this.getCases(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
@@ -2431,6 +2531,7 @@ function renderCases() {
     var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = 'Datos protegidos';
     return;
   }
+  renderDraftSlot();          // captura sin terminar, si la hay
   var all = DB.getCases();
   var sub = document.getElementById('cap-sub');
   if (sub) sub.textContent = all.length + ' captura' + (all.length===1?'':'s');
@@ -2487,8 +2588,11 @@ function getWizConfig() {
 }
 
 function startWizard(tipo) {
+  // Si hay una captura a medias sin guardar, se pregunta antes de pisarla.
+  if (wizPreguntarBorrador(null, function(){ startWizard(tipo); })) return;
   if (tipo === 'OJ') {                       // módulo propio (Fase I)
     wc = ojNuevoCaso(); ws = 0;
+    wizMarcarBase();
     document.getElementById('wz-title').textContent = 'Captura por orden judicial';
     go('wizard'); renderWiz(); return;
   }
@@ -2515,15 +2619,18 @@ function startWizard(tipo) {
     fechaDia:t.dd, fechaMes:t.mm, fechaAno:t.yy
   };
   ws=0;
+  wizMarcarBase();
   document.getElementById('wz-title').textContent = 'Nuevo caso '+tipo;
   go('wizard'); renderWiz();
 }
 
 function editCase(id) {
   var raw = DB.getCase(id); if (!raw) return;
+  if (wizPreguntarBorrador(id, function(){ editCase(id); })) return;
   wc = JSON.parse(JSON.stringify(raw));
   if (wc.ojv === 2) {                        // caso del módulo de orden judicial
     ojNormalizar(wc); ws = 0;
+    wizMarcarBase();
     document.getElementById('wz-title').textContent = 'Captura por orden judicial';
     go('wizard'); renderWiz(); return;
   }
@@ -2539,40 +2646,267 @@ function editCase(id) {
   if (!wc.autoridadSolicita) wc.autoridadSolicita='';
   if (!wc.destinoOJ) wc.destinoOJ='FISCALIA_URI';
   ws=0;
+  wizMarcarBase();
   document.getElementById('wz-title').textContent = 'Editar caso';
   go('wizard'); renderWiz();
 }
 
-function cancelWiz() { wc=null; go('capturas'); }
+/* ═══════════════════════════════════════════════════════════════════════════
+   BORRADOR AUTOMÁTICO DEL WIZARD  (Ola 1 de la auditoría del módulo OJ)
+   El wizard solo persistía en el ÚLTIMO paso: los dos botones del topbar (← y ✕)
+   llamaban a cancelWiz(), que hacía `wc=null` sin preguntar, y no había manejador
+   del botón atrás de Android. Un procedimiento de 30-40 minutos se perdía con un
+   gesto. Ahora todo lo diligenciado se guarda cifrado en `lc_draft` (fuera de
+   `lc_cases`: una captura a medias no debe salir en la lista, ni en estadísticas,
+   ni crear una persona en el registro) y se recupera desde la pantalla Capturas.
+   ⚠️ El borrador se compara siempre contra una FOTO INICIAL del caso: el wizard
+   nace con datos precargados (fecha, NUNC, perfil, unidad…), así que "tiene algo
+   escrito" no es "algún campo no está vacío", es "cambió respecto a como nació".
+═══════════════════════════════════════════════════════════════════════════ */
+var _wizBase = null;                 // huella del caso al abrir el wizard
+var _wizDraftTimer = null;           // temporizador del guardado diferido
+var _wizDraftListo = false;          // el detector de escritura ya está montado
 
+function wizMarcarBase(){
+  try { _wizBase = JSON.stringify(wc); } catch(e) { _wizBase = null; }
+  wizMontarAutoguardado();
+}
+/* «Sucio» = distinto de como nació. Se recolecta antes para contar lo que está
+   en pantalla y todavía no ha bajado al modelo.
+   ⚠️ `yaRecolectado` NO es un detalle de rendimiento: las listas repetibles
+   (funcionarios, delitos, prórrogas, elementos) se pintan de forma diferida
+   (ojPost). Recolectar justo después de un renderWiz() lee un contenedor que
+   todavía está vacío y ojListaLeer se llevaría por delante las filas del
+   modelo. Quien ya llamó a collectStep() antes de repintar pasa `true`. */
+function wizSucio(yaRecolectado){
+  if (!wc) return false;
+  if (!yaRecolectado) { try { collectStep(); } catch(e) {} }
+  try { return JSON.stringify(wc) !== _wizBase; } catch(e) { return true; }
+}
+// Nombre de quien va en la captura; si todavía no se ha diligenciado se dice
+// así, en vez de repetir el tipo de captura (que ya va en el subtítulo).
+function wizDraftEtiqueta(c){
+  if (!c) return '';
+  var n = c.ojv===2 ? ojNombreRequerido(c.oj.requerido)
+                    : ((c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : '');
+  return n || 'sin identificar aún';
+}
+function wizDraftTipo(c){
+  if (!c) return '';
+  if (c.ojv===2 || c.tipo==='OJ') return 'Orden judicial';
+  return c.tipo==='CESPA' ? 'Flagrancia CESPA' : 'Flagrancia URI';
+}
+function wizGuardarBorrador(yaRecolectado){
+  if (!wc || !wizSucio(yaRecolectado)) return Promise.resolve(false);
+  var pasos=getWizConfig().steps;
+  return DB.saveDraft({
+    caso: JSON.parse(JSON.stringify(wc)), paso: ws, ts: Date.now(),
+    tipo: wc.ojv===2 ? 'OJ' : (wc.tipo||''), etiqueta: wizDraftEtiqueta(wc),
+    tipoLbl: wizDraftTipo(wc), pasoNombre: pasos[ws]||'', total: pasos.length
+  }).then(function(){ return true; }).catch(function(){ return false; });
+}
+/* Guardado diferido: el usuario puede pasar diez minutos en un solo paso (el 4
+   tiene 33 campos), así que no basta con guardar al cambiar de pantalla. Se
+   escribe 2,5 s después de la última tecla — no en cada pulsación, que en un
+   equipo de gama baja significaría cifrar el caso entero decenas de veces. */
+function wizAutoguardar(){
+  if (_wizDraftTimer) clearTimeout(_wizDraftTimer);
+  _wizDraftTimer = setTimeout(function(){
+    _wizDraftTimer = null;
+    if (wc) wizGuardarBorrador();
+  }, 2500);
+}
+function wizMontarAutoguardado(){
+  if (_wizDraftListo) return;
+  var panel = document.getElementById('wz-panels');
+  if (!panel) return;
+  panel.addEventListener('input', wizAutoguardar);
+  panel.addEventListener('change', wizAutoguardar);
+  _wizDraftListo = true;
+}
+// Al guardar o generar el documento el borrador deja de tener sentido.
+function wizCerrarBorrador(){
+  if (_wizDraftTimer) { clearTimeout(_wizDraftTimer); _wizDraftTimer=null; }
+  return DB.clearDraft();
+}
+/* Se llama al abrir CUALQUIER wizard: si hay un borrador se pregunta en vez de
+   pisarlo en silencio. Devuelve true cuando abrió el diálogo (el llamador aborta
+   y se reintenta desde el botón «Empezar de nuevo»). */
+window._wizReintento = null;
+function wizPreguntarBorrador(idDestino, reintentar){
+  var d = DB.getDraft();
+  if (!d || !d.caso) return false;
+  var mismo = idDestino && d.caso.id === idDestino;
+  window._wizReintento = reintentar;
+  openModal(
+    '<div class="mh"><h2>'+(mismo?'Cambios sin guardar':'Captura sin terminar')+'</h2>'+
+    '<button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<p class="txs txd" style="margin-bottom:14px">'+
+      (mismo
+        ? 'Esta captura tiene cambios que no llegaste a guardar'
+        : 'Dejaste una captura a medias: <b>'+escHtml(d.etiqueta||'')+'</b>')+
+      ' — paso '+((d.paso||0)+1)+' de '+(d.total||'?')+
+      ' ('+escHtml(d.pasoNombre||'')+'), '+wizHace(d.ts)+'.</p>'+
+    '<button class="btn bp bbl" onclick="wizRetomarBorrador()">Continuar donde iba</button>'+
+    '<button class="btn bs bbl" style="margin-top:8px" onclick="wizEmpezarDeNuevo()">Empezar de nuevo</button>'+
+    '<p class="txs txd" style="margin-top:10px;font-size:12px">«Empezar de nuevo» descarta lo diligenciado y no se puede deshacer.</p>'
+  );
+  return true;
+}
+function wizHace(ts){
+  var m = Math.round((Date.now()-(ts||0))/60000);
+  if (m < 1) return 'hace un momento';
+  if (m < 60) return 'hace '+m+' minuto'+(m===1?'':'s');
+  var h = Math.round(m/60);
+  if (h < 24) return 'hace '+h+' hora'+(h===1?'':'s');
+  var dd = Math.round(h/24);
+  return 'hace '+dd+' día'+(dd===1?'':'s');
+}
+function wizRetomarBorrador(){
+  var d = DB.getDraft(); if (!d || !d.caso) { closeModal(); return; }
+  closeModal();
+  window._wizReintento = null;
+  wc = d.caso; ws = d.paso || 0;
+  if (wc.ojv===2) ojNormalizar(wc);
+  wizMarcarBase();
+  document.getElementById('wz-title').textContent =
+    wc.ojv===2 ? 'Captura por orden judicial' : ('Captura '+(wc.tipo||''));
+  go('wizard'); renderWiz();
+  toast('Borrador recuperado — vas por el paso '+(ws+1));
+}
+function wizEmpezarDeNuevo(){
+  var fn = window._wizReintento; window._wizReintento = null;
+  wizCerrarBorrador();
+  closeModal();
+  if (fn) fn(); else renderDraftSlot();
+}
+function wizDescartarBorrador(){
+  if (!confirm('¿Descartar la captura sin terminar? No se puede deshacer.')) return;
+  wizCerrarBorrador();
+  renderDraftSlot();
+  toast('Borrador descartado');
+}
+/* Tarjeta de recuperación en la pantalla Capturas: es la única forma de que el
+   funcionario SEPA que su trabajo sigue ahí. Un borrador invisible no sirve. */
+function renderDraftSlot(){
+  var el = document.getElementById('draft-slot'); if (!el) return;
+  var d = DB.getDraft();
+  if (!d || !d.caso) { el.innerHTML=''; return; }
+  el.innerHTML =
+    '<div class="draft-card">'+
+      '<div class="dc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'+
+        '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>'+
+      '<div class="dc-b">'+
+        '<div class="dc-t">Captura sin terminar — '+escHtml(d.etiqueta||'')+'</div>'+
+        '<div class="dc-s">'+escHtml(d.tipoLbl||'')+' · Paso '+((d.paso||0)+1)+' de '+(d.total||'?')+
+          ' ('+escHtml(d.pasoNombre||'')+') · '+wizHace(d.ts)+'</div>'+
+      '</div>'+
+      '<div class="dc-a">'+
+        '<button class="btn bp bsm" onclick="wizRetomarBorrador()">Continuar</button>'+
+        '<button class="btn bs bsm" onclick="wizDescartarBorrador()">Descartar</button>'+
+      '</div>'+
+    '</div>';
+}
+
+/* Salir del wizard. Antes: `wc=null` y a la calle, sin preguntar y sin red.
+   Ahora se ofrece la salida honesta — el trabajo queda como borrador — y
+   descartar es una decisión explícita, no el comportamiento por defecto. */
+function cancelWiz() {
+  if (!wizSucio()) { wc=null; go('capturas'); renderDraftSlot(); return; }
+  openModal(
+    '<div class="mh"><h2>¿Salir de la captura?</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<p class="txs txd" style="margin-bottom:14px">Tienes datos diligenciados que todavía no se han guardado como captura.</p>'+
+    '<button class="btn bp bbl" onclick="closeModal()">Seguir diligenciando</button>'+
+    '<button class="btn bs bbl" style="margin-top:8px" onclick="wizSalirGuardando()">Guardar borrador y salir</button>'+
+    '<button class="btn bd bbl" style="margin-top:8px" onclick="wizSalirDescartando()">Descartar y salir</button>'
+  );
+}
+function wizSalirGuardando(){
+  wizGuardarBorrador().then(function(ok){
+    closeModal(); wc=null; go('capturas'); renderDraftSlot();
+    toast(ok ? 'Borrador guardado — lo retomas desde Capturas' : 'Sin cambios que guardar');
+  });
+}
+function wizSalirDescartando(){
+  wizCerrarBorrador();
+  closeModal(); wc=null; go('capturas'); renderDraftSlot();
+  toast('Captura descartada');
+}
+
+/* Faltas obligatorias POR PASO. Hasta ahora las validaciones duras solo se veían
+   en el paso 7, tras ocho pantallas de scroll: el funcionario no podía saber que
+   le faltaba el número de la orden hasta el final. Devuelve un mapa
+   {índiceDePaso: nº de faltas}. Solo aplica al módulo de orden judicial, que es
+   el que tiene motor de validación (ojValidar). */
+function wizFaltasPorPaso(){
+  var out = {};
+  if (!wc || wc.ojv!==2 || typeof ojValidar!=='function') return out;
+  try {
+    ojValidar(wc).forEach(function(v){
+      if (v.nivel!=='DURA') return;
+      out[v.paso] = (out[v.paso]||0)+1;
+    });
+  } catch(e) {}
+  return out;
+}
 function renderWiz() {
   var cfg = getWizConfig(); var maxWs = cfg.steps.length-1;
   var total = cfg.steps.length;
   var pct = maxWs > 0 ? Math.round((ws / maxWs) * 100) : 100;
+  var faltas = wizFaltasPorPaso();
   var dots = '';
   cfg.steps.forEach(function(s,i){
     if(i>0) dots+='<div class="wl '+(i<=ws?'ok':'')+'"></div>';
-    dots+='<div class="wd '+(i===ws?'on':i<ws?'ok':'')+'" title="'+s+'">'+(i+1)+'</div>';
+    var n = faltas[i]||0;
+    var tit = s + (n ? ' — '+n+' dato'+(n===1?'':'s')+' obligatorio'+(n===1?'':'s')+' pendiente'+(n===1?'':'s') : '');
+    // Botón, no adorno: se salta a cualquier paso sin recorrer los intermedios.
+    dots+='<button type="button" class="wd '+(i===ws?'on':i<ws?'ok':'')+(n?' falta':'')+
+      '" title="'+escAttr(tit)+'" aria-label="'+escAttr('Paso '+(i+1)+': '+tit)+'"'+
+      (i===ws?' aria-current="step"':'')+' onclick="wizGoto('+i+')">'+(i+1)+'</button>';
   });
+  var nPaso = faltas[ws]||0;
+  var avisoPaso = nPaso
+    ? '<div class="wz-falta"><b>'+nPaso+' dato'+(nPaso===1?'':'s')+' obligatorio'+(nPaso===1?'':'s')+
+      '</b> sin diligenciar en este paso — van marcados con <span class="req">*</span></div>'
+    : (wc && wc.ojv===2 && !Object.keys(faltas).length
+        ? '<div class="wz-ok">Todos los datos obligatorios están diligenciados.</div>' : '');
   document.getElementById('wz-prog').innerHTML =
     '<div class="wz-mob">' +
       '<div class="wz-lbl">Paso '+(ws+1)+' de '+total+': <strong>'+cfg.steps[ws]+'</strong></div>' +
       '<div class="wz-bar"><div class="wz-fill" style="width:'+pct+'%"></div></div>' +
     '</div>' +
-    '<div class="wz-dots">'+dots+'</div>';
+    '<div class="wz-dots">'+dots+'</div>' + avisoPaso;
   var nav = (ws>0?'<button class="btn bs" onclick="wizPrev()">← Anterior</button>':'<div></div>')+
     (ws<maxWs?'<button class="btn bp" onclick="wizNext()">Siguiente →</button>':'<button class="btn bp" onclick="wizSave()">Guardar</button>');
   document.getElementById('wz-panels').innerHTML =
     '<div class="wpn on">'+cfg.panels[ws]()+'</div><div class="wnav">'+nav+'</div>';
+  wizMontarAutoguardado();
+  lcGeoPintarDatalist();      // sugerencias de municipio, incluidas las aprendidas
 }
 
-function wizPrev() { collectStep(); if(ws>0) ws--; renderWiz(); }
+/* Salto directo desde los puntos del progreso. Antes eran `<div>` sin onclick:
+   corregir un dato del paso 1 estando en el 7 costaba 12 toques (6 atrás y 6
+   adelante) y 12 re-renderizados. */
+function wizGoto(i){
+  var mx = getWizConfig().steps.length-1;
+  if (i<0 || i>mx || i===ws) return;
+  // Misma guarda que wizNext: el NUNC del paso 1 de flagrancia sigue siendo
+  // condición para avanzar (issue M3).
+  if (ws===0 && i>0 && !validateStep1()) return;
+  collectStep();
+  ws = i;
+  renderWiz();
+  window.scrollTo(0,0);
+  wizGuardarBorrador(true);
+}
+function wizPrev() { collectStep(); if(ws>0) ws--; renderWiz(); wizGuardarBorrador(true); }
 function wizNext() {
   if (ws===0 && !validateStep1()) return;
   collectStep();
   var mx = getWizConfig().steps.length-1;
   if (ws<mx) ws++;
   renderWiz();
+  wizGuardarBorrador(true);
 }
 async function wizSave() {
   if (wc && wc.ojv===2) return ojGuardarYSalir();
@@ -2589,7 +2923,8 @@ async function wizSave() {
       jobs=jobs.concat((saved.testigos||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Testigo'}));}));
     }
     await Promise.all(jobs);
-    wc=null; go('capturas'); guestToastGuardado('Caso guardado ✓');
+    await wizCerrarBorrador();      // ya es una captura: el borrador sobra
+    wc=null; go('capturas'); renderDraftSlot(); guestToastGuardado('Caso guardado ✓');
   } catch(e) {
     console.error('[LexCapture] error guardando caso', e);
     toast('⚠️ Error guardando el caso — el PIN pudo bloquearse. Vuelve a intentarlo.');
@@ -4470,6 +4805,134 @@ function loadPerfilServ() {
   toast('Perfil cargado ✓');
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   OLA 2 · CATÁLOGO GEOGRÁFICO — municipio ⇒ departamento
+   El modelo pedía municipio y departamento por separado CINCO veces (despacho,
+   residencia, nacimiento, lugar de la diligencia, destinatario) sin enlazarlos:
+   diez campos para cinco datos. Ahora basta escribir el municipio.
+
+   ⚠️ Por qué el catálogo NO trae los 1 122 municipios del país: una tabla larga
+   escrita de memoria es una tabla con errores, y aquí un error no es cosmético
+   (el departamento sale impreso en un documento judicial). Se embeben los que
+   son verificables sin margen de duda — las 32 capitales y el Valle de Aburrá —
+   y el resto lo APRENDE la app: el primer par municipio/departamento que el
+   usuario escribe a mano queda en `cfg.geoPropios` y desde entonces se completa
+   solo. Mismo patrón que `despachosPropios`.
+
+   ⚠️ Homónimos: hay municipios con el mismo nombre en departamentos distintos
+   (Barbosa está en Antioquia y en Santander; La Unión, en tres). Esos se
+   declaran con lista y la app NO autocompleta: preguntar es correcto, adivinar
+   no. Lo aprendido por el usuario sí manda sobre el homónimo, porque es su zona.
+═══════════════════════════════════════════════════════════════════════════ */
+var LC_GEO = {
+  // Las 32 capitales + Bogotá: dato estable y verificable.
+  'Leticia':'Amazonas','Medellín':'Antioquia','Arauca':'Arauca','Barranquilla':'Atlántico',
+  'Cartagena':'Bolívar','Tunja':'Boyacá','Manizales':'Caldas','Florencia':'Caquetá',
+  'Yopal':'Casanare','Popayán':'Cauca','Valledupar':'Cesar','Quibdó':'Chocó',
+  'Montería':'Córdoba','Bogotá D.C.':'Bogotá D.C.','Inírida':'Guainía',
+  'San José del Guaviare':'Guaviare','Neiva':'Huila','Riohacha':'La Guajira',
+  'Santa Marta':'Magdalena','Villavicencio':'Meta','Pasto':'Nariño','Cúcuta':'Norte de Santander',
+  'Mocoa':'Putumayo','Armenia':'Quindío','Pereira':'Risaralda',
+  'San Andrés':'Archipiélago de San Andrés, Providencia y Santa Catalina',
+  'Bucaramanga':'Santander','Sincelejo':'Sucre','Ibagué':'Tolima','Cali':'Valle del Cauca',
+  'Mitú':'Vaupés','Puerto Carreño':'Vichada',
+  // Valle de Aburrá: es la zona de operación de referencia del proyecto.
+  'Bello':'Antioquia','Itagüí':'Antioquia','Envigado':'Antioquia','Sabaneta':'Antioquia',
+  'La Estrella':'Antioquia','Caldas':'Antioquia','Copacabana':'Antioquia',
+  'Girardota':'Antioquia','Rionegro':'Antioquia',
+  // Homónimos conocidos: se listan para que NO se autocompleten a ciegas.
+  'Barbosa':['Antioquia','Santander'],
+  'La Unión':['Antioquia','Nariño','Valle del Cauca','Sucre'],
+  'Sabanalarga':['Atlántico','Antioquia','Casanare'],
+  'Concordia':['Antioquia','Magdalena'],
+  'San Pedro':['Antioquia','Sucre','Valle del Cauca'],
+  'Albania':['La Guajira','Caquetá','Santander'],
+  'Puerto Rico':['Caquetá','Meta']
+};
+function lcGeoNorm(s){
+  return String(s||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'');   // «Medellín» = «medellin»
+}
+// Lo que el usuario ya diligenció una vez para su zona.
+function lcGeoAprendidos(){
+  var cfg=DB.getConfig();
+  return (cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
+}
+/* Departamento de un municipio, o '' si no se sabe o es ambiguo.
+   Lo aprendido por el usuario tiene prioridad: conoce su territorio mejor que
+   una tabla embebida, y resuelve además los homónimos de su región. */
+function lcGeoDepto(muni){
+  var k=lcGeoNorm(muni); if(!k) return '';
+  var mios=lcGeoAprendidos();
+  if(mios[k]) return mios[k];
+  for(var nombre in LC_GEO){
+    if(lcGeoNorm(nombre)!==k) continue;
+    var v=LC_GEO[nombre];
+    return Array.isArray(v)?'':v;            // homónimo: no se adivina
+  }
+  return '';
+}
+// Se aprende del par que el usuario diligencia a mano; no se guarda basura ni
+// se pisa lo que ya se sabía (lo último que escriba el usuario manda).
+function lcGeoRecordar(muni,depto){
+  var k=lcGeoNorm(muni), d=String(depto||'').trim();
+  if(!k||!d||k.length<3) return;
+  var cfg=DB.getConfig(), mios=(cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
+  if(mios[k]===d) return;
+  mios[k]=d; cfg.geoPropios=mios; DB.saveConfig(cfg);
+}
+/* Inferencia: se llama desde el `oninput` del municipio (mientras el usuario
+   escribe o elige de la lista), que es cuando el foco sigue en el municipio. */
+function lcGeoCompletar(el,idDepto){
+  var dep=document.getElementById(idDepto); if(!dep) return;
+  var muni=(el&&el.value||'').trim();
+  if(!muni) return;
+  lcAutoRellenar(dep,lcGeoDepto(muni));
+}
+/* Aprendizaje: se llama desde el `onblur`. Si el departamento lo puso el
+   usuario (no la app), ese par pasa a ser catálogo de su jurisdicción. */
+function lcGeoAprender(el,idDepto){
+  var dep=document.getElementById(idDepto); if(!dep) return;
+  var muni=(el&&el.value||'').trim();
+  if(!muni||!dep.value||dep.dataset.lcAuto==='1') return;
+  lcGeoRecordar(muni,dep.value);
+}
+/* Rellena un campo con un valor inferido y lo destella.
+   ⚠️ Se dispara desde el evento `input` del campo ORIGEN, nunca desde su blur:
+   en el blur el foco todavía no ha llegado al destino (`document.activeElement`
+   es el body), así que rellenar ahí escribe justo en el campo al que el usuario
+   está entrando y lo que teclee se CONCATENA con la sugerencia — salía «239,
+   240 y 241240» en el oficio, y lo atrapó la regresión.
+   ⚠️ Solo se pisa lo que rellenó la propia app (`data-lc-auto`): si el usuario
+   corrige el municipio, el departamento inferido se recalcula; si lo escribió
+   él, no se toca nunca. */
+function lcAutoRellenar(el,valor){
+  if(!el||!valor) return false;
+  if(el.value && el.dataset.lcAuto!=='1') return false;
+  if(el.value===valor) return true;
+  el.value=valor;
+  el.dataset.lcAuto='1';
+  el.classList.add('fi-auto');
+  setTimeout(function(){ el.classList.remove('fi-auto'); },1200);
+  return true;
+}
+// El usuario escribe en un campo autocompletado ⇒ deja de ser de la app.
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t&&t.dataset&&t.dataset.lcAuto==='1') t.dataset.lcAuto='';
+},true);
+function lcGeoDatalist(){
+  var vistos={}, out=[];
+  Object.keys(LC_GEO).forEach(function(n){ if(!vistos[lcGeoNorm(n)]){vistos[lcGeoNorm(n)]=1; out.push(n);} });
+  var mios=lcGeoAprendidos();
+  Object.keys(mios).forEach(function(k){ if(!vistos[k]){ vistos[k]=1; out.push(k.replace(/(^|\s)\w/g,function(m){return m.toUpperCase();})); } });
+  return out.sort();
+}
+function lcGeoPintarDatalist(){
+  var el=document.getElementById('dl-muni'); if(!el) return;
+  el.innerHTML=lcGeoDatalist().map(function(m){ return '<option value="'+escAttr(m)+'">'; }).join('');
+}
+
 /* ═══════════════════════════════════════════
    FASE D — MÓDULO DESPACHOS
 ═══════════════════════════════════════════ */
@@ -4681,6 +5144,7 @@ function activarPerfilRegional(id) {
   if(p.zonaDefault) cfg.zonaDefault=p.zonaDefault;
   if(p.uriDestino) cfg.destUri=p.uriDestino;
   if(p.cespaDestino) cfg.destCespa=p.cespaDestino;
+  if(p.unidad) cfg.ojUnidad=p.unidad;      // línea 3 del membrete de esa zona
   DB.saveConfig(cfg); loadAjustesFields(); renderPerfilesRegionales();
   toast('Perfil '+p.nombre+' activado — datos de '+p.departamento+' aplicados.');
 }
@@ -4704,7 +5168,16 @@ function openPerfilRegionalForm(id) {
       '<div class="fg"><label class="fl">Nombre del perfil</label><input class="fi" id="rpm-nombre" value="'+(p.nombre||'')+'" placeholder="Ej: Medellín Centro"></div>'+
       '<div class="fg"><label class="fl">Departamento</label><input class="fi" id="rpm-dpto" value="'+(p.departamento||'')+'" placeholder="Antioquia"></div>'+
     '</div>'+
-    '<div class="fg"><label class="fl">Municipio</label><input class="fi" id="rpm-muni" value="'+(p.municipio||'')+'" placeholder="Medellín"></div>'+
+    '<div class="fg"><label class="fl">Municipio</label><input class="fi" id="rpm-muni" list="dl-muni" value="'+(p.municipio||'')+'" placeholder="Medellín" onblur="lcGeoCompletar(this,\'rpm-dpto\')"></div>'+
+    /* Línea 3 del membrete del oficio: es la unidad a la que pertenece la zona
+       (metropolitana, departamento de policía, dirección…). Se escribe UNA vez
+       aquí y entra sola en cada captura de esa zona.
+       ⚠️ No se puede embeber una tabla municipio→unidad: los nombres de unidad
+       son nombres institucionales y el filtro de Play Store los prohíbe en el
+       código (ver «Publicación en Play Store — de-branding»). Por eso lo escribe
+       el usuario, igual que las otras tres líneas del membrete. */
+    '<div class="fg"><label class="fl">Unidad (línea 3 del membrete del oficio)</label>'+
+      '<input class="fi" id="rpm-unidad" value="'+escAttr(p.unidad||'')+'" placeholder="La unidad de la que depende esta zona"></div>'+
     '<div class="st">NUNC por defecto</div>'+
     '<div class="fr">'+
       '<div class="fg"><label class="fl">NUNC URI</label><input class="fi mono" id="rpm-nuncUri" value="'+(p.nuncUri||'')+'" maxlength="16" inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"></div>'+
@@ -4732,9 +5205,10 @@ function savePerfilRegionalForm(id) {
   var nombre=v('nombre'); if(!nombre){toast('El nombre es obligatorio');return;}
   var cfg=DB.getConfig(); if(!cfg.perfilesRegionales) cfg.perfilesRegionales=[];
   var newId=id||uid();
-  var p={id:newId,nombre:nombre,departamento:v('dpto'),municipio:v('muni'),
+  var p={id:newId,nombre:nombre,departamento:v('dpto'),municipio:v('muni'),unidad:v('unidad'),
     nuncUri:v('nuncUri'),nuncCespa:v('nuncCespa'),uriDestino:v('uri'),cespaDestino:v('cespa'),
     localidadDefault:v('local'),zonaDefault:v('zona')};
+  if(p.municipio&&p.departamento) lcGeoRecordar(p.municipio,p.departamento);
   if(id){
     var found=false;
     cfg.perfilesRegionales.forEach(function(x,i){if(x.id===id){cfg.perfilesRegionales[i]=p;found=true;}});
@@ -5476,7 +5950,15 @@ function ojNuevoCaso(){
   c.oj.actuacion.derechos.fecha=c.oj.diligencia.fecha;
   if(perfil.nombre){
     c.oj.diligencia.funcionarios=[{grado:perfil.grado||'',nombre:perfil.nombre||'',cedula:sinPuntos(perfil.cedula||''),placa:perfil.placa||''}];
+    // Quien consulta los antecedentes es, casi siempre, quien está haciendo el
+    // procedimiento: se propone y se puede cambiar.
+    c.oj.orden.verificacion.funcionario=[perfil.grado||'',perfil.nombre||''].filter(Boolean).join(' ');
   }
+  // Departamento del municipio del perfil regional, si la zona lo tiene claro.
+  if(c.oj.diligencia.lugarMunicipio&&!c.oj.diligencia.lugarDepartamento)
+    c.oj.diligencia.lugarDepartamento=lcGeoDepto(c.oj.diligencia.lugarMunicipio)||'';
+  // Línea 3 del membrete desde el perfil regional (ver ojPrellenarDeCfg).
+  if(reg.unidad&&!cfg.ojUnidad) c.oj.encabezado.unidad=reg.unidad;
   ojPrellenarDeCfg(c,cfg);
   return c;
 }
@@ -5792,12 +6274,27 @@ function ojDisponibilidadDespacho(c,cfg){
   return {disponible:cabe,
     explicacion:'Próxima hora judicial hábil: '+ojFechaCorta(ojISO(prox))+' a las '+ojHHMM(prox)+' horas; el término de 36 horas vence el '+plazo.vence+'.'};
 }
+/* Reglas en las que el destinatario ES el mismo despacho que libró la orden: en
+   Ley 600 se pone a disposición del despacho que la libró (R2) y en captura por
+   condena, del juez de conocimiento o de ejecución de penas (R4-A). */
+var OJ_REGLAS_MISMO_DESPACHO={'R2-LEY600':1,'R4-A-JUEZ-DISPONIBLE':1};
 function ojAplicarSugerencia(c){
-  var s=ojResolverDestino(c), d=c.oj.destino;
+  var s=ojResolverDestino(c), d=c.oj.destino, dp=c.oj.despacho;
   d.sugeridoTipo=s.tipo; d.sugeridoNombre=s.nombre;
   d.reglaAplicada=s.regla; d.fundamento=s.fundamento;
   if(!d.nombre&&s.nombre) d.nombre=s.nombre;
   if(!d.tipo&&s.tipo) d.tipo=s.tipo;
+  /* ⚠️ Antes se copiaba SOLO el nombre: el funcionario volvía a teclear la
+     dirección, la ciudad y el departamento de un juzgado que la app ya tenía
+     diligenciado dos pasos antes. Se hereda todo lo que esté vacío — nunca se
+     pisa lo que el usuario haya escrito. */
+  if(OJ_REGLAS_MISMO_DESPACHO[s.regla] && dp.nombre && d.nombre===dp.nombre){
+    ['direccion','municipio','departamento','telefono','correo'].forEach(function(k){
+      if(!d[k] && dp[k]) d[k]=dp[k];
+    });
+  }
+  // Y si el destinatario quedó con ciudad pero sin departamento, se infiere.
+  if(d.municipio && !d.departamento) d.departamento=lcGeoDepto(d.municipio)||'';
   return s;
 }
 
@@ -5814,62 +6311,62 @@ function ojValidar(c){
   var vig=ojVigencia(o);
 
   // Paso 1 — la orden
-  if(!o.numero) add('V02','DURA',0,'Falta el número de la orden de captura.');
-  if(!o.fechaExpedicion) add('V03','DURA',0,'Falta la fecha de expedición de la orden: sin ella no se puede calcular su vigencia.');
-  if(!o.finalidad) add('V04','DURA',0,'Falta la finalidad de la orden: de ella depende el destinatario y la ruta procesal.');
-  if(vig.estado==='VENCIDA') add('V01','DURA',0,'La orden está VENCIDA (venció el '+ojFechaCorta(vig.hasta)+'). Capturar con orden vencida obliga a la libertad inmediata (CSJ AP4491-2016). Registra la prórroga o el aviso a la autoridad que la libró.');
-  else if(vig.estado==='CANCELADA') add('V01b','DURA',0,'La orden figura CANCELADA: no puede sustentar una puesta a disposición.');
-  else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',0,'La orden figura SUSPENDIDA: verifica su estado con el despacho antes de generar el informe.');
-  else if(vig.estado==='POR_VENCER') add('V01d','BLANDA',0,'La orden vence en '+vig.dias+' día(s) ('+ojFechaCorta(vig.hasta)+').');
-  if(!o.motivoTextual) add('V06','BLANDA',0,'No se transcribió el texto íntegro del motivo de la orden. El informe lo cita literalmente cuando existe.');
-  if(!o.verificacion.hora) add('V17','BLANDA',0,'Sin hora de verificación de la orden en el sistema: es la constancia de que se comprobó la vigencia antes de materializar.');
+  if(!o.numero) add('V02','DURA',OJ_PANT.orden,'Falta el número de la orden de captura.');
+  if(!o.fechaExpedicion) add('V03','DURA',OJ_PANT.orden,'Falta la fecha de expedición de la orden: sin ella no se puede calcular su vigencia.');
+  if(!o.finalidad) add('V04','DURA',OJ_PANT.orden,'Falta la finalidad de la orden: de ella depende el destinatario y la ruta procesal.');
+  if(vig.estado==='VENCIDA') add('V01','DURA',OJ_PANT.orden,'La orden está VENCIDA (venció el '+ojFechaCorta(vig.hasta)+'). Capturar con orden vencida obliga a la libertad inmediata (CSJ AP4491-2016). Registra la prórroga o el aviso a la autoridad que la libró.');
+  else if(vig.estado==='CANCELADA') add('V01b','DURA',OJ_PANT.orden,'La orden figura CANCELADA: no puede sustentar una puesta a disposición.');
+  else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',OJ_PANT.orden,'La orden figura SUSPENDIDA: verifica su estado con el despacho antes de generar el informe.');
+  else if(vig.estado==='POR_VENCER') add('V01d','BLANDA',OJ_PANT.orden,'La orden vence en '+vig.dias+' día(s) ('+ojFechaCorta(vig.hasta)+').');
+  if(!o.motivoTextual) add('V06','BLANDA',OJ_PANT.orden,'No se transcribió el texto íntegro del motivo de la orden. El informe lo cita literalmente cuando existe.');
+  if(!o.verificacion.hora) add('V17','BLANDA',OJ_PANT.orden,'Sin hora de verificación de la orden en el sistema: es la constancia de que se comprobó la vigencia antes de materializar.');
 
   // Paso 2 — el despacho
-  if(!d.nombre) add('V05','DURA',1,'Falta el despacho judicial que libró la orden.');
-  if(d.firma==='SIN_FIRMA') add('V19','BLANDA',1,'La orden se registró sin firma visible: el art. 28 C.P. exige mandamiento escrito de autoridad judicial.');
-  if(!d.municipio) add('V05b','BLANDA',1,'Falta el municipio del despacho que libró la orden.');
+  if(!d.nombre) add('V05','DURA',OJ_PANT.despacho,'Falta el despacho judicial que libró la orden.');
+  if(d.firma==='SIN_FIRMA') add('V19','BLANDA',OJ_PANT.despacho,'La orden se registró sin firma visible: el art. 28 C.P. exige mandamiento escrito de autoridad judicial.');
+  if(!d.municipio) add('V05b','BLANDA',OJ_PANT.despacho,'Falta el municipio del despacho que libró la orden.');
 
   // Paso 3 — el proceso
-  if(!(pr.delitos||[]).length) add('V07','BLANDA',2,'No se registró ningún delito: el art. 298 CPP exige que la orden lo indique.');
-  if(!pr.radicado) add('V18','BLANDA',2,'Falta el radicado del proceso (SPOA / número del proceso) transcrito de la orden.');
+  if(!(pr.delitos||[]).length) add('V07','BLANDA',OJ_PANT.proceso,'No se registró ningún delito: el art. 298 CPP exige que la orden lo indique.');
+  if(!pr.radicado) add('V18','BLANDA',OJ_PANT.proceso,'Falta el radicado del proceso (SPOA / número del proceso) transcrito de la orden.');
 
   // Paso 4 — el requerido
-  if(!r.priNom||!r.priApe) add('V08','DURA',3,'Falta el nombre completo del requerido.');
-  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') add('V09','DURA',3,'Falta el número de documento del requerido. Si no portaba documento, marca «Sin documento» e indica el método de identificación.');
-  if(!r.identidadMetodo) add('V10','BLANDA',3,'No se indicó cómo se confirmó la identidad. Es la verificación central en una captura por orden judicial (riesgo de homonimia).');
+  if(!r.priNom||!r.priApe) add('V08','DURA',OJ_PANT.requerido,'Falta el nombre completo del requerido.');
+  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') add('V09','DURA',OJ_PANT.requerido,'Falta el número de documento del requerido. Si no portaba documento, marca «Sin documento» e indica el método de identificación.');
+  if(!r.identidadMetodo) add('V10','BLANDA',OJ_PANT.requerido,'No se indicó cómo se confirmó la identidad. Es la verificación central en una captura por orden judicial (riesgo de homonimia).');
   var edad=ojEdadEnHechos(c);
-  if(edad!==null&&edad<14) add('V11','DURA',3,'El requerido tenía '+edad+' años al momento de los hechos: es menor de 14 y no es responsable penalmente. No procede este informe; corresponde ruta de protección.');
-  else if(ojEsAdolescente(c)) add('V12','BLANDA',3,'El requerido era adolescente al momento de los hechos: el documento usa «aprehensión» y el destino es el sistema de adolescentes. Debe avisarse a la defensoría de familia.');
+  if(edad!==null&&edad<14) add('V11','DURA',OJ_PANT.requerido,'El requerido tenía '+edad+' años al momento de los hechos: es menor de 14 y no es responsable penalmente. No procede este informe; corresponde ruta de protección.');
+  else if(ojEsAdolescente(c)) add('V12','BLANDA',OJ_PANT.requerido,'El requerido era adolescente al momento de los hechos: el documento usa «aprehensión» y el destino es el sistema de adolescentes. Debe avisarse a la defensoría de familia.');
 
   // Paso 5 — la materialización
-  if(!dl.fecha||!dl.hora) add('V13','DURA',4,'Falta la fecha o la hora de la '+ojTermino(c).acc+': de ahí arranca el término de 36 horas del art. 28 C.P.');
-  if(!dl.lugarDireccion) add('V14','DURA',4,'Falta el lugar exacto de la '+ojTermino(c).acc+'.');
-  if(!(dl.funcionarios||[]).length) add('V15','DURA',4,'Registra al menos un funcionario que participó en la diligencia.');
+  if(!dl.fecha||!dl.hora) add('V13','DURA',OJ_PANT.diligencia,'Falta la fecha o la hora de la '+ojTermino(c).acc+': de ahí arranca el término de 36 horas del art. 28 C.P.');
+  if(!dl.lugarDireccion) add('V14','DURA',OJ_PANT.diligencia,'Falta el lugar exacto de la '+ojTermino(c).acc+'.');
+  if(!(dl.funcionarios||[]).length) add('V15','DURA',OJ_PANT.diligencia,'Registra al menos un funcionario que participó en la diligencia.');
 
   // Paso 6 — la actuación
-  if(!ac.derechos.leidos) add('V16','DURA',5,'Debe constar la lectura de los derechos del '+ojTermino(c).sust+' (art. 303 CPP).');
-  else if(!ac.derechos.hora) add('V16b','DURA',5,'Falta la hora de lectura de los derechos: sin ella la constancia del art. 303 CPP queda incompleta.');
+  if(!ac.derechos.leidos) add('V16','DURA',OJ_PANT.actuacion,'Debe constar la lectura de los derechos del '+ojTermino(c).sust+' (art. 303 CPP).');
+  else if(!ac.derechos.hora) add('V16b','DURA',OJ_PANT.actuacion,'Falta la hora de lectura de los derechos: sin ella la constancia del art. 303 CPP queda incompleta.');
   if(ac.hayIncautacion&&(ac.incautaciones||[]).some(function(e){return !e.rotulo;}))
-    add('V20','BLANDA',5,'Hay elementos incautados sin rótulo de cadena de custodia.');
-  if(!(ac.anexos||[]).length) add('V21','BLANDA',5,'No se marcó ningún anexo. El acta de derechos y la copia de la orden viajan con el oficio.');
+    add('V20','BLANDA',OJ_PANT.actuacion,'Hay elementos incautados sin rótulo de cadena de custodia.');
+  if(!(ac.anexos||[]).length) add('V21','BLANDA',OJ_PANT.actuacion,'No se marcó ningún anexo. El acta de derechos y la copia de la orden viajan con el oficio.');
 
   // Paso 7 — la disposición
-  if(!de.nombre) add('V22','DURA',6,'Falta el destinatario confirmado del informe.');
+  if(!de.nombre) add('V22','DURA',OJ_PANT.disposicion,'Falta el destinatario confirmado del informe.');
   // Encabezado y firma: sin ellos el oficio sale sin membrete o sin quien lo suscriba.
   var en=c.oj.encabezado||{}, fi=c.oj.firma||{}, cu=c.oj.custodia||{};
   // El membrete son cuatro líneas: con una vacía, el oficio ya no es el formato.
-  if(!en.ministerio) add('V30','DURA',6,'Falta la línea 1 del encabezado (ministerio o sector al que pertenece la unidad).');
-  if(!en.institucion) add('V31','DURA',6,'Falta la línea 2 del encabezado (nombre de la institución).');
-  if(!en.unidad) add('V26','DURA',6,'Falta la unidad del encabezado (metropolitana, departamento o dirección). Configúrala en Ajustes o diligénciala en este paso.');
-  if(!en.dependencia) add('V27','DURA',6,'Falta la estación o dependencia del encabezado.');
-  if(!fi.nombre) add('V28','DURA',6,'Falta quién firma el oficio: cárgalo del perfil activo o diligéncialo en este paso.');
+  if(!en.ministerio) add('V30','DURA',OJ_PANT.disposicion,'Falta la línea 1 del encabezado (ministerio o sector al que pertenece la unidad).');
+  if(!en.institucion) add('V31','DURA',OJ_PANT.disposicion,'Falta la línea 2 del encabezado (nombre de la institución).');
+  if(!en.unidad) add('V26','DURA',OJ_PANT.disposicion,'Falta la unidad del encabezado (metropolitana, departamento o dirección). Configúrala en Ajustes o diligénciala en este paso.');
+  if(!en.dependencia) add('V27','DURA',OJ_PANT.disposicion,'Falta la estación o dependencia del encabezado.');
+  if(!fi.nombre) add('V28','DURA',OJ_PANT.disposicion,'Falta quién firma el oficio: cárgalo del perfil activo o diligéncialo en este paso.');
   // El bloque de contacto del final del oficio sale de estos mismos datos.
-  if(!cu.estacion&&!cu.direccion) add('V29','DURA',6,'Falta dónde queda el '+ojTermino(c).sust+'. Con eso el oficio arma la constancia de custodia y el bloque de contacto del final.');
+  if(!cu.estacion&&!cu.direccion) add('V29','DURA',OJ_PANT.disposicion,'Falta dónde queda el '+ojTermino(c).sust+'. Con eso el oficio arma la constancia de custodia y el bloque de contacto del final.');
   if(de.sugeridoNombre&&de.nombre&&de.nombre!==de.sugeridoNombre&&!de.motivoCambio)
-    add('V23','BLANDA',6,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
+    add('V23','BLANDA',OJ_PANT.disposicion,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
   var plazo=ojPlazo36(c);
-  if(plazo.semaforo==='VENCIDO') add('V24','BLANDA',6,'El término de 36 horas ya venció ('+plazo.vence+'). Deja constancia de la causa en novedades.');
-  else if(plazo.semaforo==='URGENTE') add('V25','BLANDA',6,'Quedan menos de 6 horas del término constitucional (vence el '+plazo.vence+').');
+  if(plazo.semaforo==='VENCIDO') add('V24','BLANDA',OJ_PANT.disposicion,'El término de 36 horas ya venció ('+plazo.vence+'). Deja constancia de la causa en novedades.');
+  else if(plazo.semaforo==='URGENTE') add('V25','BLANDA',OJ_PANT.disposicion,'Quedan menos de 6 horas del término constitucional (vence el '+plazo.vence+').');
   return v;
 }
 function ojDuras(c){ return ojValidar(c).filter(function(x){return x.nivel==='DURA';}); }
@@ -5892,12 +6389,27 @@ function ojBloqueoDoc(caso,legado){
    se leen del DOM antes de cualquier alta/baja, así nada se pierde.
 ───────────────────────────────────────────────────────────────────────── */
 function ojPost(fn){ setTimeout(fn,0); }
-function ojwF(label,inner,hint){
-  return '<div class="fg"><label class="fl">'+escHtml(label)+'</label>'+inner+
+/* `req` marca los campos cuya ausencia BLOQUEA la generación del oficio (las
+   validaciones DURAS de ojValidar). Antes no había ninguna señal en los pasos
+   1-6: el funcionario descubría lo que faltaba al final del paso 7, tras ocho
+   pantallas de scroll. El asterisco y el contador de los puntos del progreso
+   son la misma información, adelantada al momento en que sirve. */
+function ojwF(label,inner,hint,req){
+  return '<div class="fg"><label class="fl">'+escHtml(label)+
+    (req?'<span class="req" title="Obligatorio: sin este dato no se genera el oficio">*</span>':'')+
+    '</label>'+inner+
     (hint?'<div class="oj-hint" style="margin:5px 0 0">'+escHtml(hint)+'</div>':'')+'</div>';
 }
 function ojwIn(id,val,ph,attrs){
   return '<input class="fi'+(attrs&&attrs.mono?' mono':'')+'" id="'+id+'" value="'+escAttr(val||'')+'" placeholder="'+escAttr(ph||'')+'"'+((attrs&&attrs.extra)||'')+'>';
+}
+/* Campo de municipio: lista de sugerencias + completado del departamento
+   contiguo al salir del campo. Los cinco pares municipio/departamento del
+   módulo usan este widget, así que la inferencia es una sola. */
+function ojwMun(id,val,idDepto,ph){
+  return '<input class="fi" id="'+id+'" list="dl-muni" value="'+escAttr(val||'')+'" placeholder="'+
+    escAttr(ph||'Municipio')+'" oninput="lcGeoCompletar(this,\''+idDepto+'\')"'+
+    ' onblur="lcGeoAprender(this,\''+idDepto+'\')">';
 }
 function ojwDt(id,val,extra){ return '<input type="date" class="fi" id="'+id+'" value="'+escAttr(val||'')+'"'+(extra||'')+'>'; }
 function ojwHr(id,val,extra){ return '<input type="time" class="fi" id="'+id+'" value="'+escAttr(val||'')+'"'+(extra||'')+'>'; }
@@ -5919,7 +6431,10 @@ function ojC(id){ var el=document.getElementById(id); return el?!!el.checked:fal
 var OJ_LISTS={
   delitos:{ path:'proceso.delitos', et:'Delito', vacio:'Sin delitos registrados. Agrega los que indique la orden (art. 298 CPP).',
     campos:[
-      {k:'nombre',l:'Delito / conducta punible',ph:'Ej: Hurto calificado y agravado'},
+      // El datalist de conductas ya existía para flagrancia (dl-cond) y OJ no lo
+      // usaba; al elegir una, el artículo del C.P. se rellena solo.
+      {k:'nombre',l:'Delito / conducta punible',ph:'Ej: Hurto calificado y agravado',
+        lista:'dl-cond',extra:' oninput="ojArticuloAuto(this)"'},
       {k:'articulo',l:'Artículo del Código Penal',ph:'Ej: 240',mono:true,par:'a'},
       {k:'inciso',l:'Inciso',ph:'Ej: 2',mono:true,par:'b'},
       {k:'numeral',l:'Numeral',ph:'Ej: 1',mono:true,par:'a'},
@@ -5947,6 +6462,24 @@ var OJ_LISTS={
       {k:'entregadoA',l:'Entregado a',ph:'Unidad o funcionario que lo recibe'}
     ]}
 };
+/* Delito ⇒ artículo del Código Penal. Solo las conductas del catálogo que ya
+   usa flagrancia, y solo cuando el artículo está vacío: la orden manda, y hay
+   procesos con calificaciones que no coinciden con la típica. */
+var OJ_ART_CP={
+  'hurto calificado y agravado':'239, 240 y 241','hurto agravado':'239 y 241',
+  'hurto agravado con violencia':'239, 240 y 241','hurto':'239',
+  'lesiones personales':'111 y 112','homicidio agravado':'103 y 104','homicidio':'103',
+  'porte ilegal de armas de fuego':'365','fabricación, tráfico y porte de armas':'365',
+  'tráfico de estupefacientes':'376','tráfico de estupefacientes agravado':'376 y 384',
+  'violencia intrafamiliar':'229','daño en bien ajeno':'265','receptación':'447',
+  'concierto para delinquir':'340','extorsión':'244'
+};
+function ojArticuloAuto(el){
+  var fila=el.closest('.oj-row'); if(!fila) return;
+  var art=fila.querySelector('[data-k="articulo"]');
+  if(!art||art.value) return;                       // no se pisa lo escrito
+  lcAutoRellenar(art,OJ_ART_CP[lcGeoNorm(el.value)]);
+}
 function ojRef(kind){
   var parts=OJ_LISTS[kind].path.split('.'), o=wc.oj;
   for(var i=0;i<parts.length-1;i++) o=o[parts[i]];
@@ -5958,6 +6491,13 @@ function ojListaLeer(kind){
   var d=OJ_LISTS[kind], ref=ojRef(kind);
   var wrap=document.getElementById('oj-list-'+kind);
   if(!wrap) return ref.arr;                       // el paso no está en pantalla: no tocar
+  /* ⚠️ Las listas se pintan de forma DIFERIDA (ojPost). Entre el renderWiz() y
+     ese repintado, el contenedor existe pero está vacío: leerlo ahí borraría
+     las filas del modelo (los funcionarios de la diligencia, los delitos de la
+     orden…) sin que nadie las hubiera tocado. Cero filas en pantalla con filas
+     en el modelo solo puede ser eso — quitar la última fila pasa por
+     ojListaQuitar, que lee ANTES de vaciar. */
+  if(!wrap.querySelector('.oj-row') && ref.arr.length) return ref.arr;
   var out=[];
   function tieneAlgo(it){ for(var k in it){ if(it[k]&&it[k]!==false) return true; } return false; }
   wrap.querySelectorAll('.oj-row').forEach(function(row){
@@ -5981,7 +6521,8 @@ function ojListaPintar(kind){
       var id='ojl-'+kind+'-'+i+'-'+f.k, campo;
       if(f.t==='check') campo=ojwChk(id,!!it[f.k],f.l,'',' data-k="'+f.k+'"');
       else if(f.t==='date') campo=ojwF(f.l,'<input type="date" class="fi" id="'+id+'" data-k="'+f.k+'" value="'+escAttr(it[f.k]||'')+'">');
-      else campo=ojwF(f.l,'<input class="fi'+(f.mono?' mono':'')+'" id="'+id+'" data-k="'+f.k+'" value="'+escAttr(it[f.k]||'')+'" placeholder="'+escAttr(f.ph||'')+'">');
+      else campo=ojwF(f.l,'<input class="fi'+(f.mono?' mono':'')+'" id="'+id+'" data-k="'+f.k+'" value="'+escAttr(it[f.k]||'')+'" placeholder="'+escAttr(f.ph||'')+'"'+
+        (f.lista?' list="'+f.lista+'"':'')+(f.extra||'')+'>');
       if(f.par==='a'){ pares.a=campo; }
       else if(f.par==='b'){ html+=ojwR(pares.a||'',campo); pares.a=null; }
       else { if(pares.a){ html+=pares.a; pares.a=null; } html+=campo; }
@@ -6012,9 +6553,30 @@ function ojListaBtn(kind,label){
    El orden sigue el de la orden judicial en papel: se transcribe de arriba
    abajo sin saltar entre secciones.
 ───────────────────────────────────────────────────────────────────────── */
-var OJ_STEPS=['Orden','Despacho','Proceso','Requerido','Materialización','Actuación','Disposición'];
+/* ═══════════════════════════════════════════════════════════════════════════
+   OLA 4 · TRES PANTALLAS + REVISIÓN, AGRUPADAS POR FUENTE DEL DATO
+   Los siete pasos anteriores seguían la taxonomía jurídica (orden · despacho ·
+   proceso · requerido · materialización · actuación · disposición). En la calle
+   el funcionario no alterna entre siete cosas: tiene TRES fuentes delante — el
+   papel de la orden, la persona, y lo que acaba de pasar — y el formulario le
+   hacía cambiar de pantalla siete veces para recorrerlas.
+   Ahora cada pantalla corresponde a una fuente física, y la cuarta no es un
+   formulario sino una revisión.
+   ⚠️ Los BLOQUES no se tocaron: siguen siendo los mismos y se componen. Lo que
+   cambia es cuántos caben en una pantalla — por eso `ojCollect` recolecta por
+   presencia en el DOM y no por número de paso.
+═══════════════════════════════════════════════════════════════════════════ */
+var OJ_STEPS=['La orden','El requerido','El procedimiento','Revisión'];
+/* De qué pantalla es cada bloque. `ojValidar` etiqueta sus faltas con esto, y
+   de ahí salen el punto rojo del progreso, el modal de faltantes y el botón
+   «Ir al paso N»: cambiar el reparto de pantallas es cambiar este mapa. */
+var OJ_PANT={orden:0,despacho:0,proceso:0,requerido:1,diligencia:2,actuacion:2,disposicion:3};
+function ojPantallaA(){ return ojStep1()+ojStep2()+ojStep3(); }
+function ojPantallaB(){ return ojStep4(); }
+function ojPantallaC(){ return ojStep5()+ojStep6(); }
+function ojPantallaD(){ return ojStep7(); }
 function ojWizConfig(){
-  return {steps:OJ_STEPS, panels:[ojStep1,ojStep2,ojStep3,ojStep4,ojStep5,ojStep6,ojStep7]};
+  return {steps:OJ_STEPS, panels:[ojPantallaA,ojPantallaB,ojPantallaC,ojPantallaD]};
 }
 
 // ── Paso 1 · La orden judicial ──
@@ -6038,27 +6600,26 @@ function ojRefrescarVigencia(){
 function ojStep1(){
   var o=wc.oj.orden;
   ojPost(function(){ ojListaPintar('prorrogas'); });
-  return '<div class="st" style="margin-top:0">1 · La orden judicial</div>'+
+  return '<div class="st" style="margin-top:0">La orden judicial</div>'+
     '<p class="oj-hint">Transcribe la orden que tienes en la mano. La app no produce órdenes de captura: registra la que expidió el despacho y documenta su cumplimiento.</p>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Identificación</div>'+
       ojwR(
-        ojwF('No. de la orden',ojwIn('oj-o-num',o.numero,'Ej: 002',{mono:true}),'Es un consecutivo del despacho, no un número único nacional.'),
+        ojwF('No. de la orden',ojwIn('oj-o-num',o.numero,'Ej: 002',{mono:true,extra:' inputmode="numeric"'}),'Es un consecutivo del despacho, no un número único nacional.',!o.numero),
         ojwF('Marco procesal',ojwSel('oj-o-tipo','tipoOrden',o.tipoOrden,''))
       )+
-      ojwF('Finalidad de la orden',ojwSel('oj-o-fin','finalidad',o.finalidad,'— Selecciona —'),'De la finalidad depende ante qué autoridad se pone al capturado.')+
-      ojwR(
-        ojwF('Autoridad solicitante',ojwIn('oj-o-solic',o.autoridadSolicitante,'Fiscal o autoridad que la pidió')),
-        ojwF('Orden dirigida a',ojwIn('oj-o-dirig',o.dirigidaA,'Ej: unidades de policía judicial'))
-      )+
+      ojwF('Finalidad de la orden',ojwSel('oj-o-fin','finalidad',o.finalidad,'— Selecciona —'),'De la finalidad depende ante qué autoridad se pone al capturado.',!o.finalidad)+
+      /* «Orden dirigida a» se eliminó en la Ola 3: no salía en el oficio ni
+         alimentaba ninguna validación ni decisión — era transcripción pura. */
+      ojwF('Autoridad solicitante',ojwIn('oj-o-solic',o.autoridadSolicitante,'Fiscal o autoridad que la pidió'))+
     '</div>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Vigencia</div>'+
       '<div id="oj-vig-box">'+ojVigBoxHtml()+'</div>'+
       ojwR3(
-        ojwF('Fecha de expedición',ojwDt('oj-o-fexp',o.fechaExpedicion,' onchange="ojRefrescarVigencia()"')),
+        ojwF('Fecha de expedición',ojwDt('oj-o-fexp',o.fechaExpedicion,' onchange="ojRefrescarVigencia()"'),'',!o.fechaExpedicion),
         ojwF('Vigencia (meses)',ojwIn('oj-o-meses',o.vigenciaMeses,'12',{mono:true,extra:' inputmode="numeric" onchange="ojRefrescarVigencia()"'})),
         ojwF('Estado',ojwSel('oj-o-estado','estadoOrden',o.estado,'',' onchange="ojRefrescarVigencia()"'))
       )+
@@ -6073,9 +6634,13 @@ function ojStep1(){
       ojwF('Transcripción textual',ojwTA('oj-o-motivo',o.motivoTextual,'Copia aquí, palabra por palabra, el motivo que expresa la orden.',6))+
     '</div>'+
 
-    '<div class="oj-blk">'+
-      '<div class="st">Verificación antes de materializar</div>'+
-      '<p class="oj-hint">Constancia de que se comprobó la vigencia de la orden antes de privar de la libertad. Es lo que hoy falta en los oficios: no basta decir «registraba orden vigente», hay que decir dónde y cuándo se verificó.</p>'+
+    /* Constancia de verificación: importa, pero se diligencia con un valor por
+       defecto razonable (el sistema, el funcionario del perfil y la fecha ya
+       vienen puestos). Se pliega para que la pantalla arranque por lo que sí
+       hay que teclear. */
+    '<details class="oj-blk oj-mas"'+(o.verificacion.hora?'':' open')+'>'+
+      '<summary>Verificación de la orden antes de materializar <small>— constancia de que se comprobó la vigencia</small></summary>'+
+      '<p class="oj-hint">No basta decir «registraba orden vigente»: hay que decir dónde y cuándo se verificó.</p>'+
       ojwR(
         ojwF('Sistema o medio de consulta',ojwSel('oj-o-vsis','sistemaConsulta',o.verificacion.sistema,'')),
         ojwF('Funcionario que verificó',ojwIn('oj-o-vfun',o.verificacion.funcionario,'Grado y nombre'))
@@ -6090,7 +6655,7 @@ function ojStep1(){
           }).join('')+'</select>')
       )+
       ojwF('Observación de la verificación',ojwIn('oj-o-vobs',o.verificacion.observacion,'Opcional'))+
-    '</div>';
+    '</details>';
 }
 
 // ── Paso 2 · El despacho que libró la orden ──
@@ -6167,38 +6732,28 @@ function ojGuardarDespacho(){
 }
 function ojStep2(){
   var d=wc.oj.despacho;
-  return '<div class="st" style="margin-top:0">2 · Despacho judicial que libró la orden</div>'+
+  return '<div class="st">Despacho que libró la orden</div>'+
     '<p class="oj-hint">Este bloque alimenta el encabezado del destinatario del oficio. Si el despacho ya está registrado, se diligencia solo.</p>'+
     '<button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="ojSelectorDespacho()">Buscar en despachos guardados</button>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Identificación del despacho</div>'+
-      ojwF('Nombre completo del despacho',ojwIn('oj-d-nom',d.nombre,'Ej: Juzgado Segundo Penal Municipal con Función de Control de Garantías'))+
+      ojwF('Nombre completo del despacho',ojwIn('oj-d-nom',d.nombre,'Ej: Juzgado Segundo Penal Municipal con Función de Control de Garantías'),'',!d.nombre)+
       ojwR(
         ojwF('Tipo',ojwSel('oj-d-tipo','tipoDespacho',d.tipo,'— Selecciona —')),
-        ojwF('Especialidad',ojwSel('oj-d-esp','especialidad',d.especialidad,'— Selecciona —'))
+        ojwF('Municipio',ojwMun('oj-d-mun',d.municipio,'oj-d-dep','Municipio del despacho'))
       )+
       ojwR(
-        ojwF('Municipio',ojwIn('oj-d-mun',d.municipio,'Municipio del despacho')),
-        ojwF('Departamento',ojwIn('oj-d-dep',d.departamento,'Departamento'))
+        ojwF('Departamento',ojwIn('oj-d-dep',d.departamento,'Se completa solo')),
+        ojwF('Teléfono',ojwIn('oj-d-tel',d.telefono,'Opcional',{mono:true,extra:' inputmode="tel"'}))
       )+
-      ojwF('Dirección',ojwIn('oj-d-dir',d.direccion,'Dirección para el encabezado del oficio'))+
-      ojwR(
-        ojwF('Teléfono',ojwIn('oj-d-tel',d.telefono,'Opcional',{mono:true})),
-        ojwF('Correo electrónico',ojwIn('oj-d-cor',d.correo,'Opcional'))
-      )+
-      ojwR(
-        ojwF('Identificación del despacho',ojwIn('oj-d-ident',d.identificacion,'Código o identificador interno',{mono:true})),
-        ojwF('Funcionario responsable',ojwIn('oj-d-resp',d.funcionarioResponsable,'Secretario o quien suscribe'))
-      )+
-    '</div>'+
-
-    '<div class="oj-blk">'+
-      '<div class="st">Juez que suscribe la orden</div>'+
-      ojwR(
-        ojwF('Nombre del juez',ojwIn('oj-d-juez',d.juezNombre,'Nombres y apellidos')),
-        ojwF('Cargo',ojwIn('oj-d-cargo',d.juezCargo,'Ej: Juez'))
-      )+
+      ojwF('Dirección',ojwIn('oj-d-dir',d.direccion,'La hereda el destinatario del oficio'))+
+      ojwF('Correo electrónico',ojwIn('oj-d-cor',d.correo,'Opcional'))+
+      /* ⚠️ Ola 3 — eliminados de este paso: especialidad, identificación del
+         despacho, funcionario responsable, y nombre y cargo del juez. Ninguno
+         salía en el oficio, ni alimentaba una validación, ni intervenía en la
+         decisión del destinatario: eran cinco campos de transcripción pura.
+         La firma SÍ se queda: sostiene la validación V19 (art. 28 C.P.). */
       ojwF('Firma que trae la orden',ojwSel('oj-d-firma','firmaOrden',d.firma,''),'El art. 28 de la Constitución exige mandamiento escrito de autoridad judicial competente.')+
     '</div>'+
     '<button class="btn bs bbl bsm" onclick="ojGuardarDespacho()">Guardar este despacho para reutilizarlo</button>';
@@ -6206,50 +6761,43 @@ function ojStep2(){
 
 // ── Paso 3 · El proceso ──
 function ojStep3(){
-  var p=wc.oj.proceso, fin=wc.oj.orden.finalidad;
-  var esCondena=(fin==='CONDENA'||fin==='REVOCATORIA'||fin==='EJECUCION_FALLO');
+  var p=wc.oj.proceso;
   ojPost(function(){ ojListaPintar('delitos'); });
-  return '<div class="st" style="margin-top:0">3 · Proceso judicial</div>'+
+  /* ⚠️ Ola 3 — eliminados de este paso: fecha de la decisión judicial, la
+     descripción jurídica (un textarea entero) y el bloque de pena impuesta
+     (descripción, meses y accesorias). Ninguno de los cinco llegaba al oficio.
+     La pena, además, es información que el despacho destinatario ya tiene: es
+     él quien la impuso. */
+  return '<div class="st">Proceso judicial</div>'+
     '<p class="oj-hint">Datos del proceso dentro del cual se libró la orden. En orden judicial el radicado llega completo desde la orden: se transcribe tal cual, sin recortar.</p>'+
 
     '<div class="oj-blk">'+
       ojwF('Número del proceso / radicado (SPOA)',ojwIn('oj-p-rad',p.radicado,'Transcríbelo completo desde la orden',{mono:true}))+
       ojwR(
         ojwF('Fecha de los hechos',ojwDt('oj-p-fhec',p.fechaHechos)),
-        ojwF('Fecha de la decisión judicial',ojwDt('oj-p-fdec',p.fechaDecision))
+        ojwF('Código interno',ojwIn('oj-p-cod',p.codigoInterno,'Opcional',{mono:true}))
       )+
-      ojwF('Código interno',ojwIn('oj-p-cod',p.codigoInterno,'Opcional — consecutivo interno del despacho',{mono:true}))+
     '</div>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Delitos y artículos aplicados</div>'+
       ojListaBtn('delitos','Agregar delito')+
-    '</div>'+
-
-    (esCondena?
-    '<div class="oj-blk">'+
-      '<div class="st">Pena impuesta</div>'+
-      '<p class="oj-hint">Solo aplica cuando la orden es para el cumplimiento de una sentencia.</p>'+
-      ojwR(
-        ojwF('Descripción de la pena',ojwIn('oj-p-pena',p.pena.descripcion,'Ej: prisión')),
-        ojwF('Meses de prisión',ojwIn('oj-p-penam',p.pena.meses,'Ej: 96',{mono:true,extra:' inputmode="numeric"'}))
-      )+
-      ojwF('Penas accesorias',ojwIn('oj-p-penaa',p.pena.accesorias,'Opcional'))+
-    '</div>':'')+
-
-    '<div class="oj-blk">'+
-      ojwF('Descripción jurídica',ojwTA('oj-p-desc',p.descripcionJuridica,'Síntesis jurídica de la decisión, tal como la refiere la orden.',4))+
     '</div>';
 }
 
 // ── Paso 4 · El requerido ──
 function ojStep4(){
   var r=wc.oj.requerido, t=ojTermino(wc);
+  /* Adolescente al momento de los hechos ⇒ el documento de identidad es la
+     tarjeta de identidad. El FPJ-5 ya lo resolvía (markDocType); aquí no, y el
+     tipo se quedaba en «C.C.» por defecto en un caso del SRPA. Solo se cambia
+     mientras el usuario no haya elegido a mano (tipoDocManual). */
+  if(!r.tipoDocManual && r.tipoDoc==='CC' && ojEsAdolescente(wc)) r.tipoDoc='TI';
   var edad=ojEdadEnHechos(wc);
   var aviso='';
   if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>Al momento de los hechos tenía '+edad+' años: no es responsable penalmente. No procede el informe de captura; corresponde activar la ruta de protección.</div>';
   else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Sistema de responsabilidad penal para adolescentes</b>Al momento de los hechos tenía '+(edad===null?'menos de 18':edad)+' años: el documento hablará de «aprehensión» y el destino será el sistema de adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
-  return '<div class="st" style="margin-top:0">4 · Persona requerida</div>'+
+  return '<div class="st" style="margin-top:0">Persona requerida</div>'+
     '<p class="oj-hint">En una captura por orden judicial la verificación central es la identidad: estos datos son los que permiten descartar una homonimia.</p>'+
     aviso+
     '<button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="ojCargarPersona()">Cargar desde Personas</button>'+
@@ -6257,40 +6805,39 @@ function ojStep4(){
     '<div class="oj-blk">'+
       '<div class="st">Identificación</div>'+
       ojwR(
-        ojwF('Primer nombre',ojwIn('oj-r-pn',r.priNom,'')),
+        ojwF('Primer nombre',ojwIn('oj-r-pn',r.priNom,''),'',!r.priNom),
         ojwF('Segundo nombre',ojwIn('oj-r-sn',r.segNom,''))
       )+
       ojwR(
-        ojwF('Primer apellido',ojwIn('oj-r-pa',r.priApe,'')),
+        ojwF('Primer apellido',ojwIn('oj-r-pa',r.priApe,''),'',!r.priApe),
         ojwF('Segundo apellido',ojwIn('oj-r-sa',r.segApe,''))
       )+
       ojwR(
-        ojwF('Tipo de documento',ojwSel('oj-r-td','tipoDoc',r.tipoDoc,'')),
-        ojwF('Número de documento',ojwIn('oj-r-nd',r.numDoc,'Sin puntos',{mono:true,extra:' inputmode="numeric"'}))
+        ojwF('Tipo de documento',ojwSel('oj-r-td','tipoDoc',r.tipoDoc,'',' onchange="wc.oj.requerido.tipoDocManual=true"'),
+          (r.tipoDoc==='TI'&&!r.tipoDocManual&&ojEsAdolescente(wc))?'Se puso T.I. porque era adolescente al momento de los hechos. Cámbialo si el documento es otro.':''),
+        ojwF('Número de documento',ojwIn('oj-r-nd',r.numDoc,'Sin puntos',{mono:true,extra:' inputmode="numeric"'}),'',!r.numDoc&&r.tipoDoc!=='SIN_DOC')
       )+
-      ojwR(
-        ojwF('Expedido en',ojwIn('oj-r-exp',r.expedidoEn,'Municipio de expedición')),
-        ojwF('Alias',ojwIn('oj-r-ali',r.alias,'Como figura en la orden'))
-      )+
+      ojwF('Expedido en',ojwIn('oj-r-exp',r.expedidoEn,'Municipio de expedición'))+
     '</div>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Datos personales</div>'+
-      ojwR3(
-        ojwF('Fecha de nacimiento',ojwDt('oj-r-fn',r.fechaNac)),
-        ojwF('Edad',ojwIn('oj-r-ed',r.edad,'Años',{mono:true,extra:' inputmode="numeric"'})),
-        ojwF('Sexo',ojwSel('oj-r-sx','sexo',r.sexo,'— Selecciona —'))
-      )+
+      /* La edad se CALCULA de la fecha de nacimiento (ya lo hacía ojCollect,
+         pero seguía pidiéndose como campo en blanco). Con fecha, el campo pasa
+         a solo lectura y se explica de dónde sale; sin fecha se puede escribir,
+         porque algunas órdenes solo traen la edad. */
       ojwR(
-        ojwF('Nacionalidad',ojwIn('oj-r-nac',r.nacionalidad,'Ej: Colombiana')),
-        ojwF('Estado civil',ojwSel('oj-r-ec','estadoCivil',r.estadoCivil,'— Selecciona —'))
+        ojwF('Fecha de nacimiento',ojwDt('oj-r-fn',r.fechaNac,' onchange="ojCollect();renderWiz()"')),
+        ojwF('Edad',ojwIn('oj-r-ed',r.fechaNac?String(calcAgeVal(r.fechaNac)):r.edad,'Años',
+          {mono:true,extra:' inputmode="numeric"'+(r.fechaNac?' readonly':'')}),
+          r.fechaNac?'Calculada de la fecha de nacimiento.':'')
       )+
       ojwF('Profesión u ocupación',ojwIn('oj-r-pro',r.profesion,'Ej: comerciante'))+
       '<label class="fl">Lugar de nacimiento</label>'+
       ojwR3(
         ojwF('País',ojwIn('oj-r-np',r.nacPais,'Colombia')),
-        ojwF('Departamento',ojwIn('oj-r-ndep',r.nacDepartamento,'')),
-        ojwF('Municipio',ojwIn('oj-r-nmun',r.nacMunicipio,''))
+        ojwF('Municipio',ojwMun('oj-r-nmun',r.nacMunicipio,'oj-r-ndep','')),
+        ojwF('Departamento',ojwIn('oj-r-ndep',r.nacDepartamento,'Se completa solo'))
       )+
       ojwR(
         ojwF('Nombre de la madre',ojwIn('oj-r-madre',r.madre,'Nombres y apellidos')),
@@ -6306,8 +6853,8 @@ function ojStep4(){
         ojwF('Teléfono',ojwIn('oj-r-rtel',r.resTelefono,'',{mono:true}))
       )+
       ojwR(
-        ojwF('Municipio',ojwIn('oj-r-rmun',r.resMunicipio,'')),
-        ojwF('Departamento',ojwIn('oj-r-rdep',r.resDepartamento,''))
+        ojwF('Municipio',ojwMun('oj-r-rmun',r.resMunicipio,'oj-r-rdep','')),
+        ojwF('Departamento',ojwIn('oj-r-rdep',r.resDepartamento,'Se completa solo'))
       )+
     '</div>'+
 
@@ -6323,8 +6870,24 @@ function ojStep4(){
         ojwF('Ojos',ojwIn('oj-r-ojo',r.rasgos.ojos,'Ej: café'))
       )+
       ojwF('Señales particulares visibles',ojwTA('oj-r-sen',r.senales,'Cicatrices, tatuajes, lunares u otras señas que permitan individualizar.',3))+
-      ojwF('Demás datos identificativos',ojwTA('oj-r-otros',r.otrosDatos,'Cualquier otro dato de individualización que traiga la orden.',3))+
+      /* «Demás datos identificativos» se eliminó: era un segundo textarea que no
+         se imprimía en ninguna parte, al lado de uno que sí (señales). */
     '</div>'+
+
+    /* Datos que NO salen en este oficio pero sí alimentan el registro de
+       Personas (y el FPJ-5 si esa misma persona aparece en una flagrancia).
+       Van plegados: siguen disponibles y dejan de costar scroll en la calle. */
+    '<details class="oj-blk oj-mas">'+
+      '<summary>Más datos de la persona <small>— para el registro, no salen en el oficio</small></summary>'+
+      ojwR(
+        ojwF('Sexo',ojwSel('oj-r-sx','sexo',r.sexo,'— Selecciona —')),
+        ojwF('Estado civil',ojwSel('oj-r-ec','estadoCivil',r.estadoCivil,'— Selecciona —'))
+      )+
+      ojwR(
+        ojwF('Nacionalidad',ojwIn('oj-r-nac',r.nacionalidad,'Ej: Colombiana')),
+        ojwF('Alias',ojwIn('oj-r-ali',r.alias,'Como figura en la orden'))
+      )+
+    '</details>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Confirmación de la identidad</div>'+
@@ -6333,17 +6896,33 @@ function ojStep4(){
       ojwF('Observación',ojwIn('oj-r-iobs',r.identidadObservacion,'Ej: se confirmó con reseña decadactilar'))+
     '</div>';
 }
+/* Antes listaba las primeras 60 personas sin buscador: con el registro lleno,
+   encontrar a alguien era imposible y el funcionario acababa retecleando los 25
+   datos de identificación que la app ya tenía. */
 function ojCargarPersona(){
   var personas=DB.getPersons();
   if(!personas.length){ toast('Aún no hay personas guardadas'); return; }
   openModal(
     '<div class="mh"><h2>Cargar persona</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
-    personas.slice(0,60).map(function(p){
-      return '<div class="oj-row" style="cursor:pointer" onclick="ojUsarPersona(\''+p.id+'\')">'+
-        '<div style="font-size:13.5px;font-weight:600;color:var(--text)">'+escHtml(fullName(p))+'</div>'+
-        '<div class="oj-hint" style="margin:3px 0 0">'+escHtml((p.tipoDoc||'')+' '+sinPuntos(p.numDoc||''))+'</div></div>';
-    }).join('')
+    '<input class="fi" id="oj-per-q" placeholder="Buscar por nombre o documento…" oninput="ojCargarPersonaFiltrar()" style="margin-bottom:12px">'+
+    '<div id="oj-per-res"></div>'
   );
+  ojCargarPersonaFiltrar();
+  var q=document.getElementById('oj-per-q'); if(q) q.focus();
+}
+function ojCargarPersonaFiltrar(){
+  var q=lcGeoNorm(ojV('oj-per-q'));
+  var lista=DB.getPersons().filter(function(p){
+    if(!q) return true;
+    return lcGeoNorm(fullName(p)).indexOf(q)>=0 || sinPuntos(p.numDoc||'').indexOf(q.replace(/\D/g,''))>=0&&q.replace(/\D/g,'');
+  });
+  var el=document.getElementById('oj-per-res'); if(!el) return;
+  if(!lista.length){ el.innerHTML='<p class="oj-vacio">Sin resultados.</p>'; return; }
+  el.innerHTML=lista.slice(0,40).map(function(p){
+    return '<div class="oj-row" style="cursor:pointer" onclick="ojUsarPersona(\''+p.id+'\')">'+
+      '<div style="font-size:13.5px;font-weight:600;color:var(--text)">'+escHtml(fullName(p))+'</div>'+
+      '<div class="oj-hint" style="margin:3px 0 0">'+escHtml((p.tipoDoc||'')+' '+sinPuntos(p.numDoc||''))+'</div></div>';
+  }).join('')+(lista.length>40?'<p class="oj-hint">Mostrando 40 de '+lista.length+' — afina la búsqueda.</p>':'');
 }
 function ojUsarPersona(id){
   var p=DB.getPerson(id); if(!p) return;
@@ -6351,13 +6930,30 @@ function ojUsarPersona(id){
   var r=wc.oj.requerido;
   r.personaId=p.id; r.priNom=p.priNom||''; r.segNom=p.segNom||''; r.priApe=p.priApe||''; r.segApe=p.segApe||'';
   r.tipoDoc=p.tipoDoc||r.tipoDoc; r.numDoc=sinPuntos(p.numDoc||'');
+  if(p.tipoDoc) r.tipoDocManual=true;      // el del registro manda sobre la inferencia por edad
   r.expedidoEn=p.expEn||r.expedidoEn;
   r.fechaNac=p.fn||r.fechaNac; r.edad=p.edad||r.edad;
   r.profesion=p.ocup||r.profesion;
-  r.nacMunicipio=p.lugNac||r.nacMunicipio;
-  r.resDireccion=p.dirRes||r.resDireccion; r.resTelefono=p.tel||r.resTelefono;
   r.senales=p.senas||r.senales;
   if(p.alias&&p.alias!=='N/A') r.alias=p.alias;
+  /* ⚠️ El viaje de vuelta era asimétrico: ojPersonaEspejo GUARDA los padres, el
+     estado civil y el correo, pero al recargar a la persona no se releían — una
+     persona capturada dos veces perdía datos que la app ya tenía suyos. */
+  if(p.padres && !r.madre && !r.padre){
+    var pr=String(p.padres).split(/\s+y\s+/);
+    r.madre=(pr[0]||'').trim(); r.padre=(pr[1]||'').trim();
+  }
+  if(p.ecivil && !r.estadoCivil){
+    (OJ_CAT.estadoCivil||[]).forEach(function(o){ if(o[1]===p.ecivil) r.estadoCivil=o[0]; });
+  }
+  // Lugar de nacimiento: el registro lo guarda como «Municipio, Departamento».
+  if(p.lugNac && !r.nacMunicipio){
+    var partes=String(p.lugNac).split(',');
+    r.nacMunicipio=(partes[0]||'').trim();
+    r.nacDepartamento=(partes[1]||'').trim()||lcGeoDepto(r.nacMunicipio)||'';
+  }
+  if(p.dirRes && !r.resDireccion) r.resDireccion=p.dirRes;
+  if(p.tel && !r.resTelefono) r.resTelefono=p.tel;
   closeModal(); renderWiz(); toast('Persona cargada ✓');
 }
 /* ─────────────────────────────────────────────────────────────────────────
@@ -6385,23 +6981,23 @@ function ojGPS(){
 function ojStep5(){
   var g=wc.oj.diligencia, t=ojTermino(wc);
   ojPost(function(){ ojListaPintar('funcionarios'); });
-  return '<div class="st" style="margin-top:0">5 · Materialización de la '+escHtml(t.acc)+'</div>'+
+  return '<div class="st" style="margin-top:0">Materialización de la '+escHtml(t.acc)+'</div>'+
     ojReloj36Html()+
 
     '<div class="oj-blk">'+
       '<div class="st">Fecha, hora y lugar</div>'+
       ojwR(
-        ojwF('Fecha de la '+t.acc,ojwDt('oj-g-fec',g.fecha)),
-        ojwF('Hora (24 h)',ojwHr('oj-g-hor',g.hora))
+        ojwF('Fecha de la '+t.acc,ojwDt('oj-g-fec',g.fecha),'',!g.fecha),
+        ojwF('Hora (24 h)',ojwHr('oj-g-hor',g.hora),'',!g.hora)
       )+
-      ojwF('Dirección exacta',ojwIn('oj-g-dir',g.lugarDireccion,'Ej: calle 53 con carrera 51'))+
+      ojwF('Dirección exacta',ojwIn('oj-g-dir',g.lugarDireccion,'Ej: calle 53 con carrera 51'),'',!g.lugarDireccion)+
       ojwR(
         ojwF('Barrio o vereda',ojwIn('oj-g-bar',g.lugarBarrio,'')),
         ojwF('Tipo de lugar',ojwSel('oj-g-tlug','tipoLugar',g.lugarTipo,''))
       )+
       ojwR(
-        ojwF('Municipio',ojwIn('oj-g-mun',g.lugarMunicipio,'')),
-        ojwF('Departamento',ojwIn('oj-g-dep',g.lugarDepartamento,''))
+        ojwF('Municipio',ojwMun('oj-g-mun',g.lugarMunicipio,'oj-g-dep','')),
+        ojwF('Departamento',ojwIn('oj-g-dep',g.lugarDepartamento,'Se completa solo'))
       )+
       ojwF('Coordenadas geográficas',ojwIn('oj-g-coord',g.coordenadas,'Latitud, longitud',{mono:true}))+
       '<button class="btn bs bsm" onclick="ojGPS()">Tomar del GPS del equipo</button>'+
@@ -6419,38 +7015,48 @@ function ojStep5(){
         ojwF('Unidad policial',ojwIn('oj-g-uni',g.unidad,'Ej: estación o CAI')),
         ojwF('Patrulla',ojwIn('oj-g-pat',g.patrulla,'Ej: 32'))
       )+
-      ojwF('Vehículo institucional',ojwIn('oj-g-veh',g.vehiculo,'Placa o identificación interna',{mono:true}))+
-      '<label class="fl" style="margin-top:4px">Funcionarios participantes</label>'+
+      /* «Vehículo institucional» eliminado en la Ola 3: no salía en el oficio. */
+      '<label class="fl" style="margin-top:4px">Funcionarios participantes'+
+        ((wc.oj.diligencia.funcionarios||[]).length?'':'<span class="req" title="Obligatorio: debe constar al menos un funcionario">*</span>')+'</label>'+
       ojListaBtn('funcionarios','Agregar funcionario')+
     '</div>';
 }
 function ojStep6(){
-  var a=wc.oj.actuacion, t=ojTermino(wc);
+  var a=wc.oj.actuacion, t=ojTermino(wc), g=wc.oj.diligencia;
+  /* Los derechos se leen al momento de la captura, en el mismo sitio: si no hay
+     nada diligenciado se propone la hora y el lugar de la diligencia, que es lo
+     que el funcionario iba a escribir. Se puede corregir; solo se rellena una
+     vez y nunca se pisa lo escrito. */
+  if(!a.derechos.hora && g.hora) a.derechos.hora=g.hora;
+  if(!a.derechos.lugar && g.lugarDireccion) a.derechos.lugar=g.lugarDireccion;
+  if(!a.derechos.fecha && g.fecha) a.derechos.fecha=g.fecha;
+  ojAnexosAuto(wc);
   ojPost(function(){ ojListaPintar('incautaciones'); });
   var anexosSel=a.anexos||[];
   var anexosHtml=OJ_CAT.anexos.map(function(x,i){
     // El del oficio de la orden se muestra ya con su número resuelto: el usuario
     // no lo escribe, sale del paso 1.
-    return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,ojAnexoTexto(x,wc));
+    return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,ojAnexoTexto(x,wc),'',
+      ' onchange="wc.oj.actuacion.anexosManual=true"');
   }).join('');
   var otros=anexosSel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }).join(', ');
   var nAnx=anexosSel.length;
-  return '<div class="st" style="margin-top:0">6 · Actuación policial</div>'+
+  return '<div class="st">Actuación policial</div>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Derechos del '+escHtml(t.sust)+'</div>'+
       '<p class="oj-hint">La app no genera el acta de derechos: se diligencia aparte y viaja como anexo. Aquí queda la constancia de que se leyeron, con hora y lugar (art. 303 CPP).</p>'+
-      ojwChk('oj-a-dler',a.derechos.leidos,'Se leyeron y materializaron los derechos','Guardar silencio, designar defensor, ser informado del hecho y de quién ordenó la captura, comunicar su situación.')+
+      ojwChk('oj-a-dler',a.derechos.leidos,'Se leyeron y materializaron los derechos'+(a.derechos.leidos?'':' *'),'Guardar silencio, designar defensor, ser informado del hecho y de quién ordenó la captura, comunicar su situación.')+
       ojwR3(
         ojwF('Fecha',ojwDt('oj-a-dfec',a.derechos.fecha)),
-        ojwF('Hora (24 h)',ojwHr('oj-a-dhor',a.derechos.hora)),
+        ojwF('Hora (24 h)',ojwHr('oj-a-dhor',a.derechos.hora),'',a.derechos.leidos&&!a.derechos.hora),
         ojwF('Lugar',ojwIn('oj-a-dlug',a.derechos.lugar,'Dónde se leyeron'))
       )+
       ojwF('Observación',ojwIn('oj-a-dobs',a.derechos.observacion,'Opcional'))+
     '</div>'+
 
-    '<div class="oj-blk">'+
-      '<div class="st">Comunicación y defensa</div>'+
+    '<details class="oj-blk oj-mas"'+(a.comunicacion.nombre||a.defensor.tipo?' open':'')+'>'+
+      '<summary>Comunicación y defensa <small>— art. 303 CPP; se imprime en el oficio</small></summary>'+
       ojwR(
         ojwF('Persona a quien se comunicó',ojwIn('oj-a-cnom',a.comunicacion.nombre,'Nombre')),
         ojwF('Parentesco',ojwSel('oj-a-cpar','parentesco',a.comunicacion.parentesco,'— Selecciona —'))
@@ -6463,10 +7069,14 @@ function ojStep6(){
         ojwF('Defensor',ojwSel('oj-a-dtipo','defensor',a.defensor.tipo,'— Selecciona —')),
         ojwF('Nombre del defensor',ojwIn('oj-a-dnom',a.defensor.nombre,'Si lo designó'))
       )+
-    '</div>'+
+    '</details>'+
 
-    '<div class="oj-blk">'+
-      '<div class="st">Uso de la fuerza y estado de salud</div>'+
+    /* Uso de la fuerza, lesiones, valoración y novedades: en la inmensa mayoría
+       de los procedimientos no hubo nada de esto. Se pliega, y se abre solo si
+       ya hay algo registrado. */
+    '<details class="oj-blk oj-mas"'+
+      ((a.fuerza.tipo&&a.fuerza.tipo!=='NINGUNO')||a.lesiones.hubo||a.valoracion.realizada||a.novedades?' open':'')+'>'+
+      '<summary>Uso de la fuerza, salud y novedades <small>— si no hubo nada, no hay que tocarlo</small></summary>'+
       ojwF('Uso de la fuerza',ojwSel('oj-a-fza','usoFuerza',a.fuerza.tipo,''))+
       ojwF('Descripción del uso de la fuerza',ojwIn('oj-a-fzad',a.fuerza.descripcion,'Solo si se empleó'))+
       ojwChk('oj-a-lhubo',a.lesiones.hubo,'Se presentaron lesiones')+
@@ -6479,13 +7089,8 @@ function ojStep6(){
           }).join('')+'</select>'),
         ojwF('Entidad que la practicó',ojwIn('oj-a-vent',a.valoracion.entidad,'Opcional'))
       )+
-    '</div>'+
-
-    '<div class="oj-blk">'+
-      '<div class="st">Elementos incautados y cadena de custodia</div>'+
-      ojwChk('oj-a-hayinc',a.hayIncautacion,'Se incautaron elementos en la diligencia','Si el hallazgo constituye un delito nuevo, se registra como caso de flagrancia aparte: este informe solo lo menciona.')+
-      ojListaBtn('incautaciones','Agregar elemento')+
-    '</div>'+
+      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Solo si hubo alguna novedad que deba conocer la autoridad receptora.',3))+
+    '</details>'+
 
     '<div class="oj-blk">'+
       '<div class="st">Narración de los hechos</div>'+
@@ -6494,16 +7099,22 @@ function ojStep6(){
       'donde queda el '+escHtml(t.sust)+'). Escribe aquí lo que solo tú sabes del procedimiento: se imprime al '+
       'final de la narración bajo el título «Observaciones».</p>'+
       ojwF('Relato del procedimiento',ojwTA('oj-a-obs',a.observaciones,'Cuenta el procedimiento con tus palabras. Este espacio va en blanco hasta que lo escribas.',7))+
-      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Solo si hubo alguna novedad que deba conocer la autoridad receptora.',3))+
     '</div>'+
 
-    '<div class="oj-blk">'+
-      '<div class="st">Anexos que acompañan el oficio</div>'+
-      '<p class="oj-hint">Marca o escribe los anexos: la app cuenta cuántos son y los imprime en este mismo '+
-      'orden («Anexos: '+escHtml(ojNumPalabra(nAnx))+' ('+nAnx+')»). El número de la orden de captura se toma del paso 1.</p>'+
+    '<details class="oj-blk oj-mas"'+(a.hayIncautacion?' open':'')+'>'+
+      '<summary>Elementos incautados y cadena de custodia <small>— solo si se incautó algo</small></summary>'+
+      ojwChk('oj-a-hayinc',a.hayIncautacion,'Se incautaron elementos en la diligencia','Si el hallazgo constituye un delito nuevo, se registra como caso de flagrancia aparte: este informe solo lo menciona.')+
+      ojListaBtn('incautaciones','Agregar elemento')+
+    '</details>'+
+
+    /* Los anexos se marcan solos desde la Ola 2: se pliegan porque ya no son una
+       tarea, son una comprobación. */
+    '<details class="oj-blk oj-mas">'+
+      '<summary>Anexos que acompañan el oficio <small>— '+escHtml(ojNumPalabra(nAnx))+' ('+nAnx+'), marcados automáticamente</small></summary>'+
+      '<p class="oj-hint">La app los marca según lo que ya registraste y los cuenta en el oficio. Si tocas una casilla, deja de proponer.</p>'+
       anexosHtml+
       ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas — se imprimen en el orden que los escribas'))+
-    '</div>';
+    '</details>';
 }
 function ojStep7(){
   var d=wc.oj.destino, s=ojAplicarSugerencia(wc);
@@ -6512,16 +7123,25 @@ function ojStep7(){
     '<b>Destinatario propuesto'+(s.nombre?' — '+escHtml(ojLbl('tipoDespacho',s.tipo)||s.tipo):'')+'</b>'+
     (s.nombre?escHtml(s.nombre)+'<br>':'')+escHtml(s.nota)+
     '<div class="oj-fund">'+escHtml(s.regla)+' · '+escHtml(s.fundamento)+'</div></div>';
+  /* Cada falta lleva su propio botón: tocarla abre el paso donde se diligencia.
+     Antes era texto plano al final de ocho pantallas de scroll — el funcionario
+     leía «falta el número de la orden» y tenía que volver a mano. */
   var lista=function(arr,cls,titulo){
     if(!arr.length) return '';
     return '<div class="oj-alert '+cls+'"><b>'+titulo+'</b>'+arr.map(function(v){
-      return '· Paso '+(v.paso+1)+' ('+OJ_STEPS[v.paso]+'): '+escHtml(v.msg);
-    }).join('<br>')+'</div>';
+      return '<div style="margin:4px 0">· '+escHtml(v.msg)+
+        ' <button class="btn bs bsm" style="margin-left:2px;min-height:30px;padding:4px 10px;font-size:12px" '+
+        'onclick="wizGoto('+v.paso+')">Ir al paso '+(v.paso+1)+' · '+escHtml(OJ_STEPS[v.paso])+'</button></div>';
+    }).join('')+'</div>';
   };
   var e=wc.oj.encabezado, cu=wc.oj.custodia, fi=wc.oj.firma, t=ojTermino(wc);
   var faltaEnc=(!e.ministerio||!e.institucion||!e.unidad||!e.dependencia);
-  return '<div class="st" style="margin-top:0">7 · Puesta a disposición</div>'+
+  return '<div class="st" style="margin-top:0">Puesta a disposición</div>'+
     ojReloj36Html()+
+    /* ⚠️ El estado del expediente va ARRIBA, no al final. Este paso mide ocho
+       pantallas de teléfono: dejar el resumen de faltantes abajo obligaba a
+       recorrerlo entero solo para enterarse de que faltaba un dato del paso 1. */
+    lista(duras,'dura','Faltan datos obligatorios ('+duras.length+')')+
     sug+
     '<div class="oj-blk">'+
       '<div class="st">Destinatario confirmado</div>'+
@@ -6529,21 +7149,23 @@ function ojStep7(){
       'Este dato viene en la orden de captura: transcríbelo. Si ya lo usaste antes, búscalo — los despachos que '+
       'diligencies a mano quedan guardados.</p>'+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDestino()">Buscar en despachos guardados</button>'+
-      ojwF('Autoridad ante la que se deja a disposición',ojwIn('oj-x-nom',d.nombre,'Ej: Juzgado Treinta y Seis Penal Municipal de Conocimiento de Medellín'),'Un nombre largo no descuadra el documento: ocupa las líneas que necesite.')+
+      ojwF('Autoridad ante la que se deja a disposición',ojwIn('oj-x-nom',d.nombre,'Ej: Juzgado Treinta y Seis Penal Municipal de Conocimiento de Medellín'),'Un nombre largo no descuadra el documento: ocupa las líneas que necesite.',!d.nombre)+
       ojwR(
         ojwF('Tipo',ojwSel('oj-x-tipo','tipoDespacho',d.tipo,'— Selecciona —')),
         ojwF('Dirección (nomenclatura)',ojwIn('oj-x-dir',d.direccion,'Ej: Calle 00 No. 00-00'))
       )+
       ojwR(
-        ojwF('Ciudad',ojwIn('oj-x-mun',d.municipio,'Ej: Medellín')),
-        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Ej: Antioquia'))
+        ojwF('Ciudad',ojwMun('oj-x-mun',d.municipio,'oj-x-dep','Ej: Medellín')),
+        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Se completa solo'))
       )+
       '<button class="btn bs bsm" onclick="ojGuardarDestinatario()">Guardar este despacho para reutilizarlo</button>'+
-      ojwF('Motivo del cambio de destinatario',ojwIn('oj-x-mot',d.motivoCambio,'Solo si te apartas de la propuesta'),'Queda registrado en el caso para que la decisión sea trazable meses después.')+
     '</div>'+
 
-    '<div class="oj-blk">'+
-      '<div class="st">Entrega</div>'+
+    /* La entrega se diligencia AL ENTREGAR, que es después de imprimir el
+       oficio: por eso va plegada y no estorba mientras se prepara el documento.
+       Desde la Ola 3 sí se imprime (constancia de entrega en la narración). */
+    '<details class="oj-blk oj-mas"'+(d.fechaEntrega||d.recibeNombre?' open':'')+'>'+
+      '<summary>Constancia de entrega <small>— se diligencia al entregar; se imprime en el oficio</small></summary>'+
       ojwR(
         ojwF('Fecha de entrega',ojwDt('oj-x-fec',d.fechaEntrega)),
         ojwF('Hora de entrega',ojwHr('oj-x-hor',d.horaEntrega))
@@ -6552,63 +7174,83 @@ function ojStep7(){
         ojwF('Quién recibe',ojwIn('oj-x-rec',d.recibeNombre,'Nombre')),
         ojwF('Cargo',ojwIn('oj-x-rcar',d.recibeCargo,'Cargo'))
       )+
-    '</div>'+
+      ojwF('Motivo del cambio de destinatario',ojwIn('oj-x-mot',d.motivoCambio,'Solo si te apartas de la propuesta'),'Queda registrado en el caso para que la decisión sea trazable meses después.')+
+    '</details>'+
 
     /* Encabezado del oficio (selecciones 1 y 2). Normalmente ya viene de Ajustes;
        si el equipo no está configurado se pide aquí y no se vuelve a preguntar. */
-    '<div class="oj-blk">'+
-      '<div class="st">Encabezado del oficio (las 4 líneas del membrete)</div>'+
+    /* ⚠️ Membrete, custodia y firma son propiedades del EQUIPO, no del caso: 14
+       campos de configuración que se colaron en la ruta crítica de cada captura.
+       Se piden UNA vez (si faltan, el bloque nace abierto y con alerta) y desde
+       la segunda captura viajan plegados — se ven, se pueden corregir por caso,
+       pero dejan de costar dos pantallas de scroll en cada procedimiento. */
+    '<details class="oj-blk oj-mas"'+(faltaEnc?' open':'')+'>'+
+      '<summary>Encabezado, custodia y firma <small>— '+(faltaEnc?'FALTAN DATOS: se piden una sola vez':'ya configurados en este equipo')+'</small></summary>'+
+      '<div class="st" style="margin-top:0">Las 4 líneas del membrete</div>'+
       (faltaEnc
         ? '<div class="oj-alert dura"><b>Falta el encabezado</b>El oficio se imprime con estas cuatro líneas arriba. '+
           'Diligéncialas aquí: quedan guardadas como valor por defecto y no se te vuelven a pedir.</div>'
         : '<p class="oj-hint">Viene de Ajustes → Oficio de orden judicial. Si lo cambias aquí, queda como nuevo valor por defecto.</p>')+
-      ojwF('Línea 1 — ministerio o sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece la unidad'))+
-      ojwF('Línea 2 — institución',ojwIn('oj-e-ins',e.institucion,'Nombre de tu institución'))+
-      ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES')+
-      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Escribe solo el nombre: CANDELARIA',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'Si escribes solo el nombre, la app completa «ESTACIÓN DE POLICÍA …». Si es otro tipo de unidad (SECCIONAL DE INVESTIGACIÓN CRIMINAL, CAI…), escríbelo completo y se respeta tal cual.')+
+      ojwF('Línea 1 — ministerio o sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece la unidad'),'',!e.ministerio)+
+      ojwF('Línea 2 — institución',ojwIn('oj-e-ins',e.institucion,'Nombre de tu institución'),'',!e.institucion)+
+      ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES',!e.unidad)+
+      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Escribe solo el nombre: CANDELARIA',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'Si escribes solo el nombre, la app completa «ESTACIÓN DE POLICÍA …». Si es otro tipo de unidad (SECCIONAL DE INVESTIGACIÓN CRIMINAL, CAI…), escríbelo completo y se respeta tal cual.',!e.dependencia)+
       /* ⚠️ Aquí NO se pide el logo: el escudo del formato viene embebido y se
          pone solo. Solo se avisa de que ya está, para que nadie lo busque. */
       '<p class="oj-hint">El escudo del membrete ya viene cargado — no hay que hacer nada. '+
       'Si tu unidad usa otro, se cambia una sola vez en Ajustes → Oficio de orden judicial.</p>'+
-    '</div>'+
 
     /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
        narración. No siempre es la misma estación, por eso se puede cambiar aquí. */
-    '<div class="oj-blk">'+
       '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
       '<p class="oj-hint">Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración '+
       'y en el bloque de contacto del final. Vienen de Ajustes, pero cámbialos si esta vez quedó en otro sitio.</p>'+
-      ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}))+
-      ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'))+
+      ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}),'',!cu.estacion&&!cu.direccion)+
+      ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'),'',!cu.estacion&&!cu.direccion)+
       ojwR(
         ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
         ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
       )+
       ojwF('Sitio web institucional',ojwIn('oj-c-web',cu.web,'Última línea del bloque de contacto'))+
-    '</div>'+
 
     /* Firma (selección 8): del perfil activo, o a mano si no hay perfil. */
-    '<div class="oj-blk">'+
       '<div class="st">Quién firma el oficio</div>'+
       (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil cargado</b>No hay un perfil de funcionario activo en este '+
         'equipo. Diligencia aquí quién firma: se imprime al pie del oficio y no se guarda en ningún perfil.</div>')+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar del perfil activo</button>'+
       ojwR(
         ojwF('Grado',ojwIn('oj-f-gra',fi.grado,'Ej: Subintendente')),
-        ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo'))
+        ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo'),'',!fi.nombre)
       )+
       ojwF('Cargo',ojwIn('oj-f-car',fi.cargo,'Ej: Integrante patrulla de vigilancia'))+
       ojwR(
         ojwF('Celular',ojwIn('oj-f-tel',fi.telefono,'Ej: 310 449 8111',{mono:true})),
         ojwF('Correo institucional',ojwIn('oj-f-cor',fi.correo,'Correo del funcionario'))
       )+
-    '</div>'+
+    '</details>'+
 
-    lista(duras,'dura','Faltan datos obligatorios ('+duras.length+')')+
     lista(blandas,'blanda','Advertencias ('+blandas.length+')')+
     (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles. Guarda el caso y genera el oficio desde la tarjeta de la captura.</div>')+
     '<button class="btn boj bbl" onclick="ojGenerarDesdeWizard()" style="margin-top:6px">Generar oficio de puesta a disposición</button>'+
     '<p class="oj-hint" style="margin-top:8px">Generar el oficio guarda antes el caso.</p>';
+}
+/* Anexos deducibles de lo que ya se registró: el informe y la copia de la orden
+   viajan SIEMPRE; el acta de derechos, si consta que se leyeron; el acta de
+   incautación, si hubo elementos. El funcionario deja de marcar a mano lo que la
+   app ya sabe — y conserva el control: en cuanto toca una casilla
+   (`anexosManual`) no se vuelve a proponer nada. */
+function ojAnexosAuto(c){
+  var a=c.oj.actuacion;
+  if(a.anexosManual) return;
+  var sel=(a.anexos||[]).slice(), tiene=function(x){ return sel.indexOf(x)>=0; };
+  var add=function(x){ if(!tiene(x)) sel.push(x); };
+  add('Informe dejando a disposición');
+  if(c.oj.orden.numero) add('Copia orden de captura oficio No. {{ORD_NUMERO}}');
+  if(a.derechos.leidos) add('Acta de derechos del capturado');
+  if(a.hayIncautacion&&(a.incautaciones||[]).length) add('Acta de incautación / rótulo de cadena de custodia');
+  // Se respeta el orden del catálogo (es el orden en que se imprimen).
+  a.anexos=OJ_CAT.anexos.filter(function(x){ return sel.indexOf(x)>=0; })
+    .concat(sel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }));
 }
 function ojSelectorDestino(){ ojSelectorDespacho(true); }
 /* El destinatario del oficio también es un despacho reutilizable: quien lo
@@ -6638,80 +7280,115 @@ function ojCargarFirmaPerfil(){
 ───────────────────────────────────────────────────────────────────────── */
 function ojCollect(){
   if(!wc||wc.ojv!==2) return;
-  var paso=OJ_STEPS[ws]||'';
-  var o=wc.oj.orden, d=wc.oj.despacho, p=wc.oj.proceso, r=wc.oj.requerido,
-      g=wc.oj.diligencia, a=wc.oj.actuacion, x=wc.oj.destino;
-  if(paso==='Orden'){
-    if(!document.getElementById('oj-o-num')) return;
-    o.numero=ojV('oj-o-num'); o.tipoOrden=ojV('oj-o-tipo'); o.finalidad=ojV('oj-o-fin');
-    o.autoridadSolicitante=ojV('oj-o-solic'); o.dirigidaA=ojV('oj-o-dirig');
-    o.fechaExpedicion=ojV('oj-o-fexp'); o.vigenciaMeses=ojV('oj-o-meses'); o.estado=ojV('oj-o-estado');
-    o.motivoTextual=ojV('oj-o-motivo');
-    o.verificacion={sistema:ojV('oj-o-vsis'),funcionario:ojV('oj-o-vfun'),fecha:ojV('oj-o-vfec'),
-      hora:ojV('oj-o-vhor'),resultado:ojV('oj-o-vres'),observacion:ojV('oj-o-vobs')};
-    ojListaLeer('prorrogas');
-    o.vigenciaHasta=ojVigencia(o).hasta;
-  } else if(paso==='Despacho'){
-    if(!document.getElementById('oj-d-nom')) return;
-    d.nombre=ojV('oj-d-nom'); d.tipo=ojV('oj-d-tipo'); d.especialidad=ojV('oj-d-esp');
-    d.municipio=ojV('oj-d-mun'); d.departamento=ojV('oj-d-dep'); d.direccion=ojV('oj-d-dir');
-    d.telefono=ojV('oj-d-tel'); d.correo=ojV('oj-d-cor'); d.identificacion=ojV('oj-d-ident');
-    d.funcionarioResponsable=ojV('oj-d-resp'); d.juezNombre=ojV('oj-d-juez');
-    d.juezCargo=ojV('oj-d-cargo'); d.firma=ojV('oj-d-firma');
-  } else if(paso==='Proceso'){
-    if(!document.getElementById('oj-p-rad')) return;
-    p.radicado=ojV('oj-p-rad'); p.fechaHechos=ojV('oj-p-fhec'); p.fechaDecision=ojV('oj-p-fdec');
-    p.codigoInterno=ojV('oj-p-cod'); p.descripcionJuridica=ojV('oj-p-desc');
-    if(document.getElementById('oj-p-pena'))
-      p.pena={descripcion:ojV('oj-p-pena'),meses:ojV('oj-p-penam'),accesorias:ojV('oj-p-penaa')};
-    ojListaLeer('delitos');
-  } else if(paso==='Requerido'){
-    if(!document.getElementById('oj-r-pn')) return;
-    r.priNom=ojV('oj-r-pn'); r.segNom=ojV('oj-r-sn'); r.priApe=ojV('oj-r-pa'); r.segApe=ojV('oj-r-sa');
-    r.tipoDoc=ojV('oj-r-td'); r.numDoc=sinPuntos(ojV('oj-r-nd')); r.expedidoEn=ojV('oj-r-exp'); r.alias=ojV('oj-r-ali');
-    r.fechaNac=ojV('oj-r-fn'); r.edad=ojV('oj-r-ed'); r.sexo=ojV('oj-r-sx');
-    r.nacionalidad=ojV('oj-r-nac'); r.estadoCivil=ojV('oj-r-ec'); r.profesion=ojV('oj-r-pro');
-    r.nacPais=ojV('oj-r-np'); r.nacDepartamento=ojV('oj-r-ndep'); r.nacMunicipio=ojV('oj-r-nmun');
-    r.madre=ojV('oj-r-madre'); r.padre=ojV('oj-r-padre');
-    r.resDireccion=ojV('oj-r-rdir'); r.resBarrio=ojV('oj-r-rbar'); r.resTelefono=ojV('oj-r-rtel');
-    r.resMunicipio=ojV('oj-r-rmun'); r.resDepartamento=ojV('oj-r-rdep');
-    r.rasgos={estatura:ojV('oj-r-est'),contextura:ojV('oj-r-con'),tez:ojV('oj-r-tez'),cabello:ojV('oj-r-cab'),ojos:ojV('oj-r-ojo')};
-    r.senales=ojV('oj-r-sen'); r.otrosDatos=ojV('oj-r-otros');
-    r.identidadMetodo=ojV('oj-r-imet'); r.identidadObservacion=ojV('oj-r-iobs');
-    if(!r.edad&&r.fechaNac) r.edad=String(calcAgeVal(r.fechaNac));
-  } else if(paso==='Materialización'){
-    if(!document.getElementById('oj-g-fec')) return;
-    g.fecha=ojV('oj-g-fec'); g.hora=ojV('oj-g-hor');
-    g.lugarDireccion=ojV('oj-g-dir'); g.lugarBarrio=ojV('oj-g-bar'); g.lugarTipo=ojV('oj-g-tlug');
-    g.lugarMunicipio=ojV('oj-g-mun'); g.lugarDepartamento=ojV('oj-g-dep'); g.coordenadas=ojV('oj-g-coord');
-    g.formaUbicacion=ojV('oj-g-form');
-    if(document.getElementById('oj-g-formo')) g.formaUbicacionOtra=ojV('oj-g-formo');
-    g.unidad=ojV('oj-g-uni'); g.patrulla=ojV('oj-g-pat'); g.vehiculo=ojV('oj-g-veh');
-    ojListaLeer('funcionarios');
-  } else if(paso==='Actuación'){
-    if(!document.getElementById('oj-a-dhor')) return;
-    a.derechos={leidos:ojC('oj-a-dler'),fecha:ojV('oj-a-dfec'),hora:ojV('oj-a-dhor'),
-      lugar:ojV('oj-a-dlug'),observacion:ojV('oj-a-dobs')};
+  /* ⚠️ Se recolecta POR PRESENCIA EN EL DOM, no por índice ni por nombre de
+     paso. Antes cada bloque vivía en su propia pantalla y bastaba mirar el paso
+     activo; desde la Ola 4 una pantalla contiene varios bloques, y mañana pueden
+     ser otros. Cada recolector se autolimita comprobando su primer campo, así
+     fusionar o partir pantallas no vuelve a tocar esta función. */
+  ojCollectOrden(); ojCollectDespacho(); ojCollectProceso(); ojCollectRequerido();
+  ojCollectDiligencia(); ojCollectActuacion(); ojCollectDisposicion();
+  ojAprenderGeo();
+  wc.updated=Date.now();
+}
+function ojCollectOrden(){
+  if(!document.getElementById('oj-o-num')) return;
+  var o=wc.oj.orden;
+  o.numero=ojV('oj-o-num'); o.tipoOrden=ojV('oj-o-tipo'); o.finalidad=ojV('oj-o-fin');
+  o.autoridadSolicitante=ojV('oj-o-solic');
+  o.fechaExpedicion=ojV('oj-o-fexp'); o.vigenciaMeses=ojV('oj-o-meses'); o.estado=ojV('oj-o-estado');
+  o.motivoTextual=ojV('oj-o-motivo');
+  o.verificacion={sistema:ojV('oj-o-vsis'),funcionario:ojV('oj-o-vfun'),fecha:ojV('oj-o-vfec'),
+    hora:ojV('oj-o-vhor'),resultado:ojV('oj-o-vres'),observacion:ojV('oj-o-vobs')};
+  ojListaLeer('prorrogas');
+  o.vigenciaHasta=ojVigencia(o).hasta;
+}
+function ojCollectDespacho(){
+  if(!document.getElementById('oj-d-nom')) return;
+  var d=wc.oj.despacho;
+  d.nombre=ojV('oj-d-nom'); d.tipo=ojV('oj-d-tipo');
+  d.municipio=ojV('oj-d-mun'); d.departamento=ojV('oj-d-dep'); d.direccion=ojV('oj-d-dir');
+  d.telefono=ojV('oj-d-tel'); d.correo=ojV('oj-d-cor'); d.firma=ojV('oj-d-firma');
+}
+function ojCollectProceso(){
+  if(!document.getElementById('oj-p-rad')) return;
+  var p=wc.oj.proceso;
+  p.radicado=ojV('oj-p-rad'); p.fechaHechos=ojV('oj-p-fhec'); p.codigoInterno=ojV('oj-p-cod');
+  ojListaLeer('delitos');
+}
+function ojCollectRequerido(){
+  if(!document.getElementById('oj-r-pn')) return;
+  var r=wc.oj.requerido;
+  r.priNom=ojV('oj-r-pn'); r.segNom=ojV('oj-r-sn'); r.priApe=ojV('oj-r-pa'); r.segApe=ojV('oj-r-sa');
+  r.tipoDoc=ojV('oj-r-td'); r.numDoc=sinPuntos(ojV('oj-r-nd')); r.expedidoEn=ojV('oj-r-exp');
+  r.fechaNac=ojV('oj-r-fn'); r.edad=ojV('oj-r-ed');
+  r.profesion=ojV('oj-r-pro');
+  r.nacPais=ojV('oj-r-np'); r.nacDepartamento=ojV('oj-r-ndep'); r.nacMunicipio=ojV('oj-r-nmun');
+  r.madre=ojV('oj-r-madre'); r.padre=ojV('oj-r-padre');
+  r.resDireccion=ojV('oj-r-rdir'); r.resBarrio=ojV('oj-r-rbar'); r.resTelefono=ojV('oj-r-rtel');
+  r.resMunicipio=ojV('oj-r-rmun'); r.resDepartamento=ojV('oj-r-rdep');
+  r.rasgos={estatura:ojV('oj-r-est'),contextura:ojV('oj-r-con'),tez:ojV('oj-r-tez'),cabello:ojV('oj-r-cab'),ojos:ojV('oj-r-ojo')};
+  r.senales=ojV('oj-r-sen');
+  r.identidadMetodo=ojV('oj-r-imet'); r.identidadObservacion=ojV('oj-r-iobs');
+  // Datos del registro de Personas: viven en un bloque plegado (Ola 3), así que
+  // solo se leen si están en pantalla — plegado no significa borrado.
+  if(document.getElementById('oj-r-sx')){
+    r.sexo=ojV('oj-r-sx'); r.estadoCivil=ojV('oj-r-ec');
+    r.nacionalidad=ojV('oj-r-nac'); r.alias=ojV('oj-r-ali');
+  }
+  if(!r.edad&&r.fechaNac) r.edad=String(calcAgeVal(r.fechaNac));
+}
+function ojCollectDiligencia(){
+  if(!document.getElementById('oj-g-fec')) return;
+  var g=wc.oj.diligencia;
+  g.fecha=ojV('oj-g-fec'); g.hora=ojV('oj-g-hor');
+  g.lugarDireccion=ojV('oj-g-dir'); g.lugarBarrio=ojV('oj-g-bar'); g.lugarTipo=ojV('oj-g-tlug');
+  g.lugarMunicipio=ojV('oj-g-mun'); g.lugarDepartamento=ojV('oj-g-dep'); g.coordenadas=ojV('oj-g-coord');
+  g.formaUbicacion=ojV('oj-g-form');
+  if(document.getElementById('oj-g-formo')) g.formaUbicacionOtra=ojV('oj-g-formo');
+  g.unidad=ojV('oj-g-uni'); g.patrulla=ojV('oj-g-pat');
+  ojListaLeer('funcionarios');
+}
+function ojCollectActuacion(){
+  if(!document.getElementById('oj-a-dhor')) return;
+  var a=wc.oj.actuacion;
+  a.derechos={leidos:ojC('oj-a-dler'),fecha:ojV('oj-a-dfec'),hora:ojV('oj-a-dhor'),
+    lugar:ojV('oj-a-dlug'),observacion:ojV('oj-a-dobs')};
+  a.observaciones=ojV('oj-a-obs');
+  a.hayIncautacion=ojC('oj-a-hayinc');
+  ojListaLeer('incautaciones');
+  // Bloques complementarios: solo se leen si el usuario los desplegó.
+  if(document.getElementById('oj-a-cnom')){
     a.comunicacion={nombre:ojV('oj-a-cnom'),parentesco:ojV('oj-a-cpar'),telefono:ojV('oj-a-ctel'),
       hora:ojV('oj-a-chor'),seLogro:!!ojV('oj-a-cnom')};
     a.defensor={tipo:ojV('oj-a-dtipo'),nombre:ojV('oj-a-dnom'),telefono:a.defensor.telefono||''};
+  }
+  if(document.getElementById('oj-a-fza')){
     a.fuerza={tipo:ojV('oj-a-fza'),descripcion:ojV('oj-a-fzad')};
     a.lesiones={hubo:ojC('oj-a-lhubo'),descripcion:ojV('oj-a-ldesc')};
     a.valoracion={realizada:ojV('oj-a-vmed'),entidad:ojV('oj-a-vent'),fecha:a.valoracion.fecha||'',
       hora:a.valoracion.hora||'',renuencia:ojV('oj-a-vmed')==='RENUENCIA'};
-    a.hayIncautacion=ojC('oj-a-hayinc');
-    ojListaLeer('incautaciones');
-    a.novedades=ojV('oj-a-nov'); a.observaciones=ojV('oj-a-obs');
+    a.novedades=ojV('oj-a-nov');
+  }
+  if(document.getElementById('oj-a-anx0')){
     var anx=[];
     OJ_CAT.anexos.forEach(function(x,i){ if(ojC('oj-a-anx'+i)) anx.push(x); });
     ojV('oj-a-anxo').split(',').forEach(function(s){ s=s.trim(); if(s) anx.push(s); });
     a.anexos=anx;
-  } else if(paso==='Disposición'){
-    if(!document.getElementById('oj-x-nom')) return;
-    x.nombre=ojV('oj-x-nom'); x.tipo=ojV('oj-x-tipo'); x.direccion=ojV('oj-x-dir');
-    x.municipio=ojV('oj-x-mun'); x.departamento=ojV('oj-x-dep'); x.motivoCambio=ojV('oj-x-mot');
+  }
+}
+function ojCollectDisposicion(){
+  if(!document.getElementById('oj-x-nom')) return;
+  var x=wc.oj.destino;
+  x.nombre=ojV('oj-x-nom'); x.tipo=ojV('oj-x-tipo'); x.direccion=ojV('oj-x-dir');
+  x.municipio=ojV('oj-x-mun'); x.departamento=ojV('oj-x-dep');
+  if(document.getElementById('oj-x-mot')){
+    x.motivoCambio=ojV('oj-x-mot');
     x.fechaEntrega=ojV('oj-x-fec'); x.horaEntrega=ojV('oj-x-hor');
     x.recibeNombre=ojV('oj-x-rec'); x.recibeCargo=ojV('oj-x-rcar');
+  }
+  // Membrete, custodia y firma: son del EQUIPO, y viven plegados salvo que
+  // falten. Si no están en pantalla no se tocan — plegar no es borrar.
+  if(document.getElementById('oj-e-min')){
     wc.oj.encabezado={ministerio:ojV('oj-e-min'),institucion:ojV('oj-e-ins'),
       unidad:ojV('oj-e-uni'),dependencia:ojV('oj-e-dep')};
     wc.oj.custodia={estacion:ojV('oj-c-est'),direccion:ojV('oj-c-dir'),
@@ -6719,7 +7396,18 @@ function ojCollect(){
     wc.oj.firma={grado:ojV('oj-f-gra'),nombre:ojV('oj-f-nom'),cargo:ojV('oj-f-car'),
       telefono:ojV('oj-f-tel'),correo:ojV('oj-f-cor')};
   }
-  wc.updated=Date.now();
+}
+/* Cada par municipio/departamento que el funcionario diligencia completo pasa a
+   ser catálogo para las próximas capturas: la app termina sabiendo la geografía
+   de SU jurisdicción sin que nadie la haya cargado. */
+function ojAprenderGeo(){
+  var o=wc.oj;
+  [[o.despacho.municipio,o.despacho.departamento],
+   [o.requerido.resMunicipio,o.requerido.resDepartamento],
+   [o.requerido.nacMunicipio,o.requerido.nacDepartamento],
+   [o.diligencia.lugarMunicipio,o.diligencia.lugarDepartamento],
+   [o.destino.municipio,o.destino.departamento]
+  ].forEach(function(p){ if(p[0]&&p[1]) lcGeoRecordar(p[0],p[1]); });
 }
 /* ─────────────────────────────────────────────────────────────────────────
    I.10 · CONSTRUCTOR OOXML
@@ -7175,6 +7863,59 @@ function ojRelato(c,cfg){
     ', conforme al artículo 303 de la Ley 906 de 2004.',
     a.derechos.observacion?' '+a.derechos.observacion:''
   ]));
+  /* ── Ola 3 · lo que se pedía y no salía en ninguna parte ──────────────────
+     Comunicación a un tercero, defensor y valoración médica son garantías del
+     art. 303 CPP: su ausencia en el informe es un defecto del documento, no un
+     dato de relleno. Se imprimen DENTRO DE LA NARRACIÓN, que es el espacio que
+     el formato tiene para los hechos del procedimiento — igual que ya se hacía
+     con el uso de la fuerza, las lesiones y las incautaciones.
+     ⚠️ NO se añade ningún apartado, tabla ni fila: la estructura de «Propuesta
+     Plantilla OJ» sigue intacta (regla «el oficio ES el formato», OJ v2.1). */
+  var com=a.comunicacion||{};
+  if(com.nombre){
+    pars.push(ojFrase([
+      'En ejercicio del derecho a comunicar su situación (art. 303, num. 1 CPP), el '+t.sust+
+      ' se comunicó con '+com.nombre,
+      com.parentesco?', en calidad de '+ojLbl('parentesco',com.parentesco).toLowerCase():'',
+      com.telefono?', al abonado telefónico '+com.telefono:'',
+      com.hora?', siendo las '+com.hora+' horas':'',
+      '.'
+    ]));
+  }
+  var def=a.defensor||{};
+  if(def.tipo){
+    pars.push(ojFrase([
+      def.tipo==='NO_DESIGNA'
+        ? 'El '+t.sust+' no designó defensor en el momento de la diligencia'
+        : 'El '+t.sust+' designó '+ojLbl('defensor',def.tipo).toLowerCase(),
+      (def.tipo!=='NO_DESIGNA'&&def.nombre)?': '+def.nombre:'',
+      (def.tipo!=='NO_DESIGNA'&&def.telefono)?', abonado telefónico '+def.telefono:'',
+      '.'
+    ]));
+  }
+  var val=a.valoracion||{};
+  if(val.realizada){
+    pars.push(ojFrase([
+      val.realizada==='SI'
+        ? 'Se practicó valoración médica al '+t.sust+(val.entidad?' en '+val.entidad:'')
+        : (val.realizada==='RENUENCIA'
+            ? 'El '+t.sust+' se negó a que se le practicara la valoración médica, dejándose constancia de su renuencia'
+            : 'No se practicó valoración médica al '+t.sust),
+      '.'
+    ]));
+  }
+  // Resultado de la verificación cuando NO fue positivo: es una alerta para el
+  // despacho, y era justo lo que se registraba y se perdía.
+  if(o.verificacion.resultado&&o.verificacion.resultado!=='POSITIVO'){
+    pars.push(ojFrase([
+      'La verificación de la orden en el sistema arrojó resultado '+
+      (o.verificacion.resultado==='NEGATIVO'?'negativo':'pendiente de confirmar'),
+      o.verificacion.observacion?': '+o.verificacion.observacion:'',
+      '.'
+    ]));
+  } else if(o.verificacion.observacion){
+    pars.push('Sobre la verificación de la orden se deja la siguiente constancia: '+o.verificacion.observacion+'.');
+  }
   if(a.fuerza.tipo&&a.fuerza.tipo!=='NINGUNO'){
     pars.push(ojFrase([
       'Durante el procedimiento se registró el siguiente uso de la fuerza: '+ojLbl('usoFuerza',a.fuerza.tipo).toLowerCase(),
@@ -7220,6 +7961,19 @@ function ojRelatoDisposicion(c,cfg){
       '(Sentencia C-042 de 2018).');
   }
   if(x.motivoCambio) pars.push('El destinatario se determinó así por la siguiente razón: '+x.motivoCambio+'.');
+  /* Constancia de entrega (Ola 3): fecha, hora y quién recibe se pedían en el
+     paso 7 y no salían en ningún lado. Es la prueba de que el término del
+     art. 28 se cumplió — el dato más comprobable del expediente. */
+  if(x.fechaEntrega||x.recibeNombre){
+    pars.push(ojFrase([
+      'La entrega se realizó',
+      x.fechaEntrega?' el '+ojFechaCorta(x.fechaEntrega):'',
+      x.horaEntrega?', siendo las '+x.horaEntrega+' horas':'',
+      x.recibeNombre?', y fue recibida por '+x.recibeNombre:'',
+      (x.recibeNombre&&x.recibeCargo)?', en calidad de '+x.recibeCargo:'',
+      '.'
+    ]));
+  }
   var cu=ojCustodiaTexto(c,cfg);
   if(cu) pars.push(cu);
   return pars;
@@ -7618,6 +8372,7 @@ async function ojGuardarCaso(silencioso){
   try{
     await DB.saveCase(wc);
     await DB.savePerson(persona);
+    await wizCerrarBorrador();      // ya es una captura: el borrador sobra
     if(!silencioso) guestToastGuardado('Caso guardado ✓');
     return true;
   }catch(e){
@@ -7628,7 +8383,7 @@ async function ojGuardarCaso(silencioso){
 }
 async function ojGuardarYSalir(){
   var ok=await ojGuardarCaso();
-  if(ok){ wc=null; go('capturas'); }
+  if(ok){ wc=null; go('capturas'); renderDraftSlot(); }
 }
 async function ojGenerarDesdeWizard(){
   ojCollect();
