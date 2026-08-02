@@ -868,6 +868,85 @@ Las cuatro olas de la auditoría están ejecutadas. Pendientes de otro orden:
   datos distintos (despacho, residencia, nacimiento, lugar de la diligencia, destinatario) y el
   formato los imprime por separado. No se fusionan.
 
+## Mejora 1 (2026-08-01) — el formulario de flagrancia, revisado de raíz
+Diez observaciones de campo sobre el wizard de flagrancia (`Documentos/Otro/Mejora 1.docx`, texto +
+10 pantallazos con recuadro rojo numerado). No eran retoques visuales: cada una señalaba un dato que
+se pedía donde no correspondía, o que se pedía y **no llegaba al documento**. Verificado con
+`verify_mejora1.mjs` (**93 checks**, nuevo) y abriendo los `.docx` en **Word real** (COM → PDF →
+render con Edge). Regresiones: las 12 suites previas siguen en verde **sin tocar sus expectativas**.
+
+- ⚠️ **El hallazgo de fondo: los EMP y EF NUNCA se imprimieron en el numeral 7.** El código escribía
+  `setPar(pars, 301)` (303 en CESPA) y **el índice era correcto** — el fallo estaba una capa más
+  abajo. Los tres renglones que la plantilla deja en blanco en ese apartado **no traen ni `<w:r>` ni
+  `<w:t>`**, y `_setParNode` arranca con `if(!ts.length) return false`; `setPar` **no mira el valor
+  devuelto**, así que el texto se descartaba en silencio. Un elemento material probatorio que
+  desaparece de un informe de captura es el mismo tipo de fallo que el de las personas que no se
+  reproducían (FPJ-5 v3): el documento *parece* correcto. Nuevo `_setParForce`, que crea el run
+  heredando el `rPr` del párrafo. ⚠️ **Se deja aparte de `_setParNode` a propósito**: `buildFPJBlob`
+  usa `setPar` también para **borrar** la narración de muestra, y si esa limpieza empezara a crear
+  runs vacíos cambiaría el XML de cualquier caso.
+- **`_fpjEmp` localiza el apartado POR TEXTO**, nunca por índice (URI y CESPA no comparten
+  numeración de párrafos: 301 vs 303), escribe un elemento por renglón y, si hay más elementos que
+  renglones, **clona el último** — que es justo lo que el formato autoriza al pie del apartado. Un
+  párrafo clonado hereda anchos y bordes: la calibración de las 35 tablas no se toca (medido: siguen
+  siendo 35 en ambos formatos).
+- ⚠️ **Con cero elementos NO se toca el apartado**, para que el documento de una captura sin EMP
+  salga exactamente como salía antes.
+- **`keepNext` solo en el título del apartado.** Encadenar también los renglones entre sí obliga al
+  bloque entero a saltar de página y **costaba una hoja de más en cada captura con elementos** (3 → 4
+  páginas, medido sobre el render). Que la relación continúe en la página siguiente no es un defecto
+  —el formato lo contempla—; un encabezado huérfano sí, y eso es lo que se evita.
+- **Vehículos sin tope** (`_fpjVehiculos`): el formato trae dos filas y del tercero en adelante se
+  **reproduce la fila**, igual que los apartados 4/5/6 con varias personas. Antes, del tercer
+  vehículo en adelante se perdían en silencio. Las **placas van siempre en MAYÚSCULAS** (`lcPlaca`),
+  normalizadas al teclear, al guardar y al imprimir — los tres, porque un caso puede venir del
+  simulador o de un import y no pasar por el formulario.
+- **Direcciones normalizadas** (`LC_VIA`, `lcDirWidget`/`lcDirComponer`/`lcDirParsear`), con la
+  abreviatura del IGAC (CL, KR, AV…) que es corta y cabe en la casilla del formato: «CL 52 # 50-31».
+  Mismo widget en **lugar de los hechos, capturados, víctimas, testigos y el registro de Personas**.
+  ⚠️ **El MODELO no cambia**: el widget escribe en un `<input type="hidden">` con el **id de siempre**
+  (`w-dir`, `pm-dirRes`), así `collectStep`, `savePersonModal` y el mapeo al FPJ-5 no se enteran.
+  ⚠️ La escritura libre se conserva (requisito explícito), y **lo que no encaja no se inventa**:
+  `lcDirParsear` devuelve modo `libre` con el texto íntegro. Una dirección mal interpretada manda a
+  la policía judicial al sitio equivocado.
+- **Conductas punibles a demanda**: el paso nacía con cuatro parejas fijas. Ahora arranca con una y
+  se agregan hasta cuatro (lo que imprime el formato, celdas 58-61). ⚠️ **`lcCondFilas` NO recorta
+  las filas vacías**: si lo hiciera, «+ Agregar» crearía una fila que el propio render se llevaría
+  por delante. La limpieza es cosa de `editCase` (migración) y de `lcLimpiarListas` (guardado).
+- ⚠️ **Las listas repetibles leen el DOM ANTES de crecer o encoger, y quien acaba de tocar el modelo
+  NO vuelve a leerlo.** `lcEmpQuitar`/`lcEmpDesdeTexto` llamaban a `lcEmpSync()` después de mutar y
+  el DOM todavía era el de antes: deshacían justo lo que acababan de hacer. De ahí la separación
+  `lcEmpSync` (DOM→modelo) / `lcEmpAplicar` (modelo→`narracion.emp`).
+- **Normalización de los elementos**: `lcEmpParsear` reparte lo que el funcionario escriba —«01», «Un
+  (1)», «dos», separado por `;`, coma o salto de línea, o todo de corrido— y `lcEmpLineas` imprime
+  «01 (uno) celular marca Samsung» / «02 (dos) celulares…», pluralizando en español.
+  ⚠️ **La frontera de corte es estrecha a propósito**: con `\d+ palabra` a secas, «revólver calibre
+  38 con tres cartuchos» se partía en dos elementos por el «38 con». Inventar un elemento probatorio
+  es peor que no separarlo.
+- **Fecha y hora**: diez casillas sueltas → cuatro controles nativos (`type=date`/`type=time`), que
+  en el teléfono abren el selector del sistema. ⚠️ **El modelo sigue guardando dd/mm/aaaa y hh/mm por
+  separado** —`lcDtPartes`/`lcHrPartes` son el único puente— porque así los imprime el FPJ-5, una
+  casilla por dígito. Hay vista previa del desglose para que el cambio sea comprobable.
+- **Tipo y destino, un solo control**: el selector nombra ya el destino («URI (Adulto) → Fiscalía
+  URI») y el destino se edita ahí mismo con «Cambiar», que conserva el botón «Lista» de despachos.
+  Cambiar de tipo arrastra el destino.
+- ⚠️ **SPOA, No. de incidente y fiscal que recibe salieron del formulario, NO del modelo.** Están en
+  el dossier (sección «ES DEJADO A DISPOSICIÓN» y línea «Recibe») pero **no existen en ninguna casilla
+  del FPJ-5** — comprobado sobre las dos plantillas embebidas y sobre el documento generado. Se
+  diligencian en **Dossier → «Datos del Dossier»**, que es donde se usan. El SPOA venía de la
+  observación 1 («eliminar») y recibe el mismo trato que los otros dos porque es el mismo caso: dato
+  del dossier, no del formato. Borrarlo habría roto el dossier.
+- **Entidad por defecto en el perfil**: `rStep7` ya sabía leerla del perfil activo, pero **el
+  formulario del perfil nunca la pedía**, así que salía siempre vacía. Nuevo campo + `lcServidorDefecto`
+  como punto único (wizard, paso «Servidor» y «Cargar perfil activo» no pueden discrepar).
+  ⚠️ Sigue sin haber ninguna institución escrita en el código — la regla del filtro de Play Store.
+- **Migración de casos guardados**: `editCase` compacta conductas, interpreta los EMP del textarea
+  antiguo (`lcEmpDeCaso`) y corrige las placas. Una captura vieja sale numerada en el numeral 7 sin
+  que el funcionario reescriba nada, y su dirección antigua se lee en el widget nuevo.
+- Regresiones en verde: **mejora1 93** · OJ 138 · export 74 · envío 39 · invitado 33 · simulador 41 ·
+  multipersona (todo OK) · personas 24 · ola1 38 · ola2 34 · ola3 33 · ola4 21 · DS 10.
+  Anti-caché `?v=43` / `cache-v43`, `_BUILD=43`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

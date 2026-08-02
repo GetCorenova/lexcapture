@@ -5,4 +5,8 @@ verify_oj_salida.docx
 verify_simulador_oj.docx
 verify_simulador_fpj_uri.docx
 verify_simulador_fpj_cespa.docx
+verify_mejora1_uri.docx
+verify_mejora1_cespa.docx
+verify_mejora1_legado.docx
+verify_mejora1_golden.docx
 ~WRL*.tmp

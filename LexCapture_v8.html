@@ -1181,6 +1181,56 @@ body.guest{padding-top:38px}
 .oj-mas>summary small{font-weight:400;color:var(--text-3)}
 .oj-mas[open]>summary{margin-bottom:10px}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEJORA 1 — direcciones normalizadas, listas repetibles y fecha/hora
+   Un único juego de clases para los widgets nuevos, usados en los tres sitios
+   donde se pide una dirección (lugar de los hechos, personas del wizard y
+   registro de Personas) y en las listas que crecen a demanda (conductas,
+   elementos materiales probatorios, vehículos).
+═══════════════════════════════════════════════════════════════════════════ */
+/* Fila de la dirección estructurada: [vía][número] # [cruce] - [placa].
+   Los separadores # y − son parte del renglón, no adornos: el usuario ve el
+   mismo patrón que va a quedar impreso en el formato. */
+.lc-dir{display:grid;grid-template-columns:1.35fr 1fr auto 1fr auto 1fr;gap:6px;align-items:center}
+.lc-dir .fi,.lc-dir .fs{margin:0;padding-left:10px;padding-right:10px;text-align:center}
+.lc-dir .fs{padding-right:26px;background-position:right 8px center;text-align:left}
+.lc-dir-sep{font-size:14px;font-weight:700;color:var(--text-3);text-align:center;user-select:none}
+/* Vista previa de lo que se va a imprimir: la estandarización solo sirve si el
+   usuario la ve antes de generar el documento. */
+.lc-dir-prev{font-size:11.5px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lc-dir-prev b{color:var(--acc);font-family:var(--m);letter-spacing:.02em}
+.lc-dir-link{background:none;border:0;padding:0;font:inherit;font-size:11.5px;color:var(--acc);cursor:pointer;text-decoration:underline}
+/* Pareja campo-ancho + campo-corto SIEMPRE en la misma línea, también en el
+   teléfono. Con `.fr` (una columna hasta 580px) cada conducta y cada elemento
+   ocupaban cuatro renglones, que es justo lo que hacía el paso interminable. */
+.lc-par{display:grid;grid-template-columns:1fr 104px;gap:8px;align-items:start}
+.lc-par-inv{grid-template-columns:76px 1fr}
+.lc-par .fg{margin-bottom:8px;min-width:0}
+/* Fila de una lista repetible (conducta, elemento, …) con su botón de quitar. */
+.lc-rowx{display:flex;gap:6px;align-items:flex-start;margin-bottom:8px}
+.lc-rowx>.lc-rowx-in{flex:1;min-width:0}
+.lc-rowx .fg{margin-bottom:6px}
+.lc-rowx-del{
+  flex:0 0 auto;width:34px;height:44px;border:1px solid var(--border);border-radius:var(--rs);
+  background:var(--surface-2);color:var(--text-3);cursor:pointer;font-size:14px;line-height:1
+}
+.lc-rowx-del:hover{color:var(--danger);border-color:var(--danger)}
+.lc-num{
+  flex:0 0 auto;min-width:26px;height:44px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--m);font-size:12px;font-weight:700;color:var(--text-3)
+}
+/* Fecha y hora: dos controles nativos en vez de cinco casillas sueltas. */
+.lc-dt{display:grid;grid-template-columns:1fr;gap:0}
+.lc-dt-prev{font-size:11.5px;color:var(--text-3);margin:-6px 0 12px}
+.lc-dt-prev b{color:var(--text-2)}
+/* Vista previa del numeral 7 ya numerado y en orden. */
+.lc-emp-prev{
+  font-family:var(--m);font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word;
+  background:var(--surface-2);border:1px solid var(--border);border-radius:var(--rs);
+  padding:10px 12px;margin:0;color:var(--text-2)
+}
+@media(min-width:520px){ .lc-dt{grid-template-columns:1.4fr 1fr;column-gap:10px} }
+
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
   .fr{grid-template-columns:1fr 1fr;column-gap:10px}
@@ -1390,6 +1440,11 @@ body.guest{padding-top:38px}
       <div class="card" id="dos-preview-wrap" style="display:none">
         <div class="st" style="margin-top:0">Dossier WhatsApp</div>
         <textarea class="dos-preview" id="dos-txt" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+        <!-- Datos que alimentan el dossier y NO salen en el FPJ-5 (observaciones
+             1 y 4): sacarlos del formulario principal lo acortó, pero tienen que
+             seguir estando en algún sitio, y su sitio es donde se usan. -->
+        <button class="btn bs bsm" style="margin-top:12px" onclick="lcDossierExtra()">Datos del Dossier</button>
+        <p style="font-size:.72rem;color:var(--txD);margin:8px 0 0" id="dos-extra-hint"></p>
       </div>
 
       <!-- Todas las salidas del caso en un solo lugar -->
@@ -1928,7 +1983,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 42;
+var _BUILD = 43;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2664,16 +2719,20 @@ function delCase(id) {
   if (confirm('¿Eliminar este registro?')) { DB.delCase(id); renderCases(); toast('Eliminado'); }
 }
 
-var STEPS_STD = ['Caso','Lugar','Capturados','Víctimas','Testigos','Vehículos','Narración','Servidor'];
-var STEPS_OJ  = ['Caso','Lugar','Capturado','Vehículos','Narración','Servidor'];
+/* ⚠️ «EMP y EF» va DESPUÉS de Testigos y ANTES de Vehículos porque ese es su
+   lugar en el formato: numeral 7, entre el 6 (testigos) y el 8 (vehículos).
+   Antes era un textarea perdido al final del paso de Narración y ni siquiera
+   llegaba al documento (observación 9). */
+var STEPS_STD = ['Caso','Lugar','Capturados','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor'];
+var STEPS_OJ  = ['Caso','Lugar','Capturado','EMP y EF','Vehículos','Narración','Servidor'];
 
 function getWizConfig() {
   // Módulo de orden judicial v2: formulario propio, sin nada de flagrancia.
   if (wc&&wc.ojv===2) return ojWizConfig();
   // Casos OJ creados antes del módulo v2: siguen abriendo con el flujo viejo.
-  if (wc&&wc.tipo==='OJ') return {steps:STEPS_OJ, panels:[rStep1,rStep2,rStep3,rStepVeh,rStep6,rStep7]};
-  var steps=wc&&wc.tipo==='CESPA'?['Caso','Lugar','Aprehendidos','Víctimas','Testigos','Vehículos','Narración','Servidor']:STEPS_STD;
-  return {steps:steps, panels:[rStep1,rStep2,rStep3,rStep4,rStep5,rStepVeh,rStep6,rStep7]};
+  if (wc&&wc.tipo==='OJ') return {steps:STEPS_OJ, panels:[rStep1,rStep2,rStep3,rStepEMP,rStepVeh,rStep6,rStep7]};
+  var steps=wc&&wc.tipo==='CESPA'?['Caso','Lugar','Aprehendidos','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor']:STEPS_STD;
+  return {steps:steps, panels:[rStep1,rStep2,rStep3,rStep4,rStep5,rStepEMP,rStepVeh,rStep6,rStep7]};
 }
 
 function startWizard(tipo) {
@@ -2685,14 +2744,17 @@ function startWizard(tipo) {
     document.getElementById('wz-title').textContent = 'Captura por orden judicial';
     go('wizard'); renderWiz(); return;
   }
-  var cfg = DB.getConfig(); var s = cfg.servidor||{};
+  var cfg = DB.getConfig(); var s = lcServidorDefecto(cfg);
   var t = nowParts();
   wc = {
     id:uid(), tipo:tipo,
     nunc: tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''),
     spoa:'', fechaProc:t.yy+'-'+t.mm+'-'+t.dd,
-    conductas:['','','',''],
-    articulosCP:['','','',''],
+    /* Una sola conducta de entrada; las demás se agregan si el caso las tiene
+       (observación 2). */
+    conductas:[''],
+    articulosCP:[''],
+    elementos:[],
     destino: tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI'),
     numIncidente:'', recibe:'',
     autoridadSolicita:'', destinoOJ:'FISCALIA_URI',
@@ -2732,6 +2794,20 @@ function editCase(id) {
   if (!wc.vehiculos) wc.vehiculos=[];
   if (wc.hayVehiculos===undefined) wc.hayVehiculos=(wc.vehiculos.length>0);
   if (!wc.lugar) wc.lugar={};
+  /* Casos guardados antes de la Mejora 1. Nada se descarta: las conductas se
+     compactan (quitando las casillas vacías que dejaba el formulario de cuatro
+     filas fijas) y los elementos materiales se interpretan del textarea
+     antiguo, así una captura vieja se numera sola en el numeral 7 sin que el
+     funcionario vuelva a escribirlos. */
+  wc.conductas=(wc.conductas||[]).slice();
+  wc.articulosCP=(wc.articulosCP||[]).slice();
+  while(wc.conductas.length>1&&!String(wc.conductas[wc.conductas.length-1]||'').trim()
+        &&!String(wc.articulosCP[wc.conductas.length-1]||'').trim()){
+    wc.conductas.pop(); wc.articulosCP.pop();
+  }
+  if(!wc.conductas.length){ wc.conductas=['']; wc.articulosCP=['']; }
+  if(!Array.isArray(wc.elementos)) wc.elementos=lcEmpDeCaso(wc);
+  (wc.vehiculos||[]).forEach(function(v){ if(v) v.placas=lcPlaca(v.placas); });
   if (!wc.autoridadSolicita) wc.autoridadSolicita='';
   if (!wc.destinoOJ) wc.destinoOJ='FISCALIA_URI';
   ws=0;
@@ -2971,6 +3047,7 @@ function renderWiz() {
     '<div class="wpn on">'+cfg.panels[ws]()+'</div><div class="wnav">'+nav+'</div>';
   wizMontarAutoguardado();
   lcGeoPintarDatalist();      // sugerencias de municipio, incluidas las aprendidas
+  lcDtPrev();                 // desglose D/M/A + hora tal como se imprimirá
 }
 
 /* Salto directo desde los puntos del progreso. Antes eran `<div>` sin onclick:
@@ -3002,6 +3079,7 @@ async function wizSave() {
   if (ws===0 && !validateStep1()) return;
   collectStep();
   if (!wc.capturados||!wc.capturados.length){toast('Debe registrar al menos un '+(wc.tipo==='CESPA'?'aprehendido':'capturado'));return;}
+  lcLimpiarListas(wc);      // fuera las filas que quedaron en blanco
   if (wc.tipo==='OJ'){wc.sinVictima=true;wc.sinTestigo=true;wc.victimas=[];wc.testigos=[];}
   var saved=wc;
   try {
@@ -3048,20 +3126,436 @@ function collectStep() {
   var isOJ=wc&&wc.tipo==='OJ';
   var stepName=(getWizConfig().steps[ws])||'';
   if(ws===0){
-    wc.tipo=v('w-tipo');wc.fechaProc=v('w-fecha');wc.nunc=v('w-nunc');wc.spoa=v('w-spoa');
-    wc.conductas=[v('w-cond0'),v('w-cond1'),v('w-cond2'),v('w-cond3')];
-    wc.articulosCP=[v('w-art0'),v('w-art1'),v('w-art2'),v('w-art3')];
-    wc.destino=v('w-dest');wc.numIncidente=v('w-inc');wc.recibe=v('w-recibe');
+    wc.tipo=v('w-tipo');wc.fechaProc=v('w-fecha');wc.nunc=v('w-nunc');
+    /* Conductas: lista a demanda, se lee del DOM (observación 2).
+       SPOA / No. incidente / fiscal que recibe ya NO se piden aquí — viven en
+       «Datos del Dossier» (observaciones 1 y 4); sus campos del modelo se
+       conservan intactos y se editan desde esa pantalla. */
+    lcCondSync();
+    /* El destino solo tiene input cuando el usuario abrió el editor; si está
+       cerrado manda lo que ya haya en el modelo — nunca se borra. */
+    var elDest=document.getElementById('w-dest');
+    if(elDest) wc.destino=elDest.value;
     if(isOJ){wc.autoridadSolicita=v('w-autoridad')||v('w-juzgadoOrden');wc.destinoOJ=v('w-destinoOJ');wc.numOrden=v('w-numOrden');wc.delitoOrden=v('w-delitoOrden');wc.juzgadoOrden=v('w-juzgadoOrden');wc.fechaOrden=v('w-fechaOrden');}
   } else if(stepName==='Lugar'){
     wc.lugar={depto:v('w-depto'),muni:v('w-muni'),dir:v('w-dir'),barrio:v('w-barrio'),caract:v('w-caract'),localidad:v('w-local'),zona:v('w-zona'),vereda:v('w-vereda')};
+  } else if(stepName==='EMP y EF'){
+    lcEmpSync();
   } else if(stepName==='Narración'){
-    wc.narracion={fechaCapD:v('w-fcD'),fechaCapM:v('w-fcM'),fechaCapA:v('w-fcA'),horaCapH:v('w-hcH'),horaCapM:v('w-hcM'),fechaDispD:v('w-fdD'),fechaDispM:v('w-fdM'),fechaDispA:v('w-fdA'),horaDispH:v('w-hdH'),horaDispM:v('w-hdM'),texto:v('w-narrTxt'),emp:v('w-empTxt')};
+    /* Fecha y hora: dos controles nativos, el MISMO modelo de siempre
+       (observación 8). El FPJ-5 imprime casilla por dígito y sigue recibiendo
+       exactamente los mismos campos. */
+    var n0=wc.narracion||{};
+    var fc=lcDtPartes(v('w-fcap')), hc=lcHrPartes(v('w-hcap'));
+    var fd=lcDtPartes(v('w-fdisp')), hd=lcHrPartes(v('w-hdisp'));
+    wc.narracion={fechaCapD:fc.d,fechaCapM:fc.m,fechaCapA:fc.a,horaCapH:hc.h,horaCapM:hc.mi,
+      fechaDispD:fd.d,fechaDispM:fd.m,fechaDispA:fd.a,horaDispH:hd.h,horaDispM:hd.mi,
+      texto:v('w-narrTxt'),emp:n0.emp||''};
     var fp=wc.fechaProc?wc.fechaProc.split('-'):['','',''];
     wc.fechaDia=fp[2]||''; wc.fechaMes=fp[1]||''; wc.fechaAno=fp[0]||'';
   } else if(stepName==='Servidor'){
     wc.servidor={grado:v('w-sGrado'),ident:sinPuntos(v('w-sId')),nombre:v('w-sNombre'),entidad:v('w-sEntidad'),cargo:v('w-sCargo'),tel:v('w-sTel'),correo:v('w-sCorreo')};
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MEJORA 1 — utilidades compartidas del formulario de flagrancia
+   Tres piezas que se usan en más de un sitio y por eso viven aquí y no dentro
+   del paso que las estrenó:
+     · direcciones normalizadas   → lugar de los hechos, capturados, víctimas,
+                                    testigos y el registro de Personas;
+     · listas que crecen a demanda → conductas punibles y elementos materiales
+                                    probatorios (misma mecánica que vehículos);
+     · elementos materiales        → normalización del texto que escribe el
+                                    funcionario al formato del numeral 7.
+   ⚠️ Regla que ordena todo el bloque: NINGUNA de estas utilidades cambia el
+   MODELO del caso. La dirección se sigue guardando como el mismo string de
+   siempre (`lugar.dir`, `persona.dirRes`) y la fecha/hora sigue viviendo en
+   `narracion.fechaCapD/M/A` y `horaCapH/M`. Son widgets sobre los datos que ya
+   existían, así que el mapeo al FPJ-5 y al dossier no se entera del cambio.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Direcciones (observaciones 5 y 6) ─────────────────────────────────────
+   El usuario escogía la vía a mano y cada quien escribía "Cll 52", "calle 52",
+   "CALLE 52 CON CRA 50"… El formato oficial tiene una casilla estrecha para la
+   dirección, así que la mezcla de estilos largos la desbordaba. Se estandariza
+   con la abreviatura del IGAC/DANE (CL, KR, AV…), que es corta y es la que
+   usan los despachos.
+   ⚠️ La libertad de escribir a mano NO se toca: es un requisito explícito de la
+   observación y además hay direcciones que ningún formato captura ("finca La
+   Esperanza, vía al mar km 4"). El widget tiene los dos modos y recuerda cuál
+   quedó activo por el propio contenido del dato. */
+var LC_VIA=[
+  {ab:'CL', nom:'Calle'},          {ab:'KR', nom:'Carrera'},
+  {ab:'AV', nom:'Avenida'},        {ab:'AC', nom:'Avenida Calle'},
+  {ab:'AK', nom:'Avenida Carrera'},{ab:'CQ', nom:'Circular'},
+  {ab:'CV', nom:'Circunvalar'},    {ab:'DG', nom:'Diagonal'},
+  {ab:'TV', nom:'Transversal'},    {ab:'MZ', nom:'Manzana'},
+  {ab:'VDA',nom:'Vereda'},         {ab:'KM', nom:'Kilómetro'},
+  {ab:'AU', nom:'Autopista'},      {ab:'PJ', nom:'Pasaje'},
+  {ab:'SEC',nom:'Sector'},         {ab:'CTO',nom:'Corregimiento'}
+];
+/* Sinónimos que la gente escribe de verdad. Se consultan al interpretar una
+   dirección ya guardada; no se ofrecen en el selector. */
+var LC_VIA_ALIAS={CLL:'CL',CLE:'CL',CA:'CL',CRA:'KR',CR:'KR',KRA:'KR',CARR:'KR',AVE:'AV',TRANS:'TV',TRV:'TV',DIAG:'DG',DIG:'DG',MAN:'MZ',MZA:'MZ',CIRC:'CQ',VDA:'VDA',VRD:'VDA'};
+
+function lcViaNombre(ab){
+  var r=ab||''; LC_VIA.forEach(function(v){ if(v.ab===ab) r=v.nom; }); return r;
+}
+/* Compone la dirección en el formato uniforme: "CL 52 # 50-31 APTO 301". */
+function lcDirComponer(o){
+  o=o||{};
+  var via=String(o.via||'').trim();
+  var num=String(o.num||'').trim().toUpperCase().replace(/\s+/g,'');
+  var cruce=String(o.cruce||'').trim().toUpperCase().replace(/\s+/g,'');
+  var placa=String(o.placa||'').trim().toUpperCase().replace(/\s+/g,'');
+  var comp=String(o.comp||'').trim().replace(/\s+/g,' ');
+  if(!via&&!num) return '';
+  var s=(via?via+' ':'')+num;
+  if(cruce) s+=' # '+cruce+(placa?'-'+placa:'');
+  else if(placa) s+=' # '+placa;
+  if(comp) s+=' '+comp.toUpperCase();
+  return s.replace(/\s+/g,' ').trim();
+}
+/* Lee una dirección escrita de cualquier forma y la descompone. Se usa al ABRIR
+   el formulario, para que una captura vieja (o una persona ya registrada) se
+   edite con el widget nuevo en vez de perder el dato.
+   ⚠️ Si no se reconoce el patrón NO se inventa nada: se devuelve modo 'libre'
+   con el texto intacto. Una dirección mal interpretada en un informe de captura
+   manda a la policía judicial al sitio equivocado. */
+function lcDirParsear(txt){
+  var vacio={via:'',num:'',cruce:'',placa:'',comp:'',libre:'',modo:'form'};
+  var s=String(txt==null?'':txt).trim();
+  if(!s) return vacio;
+  var norm=_noAcc(s).toUpperCase().replace(/\s+/g,' ').trim();
+  // Tipo de vía: se prueban primero los nombres largos ("AVENIDA CALLE" antes
+  // que "AVENIDA"), si no "AV" se comería el prefijo de "AVENIDA CALLE 30".
+  var cands=[];
+  LC_VIA.forEach(function(v){
+    cands.push({ab:v.ab,txt:_noAcc(v.nom).toUpperCase()});
+    cands.push({ab:v.ab,txt:v.ab});
+  });
+  for(var k in LC_VIA_ALIAS) cands.push({ab:LC_VIA_ALIAS[k],txt:k});
+  cands.sort(function(a,b){return b.txt.length-a.txt.length;});
+  var via='',rest=norm;
+  for(var i=0;i<cands.length;i++){
+    var re=new RegExp('^'+cands[i].txt.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\.?\\s+');
+    if(re.test(rest)){ via=cands[i].ab; rest=rest.replace(re,'').trim(); break; }
+  }
+  if(!via) return {via:'',num:'',cruce:'',placa:'',comp:'',libre:s,modo:'libre'};
+  // Número de la vía: "52", "52A", "52 BIS", "4 SUR"…
+  var mNum=rest.match(/^([0-9]+[A-Z]*(?:\s+(?:BIS|SUR|NORTE|ESTE|OESTE))?)\s*/);
+  if(!mNum) return {via:'',num:'',cruce:'',placa:'',comp:'',libre:s,modo:'libre'};
+  var num=mNum[1].replace(/\s+/g,' ').trim();
+  rest=rest.slice(mNum[0].length).trim();
+  // Cruce: "# 50-31", "No 50-31", "CON CARRERA 50", "50-31"
+  var cruce='',placa='';
+  var mCross=rest.match(/^(?:#|N[°º]|NO\.?|NRO\.?|NUM\.?)\s*([0-9]+[A-Z]*)\s*(?:-\s*([0-9]+[A-Z]*))?\s*/);
+  if(!mCross) mCross=rest.match(/^CON\s+(?:[A-Z]+\.?\s+)?([0-9]+[A-Z]*)\s*(?:-\s*([0-9]+[A-Z]*))?\s*/);
+  if(!mCross) mCross=rest.match(/^([0-9]+[A-Z]*)\s*-\s*([0-9]+[A-Z]*)\s*/);
+  if(mCross){ cruce=mCross[1]||''; placa=mCross[2]||''; rest=rest.slice(mCross[0].length).trim(); }
+  rest=rest.replace(/^[,;.\-\s]+/,'').trim();
+  return {via:via,num:num,cruce:cruce,placa:placa,comp:rest,libre:'',modo:'form'};
+}
+/* Estado de cada widget vivo, indexado por el id del campo oculto. El widget se
+   repinta solo por dentro (nunca el paso entero) para no borrar lo que el
+   usuario esté escribiendo en los demás campos — misma lección que dejó
+   ojRefrescarLogoWiz en la Ola 4. */
+var _lcDir={};
+function lcDirWidget(id,valor,label,ph){
+  var st=lcDirParsear(valor);
+  if(st.modo==='libre') st.libre=st.libre||String(valor||'');
+  _lcDir[id]=st;
+  return '<div class="fg" id="'+id+'__wrap">'+
+    (label?'<label class="fl">'+escHtml(label)+'</label>':'')+
+    '<div id="'+id+'__body">'+lcDirCuerpo(id,ph)+'</div>'+
+    '<input type="hidden" id="'+id+'" value="'+escAttr(lcDirValor(id))+'">'+
+  '</div>';
+}
+function lcDirValor(id){
+  var st=_lcDir[id]||{};
+  return st.modo==='libre'?String(st.libre||'').trim():lcDirComponer(st);
+}
+function lcDirCuerpo(id,ph){
+  var st=_lcDir[id]||{};
+  var j="'"+id+"'";
+  if(st.modo==='libre'){
+    return '<input class="fi" id="'+id+'__libre" value="'+escAttr(st.libre)+'" '+
+        'placeholder="'+escAttr(ph||'Escribe la dirección como quieras')+'" '+
+        'oninput="lcDirEditar('+j+')">'+
+      '<div class="lc-dir-prev"><span>Escritura libre.</span>'+
+      '<button type="button" class="lc-dir-link" onclick="lcDirModo('+j+',\'form\')">Usar el formato guiado</button></div>';
+  }
+  var opts='<option value="">Vía…</option>'+LC_VIA.map(function(v){
+    return '<option value="'+v.ab+'"'+(st.via===v.ab?' selected':'')+'>'+escHtml(v.nom)+' ('+v.ab+')</option>';
+  }).join('');
+  var prev=lcDirComponer(st);
+  return '<div class="lc-dir">'+
+      '<select class="fs" id="'+id+'__via" onchange="lcDirEditar('+j+')" aria-label="Tipo de vía">'+opts+'</select>'+
+      '<input class="fi mono" id="'+id+'__num" value="'+escAttr(st.num)+'" placeholder="52" aria-label="Número de la vía" oninput="lcDirEditar('+j+')">'+
+      '<span class="lc-dir-sep">#</span>'+
+      '<input class="fi mono" id="'+id+'__cruce" value="'+escAttr(st.cruce)+'" placeholder="50" aria-label="Vía que cruza" oninput="lcDirEditar('+j+')">'+
+      '<span class="lc-dir-sep">–</span>'+
+      '<input class="fi mono" id="'+id+'__placa" value="'+escAttr(st.placa)+'" placeholder="31" aria-label="Número de la placa" oninput="lcDirEditar('+j+')">'+
+    '</div>'+
+    '<input class="fi" id="'+id+'__comp" value="'+escAttr(st.comp)+'" style="margin-top:6px" '+
+      'placeholder="Complemento: apto, torre, interior, barrio…" oninput="lcDirEditar('+j+')">'+
+    '<div class="lc-dir-prev">'+
+      (prev?'<span>Se imprimirá:</span><b>'+escHtml(prev)+'</b>':'<span>Elige la vía y el número.</span>')+
+      '<button type="button" class="lc-dir-link" onclick="lcDirModo('+j+',\'libre\')">Escribir a mano</button>'+
+    '</div>';
+}
+/* Cada tecla actualiza el campo oculto: quien lea el valor (collectStep,
+   savePersonModal, el borrador automático…) sigue leyendo un input normal y no
+   necesita saber que detrás hay un widget. */
+function lcDirEditar(id){
+  var st=_lcDir[id]; if(!st) return;
+  function g(suf){ var el=document.getElementById(id+'__'+suf); return el?el.value:''; }
+  if(st.modo==='libre') st.libre=g('libre');
+  else { st.via=g('via'); st.num=g('num'); st.cruce=g('cruce'); st.placa=g('placa'); st.comp=g('comp'); }
+  var h=document.getElementById(id); if(h) h.value=lcDirValor(id);
+  if(st.modo!=='libre'){
+    var pv=document.querySelector('#'+id+'__body .lc-dir-prev');
+    var v=lcDirComponer(st);
+    if(pv) pv.innerHTML=(v?'<span>Se imprimirá:</span><b>'+escHtml(v)+'</b>':'<span>Elige la vía y el número.</span>')+
+      '<button type="button" class="lc-dir-link" onclick="lcDirModo(\''+id+'\',\'libre\')">Escribir a mano</button>';
+  }
+}
+/* Cambiar de modo NO pierde lo escrito: al pasar a libre se arranca con la
+   dirección ya compuesta, y al volver al formato guiado se intenta interpretar
+   lo que haya escrito el usuario. */
+function lcDirModo(id,modo){
+  var st=_lcDir[id]; if(!st) return;
+  if(modo==='libre'){ st.libre=lcDirValor(id); st.modo='libre'; }
+  else {
+    var p=lcDirParsear(st.libre||'');
+    if(p.modo==='form'){ p.modo='form'; _lcDir[id]=p; }
+    else { st.modo='form'; st.comp=st.comp||''; }
+    _lcDir[id].modo='form';
+  }
+  var body=document.getElementById(id+'__body');
+  if(body) body.innerHTML=lcDirCuerpo(id);
+  var h=document.getElementById(id); if(h) h.value=lcDirValor(id);
+}
+
+/* ── Placas de vehículo (observación 7) ────────────────────────────────────
+   La placa es un identificador oficial: va SIEMPRE en mayúsculas, escriba el
+   usuario como escriba. Se normaliza al teclear, al guardar y al imprimir; los
+   tres, porque un caso puede venir de un import o del simulador y no pasar por
+   el formulario. */
+function lcPlaca(s){ return String(s==null?'':s).toUpperCase().replace(/\s+/g,'').trim(); }
+function lcPlacaInput(el){ var p=el.selectionStart; el.value=lcPlaca(el.value); try{el.setSelectionRange(p,p);}catch(e){} }
+
+/* ── Elementos materiales probatorios (observación 9) ──────────────────────
+   El numeral 7 del FPJ-5 pide los EMP y EF relacionados uno a uno. El campo era
+   un textarea suelto dentro del paso de narración, así que llegaban en una sola
+   línea corrida y sin numerar. Ahora el paso tiene su lugar propio (después de
+   Testigos y antes de Vehículos, como el formato) y la app normaliza:
+       "01 (uno) celular marca Samsung"
+       "02 (dos) celulares marca Nokia"
+   ⚠️ El usuario NO está obligado a diligenciar fila por fila: puede pegar todo
+   corrido y la app lo reparte (lcEmpParsear). Ese era el punto de la
+   observación — que la app sea capaz de ordenar lo que venga. */
+var LC_NUM_PAL=['cero','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez',
+  'once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte'];
+var LC_PAL_NUM={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,
+  once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20};
+function lcNumPalabra(n){
+  n=parseInt(n,10); if(isNaN(n)||n<0) return '';
+  return LC_NUM_PAL[n]!==undefined?LC_NUM_PAL[n]:String(n);
+}
+/* Plural español del sustantivo que encabeza la descripción. Solo se toca la
+   PRIMERA palabra: "celular marca Samsung" → "celulares marca Samsung"; la
+   marca es un nombre propio y no se pluraliza. */
+function lcPlural(pal){
+  var s=String(pal||''); if(!s) return s;
+  var base=_noAcc(s).toLowerCase();
+  if(/[aeiou]$/.test(base)) return s+'s';
+  if(/z$/.test(base)) return s.slice(0,-1)+'ces';
+  if(/[sx]$/.test(base)) return s;                    // "lunes", "tórax": invariables
+  if(/[íú]$/i.test(s)) return s+'es';
+  return s+'es';                                      // revólver→revólveres, papel→papeles
+}
+function lcEmpDesc(desc,cant){
+  var d=String(desc||'').trim().replace(/\s+/g,' ');
+  if(!d) return '';
+  if(cant<=1) return d;
+  var partes=d.split(' ');
+  partes[0]=lcPlural(partes[0]);
+  return partes.join(' ');
+}
+/* "01 (uno) celular marca Samsung" — dos dígitos + cantidad en letras, que es
+   como lo pidió el documento de mejoras y como se diligencia el formato. */
+function lcEmpLinea(it,i){
+  var cant=parseInt(it&&it.cant,10); if(isNaN(cant)||cant<1) cant=1;
+  var desc=lcEmpDesc(it&&it.desc,cant);
+  if(!desc) return '';
+  return String(cant).padStart(2,'0')+' ('+lcNumPalabra(cant)+') '+desc;
+}
+function lcEmpLineas(items){
+  return (items||[]).map(lcEmpLinea).filter(Boolean);
+}
+/* Texto plano que se sigue guardando en `narracion.emp`: es el campo que ya
+   existía y el que leen el caso guardado y cualquier lector antiguo. El módulo
+   nuevo es la forma de diligenciarlo, no un campo paralelo. */
+function lcEmpTexto(items){ return lcEmpLineas(items).join('\n'); }
+/* Interpreta lo que sea que haya escrito el funcionario y lo reparte en filas.
+   Separadores admitidos: salto de línea, ";" y " , " entre elementos; y como
+   último recurso el propio patrón de numeración ("01 … 02 …") cuando viene todo
+   en una línea corrida, que es justo el caso que motivó la observación. */
+/* ¿Este trozo EMPIEZA anunciando una cantidad? Es la prueba que decide si un
+   separador abre un elemento nuevo o es puntuación dentro de la descripción. */
+function _lcEmpEmpiezaCant(t){
+  return /^(?:\d{1,3}\s*\(|\d{1,3}\s+\D|[A-Za-zÁÉÍÓÚÑáéíóúñ]+\s*\(\s*\d{1,3}\s*\))/.test(String(t||'').trim());
+}
+/* Corta una línea en elementos. Dos clases de frontera, y ninguna más:
+     · después de una coma o un punto y coma, SI lo que sigue anuncia cantidad;
+     · en medio de la frase, solo ante una numeración inequívoca («… 02 (dos)…»,
+       «… 03 cuchillo…»).
+   ⚠️ La segunda condición es estrecha a propósito: con «\d+ palabra» a secas,
+   «revólver calibre 38 con tres cartuchos» se partiría en dos elementos por el
+   «38 con». En un informe de captura, inventar un elemento probatorio es peor
+   que no separarlo. */
+function _lcEmpCortar(linea){
+  var s=String(linea||'').trim();
+  if(!s) return [];
+  var cortes=[0],m;
+  var reSep=/[,;]\s*(?=\S)/g;
+  while((m=reSep.exec(s))!==null){
+    var p1=m.index+m[0].length;
+    if(_lcEmpEmpiezaCant(s.slice(p1))) cortes.push(p1);
+  }
+  var reNum=/\s+(?=(?:0\d\b|\d{1,3}\s*\())/g;
+  while((m=reNum.exec(s))!==null){
+    var p2=m.index+m[0].length;
+    if(_lcEmpEmpiezaCant(s.slice(p2))) cortes.push(p2);
+  }
+  cortes=cortes.filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(a,b){return a-b;});
+  var out=[];
+  for(var i=0;i<cortes.length;i++){
+    var t=s.slice(cortes[i],cortes[i+1]===undefined?s.length:cortes[i+1]).replace(/[\s,;]+$/,'').trim();
+    if(t) out.push(t);
+  }
+  return out.length?out:[s];
+}
+function lcEmpParsear(txt){
+  var s=String(txt==null?'':txt).replace(/\r/g,'').trim();
+  if(!s) return [];
+  // Separadores explícitos primero; después, cada trozo se vuelve a mirar por
+  // si trae varios elementos escritos de corrido.
+  var trozos=[];
+  s.split(/\n+|;+/).forEach(function(x){
+    if(x.trim()) trozos=trozos.concat(_lcEmpCortar(x));
+  });
+  return trozos.map(function(t){
+    var cant=1,desc=t;
+    // "01 (uno) celular…", "Un (1) celular…", "1 celular…", "dos cuchillos…"
+    var m1=desc.match(/^(\d{1,3})\s*\(\s*[^)]*\)\s*/);
+    var m2=desc.match(/^([A-Za-zÁÉÍÓÚÑáéíóúñ]+)\s*\(\s*(\d{1,3})\s*\)\s*/);
+    var m3=desc.match(/^(\d{1,3})\s+/);
+    var m4=desc.match(/^([A-Za-zÁÉÍÓÚÑáéíóúñ]+)\s+/);
+    if(m1){ cant=parseInt(m1[1],10); desc=desc.slice(m1[0].length); }
+    else if(m2){ cant=parseInt(m2[2],10); desc=desc.slice(m2[0].length); }
+    else if(m3){ cant=parseInt(m3[1],10); desc=desc.slice(m3[0].length); }
+    else if(m4&&LC_PAL_NUM[_noAcc(m4[1]).toLowerCase()]!==undefined){
+      cant=LC_PAL_NUM[_noAcc(m4[1]).toLowerCase()]; desc=desc.slice(m4[0].length);
+    }
+    if(isNaN(cant)||cant<1) cant=1;
+    desc=desc.replace(/^[\s,;.\-]+/,'').replace(/[\s,;.]+$/,'').trim();
+    // Si venía en plural y son varios, se guarda el singular para que la app
+    // reconstruya el plural sola cuando cambie la cantidad.
+    return {cant:cant,desc:desc};
+  }).filter(function(it){return it.desc;});
+}
+/* Migración de casos ya guardados: el textarea antiguo se interpreta la primera
+   vez que se abre el caso, así una captura vieja pasa a numerarse sin que el
+   funcionario vuelva a escribir nada. */
+function lcEmpDeCaso(c){
+  if(c&&Array.isArray(c.elementos)&&c.elementos.length) return c.elementos;
+  return lcEmpParsear((c&&c.narracion&&c.narracion.emp)||'');
+}
+
+/* ── Fecha y hora (observación 8) ──────────────────────────────────────────
+   Eran diez casillas sueltas (DD, MM, AAAA, HH, MM × 2 bloques). Ahora son dos
+   controles nativos por bloque, que en el teléfono abren el selector del
+   sistema.
+   ⚠️ El MODELO NO CAMBIA: se sigue guardando dd / mm / aaaa / hh / mm por
+   separado, que es como el FPJ-5 los imprime (una casilla por dígito). Estas
+   dos funciones son el único puente entre el control y el modelo. */
+function lcDtISO(d,m,a){
+  d=String(d||'').replace(/\D/g,''); m=String(m||'').replace(/\D/g,''); a=String(a||'').replace(/\D/g,'');
+  if(d.length<1||m.length<1||a.length!==4) return '';
+  return a+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
+}
+function lcDtHora(h,mi){
+  h=String(h||'').replace(/\D/g,''); mi=String(mi||'').replace(/\D/g,'');
+  if(h==='' && mi==='') return '';
+  return h.padStart(2,'0')+':'+(mi||'0').padStart(2,'0');
+}
+/* Devuelve {d,m,a} a partir del <input type="date">. Si el campo se deja vacío
+   se devuelven cadenas vacías: el FPJ-5 imprime la casilla en blanco, nunca una
+   fecha inventada. */
+function lcDtPartes(iso){
+  var p=String(iso||'').split('-');
+  return p.length===3&&p[0].length===4?{d:p[2],m:p[1],a:p[0]}:{d:'',m:'',a:''};
+}
+function lcHrPartes(hhmm){
+  var p=String(hhmm||'').split(':');
+  return p.length===2?{h:p[0],mi:p[1]}:{h:'',mi:''};
+}
+/* Bloque de fecha + hora con vista previa del dato tal como quedará impreso. */
+function lcDtWidget(idF,idH,valF,valH,lblF,lblH){
+  return '<div class="lc-dt">'+
+      '<div class="fg"><label class="fl">'+escHtml(lblF||'Fecha')+'</label>'+
+        '<input type="date" class="fi" id="'+idF+'" value="'+escAttr(valF)+'" oninput="lcDtPrev()"></div>'+
+      '<div class="fg"><label class="fl">'+escHtml(lblH||'Hora')+'</label>'+
+        '<input type="time" class="fi" id="'+idH+'" value="'+escAttr(valH)+'" oninput="lcDtPrev()"></div>'+
+    '</div>';
+}
+function lcDtPrev(){
+  ['cap','disp'].forEach(function(k){
+    var f=document.getElementById('w-f'+k), h=document.getElementById('w-h'+k);
+    var el=document.getElementById('w-prev'+k);
+    if(!el||!f) return;
+    var p=lcDtPartes(f.value), hr=lcHrPartes(h?h.value:'');
+    el.innerHTML=p.d
+      ? 'Quedará impreso <b>D '+p.d+'  M '+p.m+'  A '+p.a+'</b>'+(hr.h?'  ·  <b>Hora '+hr.h+':'+hr.mi+'</b>':'  ·  hora sin diligenciar')
+      : 'Sin fecha diligenciada — el formato saldrá con las casillas en blanco.';
+  });
+}
+
+/* ── Listas repetibles del formulario de flagrancia (observaciones 2 y 9) ───
+   Mismo criterio que las listas del módulo OJ: se LEE EL DOM antes de cada alta
+   o baja, para no perder lo tecleado y todavía no recolectado. */
+/* Antes de guardar, las filas en blanco que el funcionario dejó abiertas no
+   tienen por qué persistir: una conducta vacía no es una conducta. Se hace al
+   GUARDAR y no al recolectar, para no borrar la fila que se está escribiendo. */
+function lcLimpiarListas(c){
+  if(!c) return c;
+  var cs=c.conductas||[], as=c.articulosCP||[], nc=[], na=[];
+  for(var i=0;i<Math.max(cs.length,as.length);i++){
+    if(String(cs[i]||'').trim()||String(as[i]||'').trim()){ nc.push(cs[i]||''); na.push(as[i]||''); }
+  }
+  c.conductas=nc.length?nc:['']; c.articulosCP=na.length?na:[''];
+  if(Array.isArray(c.elementos)){
+    c.elementos=c.elementos.filter(function(it){ return it&&String(it.desc||'').trim(); });
+    c.narracion=c.narracion||{};
+    c.narracion.emp=lcEmpTexto(c.elementos);
+  }
+  (c.vehiculos||[]).forEach(function(v){ if(v) v.placas=lcPlaca(v.placas); });
+  return c;
+}
+function lcListaLeer(cont,campos){
+  var box=document.getElementById(cont);
+  if(!box) return null;                       // el bloque no está en pantalla
+  return Array.from(box.querySelectorAll('[data-fila]')).map(function(fila){
+    var o={};
+    campos.forEach(function(c){
+      var el=fila.querySelector('[data-c="'+c+'"]');
+      o[c]=el?el.value:'';
+    });
+    return o;
+  });
 }
 
 function rStep1(){
@@ -3077,40 +3571,144 @@ function rStep1(){
     '<option value="JUZGADO" '+(c.destinoOJ==='JUZGADO'?'selected':'')+'>Juzgado solicitante</option></select></div>'+
     '<div class="fg"><label class="fl">Autoridad que solicita</label><input class="fi" id="w-autoridad" value="'+(c.autoridadSolicita||c.juzgadoOrden||'')+'" placeholder="Se auto-completa desde el juzgado"></div>'+
     '</div>'):('');
+  /* El tipo de captura y el destino del informe decían lo mismo dos veces
+     ("URI (Adulto)" arriba y "URI Centro — Sede Caribe" cinco campos más
+     abajo), cada uno en su propio renglón. Ahora son UN control: el selector
+     nombra el destino que le corresponde y el destino se edita ahí mismo, solo
+     cuando hay que cambiarlo (observación 3). */
+  var cfgD=DB.getConfig();
+  var destDe=function(t){ return t==='CESPA'?(cfgD.destCespa||'CESPA'):(cfgD.destUri||'Fiscalía URI'); };
+  var destAct=c.destino||destDe(c.tipo);
+  var opt=function(val,txt){
+    var d=val==='OJ'?'':destDe(val);
+    return '<option value="'+val+'"'+(c.tipo===val?' selected':'')+'>'+escHtml(txt+(d?' → '+d:''))+'</option>';
+  };
+  var destBloque=_lcDestEdit
+    ? '<div class="fg"><label class="fl">'+(isOJ?'Destino final':'Destino del informe')+'</label>'+
+      '<div style="display:flex;gap:8px;align-items:flex-end">'+
+        '<input class="fi" id="w-dest" value="'+escAttr(destAct)+'" style="flex:1">'+
+        '<button class="btn bs" style="white-space:nowrap" onclick="abrirSelectorDespacho()">Lista</button>'+
+      '</div>'+
+      '<div class="lc-dir-prev"><button type="button" class="lc-dir-link" onclick="lcDestEditar(false)">Listo</button></div></div>'
+    : '<div class="lc-dir-prev" style="margin:-8px 0 14px">'+
+        '<span>Destino del informe:</span><b>'+escHtml(destAct||'—')+'</b>'+
+        '<button type="button" class="lc-dir-link" onclick="lcDestEditar(true)">Cambiar</button>'+
+      '</div>';
   return '<div class="st" style="margin-top:0">Datos del Caso</div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Tipo</label><select class="fs" id="w-tipo" onchange="onTipoChg()">'+
-    '<option value="URI" '+(c.tipo==='URI'?'selected':'')+'>URI (Adulto)</option>'+
-    '<option value="CESPA" '+(c.tipo==='CESPA'?'selected':'')+'>CESPA (Menor)</option>'+
-    '<option value="OJ" '+(c.tipo==='OJ'?'selected':'')+'>&#x2696; Orden Judicial</option>'+
+    '<div class="fr"><div class="fg"><label class="fl">Tipo de captura y destino</label><select class="fs" id="w-tipo" onchange="onTipoChg()">'+
+    opt('URI','URI (Adulto)')+opt('CESPA','CESPA (Menor)')+
+    '<option value="OJ"'+(c.tipo==='OJ'?' selected':'')+'>&#x2696; Orden Judicial</option>'+
     '</select></div>'+
     '<div class="fg"><label class="fl">Fecha procedimiento</label><input type="date" class="fi" id="w-fecha" value="'+(c.fechaProc||'')+'"></div></div>'+
-    '<div class="fr"><div class="fg"><label class="fl">NUNC</label>'+
+    destBloque+
+    /* El SPOA salía aquí y no aparece en ninguna casilla del FPJ-5 (comprobado
+       sobre las dos plantillas): solo alargaba el paso. Se diligencia ahora en
+       «Datos del Dossier», junto al No. de incidente y al fiscal que recibe,
+       que son igual de ajenos al formato (observaciones 1 y 4). */
+    '<div class="fg"><label class="fl">NUNC</label>'+
     '<input class="fi mono" id="w-nunc" value="'+(c.nunc||'')+'" maxlength="16" inputmode="numeric" pattern="\\d{16}" placeholder="16 dígitos" oninput="validateNunc(this)">'+
     '<div class="nunc-err" id="nunc-err"></div></div>'+
-    '<div class="fg"><label class="fl">SPOA</label><input class="fi mono" id="w-spoa" value="'+(c.spoa||'')+'" inputmode="numeric"></div></div>'+
-    '<div class="fr"><div class="fg" style="flex:2"><label class="fl">Conducta punible 1</label><input class="fi" id="w-cond0" value="'+(c.conductas[0]||'')+'" list="dl-cond"></div>'+
-    '<div class="fg"><label class="fl">Art. CP</label><input class="fi" id="w-art0" value="'+((c.articulosCP||[])[0]||'')+'" placeholder="Art. 239"></div></div>'+
-    '<div class="fr"><div class="fg" style="flex:2"><label class="fl">Conducta 2</label><input class="fi" id="w-cond1" value="'+(c.conductas[1]||'')+'" list="dl-cond"></div>'+
-    '<div class="fg"><label class="fl">Art. CP</label><input class="fi" id="w-art1" value="'+((c.articulosCP||[])[1]||'')+'" placeholder="Art. ..."></div></div>'+
-    '<div class="fr"><div class="fg" style="flex:2"><label class="fl">Conducta 3</label><input class="fi" id="w-cond2" value="'+(c.conductas[2]||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Art. CP</label><input class="fi" id="w-art2" value="'+((c.articulosCP||[])[2]||'')+'" placeholder="Art. ..."></div></div>'+
-    '<div class="fr"><div class="fg" style="flex:2"><label class="fl">Conducta 4</label><input class="fi" id="w-cond3" value="'+(c.conductas[3]||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Art. CP</label><input class="fi" id="w-art3" value="'+((c.articulosCP||[])[3]||'')+'" placeholder="Art. ..."></div></div>'+
-    ojB+
-    '<div class="fg"><label class="fl">'+(isOJ?'Destino final':'Destino (Fiscalía)')+'</label>'+
-    '<div style="display:flex;gap:8px;align-items:flex-end">'+
-    '<input class="fi" id="w-dest" value="'+(c.destino||'')+'" style="flex:1">'+
-    '<button class="btn bs" style="white-space:nowrap" onclick="abrirSelectorDespacho()">Lista</button>'+
-    '</div></div>'+
-    '<div class="fr"><div class="fg"><label class="fl">No. Incidente</label><input class="fi mono" id="w-inc" value="'+(c.numIncidente||'')+'" inputmode="numeric"></div>'+
-    '<div class="fg"><label class="fl">Recibe (fiscal)</label><input class="fi" id="w-recibe" value="'+(c.recibe||'')+'"></div></div>';
+    '<div class="st">Conductas punibles</div>'+
+    '<div id="w-conds">'+lcCondHtml()+'</div>'+
+    '<div id="w-conds-add">'+lcCondBoton()+'</div>'+
+    ojB;
+}
+
+/* ── Destino: se edita solo cuando hace falta (observación 3) ─────────────── */
+var _lcDestEdit=false;
+function lcDestEditar(on){
+  collectStep();                     // no perder lo tecleado al repintar el paso
+  _lcDestEdit=!!on;
+  renderWiz();
+}
+
+/* ── Conductas punibles a demanda (observación 2) ──────────────────────────
+   El paso nacía con CUATRO parejas conducta+artículo siempre visibles, tuviera
+   el caso una conducta o cuatro: una lista larga y desordenada donde lo normal
+   —una sola conducta— costaba lo mismo que el caso excepcional. Ahora arranca
+   con una y el funcionario agrega solo las que necesite.
+   ⚠️ El MODELO no cambia: siguen siendo `wc.conductas[]` y `wc.articulosCP[]`
+   en paralelo, que es lo que lee el FPJ-5 (celdas 58-61) y el dossier. */
+/* Las filas son EXACTAMENTE las del modelo, sin recortar las vacías: si se
+   descartaran aquí, «+ Agregar conducta» añadiría una fila en blanco y el
+   propio render se la llevaría por delante. La limpieza de casillas vacías es
+   cosa de la migración (editCase) y del guardado, no del pintado. */
+function lcCondFilas(){
+  var cs=(wc&&wc.conductas)||[], as=(wc&&wc.articulosCP)||[];
+  var n=Math.max(cs.length,as.length), out=[];
+  for(var i=0;i<n;i++) out.push({cond:cs[i]||'',art:as[i]||''});
+  if(!out.length) out.push({cond:'',art:''});
+  return out;
+}
+function lcCondHtml(){
+  var filas=lcCondFilas();
+  return filas.map(function(f,i){
+    return '<div class="lc-rowx" data-fila><div class="lc-rowx-in">'+
+      '<div class="lc-par">'+
+        '<div class="fg"><label class="fl">'+(i===0?'Conducta punible':'Conducta '+(i+1))+'</label>'+
+          '<input class="fi" data-c="cond" value="'+escAttr(f.cond)+'" list="dl-cond" onchange="lcCondArt(this)"></div>'+
+        '<div class="fg"><label class="fl">Art. C.P.</label>'+
+          '<input class="fi" data-c="art" value="'+escAttr(f.art)+'" placeholder="'+(i===0?'Art. 239':'Art. …')+'"></div>'+
+      '</div></div>'+
+      (filas.length>1
+        ?'<button type="button" class="lc-rowx-del" title="Quitar esta conducta" aria-label="Quitar conducta '+(i+1)+'" onclick="lcCondQuitar('+i+')">✕</button>'
+        :'')+
+    '</div>';
+  }).join('');
+}
+/* El formato imprime CUATRO conductas (celdas 58-61). Se dice, en vez de dejar
+   agregar una quinta que no saldría en el documento. */
+function lcCondBoton(){
+  var n=lcCondFilas().length;
+  return n<4
+    ? '<button type="button" class="btn bs bsm" onclick="lcCondAgregar()">+ Agregar conducta</button>'
+    : '<p style="font-size:.72rem;color:var(--txD);margin:4px 0 0">El FPJ-5 imprime hasta cuatro conductas punibles.</p>';
+}
+function lcCondSync(){
+  var rows=lcListaLeer('w-conds',['cond','art']);
+  if(!rows||!wc) return;
+  wc.conductas=rows.map(function(r){return r.cond;});
+  wc.articulosCP=rows.map(function(r){return r.art;});
+}
+function lcCondPintar(){
+  var box=document.getElementById('w-conds'); if(box) box.innerHTML=lcCondHtml();
+  var add=document.getElementById('w-conds-add'); if(add) add.innerHTML=lcCondBoton();
+}
+function lcCondAgregar(){
+  lcCondSync();                       // se lee el DOM ANTES de crecer
+  if(lcCondFilas().length>=4) return;
+  wc.conductas=(wc.conductas||[]).concat(['']);
+  wc.articulosCP=(wc.articulosCP||[]).concat(['']);
+  lcCondPintar();
+  var ins=document.querySelectorAll('#w-conds [data-c="cond"]');
+  if(ins.length) ins[ins.length-1].focus();
+}
+function lcCondQuitar(i){
+  lcCondSync();
+  (wc.conductas||[]).splice(i,1); (wc.articulosCP||[]).splice(i,1);
+  if(!wc.conductas.length){ wc.conductas=['']; wc.articulosCP=['']; }
+  lcCondPintar();
+}
+/* Delito ⇒ artículo del C.P., el mismo automatismo que ya tenía el módulo de
+   orden judicial (Ola 2). Solo rellena si el artículo está vacío: lo que el
+   funcionario escribió no se pisa nunca. */
+function lcCondArt(el){
+  var fila=el.closest('[data-fila]'); if(!fila) return;
+  var art=fila.querySelector('[data-c="art"]');
+  if(!art||art.value.trim()) return;
+  var n=(typeof OJ_ART_CP==='object'&&OJ_ART_CP)?OJ_ART_CP[lcGeoNorm(el.value)]:null;
+  if(n) art.value='Art. '+n;
 }
 
 function onTipoChg(){
   var cfg=DB.getConfig(); var tipo=document.getElementById('w-tipo').value;
   var dest=document.getElementById('w-dest'); var nunc=document.getElementById('w-nunc');
-  if(tipo==='CESPA'){if(dest)dest.value=cfg.destCespa||'CESPA';if(nunc)nunc.value=cfg.nuncCespa||'';}
-  else{if(dest)dest.value=cfg.destUri||'Fiscalía URI';if(nunc)nunc.value=cfg.nuncUri||'';}
+  /* El destino va DENTRO del selector de tipo: al cambiar de tipo cambia con
+     él, esté o no abierto el editor (observación 3). */
+  var d=tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI');
+  if(tipo!=='OJ'){ wc.destino=d; if(dest) dest.value=d; }
+  if(nunc) nunc.value=(tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''));
+  wc.nunc=nunc?nunc.value:wc.nunc;
   wc.tipo=tipo; renderWiz();
 }
 function onDestinoOJChg(){
@@ -3126,8 +3724,11 @@ function rStep2(){
   return '<div class="st" style="margin-top:0">Lugar de los Hechos</div>'+
     '<div class="fr"><div class="fg"><label class="fl">Departamento</label><input class="fi" id="w-depto" value="'+(l.depto||'Antioquia')+'"></div>'+
     '<div class="fg"><label class="fl">Municipio</label><input class="fi" id="w-muni" value="'+(l.muni||'Medellín')+'"></div></div>'+
-    '<div class="fg"><label class="fl">Dirección exacta</label><input class="fi" id="w-dir" value="'+(l.dir||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Barrio</label><input class="fi" id="w-barrio" value="'+(l.barrio||'')+'" list="dl-barrio"></div>'+
+    /* Dirección con formato guiado (observación 5). El campo oculto `w-dir`
+       sigue llevando el mismo string de siempre, así que collectStep y el
+       mapeo al FPJ-5 (celda 63) no cambian ni una línea. */
+    lcDirWidget('w-dir',l.dir,'Dirección exacta','Ej: finca La Esperanza, vía al mar km 4')+
+    '<div class="fg"><label class="fl">Barrio</label><input class="fi" id="w-barrio" value="'+escAttr(l.barrio)+'" list="dl-barrio"></div>'+
     '<div class="fg"><label class="fl">Características del sitio</label><textarea class="ft" id="w-caract">'+escHtml(l.caract)+'</textarea></div>'+
     '<div class="fr3">'+
     '<div class="fg"><label class="fl">Localidad</label><input class="fi mono" id="w-local" value="'+(l.localidad!==undefined?l.localidad:cfg.localidadDefault)+'" inputmode="numeric" maxlength="4"></div>'+
@@ -3212,7 +3813,12 @@ function openPersonModal(key,idx,p,showSenas,showRole){
     '<option '+(p.escol==='Posgrado'?'selected':'')+'>Posgrado</option></select></div></div>'+
     '<div class="fg"><label class="fl">Ocupación</label><input class="fi" id="pm-ocup" value="'+(p.ocup||'')+'"></div>'+
     '<div class="st">Contacto</div>'+
-    '<div class="fg"><label class="fl">Dirección</label><input class="fi" id="pm-dirRes" value="'+(p.dirRes||'')+'"></div>'+
+    /* Mismo widget de dirección que el lugar de los hechos, con el mismo
+       formato abreviado: capturados, víctimas, testigos y el registro de
+       Personas comparten una sola forma de escribir una dirección
+       (observación 6). El campo `pm-dirRes` sigue siendo un input normal para
+       quien lo lee (savePersonModal, openPersonForm). */
+    lcDirWidget('pm-dirRes',p.dirRes,'Dirección de residencia')+
     '<div class="fr"><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="pm-tel" value="'+(p.tel||'')+'" inputmode="tel"></div>'+
     '<div class="fg"><label class="fl">Correo</label><input class="fi" id="pm-correo" value="'+(p.correo||'')+'"></div></div>'+
     '<div class="fg"><label class="fl">Nombres padres</label><input class="fi" id="pm-padres" value="'+(p.padres||'')+'"></div>'+
@@ -3561,6 +4167,124 @@ function openPersonForm(person) {
 function editPerson(id) { openPersonForm(DB.getPerson(id)); }
 function delPerson(id) { if (confirm('¿Eliminar persona? Esta acción no se puede deshacer.')) { DB.delPerson(id); renderPersonas(); toast('Persona eliminada'); } }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   PASO «EMP y EF» — numeral 7 del FPJ-5  (observación 9)
+   Los elementos materiales probatorios y la evidencia física tienen apartado
+   propio en el formato, entre Testigos (6) y Vehículos (8). En la app eran un
+   textarea suelto al final del paso de Narración, del que salía una línea
+   corrida sin numerar… y que además NUNCA llegaba al documento (ver el arreglo
+   de setPar en buildFPJBlob).
+   Ahora se diligencian uno a uno —o se pegan de corrido y la app los reparte—
+   y se imprimen numerados: «01 (uno) celular marca Samsung».
+═══════════════════════════════════════════════════════════════════════════ */
+function lcEmpItems(){
+  if(!wc) return [];
+  if(!Array.isArray(wc.elementos)) wc.elementos=lcEmpDeCaso(wc);
+  return wc.elementos;
+}
+function lcEmpFilaHtml(it,i){
+  return '<div class="lc-rowx" data-fila>'+
+    '<div class="lc-num">'+String(i+1).padStart(2,'0')+'</div>'+
+    '<div class="lc-rowx-in"><div class="lc-par lc-par-inv">'+
+      '<div class="fg"><label class="fl">Cant.</label>'+
+        '<input class="fi mono" data-c="cant" type="number" min="1" step="1" value="'+escAttr(it.cant||1)+'" oninput="lcEmpPrev()"></div>'+
+      '<div class="fg"><label class="fl">Descripción</label>'+
+        '<input class="fi" data-c="desc" value="'+escAttr(it.desc)+'" placeholder="celular marca Samsung color negro" oninput="lcEmpPrev()"></div>'+
+    '</div></div>'+
+    '<button type="button" class="lc-rowx-del" title="Quitar este elemento" aria-label="Quitar elemento '+(i+1)+'" onclick="lcEmpQuitar('+i+')">✕</button>'+
+  '</div>';
+}
+function lcEmpListaHtml(){
+  var its=lcEmpItems();
+  if(!its.length) return '<p style="font-size:.78rem;color:var(--txD);margin:2px 0 10px">Sin elementos registrados. Si en el procedimiento no se recolectó ninguno, continúa al siguiente paso.</p>';
+  return its.map(lcEmpFilaHtml).join('');
+}
+/* Lo que se va a imprimir, visible mientras se escribe: la numeración es el
+   punto de la observación, así que tiene que verse antes de generar. */
+function lcEmpPrevHtml(){
+  var lineas=lcEmpLineas(lcEmpLeerDom()||lcEmpItems());
+  if(!lineas.length) return '';
+  return '<div class="st">Así quedará el numeral 7</div>'+
+    '<pre class="lc-emp-prev">'+escHtml(lineas.join('\n'))+'</pre>';
+}
+/* Lo que hay en pantalla, tal cual. No se descartan las filas sin descripción:
+   una fila recién agregada está vacía por definición y tiene que sobrevivir a
+   la siguiente recolección. Al imprimir sí se ignoran (lcEmpLinea). */
+function lcEmpLeerDom(){
+  var rows=lcListaLeer('w-emp-list',['cant','desc']);
+  if(!rows) return null;
+  return rows.map(function(r){
+    var n=parseInt(r.cant,10); if(isNaN(n)||n<1) n=1;
+    return {cant:n,desc:String(r.desc||'').trim()};
+  });
+}
+function rStepEMP(){
+  var its=lcEmpItems();
+  return '<div class="st" style="margin-top:0">7. EMP y EF recolectados</div>'+
+    '<p style="font-size:.78rem;color:var(--txD);margin:-4px 0 12px">Elementos materiales probatorios y evidencia física, uno por renglón. Se imprimen numerados en el numeral 7 del formato.</p>'+
+    '<div id="w-emp-list">'+lcEmpListaHtml()+'</div>'+
+    '<div class="flx g8 mt8"><button type="button" class="btn bp bsm" onclick="lcEmpAgregar()">+ Agregar elemento</button></div>'+
+    /* La app tiene que ser capaz de ordenar lo que el funcionario escriba, aunque
+       lo mande todo de corrido: es literalmente lo que pide la observación. */
+    '<details class="oj-mas" style="margin-top:16px"'+(its.length?'':' open')+'>'+
+      '<summary>Escribirlos de corrido <small>— la app los separa y los numera</small></summary>'+
+      '<div class="fg"><textarea class="ft" id="w-emp-bulk" placeholder="Un (1) celular Samsung color negro; 01 revólver calibre 38 con tres cartuchos, 2 cuchillos marca Stainless"></textarea></div>'+
+      '<button type="button" class="btn bs bsm" onclick="lcEmpDesdeTexto()">Ordenar y numerar</button>'+
+      '<p style="font-size:.72rem;color:var(--txD);margin:8px 0 0">Se agregan a los que ya estén en la lista. Reconoce «01», «Un (1)», «dos», y separa por punto y coma, coma o salto de línea.</p>'+
+    '</details>'+
+    '<div id="w-emp-prev">'+lcEmpPrevHtml()+'</div>';
+}
+function lcEmpPintar(){
+  var box=document.getElementById('w-emp-list'); if(box) box.innerHTML=lcEmpListaHtml();
+  lcEmpPrev();
+}
+function lcEmpPrev(){
+  var el=document.getElementById('w-emp-prev'); if(el) el.innerHTML=lcEmpPrevHtml();
+}
+/* Se lee el DOM ANTES de crecer o encoger: misma regla que las conductas y que
+   las listas del módulo OJ. */
+function lcEmpSync(){
+  var dom=lcEmpLeerDom();
+  if(dom===null||!wc) return;
+  wc.elementos=dom;
+  lcEmpAplicar();
+}
+/* Modelo → `narracion.emp`, el campo de siempre, ya normalizado.
+   ⚠️ Va SEPARADO de lcEmpSync: quien acaba de tocar el modelo (agregar, quitar,
+   pegar de corrido) no puede volver a leer el DOM, porque el DOM todavía es el
+   de ANTES del cambio y desharía justo lo que se acaba de hacer. */
+function lcEmpAplicar(){
+  if(!wc) return;
+  wc.narracion=wc.narracion||{};
+  wc.narracion.emp=lcEmpTexto(wc.elementos||[]);
+}
+function lcEmpAgregar(){
+  lcEmpSync();
+  lcEmpItems().push({cant:1,desc:''});
+  lcEmpAplicar();
+  lcEmpPintar();
+  var ins=document.querySelectorAll('#w-emp-list [data-c="desc"]');
+  if(ins.length) ins[ins.length-1].focus();
+}
+function lcEmpQuitar(i){
+  lcEmpSync();
+  lcEmpItems().splice(i,1);
+  lcEmpAplicar();
+  lcEmpPintar();
+}
+function lcEmpDesdeTexto(){
+  var ta=document.getElementById('w-emp-bulk'); if(!ta) return;
+  var nuevos=lcEmpParsear(ta.value);
+  if(!nuevos.length){ toast('No se reconoció ningún elemento en ese texto'); return; }
+  lcEmpSync();
+  // Los que ya estaban en blanco no estorban a los que llegan.
+  wc.elementos=lcEmpItems().filter(function(it){return it.desc;}).concat(nuevos);
+  lcEmpAplicar();
+  ta.value='';
+  lcEmpPintar();
+  toast(nuevos.length+' elemento'+(nuevos.length===1?'':'s')+' agregado'+(nuevos.length===1?'':'s')+' ✓');
+}
+
 // ── Paso Vehículos: pregunta clara "¿Hay vehículos implicados?" ──
 function rStepVeh(){
   var has=!!wc.hayVehiculos;
@@ -3575,9 +4299,11 @@ function rStepVeh(){
   return '<div class="st" style="margin-top:0">¿Hay vehículos implicados?</div>'+
     '<div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="w-hayVeh" '+(has?'checked':'')+' onchange="wc.hayVehiculos=this.checked;if(!this.checked)wc.vehiculos=[];renderWiz()"> <span class="txd txs">Sí, uno o más vehículos están implicados</span></label></div>'+
     (has
+      /* Sin tope: el formato trae dos filas y el resto se reproducen, igual que
+         los apartados 4/5/6 con varias personas (observación 7). */
       ?('<div class="st">Vehículos — '+arr.length+' registrado(s)</div>'+cards+
         '<div class="flx g8 mt8"><button class="btn bp bsm" onclick="addVeh()">+ Agregar vehículo</button></div>'+
-        (arr.length>=2?'<p style="font-size:.72rem;color:var(--txD);margin-top:8px">El formato FPJ-5 imprime hasta 2 vehículos; los adicionales deberán anexarse aparte.</p>':''))
+        (arr.length>2?'<p style="font-size:.72rem;color:var(--txD);margin-top:8px">El formato trae dos filas; las demás se reproducen en el documento.</p>':''))
       :'<p style="font-size:.78rem;color:var(--txD);margin-top:6px">Si no hay vehículos, continúa al siguiente paso.</p>');
 }
 function addVeh(){openVehModal(-1,{});}
@@ -3589,13 +4315,15 @@ function openVehModal(idx,v){
     '<div class="fr"><div class="fg"><label class="fl">Marca</label><input class="fi" id="vm-marca" value="'+escHtml(v.marca)+'"></div>'+
     '<div class="fg"><label class="fl">Clase</label><input class="fi" id="vm-clase" value="'+escHtml(v.clase)+'" placeholder="Automóvil, motocicleta…"></div></div>'+
     '<div class="fr"><div class="fg"><label class="fl">Color</label><input class="fi" id="vm-color" value="'+escHtml(v.color)+'"></div>'+
-    '<div class="fg"><label class="fl">Placas</label><input class="fi mono" id="vm-placas" value="'+escHtml(v.placas)+'" placeholder="ABC123"></div></div>'+
+    /* La placa es un identificador oficial: se pasa a mayúsculas mientras se
+       teclea, escriba el usuario como escriba (observación 7). */
+    '<div class="fg"><label class="fl">Placas</label><input class="fi mono" id="vm-placas" value="'+escAttr(lcPlaca(v.placas))+'" placeholder="ABC123" autocapitalize="characters" spellcheck="false" style="text-transform:uppercase" oninput="lcPlacaInput(this)"></div></div>'+
     '<div class="fg"><label class="fl">Propietario</label><input class="fi" id="vm-prop" value="'+escHtml(v.prop)+'"></div>'+
     '<button class="btn bp bbl mt16" onclick="saveVehModal('+idx+')">Guardar vehículo</button>');
 }
 function saveVehModal(idx){
   function v(id){var el=document.getElementById('vm-'+id);return el?el.value.trim():'';}
-  var veh={marca:v('marca'),clase:v('clase'),color:v('color'),placas:v('placas'),prop:v('prop')};
+  var veh={marca:v('marca'),clase:v('clase'),color:v('color'),placas:lcPlaca(v('placas')),prop:v('prop')};
   if(!wc.vehiculos)wc.vehiculos=[];
   if(idx>=0){wc.vehiculos[idx]=veh;}else{wc.vehiculos.push(veh);}
   wc.hayVehiculos=true;
@@ -3604,34 +4332,38 @@ function saveVehModal(idx){
 function rStep6(){
   var n=wc.narracion||{};
   if(wc.tipo==='OJ'&&!n.fechaCapD){var t=nowParts();n.fechaCapD=t.dd;n.fechaCapM=t.mm;n.fechaCapA=t.yy;n.horaCapH=t.hh;n.horaCapM=t.mi;n.fechaDispD=t.dd;n.fechaDispM=t.mm;n.fechaDispA=t.yy;wc.narracion=n;}
-  return '<div class="st" style="margin-top:0">Fecha y hora de '+(wc.tipo==='CESPA'?'aprehensión':'captura')+'</div>'+
-    '<div class="fr3"><div class="fg"><label class="fl">Día</label><input class="fi mono" id="w-fcD" value="'+(n.fechaCapD||'')+'" maxlength="2" inputmode="numeric" placeholder="DD"></div>'+
-    '<div class="fg"><label class="fl">Mes</label><input class="fi mono" id="w-fcM" value="'+(n.fechaCapM||'')+'" maxlength="2" inputmode="numeric" placeholder="MM"></div>'+
-    '<div class="fg"><label class="fl">Año</label><input class="fi mono" id="w-fcA" value="'+(n.fechaCapA||'')+'" maxlength="4" inputmode="numeric" placeholder="AAAA"></div></div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Hora</label><input class="fi mono" id="w-hcH" value="'+(n.horaCapH||'')+'" maxlength="2" inputmode="numeric" placeholder="HH"></div>'+
-    '<div class="fg"><label class="fl">Min</label><input class="fi mono" id="w-hcM" value="'+(n.horaCapM||'')+'" maxlength="2" inputmode="numeric" placeholder="MM"></div></div>'+
+  /* Diez casillas sueltas (día, mes, año, hora, minuto × dos bloques) pasaron a
+     cuatro controles nativos, que en el teléfono abren el selector del sistema
+     (observación 8).
+     ⚠️ La LÓGICA INTERNA NO CAMBIA: el modelo sigue guardando dd/mm/aaaa y
+     hh/mm por separado —collectStep los vuelve a partir— porque así es como el
+     FPJ-5 los imprime, una casilla por dígito. La vista previa deja ver ese
+     mismo desglose para que nadie tenga que fiarse del cambio. */
+  var lblCap='Fecha y hora de '+(wc.tipo==='CESPA'?'la aprehensión':'la captura');
+  return '<div class="st" style="margin-top:0">'+lblCap+'</div>'+
+    lcDtWidget('w-fcap','w-hcap',
+      lcDtISO(n.fechaCapD,n.fechaCapM,n.fechaCapA), lcDtHora(n.horaCapH,n.horaCapM),
+      'Fecha','Hora')+
+    '<div class="lc-dt-prev" id="w-prevcap"></div>'+
     '<div class="st">Fecha y hora de disposición</div>'+
-    '<div class="fr3"><div class="fg"><label class="fl">Día</label><input class="fi mono" id="w-fdD" value="'+(n.fechaDispD||'')+'" maxlength="2" inputmode="numeric"></div>'+
-    '<div class="fg"><label class="fl">Mes</label><input class="fi mono" id="w-fdM" value="'+(n.fechaDispM||'')+'" maxlength="2" inputmode="numeric"></div>'+
-    '<div class="fg"><label class="fl">Año</label><input class="fi mono" id="w-fdA" value="'+(n.fechaDispA||'')+'" maxlength="4" inputmode="numeric"></div></div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Hora</label><input class="fi mono" id="w-hdH" value="'+(n.horaDispH||'')+'" maxlength="2" inputmode="numeric"></div>'+
-    '<div class="fg"><label class="fl">Min</label><input class="fi mono" id="w-hdM" value="'+(n.horaDispM||'')+'" maxlength="2" inputmode="numeric"></div></div>'+
+    lcDtWidget('w-fdisp','w-hdisp',
+      lcDtISO(n.fechaDispD,n.fechaDispM,n.fechaDispA), lcDtHora(n.horaDispH,n.horaDispM),
+      'Fecha','Hora')+
+    '<div class="lc-dt-prev" id="w-prevdisp"></div>'+
     '<div class="st">Narración de los hechos</div>'+
     '<div class="fg"><textarea class="ft" id="w-narrTxt" style="min-height:140px">'+escHtml(n.texto)+'</textarea></div>'+
-    '<div class="st">EMP y EF recolectados</div>'+
-    '<div class="fg"><textarea class="ft" id="w-empTxt">'+escHtml(n.emp)+'</textarea></div>';
+    /* Los EMP y EF salieron de aquí: tienen su propio paso, en el lugar que les
+       da el formato (numeral 7, antes de Vehículos) — observación 9. */
+    '<p style="font-size:.75rem;color:var(--txD);margin:4px 0 0">Los elementos materiales probatorios se diligencian en el paso «EMP y EF».</p>';
 }
 
 function rStep7(){
   var cfg=DB.getConfig();
-  var perfilAct=null;
-  if(cfg.perfiles&&cfg.perfiles.length&&cfg.perfilActivo){
-    cfg.perfiles.forEach(function(p){if(p.id===cfg.perfilActivo)perfilAct=p;});
-  }
-  var defServ=perfilAct
-    ?{grado:perfilAct.grado||'',ident:perfilAct.cedula||'',nombre:perfilAct.nombre||'',entidad:perfilAct.entidad||'',cargo:perfilAct.cargo||'',tel:perfilAct.telefono||'',correo:perfilAct.correo||''}
-    :(cfg.servidor||{});
+  var defServ=lcServidorDefecto(cfg);      // incluye la entidad por defecto del perfil
   var s=wc.servidor||defServ;
+  /* Una captura guardada antes de que el perfil tuviera entidad no debe salir
+     con el campo vacío si el equipo ya la configuró (observación 10). */
+  if(s&&!s.entidad&&defServ.entidad) s=Object.assign({},s,{entidad:defServ.entidad});
   var hasPerfiles=cfg.perfiles&&cfg.perfiles.length;
   var ojHtml='';
   if(wc&&wc.tipo==='OJ'){
@@ -3844,9 +4576,11 @@ var SIM={
     var barr=this.r(this.B),muni=this.r(this.MUNI);
     var dir='Calle '+this.ri(40,60)+' con carrera '+this.ri(40,55);
     // 1 a 4 conductas con su artículo del C.P.
+    /* Solo las conductas que el caso tiene de verdad: el formulario ya no nace
+       con cuatro casillas fijas (observación 2). */
     var delitos=this.rN(this.C,this.ri(1,4));
-    var conductas=['','','',''],arts=['','','',''];
-    delitos.forEach(function(d,i){conductas[i]=d[0];arts[i]=d[1];});
+    var conductas=delitos.map(function(d){return d[0];});
+    var arts=delitos.map(function(d){return d[1];});
     // Los apartados 4/5/6 del FPJ-5 son repetibles: se simulan varias personas.
     var caps=[],vics=[],tests=[],i;
     for(i=0;i<this.ri(1,isMn?2:3);i++) caps.push(this.gP({menor:isMn}));
@@ -3869,6 +4603,9 @@ var SIM={
       nunc:this.rNunc(isMn?cfg.nuncCespa:cfg.nuncUri),
       spoa:this.rRadicado(),
       fechaProc:fecha,conductas:conductas,articulosCP:arts,
+      /* El caso de demostración estrena el paso «EMP y EF»: los elementos van
+         estructurados, no en una línea corrida (observación 9). */
+      elementos:lcEmpParsear(emp),
       destino:isMn?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI'),
       numIncidente:String(this.ri(100000,999999)),recibe:this.r(this.F),
       lugar:{depto:'Antioquia',muni:muni,dir:dir,barrio:barr,
@@ -4383,12 +5120,53 @@ function updateDosPreview(caso) {
   document.getElementById('dos-actions').style.display='flex';
   var sub=document.getElementById('dos-sub');
   if(sub) sub.textContent=(caso.capturados&&caso.capturados[0])?fullName(caso.capturados[0]):'Sin capturado';
+  lcDossierExtraHint(caso);
   var btnSend=document.getElementById('dos-btn-send');
   if(btnSend){
     if(caso.tipo==='CESPA') btnSend.textContent='Enviar FPJ-5 CESPA';
     else if(caso.tipo==='OJ') btnSend.textContent='Enviar Oficio Disposición';
     else btnSend.textContent='Enviar FPJ-5 URI';
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATOS DEL DOSSIER — lo que el FPJ-5 no pide  (observaciones 1 y 4)
+   El paso 1 del formulario arrastraba tres campos que el formato oficial no
+   tiene por ninguna parte: SPOA, No. de incidente y el fiscal que recibe.
+   Comprobado sobre las dos plantillas embebidas (TPL_URI y TPL_CESPA): ninguna
+   los imprime. Solo alargaban el paso donde el funcionario está contra reloj.
+   ⚠️ NO se borran del modelo: el dossier SÍ los usa (sección «ES DEJADO A
+   DISPOSICIÓN» y la línea «Recibe»). Se diligencian aquí, que es la pantalla
+   donde el dossier se produce, y el caso se guarda con ellos como siempre.
+═══════════════════════════════════════════════════════════════════════════ */
+function lcDossierExtraHint(caso){
+  var el=document.getElementById('dos-extra-hint'); if(!el) return;
+  var p=[];
+  if(caso.spoa) p.push('SPOA '+caso.spoa);
+  if(caso.numIncidente) p.push('Incidente '+caso.numIncidente);
+  if(caso.recibe) p.push('Recibe: '+caso.recibe);
+  el.textContent=p.length?p.join(' · '):'SPOA, No. de incidente y fiscal que recibe — sin diligenciar.';
+}
+function lcDossierExtra(){
+  var caso=_dosCasoId?DB.getCase(_dosCasoId):null;
+  if(!caso){ toast('Sin captura seleccionada'); return; }
+  openModal('<div class="mh"><h2>Datos del Dossier</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<p style="font-size:.8rem;color:var(--txD);margin:0 0 14px">Estos datos no aparecen en el FPJ-5; solo alimentan el dossier, por eso no se piden en el formulario de la captura.</p>'+
+    '<div class="fg"><label class="fl">SPOA</label><input class="fi mono" id="dx-spoa" value="'+escAttr(caso.spoa)+'" inputmode="numeric"></div>'+
+    '<div class="fr"><div class="fg"><label class="fl">No. Incidente</label><input class="fi mono" id="dx-inc" value="'+escAttr(caso.numIncidente)+'" inputmode="numeric"></div>'+
+    '<div class="fg"><label class="fl">Recibe (fiscal)</label><input class="fi" id="dx-recibe" value="'+escAttr(caso.recibe)+'"></div></div>'+
+    '<button class="btn bp bbl mt16" onclick="lcDossierExtraGuardar()">Guardar</button>');
+}
+async function lcDossierExtraGuardar(){
+  var caso=_dosCasoId?DB.getCase(_dosCasoId):null;
+  if(!caso){ toast('Sin captura seleccionada'); return; }
+  function v(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
+  caso.spoa=v('dx-spoa'); caso.numIncidente=v('dx-inc'); caso.recibe=v('dx-recibe');
+  try { await DB.saveCase(caso); }
+  catch(e){ console.error('[LexCapture] error guardando datos del dossier',e); toast('⚠️ No se pudieron guardar los datos'); return; }
+  closeModal();
+  updateDosPreview(DB.getCase(_dosCasoId));   // el dossier se repinta ya con ellos
+  guestToastGuardado('Datos del dossier guardados ✓');
 }
 
 function copyDosTxt() {
@@ -4414,6 +5192,145 @@ function unzipDocx(b64){var bin=atob(b64);var arr=new Uint8Array(bin.length);for
 function setTc(tcs,i,t){if(i>=tcs.length)return;var tc=tcs[i];var W="http://schemas.openxmlformats.org/wordprocessingml/2006/main";var ts=tc.getElementsByTagNameNS(W,"t");if(ts.length>0){ts[0].textContent=t||"";for(var j=1;j<ts.length;j++)ts[j].textContent="";}else{var p=tc.getElementsByTagNameNS(W,"p")[0];if(!p){p=tc.ownerDocument.createElementNS(W,"w:p");tc.appendChild(p);}var r=p.getElementsByTagNameNS(W,"r")[0];if(!r){r=tc.ownerDocument.createElementNS(W,"w:r");p.appendChild(r);}var tn=tc.ownerDocument.createElementNS(W,"w:t");tn.setAttribute("xml:space","preserve");tn.textContent=t||"";r.appendChild(tn);}}
 function setPar(pars,i,t){if(i<pars.length)_setParNode(pars[i],t);}
 function _setParNode(p,t){var W=FPJ_W;var ts=p.getElementsByTagNameNS(W,"t");if(!ts.length)return false;ts[0].textContent=t||"";ts[0].setAttribute("xml:space","preserve");for(var j=1;j<ts.length;j++)ts[j].textContent="";return true;}
+/* Igual que _setParNode pero CREANDO el run cuando el párrafo no tiene ninguno.
+   ⚠️ Esta es la razón de fondo por la que los EMP y EF nunca salieron impresos
+   en el numeral 7: los tres renglones que la plantilla deja en blanco en ese
+   apartado no traen ni <w:r> ni <w:t>, así que _setParNode devolvía `false` y
+   setPar —que no mira el valor devuelto— se iba en silencio. El texto se
+   escribía en un párrafo que no existía como tal.
+   Se deja aparte de _setParNode a propósito: buildFPJBlob usa setPar también
+   para BORRAR la narración de muestra, y si esa limpieza empezara a crear runs
+   vacíos cambiaría el documento de un caso normal (la regresión de no-cambio
+   compara el XML run por run). Solo escribe quien de verdad quiere escribir. */
+function _setParForce(p,t){
+  var W=FPJ_W;
+  if(_setParNode(p,t)) return true;
+  var doc=p.ownerDocument;
+  var r=p.getElementsByTagNameNS(W,"r")[0];
+  if(!r){
+    r=doc.createElementNS(W,"w:r");
+    // El párrafo declara su tamaño/fuente en pPr>rPr: el run nuevo lo hereda,
+    // si no saldría con el default de Word en vez de los 11pt del formato.
+    var pPr=p.getElementsByTagNameNS(W,"pPr")[0];
+    var rPr=pPr?pPr.getElementsByTagNameNS(W,"rPr")[0]:null;
+    if(rPr) r.appendChild(rPr.cloneNode(true));
+    p.appendChild(r);
+  }
+  var tn=doc.createElementNS(W,"w:t");
+  tn.setAttribute("xml:space","preserve");
+  tn.textContent=t||"";
+  r.appendChild(tn);
+  return true;
+}
+/* ── Numeral 7: EMP y EF recolectados (observación 9) ─────────────────────
+   El apartado se localiza POR TEXTO, nunca por índice: URI y CESPA comparten el
+   layout de celdas pero no la numeración de párrafos (301 vs 303), y la misma
+   lección ya costó cara en los apartados repetibles 4/5/6. */
+function _fpjEmpNodos(body){
+  var W=FPJ_W,kids=[],n;
+  for(n=body.firstChild;n;n=n.nextSibling) if(n.nodeType===1) kids.push(n);
+  var start=-1;
+  for(var i=0;i<kids.length;i++){
+    var t=_noAcc(_getElText(kids[i],W)).toUpperCase();
+    if(start<0){ if(/^\s*7\.\s*DESCRIPCION DE EMP/.test(t)) start=i; continue; }
+    if(/EVENTO DE REQUERIR MAS ESPACIO/.test(t)) return {titulo:kids[start],nodos:kids.slice(start+1,i)};
+  }
+  return null;
+}
+/* «No te separes del que viene detrás». Se descubrió mirando el render: con el
+   apartado ya lleno, la barra «7. DESCRIPCIÓN DE EMP…» se quedaba al pie de una
+   página y dos elementos aparecían sueltos arriba de la siguiente, sin
+   encabezado que dijera qué eran. En un informe de captura eso es un defecto
+   del documento, no una minucia tipográfica.
+   ⚠️ El orden de los hijos de w:pPr lo fija el esquema (pStyle → keepNext →
+   … → pBdr → shd → spacing → ind → jc): keepNext va justo detrás de pStyle o,
+   si no hay, el primero. Ponerlo en otro sitio hace que Word abra el documento
+   «dañado» — misma lección que costó tiempo en el constructor del oficio OJ. */
+function _fpjKeepNext(p){
+  var W=FPJ_W;
+  if(!p||p.localName!=="p") return;
+  var pPr=p.getElementsByTagNameNS(W,"pPr")[0];
+  if(!pPr||pPr.parentNode!==p){
+    pPr=p.ownerDocument.createElementNS(W,"w:pPr");
+    p.insertBefore(pPr,p.firstChild);
+  }
+  if(pPr.getElementsByTagNameNS(W,"keepNext").length) return;
+  var kn=p.ownerDocument.createElementNS(W,"w:keepNext");
+  var pStyle=pPr.getElementsByTagNameNS(W,"pStyle")[0];
+  if(pStyle&&pStyle.nextSibling) pPr.insertBefore(kn,pStyle.nextSibling);
+  else if(pStyle) pPr.appendChild(kn);
+  else pPr.insertBefore(kn,pPr.firstChild);
+}
+/* Escribe un elemento por renglón. Si hay más elementos que renglones se
+   agregan los que falten clonando el último — que es exactamente lo que el
+   propio formato autoriza al pie del apartado ("se puede ampliar el número de
+   filas cuantas veces sea necesario"). Clonar hereda anchos y bordes, así que
+   la calibración del formato no se toca. */
+function _fpjEmp(body,lineas){
+  var W=FPJ_W;
+  var blk=_fpjEmpNodos(body);
+  if(!blk||!blk.nodos.length) return false;
+  var slots=[];
+  blk.nodos.forEach(function(nd){
+    if(nd.localName==="p"){ slots.push(nd); return; }
+    if(!nd.getElementsByTagNameNS) return;
+    var ps=nd.getElementsByTagNameNS(W,"p");
+    for(var i=0;i<ps.length;i++) slots.push(ps[i]);
+  });
+  if(!slots.length) return false;
+  while(slots.length<lineas.length){
+    var ult=slots[slots.length-1];
+    if(!ult.parentNode) break;
+    var cp=ult.cloneNode(true);
+    _fpjLimpiaIds(cp);
+    ult.parentNode.insertBefore(cp,ult.nextSibling);
+    slots.push(cp);
+  }
+  for(var k=0;k<slots.length;k++) _setParForce(slots[k],lineas[k]||"");
+  /* La barra «7. DESCRIPCIÓN DE EMP…» no puede quedarse sola al pie de una
+     página: se lleva consigo el primer renglón.
+     ⚠️ Solo el título. Encadenar TAMBIÉN los renglones entre sí obliga al
+     apartado entero a saltar de página, y medido sobre el render eso costaba
+     una hoja de más en cada captura con elementos (3 → 4 páginas). Que la
+     relación siga en la página siguiente no es un defecto: es lo que el propio
+     formato contempla al pie del apartado («se puede ampliar el número de filas
+     cuantas veces sea necesario»). Lo que sí sería un defecto es un encabezado
+     huérfano, y eso es lo que se evita aquí. */
+  _fpjKeepNext(blk.titulo);
+  return slots.length>=lineas.length;
+}
+/* ── Numeral 8: vehículos implicados (observación 7) ──────────────────────
+   El formato trae dos filas. A partir del tercer vehículo se reproduce la fila,
+   igual que los apartados 4/5/6 reproducen a las personas: una fila clonada
+   hereda el ancho de columna y los bordes de la tabla, así que no hay riesgo de
+   descuadre. Antes, del tercero en adelante se perdían en silencio. */
+function _fpjVehiculos(tcs,vehs){
+  var W=FPJ_W;
+  var filas=[[249,250,251,252,253],[254,255,256,257,258]];
+  for(var i=0;i<2;i++){
+    var v=vehs[i]||{};
+    setTc(tcs,filas[i][0],v.marca||"");  setTc(tcs,filas[i][1],v.clase||"");
+    setTc(tcs,filas[i][2],v.color||"");  setTc(tcs,filas[i][3],v.prop||"");
+    setTc(tcs,filas[i][4],lcPlaca(v.placas));
+  }
+  if(vehs.length<=2) return 0;
+  var base=tcs[254]; if(!base) return 0;
+  var tr=base.parentNode; while(tr&&tr.localName!=="tr") tr=tr.parentNode;
+  if(!tr||!tr.parentNode) return 0;
+  var ref=tr,hechas=0;
+  for(var k=2;k<vehs.length;k++){
+    var cp=tr.cloneNode(true);
+    _fpjLimpiaIds(cp);
+    ref.parentNode.insertBefore(cp,ref.nextSibling);
+    ref=cp;
+    var cs=cp.getElementsByTagNameNS(W,"tc");
+    var vv=vehs[k]||{};
+    var vals=[vv.marca||"",vv.clase||"",vv.color||"",vv.prop||"",lcPlaca(vv.placas)];
+    for(var j=0;j<vals.length&&j<cs.length;j++) setTc(cs,j,vals[j]);
+    hechas++;
+  }
+  return hechas;
+}
 function _getElText(el,W){var ts=el.getElementsByTagNameNS?el.getElementsByTagNameNS(W,"t"):[];var r="";for(var i=0;i<ts.length;i++)r+=(ts[i].textContent||"");return r;}
 
 /* ─── Apartados repetibles del FPJ-5: 4 capturados / 5 víctimas / 6 testigos ───
@@ -4698,8 +5615,15 @@ function buildFPJBlob(c,papel){
     var fda=(n.fechaDispA||"").padStart(4,"0");setTc(tcs,284,fda[0]);setTc(tcs,285,fda[1]);setTc(tcs,286,fda[2]);setTc(tcs,287,fda[3]);
     // La hora de puesta a disposición del Fiscal la diligencia a mano el fiscal que recibe el caso — se deja en blanco.
     setTc(tcs,289,"");setTc(tcs,290,"");setTc(tcs,291,"");setTc(tcs,292,"");
-    // EMP y narracion
-    setPar(pars,tf==="CESPA"?303:301,n.emp||"");
+    /* 7. EMP y EF recolectados — numerados y en orden (observación 9).
+       Se prefiere la lista estructurada del paso «EMP y EF»; si el caso es
+       anterior a ese paso, se interpreta el texto que traiga guardado, así una
+       captura vieja también sale numerada.
+       ⚠️ Si el caso no tiene elementos NO se toca el apartado: así el documento
+       de una captura sin EMP sale byte a byte como salía antes. */
+    var emps=lcEmpLineas(lcEmpDeCaso(c));
+    if(emps.length&&!_fpjEmp(body,emps))
+      toast("Atención: los elementos materiales no se pudieron escribir en el numeral 7. Revisa el documento antes de enviarlo.");
     var narrIdx=tf==="CESPA"?366:363;
     setPar(pars,narrIdx,n.texto||"");
     // Limpiar la narración de referencia que trae la plantilla: borrar los párrafos siguientes hasta "10. ANEXOS"
@@ -4710,11 +5634,11 @@ function buildFPJBlob(c,papel){
     setTc(tcs,304,s.cargo||"");setTc(tcs,305,s.tel||"");setTc(tcs,306,s.correo||"");
     // 1. Destino del informe y zona del lugar (reemplazan los valores de referencia de la plantilla)
     setTc(tcs,57,c.destino||"");setTc(tcs,66,"Zona: "+((c.lugar&&c.lugar.zona)||"Urbana"));
-    // 8. Vehículos implicados (el formato FPJ-5 imprime hasta 2 filas)
+    // 8. Vehículos implicados — sin tope: las filas se reproducen (observación 7)
     var vehs=c.hayVehiculos?(c.vehiculos||[]):[];
-    var v1=vehs[0]||{},v2=vehs[1]||{};
-    setTc(tcs,249,v1.marca||"");setTc(tcs,250,v1.clase||"");setTc(tcs,251,v1.color||"");setTc(tcs,252,v1.prop||"");setTc(tcs,253,v1.placas||"");
-    setTc(tcs,254,v2.marca||"");setTc(tcs,255,v2.clase||"");setTc(tcs,256,v2.color||"");setTc(tcs,257,v2.prop||"");setTc(tcs,258,v2.placas||"");
+    var vExtra=_fpjVehiculos(tcs,vehs);
+    if(vehs.length>2&&vExtra<vehs.length-2)
+      toast("Atención: "+(vehs.length-2-vExtra)+" vehículo(s) no se pudieron agregar al formato. Revisa el documento antes de enviarlo.");
     // Tamaño de papel: solo el alto de la hoja. Ni una casilla se toca.
     fpjAplicarPapel(doc,W,papel||'CARTA');
     // Construir y descargar
@@ -4871,8 +5795,15 @@ function openPerfilForm(id) {
       '<div class="fg"><label class="fl">Cédula</label><input class="fi mono" id="pfm-cedula" value="'+(p.cedula||'')+'" inputmode="numeric"></div>'+
       '<div class="fg"><label class="fl">Teléfono</label><input class="fi" id="pfm-tel" value="'+(p.telefono||'')+'" inputmode="tel"></div>'+
     '</div>'+
-    '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="pfm-cargo" value="'+(p.cargo||'')+'" placeholder="Ej: Comandante de Cuadrante"></div>'+
-    '<div class="fg"><label class="fl">Correo institucional</label><input class="fi" id="pfm-correo" value="'+(p.correo||'')+'" inputmode="email"></div>'+
+    '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="pfm-cargo" value="'+escAttr(p.cargo)+'" placeholder="Ej: Comandante de Cuadrante"></div>'+
+    /* Entidad por defecto (observación 10). El paso «Servidor» ya sabía leerla
+       del perfil activo, pero el formulario del perfil NUNCA la pedía: por eso
+       salía siempre vacía y había que reescribirla en cada captura.
+       ⚠️ Sigue siendo un campo del usuario, sin ninguna institución escrita en
+       el código — es la regla del filtro de Play Store. */
+    '<div class="fg"><label class="fl">Entidad</label><input class="fi" id="pfm-entidad" value="'+escAttr(p.entidad)+'" placeholder="Nombre de la institución">'+
+      '<p style="font-size:.72rem;color:var(--txD);margin:6px 0 0">Se carga sola en cada captura nueva; se puede cambiar en el paso «Servidor».</p></div>'+
+    '<div class="fg"><label class="fl">Correo institucional</label><input class="fi" id="pfm-correo" value="'+escAttr(p.correo)+'" inputmode="email"></div>'+
     '<button class="btn bp bbl" onclick="savePerfilForm(\''+  (id||'')+'\' )" style="margin-top:16px">Guardar perfil</button>'
   );
 }
@@ -4882,13 +5813,28 @@ function savePerfilForm(id) {
   var nombre=v('nombre'); if(!nombre){toast('El nombre es obligatorio');return;}
   var cfg=DB.getConfig(); if(!cfg.perfiles) cfg.perfiles=[];
   if(id) {
-    cfg.perfiles.forEach(function(p){if(p.id===id){p.grado=v('grado');p.nombre=nombre;p.cedula=sinPuntos(v('cedula'));p.telefono=v('tel');p.cargo=v('cargo');p.correo=v('correo');}});
+    cfg.perfiles.forEach(function(p){if(p.id===id){p.grado=v('grado');p.nombre=nombre;p.cedula=sinPuntos(v('cedula'));p.telefono=v('tel');p.cargo=v('cargo');p.entidad=v('entidad');p.correo=v('correo');}});
   } else {
     var newId=uid();
-    cfg.perfiles.push({id:newId,grado:v('grado'),nombre:nombre,cedula:sinPuntos(v('cedula')),telefono:v('tel'),cargo:v('cargo'),correo:v('correo')});
+    cfg.perfiles.push({id:newId,grado:v('grado'),nombre:nombre,cedula:sinPuntos(v('cedula')),telefono:v('tel'),cargo:v('cargo'),entidad:v('entidad'),correo:v('correo')});
     if(!cfg.perfilActivo) cfg.perfilActivo=newId;
   }
   DB.saveConfig(cfg); closeModal(); renderPerfilScreen(); toast('Perfil guardado ✓');
+}
+
+/* Datos del servidor con los que NACE una captura nueva: perfil activo primero
+   (ahí vive la entidad por defecto, observación 10) y, si no hay perfiles, los
+   últimos datos guardados. Punto único para que el wizard, el paso «Servidor» y
+   el botón «Cargar perfil activo» no puedan discrepar. */
+function lcServidorDefecto(cfg){
+  cfg=cfg||DB.getConfig();
+  var p=null;
+  if(cfg.perfiles&&cfg.perfilActivo) cfg.perfiles.forEach(function(x){ if(x.id===cfg.perfilActivo) p=x; });
+  var s=cfg.servidor||{};
+  if(!p) return Object.assign({},s);
+  return {grado:p.grado||s.grado||'', ident:p.cedula||s.ident||'', nombre:p.nombre||s.nombre||'',
+          entidad:p.entidad||s.entidad||'', cargo:p.cargo||s.cargo||'',
+          tel:p.telefono||s.tel||'', correo:p.correo||s.correo||''};
 }
 
 function loadPerfilServ() {
@@ -4897,7 +5843,9 @@ function loadPerfilServ() {
   if(!p){toast('Sin perfil activo — agrega uno en Perfil');return;}
   var map=[['sGrado','grado'],['sNombre','nombre'],['sId','cedula'],['sCargo','cargo'],['sTel','telefono'],['sCorreo','correo']];
   map.forEach(function(m){var el=document.getElementById('w-'+m[0]);if(el)el.value=p[m[1]]||'';});
-  var ent=document.getElementById('w-sEntidad');if(ent&&!ent.value)ent.value=cfg.servidor&&cfg.servidor.entidad||'';
+  // La entidad sale del perfil; si ese perfil aún no la tiene, se cae a la última usada.
+  var ent=document.getElementById('w-sEntidad');
+  if(ent) ent.value=p.entidad||(cfg.servidor&&cfg.servidor.entidad)||ent.value||'';
   toast('Perfil cargado ✓');
 }
 
