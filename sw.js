@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lexcapture-v8-cache-v43'
+const CACHE_NAME = 'lexcapture-v8-cache-v45'
 const ASSETS = [
   './',
   './index.html',

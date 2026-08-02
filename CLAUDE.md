@@ -947,6 +947,70 @@ render con Edge). Regresiones: las 12 suites previas siguen en verde **sin tocar
   multipersona (todo OK) · personas 24 · ola1 38 · ola2 34 · ola3 33 · ola4 21 · DS 10.
   Anti-caché `?v=43` / `cache-v43`, `_BUILD=43`.
 
+### Numeral 2 — los delitos, numerados y en orden (2026-08-02)
+Reportado en campo con el documento impreso a la vista: el apartado «2. PRESUNTA CONDUCTA PUNIBLE»
+salía desordenado — el primer delito con un «1.» seguido de una tabulación larga, y los otros dos
+sin número ninguno. `verify_mejora1.mjs` sube a **115 checks** (12 nuevos); verificado además
+abriendo los `.docx` de URI y CESPA en **Word real** (COM → PDF → render con Edge).
+- ⚠️ **La plantilla no numera igual sus cuatro casillas.** La primera (celda `58`) trae una **lista
+  automática de Word** (`w:numPr` → `numId 2`), que imprime el ordinal y su tabulación **por fuera
+  del texto**; las otras tres (`59`-`61`) traen el ordinal **escrito a mano como texto normal**
+  («2.», «3.», «4.»). El llenado hacía `setTc` con el nombre del delito y **pisaba esos ordinales**,
+  así que solo sobrevivía el de la lista automática. Nada estaba «mal escrito»: eran dos mecanismos
+  de numeración distintos en la misma columna.
+- **Ahora numera siempre la app** (`_fpjConductas`): se retira el `w:numPr` de la primera casilla
+  —comprobado sobre las dos plantillas: **ningún otro párrafo usa ese `numId`**; el `numId 1` es el
+  del apartado 9 y no se toca— y se escribe «N. delito» como texto en las cuatro, con el mismo
+  `w:ind` y el mismo cuerpo de letra. Sin tabulación: el delito arranca justo tras el punto.
+- ⚠️ **Las conductas se compactan antes de numerar.** Un hueco en medio del arreglo dejaría un
+  ordinal sin delito o se saltaría un número — que es el desorden que se está corrigiendo.
+- ⚠️ **Las casillas sobrantes quedan en blanco, sin el ordinal suelto.** Un «4.» solo en un renglón
+  vacío se lee como un delito que faltó por escribir.
+- ⚠️ **El apartado 2 NO es repetible**: a diferencia de los apartados 4/5/6 y del 7, el formato no
+  trae al pie la nota que autoriza reproducir las casillas. Son cuatro. Lo que no quepa **se avisa
+  por toast** (misma regla de honestidad que los vehículos), no se inventa una fila.
+- **CESPA**: el run de esa casilla viene vacío y **sin `w:sz`**, mientras el párrafo sí lo declara en
+  su `pPr>rPr`; escribir ahí el delito lo sacaba con el cuerpo por defecto de Word, distinto del de
+  las casillas 2-4. `_fpjRunCuerpo` le copia el tamaño del párrafo. ⚠️ Se inserta respetando el
+  **orden de hijos de `w:rPr`** que fija el esquema (`_fpjRprPon`): alterarlo hace que Word abra el
+  documento «dañado» — la misma lección de `ojx*`.
+- Sin efectos colaterales medidos: **35 tablas** en ambos formatos y 3 páginas, igual que antes.
+  Regresiones en verde: **mejora1 115** · export 74 · envío 39 · simulador 41 · multipersona (todo
+  OK). Anti-caché `?v=44` / `cache-v44`, `_BUILD=44`.
+
+### Género con «X» en los apartados 4, 5 y 6 (2026-08-02)
+El formato trae dos casillas —«M» y «F»— que se marcan con una X, y la app **no guardaba el género
+en ninguna parte**: el formulario de persona nunca lo pedía y el motor se limitaba a **limpiar** la
+casilla M (donde la plantilla traía la X de la captura de muestra), así que las dos salían en blanco
+para diligenciarlas a mano. `verify_mejora1.mjs` sube a **129 checks** (14 nuevos); verificado
+abriendo los `.docx` en Word real (capturado M, víctima F, testigo sin dato).
+- **El dato se pide donde se piden los demás**: `openPersonModal` gana un selector de Género, así que
+  lo tienen a la vez el wizard (capturados, víctimas, testigos) y el registro de Personas. Va en el
+  renglón de edad y fecha de nacimiento porque es el mismo renglón del formato.
+- **Vocabulario único**: el campo es `sexo` con los códigos que ya usa el módulo de orden judicial
+  (`OJ_CAT.sexo`: M / F / I). Una persona capturada por flagrancia y luego por orden judicial —o al
+  revés— no cambia de campo por el camino: `ojPersonaEspejo` lo escribe y `ojUsarPersona` lo relee
+  (la simetría del viaje de vuelta, lección de la Ola 2).
+- ⚠️ **`lcSexo` normaliza por palabra, nunca por inicial.** «Mujer» empieza por M: leer solo la
+  primera letra la habría marcado como masculina en un documento judicial. Acepta lo que venga de un
+  caso viejo, de un import o del simulador (`M`, `Masculino`, `Hombre`, `F`, `Femenino`, `Mujer`, `I`)
+  y ante cualquier otra cosa devuelve vacío.
+- ⚠️ **Se escriben SIEMPRE las dos casillas**, la que no corresponde en blanco. Las copias
+  4.1 / 5.1 / 6.1 se clonan **después** de llenar a la primera persona: una X sin limpiar viajaría a
+  la siguiente y le cambiaría el género — la misma razón por la que edad y fecha de nacimiento se
+  limpian celda por celda (FPJ-5 v3). Hay un check con tres capturados (M, F, I) que lo mide.
+- ⚠️ **Con «Intersexual / no informa» o sin dato, las dos quedan en blanco**: el formato solo tiene
+  esas dos casillas y aquí no se inventa ninguna. El formulario lo dice en una línea, para que no se
+  lea como un fallo.
+- ⚠️ **Las dos casillas no tienen el mismo XML.** La de M trae el run de la captura de muestra con su
+  `w:sz`; la de F viene vacía —**sin ningún run en URI**, con un run **sin `w:sz` en CESPA**—, así que
+  escribir la X «a pelo» la sacaba con el cuerpo por defecto de Word. `_fpjMarcaX` combina
+  `_fpjRunCuerpo` (le copia el tamaño al run que ya existe) y `_setParForce` (crea el run heredando
+  el `pPr` cuando no hay ninguno). Índices: capturado `b+25`/`b+27`, víctima y testigo `b+23`/`b+25`.
+- El simulador reparte género a sus personas, para que el caso de demostración enseñe la marca.
+- Regresiones en verde: **mejora1 129** · OJ 138 · export 74 · simulador 41 · personas 24 ·
+  invitado 33 · multipersona (todo OK). Anti-caché `?v=45` / `cache-v45`, `_BUILD=45`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

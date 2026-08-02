@@ -1983,7 +1983,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 43;
+var _BUILD = 45;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3773,6 +3773,24 @@ function pickExistingPerson(key,showSenas){
 }
 function pickPersonInto(key,pid){var p=DB.getPerson(pid);if(p) wc[key].push(JSON.parse(JSON.stringify(p)));}
 
+/* Género de una persona. Vocabulario ÚNICO en toda la app: los mismos códigos
+   del módulo de orden judicial (OJ_CAT.sexo), para que una persona capturada por
+   flagrancia y luego por orden judicial —o al revés— no cambie de campo ni de
+   valores por el camino. `lcSexo` normaliza lo que venga de un caso viejo, de un
+   import o del simulador ('Masculino', 'femenino', 'M'…) sin adivinar: «Mujer»
+   empieza por M y marcarla como masculino sería peor que no marcar nada. */
+function lcSexo(v){
+  var s=String(v==null?"":v).trim().toUpperCase();
+  if(/^(M|MASCULINO|HOMBRE)$/.test(s))return 'M';
+  if(/^(F|FEMENINO|MUJER)$/.test(s))return 'F';
+  if(/^(I|INTERSEXUAL)/.test(s))return 'I';
+  return '';
+}
+function lcSexoOpciones(v){
+  var sel=lcSexo(v);
+  return [['','—'],['M','Masculino (M)'],['F','Femenino (F)'],['I','Intersexual / no informa']]
+    .map(function(o){return '<option value="'+o[0]+'"'+(sel===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+}
 function openPersonModal(key,idx,p,showSenas,showRole){
   p=p||{}; var isEdit=idx>=0;
   var senasB=showSenas?'<div class="st">Señas Particulares</div><div class="fg"><textarea class="ft" id="pm-senas">'+escHtml(p.senas)+'</textarea></div>':'';
@@ -3799,8 +3817,15 @@ function openPersonModal(key,idx,p,showSenas,showRole){
     '<div class="fg"><label class="fl">Segundo apellido</label><input class="fi" id="pm-segApe" value="'+(p.segApe||'')+'"></div></div>'+
     '<div class="fg"><label class="fl">Alias</label><input class="fi" id="pm-alias" value="'+(p.alias||'N/A')+'"></div>'+
     '<div class="st">Datos Personales</div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Fecha nacimiento</label><input type="date" class="fi" id="pm-fn" value="'+(p.fn||'')+'" onchange="document.getElementById(\'pm-edad\').value=calcAgeVal(this.value)"></div>'+
-    '<div class="fg"><label class="fl">Edad</label><input class="fi" id="pm-edad" value="'+(p.edad||'')+'" type="number"></div></div>'+
+    /* Género: el FPJ-5 lo pide en los apartados 4, 5 y 6 y se marca con una «X»
+       en la casilla M o F. Se pone junto a edad y fecha de nacimiento porque es
+       el mismo renglón del formato. `sexo` es el nombre que ya usa el módulo de
+       orden judicial (OJ_CAT.sexo): un solo vocabulario para el mismo dato. */
+    '<div class="fr3"><div class="fg"><label class="fl">Fecha nacimiento</label><input type="date" class="fi" id="pm-fn" value="'+(p.fn||'')+'" onchange="document.getElementById(\'pm-edad\').value=calcAgeVal(this.value)"></div>'+
+    '<div class="fg"><label class="fl">Edad</label><input class="fi" id="pm-edad" value="'+(p.edad||'')+'" type="number"></div>'+
+    '<div class="fg"><label class="fl">Género</label><select class="fs" id="pm-sexo">'+
+    lcSexoOpciones(p.sexo)+'</select></div></div>'+
+    '<p style="font-size:.72rem;color:var(--txD);margin:-4px 0 10px">El formato solo trae casillas M y F: con «Intersexual / no informa» o sin dato, las dos quedan en blanco para diligenciarlas a mano.</p>'+
     '<div class="fg"><label class="fl">Lugar nacimiento</label><input class="fi" id="pm-lugNac" value="'+(p.lugNac||'')+'"></div>'+
     '<div class="fr"><div class="fg"><label class="fl">Estado civil</label><select class="fs" id="pm-ecivil">'+
     '<option value="">—</option><option '+(p.ecivil==='Soltero/a'?'selected':'')+'>Soltero/a</option><option '+(p.ecivil==='Casado/a'?'selected':'')+'>Casado/a</option>'+
@@ -3828,7 +3853,7 @@ function openPersonModal(key,idx,p,showSenas,showRole){
 
 function savePersonModal(key,idx,showSenas){
   function v(id){var el=document.getElementById('pm-'+id);return el?el.value:'';}
-  var p={id:uid(),tipoDoc:v('tipoDoc'),numDoc:sinPuntos(v('numDoc')),expEn:v('expEn'),priNom:v('priNom'),segNom:v('segNom'),priApe:v('priApe'),segApe:v('segApe'),alias:v('alias')||'N/A',fn:v('fn'),edad:v('edad'),lugNac:v('lugNac'),ecivil:v('ecivil'),escol:v('escol'),ocup:v('ocup'),dirRes:v('dirRes'),tel:v('tel'),correo:v('correo'),padres:v('padres'),senas:showSenas?v('senas'):''};
+  var p={id:uid(),tipoDoc:v('tipoDoc'),numDoc:sinPuntos(v('numDoc')),expEn:v('expEn'),priNom:v('priNom'),segNom:v('segNom'),priApe:v('priApe'),segApe:v('segApe'),alias:v('alias')||'N/A',fn:v('fn'),edad:v('edad'),sexo:lcSexo(v('sexo')),lugNac:v('lugNac'),ecivil:v('ecivil'),escol:v('escol'),ocup:v('ocup'),dirRes:v('dirRes'),tel:v('tel'),correo:v('correo'),padres:v('padres'),senas:showSenas?v('senas'):''};
   if(idx>=0){p.id=wc[key][idx].id||uid();wc[key][idx]=p;}else{wc[key].push(p);}
   closeModal(); renderWiz();
 }
@@ -4156,7 +4181,7 @@ function openPersonForm(person) {
       id: existingId || uid(),
       tipoDoc:v('tipoDoc'), numDoc:sinPuntos(v('numDoc')), expEn:v('expEn'),
       priNom:v('priNom'), segNom:v('segNom'), priApe:v('priApe'), segApe:v('segApe'),
-      alias:v('alias')||'N/A', fn:v('fn'), edad:v('edad'), lugNac:v('lugNac'),
+      alias:v('alias')||'N/A', fn:v('fn'), edad:v('edad'), sexo:lcSexo(v('sexo')), lugNac:v('lugNac'),
       ecivil:v('ecivil'), escol:v('escol'), ocup:v('ocup'),
       dirRes:v('dirRes'), tel:v('tel'), correo:v('correo'), padres:v('padres'),
       senas:v('senas'), rol:v('rol')||p.rol||'Capturado'
@@ -4538,6 +4563,7 @@ var SIM={
       priApe:ape,segApe:this.r(this.A),
       alias:this.rb(.4)?this.r(this.ALIAS):'N/A',
       fn:fn,edad:String(calcAgeVal(fn)),
+      sexo:this.r(['M','F']),                    // el FPJ-5 marca con X la casilla M o F
       lugNac:this.r(this.MUNI)+', Antioquia',
       ecivil:opts.menor?'Soltero/a':this.r(this.EC),
       escol:opts.menor?this.r(['Primaria','Bachiller']):this.r(this.ES),
@@ -5299,6 +5325,72 @@ function _fpjEmp(body,lineas){
   _fpjKeepNext(blk.titulo);
   return slots.length>=lineas.length;
 }
+/* ── Numeral 2: presunta conducta punible — numeración de la app ──────────
+   La plantilla NO numera igual sus cuatro casillas: la primera lleva una lista
+   automática de Word (w:numPr → numId 2), que imprime «1.» seguido de la
+   tabulación de la lista, y las otras tres traen el ordinal escrito a mano como
+   texto normal («2.», «3.», «4.»), que el llenado pisaba con el nombre del
+   delito. De ahí lo que se veía impreso: una primera línea numerada y separada
+   por un tabulador, y debajo tres delitos sin número ninguno.
+   Ahora numera SIEMPRE la app, con el mismo criterio en las cuatro: se quita la
+   lista automática de la primera casilla —su numId no lo usa ningún otro
+   párrafo del formato, comprobado sobre las dos plantillas— y se escribe
+   «N. delito» como texto, con el mismo margen (w:ind) y el mismo cuerpo de
+   letra que las demás. Sin tabulación: el delito arranca justo tras el punto.
+   ⚠️ Las conductas se compactan ANTES de numerar. Un hueco en medio del arreglo
+   dejaría un ordinal sin delito o se saltaría un número, que es exactamente el
+   desorden que se corrige.
+   ⚠️ Las casillas sobrantes se dejan en blanco, sin el ordinal suelto: un «4.»
+   solo en un renglón vacío se lee como un delito que faltó por escribir.
+   ⚠️ El apartado 2 NO es repetible: a diferencia de los apartados 4/5/6 y del 7,
+   el formato no trae al pie la nota que autoriza reproducir las casillas. Son
+   cuatro y son cuatro; lo que no quepa se avisa, no se inventa una fila. */
+function _fpjConductas(tcs,conds){
+  var W=FPJ_W,celdas=[58,59,60,61];
+  var lista=(conds||[]).map(function(x){return String(x==null?"":x).trim();}).filter(Boolean);
+  for(var i=0;i<celdas.length;i++){
+    var tc=tcs[celdas[i]];
+    if(tc){
+      var p=tc.getElementsByTagNameNS(W,"p")[0];
+      if(p){
+        var np=p.getElementsByTagNameNS(W,"numPr")[0];
+        if(np&&np.parentNode)np.parentNode.removeChild(np);
+        _fpjRunCuerpo(p);
+      }
+    }
+    setTc(tcs,celdas[i],i<lista.length?((i+1)+". "+lista[i]):"");
+  }
+  return Math.max(0,lista.length-celdas.length);
+}
+/* El orden de los hijos de w:rPr lo fija el esquema: alterarlo hace que Word
+   abra el documento «dañado» (misma lección que ya costó tiempo en ojx*). */
+var _FPJ_RPR="rFonts b bCs i iCs caps smallCaps strike dstrike outline shadow emboss imprint noProof snapToGrid vanish webHidden color spacing w kern position sz szCs highlight u effect bdr shd fitText vertAlign rtl cs em lang eastAsianLayout specVanish oMath".split(" ");
+function _fpjRprPon(rPr,nodo){
+  var pos=_FPJ_RPR.indexOf(nodo.localName),ref=null;
+  for(var n=rPr.firstChild;n;n=n.nextSibling){
+    if(n.nodeType!==1)continue;
+    if(_FPJ_RPR.indexOf(n.localName)>pos){ref=n;break;}
+  }
+  rPr.insertBefore(nodo,ref);
+}
+/* En CESPA el run de la primera casilla del numeral 2 viene vacío y SIN tamaño
+   de letra (la plantilla lo dejó así), mientras que el párrafo sí lo declara en
+   su pPr>rPr. Escribir ahí el delito lo sacaba con el cuerpo por defecto de
+   Word, distinto del de las casillas 2-4. Se le copia el tamaño que el propio
+   párrafo declara, para que las cuatro líneas se lean iguales. */
+function _fpjRunCuerpo(p){
+  var W=FPJ_W;
+  var r=p.getElementsByTagNameNS(W,"r")[0];if(!r)return;
+  var rPr=r.getElementsByTagNameNS(W,"rPr")[0];
+  if(rPr&&rPr.getElementsByTagNameNS(W,"sz").length)return;
+  var pPr=p.getElementsByTagNameNS(W,"pPr")[0];
+  var base=pPr?pPr.getElementsByTagNameNS(W,"rPr")[0]:null;
+  if(!base)return;
+  if(!rPr){rPr=p.ownerDocument.createElementNS(W,"w:rPr");r.insertBefore(rPr,r.firstChild);}
+  var sz=base.getElementsByTagNameNS(W,"sz")[0],szCs=base.getElementsByTagNameNS(W,"szCs")[0];
+  if(szCs)_fpjRprPon(rPr,szCs.cloneNode(true));
+  if(sz)_fpjRprPon(rPr,sz.cloneNode(true));
+}
 /* ── Numeral 8: vehículos implicados (observación 7) ──────────────────────
    El formato trae dos filas. A partir del tercer vehículo se reproduce la fila,
    igual que los apartados 4/5/6 reproducen a las personas: una fila clonada
@@ -5457,6 +5549,31 @@ function _fpjEdad(tcs,b,edad){
   e=e.slice(-2).padStart(2,"0");
   setTc(tcs,b,e[0]);setTc(tcs,b+1,e[1]);
 }
+/* Género: el formato trae dos casillas —«M» y «F»— que se marcan con una X.
+   ⚠️ Se escriben SIEMPRE las dos, la que no corresponde en blanco. Las copias de
+   los apartados 4.1 / 5.1 / 6.1 se clonan DESPUÉS de llenar a la primera persona,
+   así que una X que no se limpie viajaría a la persona siguiente y le cambiaría
+   el género — la misma razón por la que edad y fecha de nacimiento se limpian
+   celda por celda.
+   ⚠️ Sin dato, o con un género que el formato no contempla, las dos quedan en
+   blanco: el FPJ-5 solo tiene esas dos casillas y aquí no se inventa ninguna. */
+function _fpjGenero(tcs,bM,bF,p){
+  var g=lcSexo(p&&(p.sexo||p.genero));
+  _fpjMarcaX(tcs,bM,g==="M");
+  _fpjMarcaX(tcs,bF,g==="F");
+}
+/* ⚠️ Las dos casillas no tienen el mismo XML: la de M trae el run de la captura
+   de muestra (con su tamaño de letra), la de F viene vacía —sin ningún run en
+   URI, con un run sin `w:sz` en CESPA—. Escribir la X «a pelo» la sacaba con el
+   cuerpo por defecto de Word en la casilla F, distinto del de la casilla M. */
+function _fpjMarcaX(tcs,i,marcar){
+  var tc=tcs[i];if(!tc)return;
+  if(!marcar){setTc(tcs,i,"");return;}
+  var p=tc.getElementsByTagNameNS(FPJ_W,"p")[0];
+  if(!p){setTc(tcs,i,"X");return;}
+  _fpjRunCuerpo(p);      // run sin tamaño declarado (CESPA)
+  _setParForce(p,"X");   // párrafo sin ningún run (URI): lo crea heredando el pPr
+}
 // Fecha de nacimiento: un dígito por casilla (D-D / M-M / A-A-A-A). Sin fecha, todas en blanco.
 function _fpjFecha(tcs,dd,mm,aa,fn){
   var f=String(fn||"").split("-"),ok=f.length===3&&f[0].length===4;
@@ -5476,7 +5593,7 @@ function fpjFillCapturado(tcs,b,p,tf){
   markDocType(tcs,b+12,b+14,p,(tf==="CESPA"?"TI":"CC"),true);
   setTc(tcs,b+16,sinPuntos(p.numDoc));setTc(tcs,b+18,p.expEn||"");
   _fpjEdad(tcs,b+20,p.edad);
-  setTc(tcs,b+25,"");                                   // Género: casilla M/F, se marca a mano
+  _fpjGenero(tcs,b+25,b+27,p);                          // Género: X en la casilla M o F
   _fpjFecha(tcs,[b+30,b+31],[b+33,b+34],[b+36,b+37,b+38,b+39],p.fn);
   setTc(tcs,b+41,p.lugNac||"");setTc(tcs,b+43,p.ecivil||"");
   setTc(tcs,b+45,p.escol||"");setTc(tcs,b+47,p.ocup||"");
@@ -5492,7 +5609,7 @@ function _fpjFillVicTest(tcs,b,p,conRelacion){
   markDocType(tcs,b+10,b+12,p,"CC",false);
   setTc(tcs,b+14,sinPuntos(p.numDoc));setTc(tcs,b+16,p.expEn||"");
   _fpjEdad(tcs,b+18,p.edad);
-  setTc(tcs,b+23,"");                                   // Género: casilla M/F, se marca a mano
+  _fpjGenero(tcs,b+23,b+25,p);                          // Género: X en la casilla M o F
   _fpjFecha(tcs,[b+28,b+29],[b+31,b+32],[b+34,b+35,b+36,b+37],p.fn);
   setTc(tcs,b+40,p.lugNac||"");setTc(tcs,b+42,"");setTc(tcs,b+44,""); // País / Depto / Municipio
   setTc(tcs,b+46,p.ocup||"");setTc(tcs,b+48,p.ecivil||"");
@@ -5576,8 +5693,10 @@ function buildFPJBlob(c,papel){
     for(var i=0;i<16;i++)setTc(tcs,17+i,nunc[i]);
     // Fecha procedimiento
     if(c.fechaProc){var fp=c.fechaProc.split("-");if(fp.length===3){setTc(tcs,54,fp[0]);setTc(tcs,55,fp[1]);setTc(tcs,56,fp[2]);}}
-    // Conductas
-    setTc(tcs,58,(c.conductas||[])[0]||"");setTc(tcs,59,(c.conductas||[])[1]||"");setTc(tcs,60,(c.conductas||[])[2]||"");setTc(tcs,61,(c.conductas||[])[3]||"");
+    // 2. Presunta conducta punible — numeradas y en orden por la app (celdas 58-61)
+    var condFuera=_fpjConductas(tcs,c.conductas||[]);
+    if(condFuera>0)
+      toast("Atención: "+condFuera+" conducta(s) punible(s) no caben en el formato, que imprime cuatro. Revisa el documento antes de enviarlo.");
     // Lugar
     setTc(tcs,63,(c.lugar&&c.lugar.dir)||"");setTc(tcs,65,(c.lugar&&c.lugar.barrio)||"");
     setTc(tcs,68,(c.lugar&&c.lugar.localidad)||"10");setTc(tcs,70,(c.lugar&&c.lugar.vereda)||"N/A");
@@ -7997,6 +8116,7 @@ function ojUsarPersona(id){
   if(p.tipoDoc) r.tipoDocManual=true;      // el del registro manda sobre la inferencia por edad
   r.expedidoEn=p.expEn||r.expedidoEn;
   r.fechaNac=p.fn||r.fechaNac; r.edad=p.edad||r.edad;
+  if(p.sexo && !r.sexo) r.sexo=lcSexo(p.sexo);   // el género también hace el viaje de vuelta
   r.profesion=p.ocup||r.profesion;
   r.senales=p.senas||r.senales;
   if(p.alias&&p.alias!=='N/A') r.alias=p.alias;
@@ -9396,7 +9516,7 @@ function ojPersonaEspejo(c){
     id:r.personaId||uid(), rol:'Capturado',
     tipoDoc:r.tipoDoc==='SIN_DOC'?'':r.tipoDoc, numDoc:sinPuntos(r.numDoc), expEn:r.expedidoEn||'',
     priNom:r.priNom||'', segNom:r.segNom||'', priApe:r.priApe||'', segApe:r.segApe||'',
-    alias:r.alias||'N/A', fn:r.fechaNac||'', edad:r.edad||'',
+    alias:r.alias||'N/A', fn:r.fechaNac||'', edad:r.edad||'', sexo:lcSexo(r.sexo),
     lugNac:[r.nacMunicipio,r.nacDepartamento].filter(Boolean).join(', '),
     ecivil:ojLbl('estadoCivil',r.estadoCivil), escol:'', ocup:r.profesion||'',
     dirRes:r.resDireccion||'', tel:r.resTelefono||'', correo:'',

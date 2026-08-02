@@ -393,6 +393,139 @@ log(!/110016000000202600001/.test(cuerpo), 'El SPOA no aparece en el FPJ-5 — c
 // Nada de la persona de muestra de la plantilla se filtró (regla del FPJ-5 v2).
 log(!/DAYNIS/i.test(cuerpo), 'Sin rastros de los datos de muestra de la plantilla');
 
+/* ═══════════ El numeral 2 sale numerado y en orden ═══════════
+   Reportado en campo con el documento a la vista: el primer delito salía con la
+   numeración automática de Word («1.» + tabulación) y los otros tres sin número
+   ninguno, porque el llenado pisaba con el nombre del delito los ordinales que
+   la plantilla trae escritos a mano en las casillas 2, 3 y 4. */
+sec('Numeral 2 — las conductas punibles, numeradas por la app');
+function celdas(xml) {
+  const out = [];
+  const re = /<w:tc(?:\s[^>]*)?>/g; let m;
+  while ((m = re.exec(xml))) {
+    const s = xml.slice(m.index);
+    const tre = /<w:tc(?:\s[^>]*)?>|<\/w:tc>/g; let t, cur = 0, fin = 0;
+    while ((t = tre.exec(s))) { if (t[0] === '</w:tc>') { cur--; if (!cur) { fin = t.index + 7; break; } } else cur++; }
+    out.push(s.slice(0, fin));
+  }
+  return out;
+}
+function textoCelda(seg) { let t = ''; for (const x of seg.matchAll(/<w:t(?:\s[^>\/]*)?>([\s\S]*?)<\/w:t>/g)) t += x[1]; return t; }
+/* Un caso por tipo: URI y CESPA comparten el layout de celdas pero NO el XML de
+   esa casilla (en CESPA su run viene vacío y sin tamaño de letra declarado). */
+async function num2De(tipo, conductas, tag) {
+  const id = await page.evaluate(async ([tp, cds]) => {
+    const c = {
+      id: 'N2' + Date.now() + Math.random().toString(36).slice(2, 6), tipo: tp, estado: 'Registrado',
+      nunc: '0500160002062026', fechaProc: '2026-07-30', destino: 'Fiscalía',
+      conductas: cds, articulosCP: cds.map(() => '239'),
+      capturados: [{ nombre1: 'JUAN', apellido1: 'PÉREZ', tipoDoc: 'C.C.', doc: '1017' }],
+      victimas: [], testigos: [], sinVictima: true, sinTestigo: true,
+      lugar: { dir: 'CL 52 # 50-31', barrio: 'Colón', zona: 'Urbana', depto: 'Antioquia', muni: 'Medellín' },
+      narracion: {}, servidor: { grado: 'PT', nombre: 'X', ident: '1', entidad: 'E' },
+      hayVehiculos: false, vehiculos: []
+    };
+    await DB.saveCase(c); return c.id;
+  }, [tipo, conductas]);
+  const x = await docXmlDe(id, 'CARTA', tag);
+  if (!x) return null;
+  const cs = celdas(x);
+  return { xml: x, celdas: [58, 59, 60, 61].map(i => textoCelda(cs[i]).trim()), crudas: [58, 59, 60, 61].map(i => cs[i]) };
+}
+const tres = ['Fabricación, tráfico y porte de armas de fuego', 'Falsedad en documento privado', 'Receptación'];
+const n2uri = await num2De('URI', tres, 'num2uri');
+log(!!n2uri, 'El FPJ-5 con tres conductas se genera sin errores');
+log(!!n2uri && n2uri.celdas[0] === '1. Fabricación, tráfico y porte de armas de fuego',
+  '⚠️ El primer delito lleva su número escrito por la app, sin la tabulación de la lista de Word', n2uri && n2uri.celdas[0]);
+log(!!n2uri && n2uri.celdas[1] === '2. Falsedad en documento privado', 'El segundo va numerado (antes salía sin número)', n2uri && n2uri.celdas[1]);
+log(!!n2uri && n2uri.celdas[2] === '3. Receptación', 'Y el tercero', n2uri && n2uri.celdas[2]);
+log(!!n2uri && n2uri.celdas[3] === '', 'La casilla sobrante queda en blanco, sin un ordinal suelto que parezca un delito olvidado');
+log(!!n2uri && !/<w:numPr>/.test(n2uri.crudas[0]),
+  'La numeración automática de Word se retiró de la casilla: no hay dos numeraciones compitiendo');
+log(!!n2uri && (n2uri.xml.match(/<w:numPr>/g) || []).length === 1,
+  'Solo queda la lista del apartado 9, que no se toca', n2uri && (n2uri.xml.match(/<w:numPr>/g) || []).length);
+log(!!n2uri && (n2uri.xml.match(/<w:tbl>/g) || []).length === 35,
+  'El formato conserva sus 35 tablas: numerar no descuadró la calibración', n2uri && (n2uri.xml.match(/<w:tbl>/g) || []).length);
+const n2ces = await num2De('CESPA', tres, 'num2cespa');
+log(!!n2ces && n2ces.celdas.join(' | ') === '1. Fabricación, tráfico y porte de armas de fuego | 2. Falsedad en documento privado | 3. Receptación | ',
+  'CESPA numera exactamente igual', n2ces && n2ces.celdas[0]);
+log(!!n2ces && /<w:sz w:val="22"\/>[\s\S]*<w:t[^>]*>1\. /.test(n2ces.crudas[0].replace(/\s*\n\s*/g, '')),
+  '⚠️ En CESPA el delito sale con el mismo cuerpo de letra que los demás (su run no declaraba tamaño)');
+// Compactación: un hueco en el modelo no puede saltarse un ordinal.
+const n2hueco = await num2De('URI', ['', 'Receptación', '', 'Hurto calificado'], 'num2hueco');
+log(!!n2hueco && n2hueco.celdas[0] === '1. Receptación' && n2hueco.celdas[1] === '2. Hurto calificado' && n2hueco.celdas[2] === '',
+  'Un hueco en medio del modelo no deja un número sin delito ni se salta un ordinal', n2hueco && n2hueco.celdas.join(' | '));
+// Una sola conducta: el resto del apartado queda en blanco, como siempre.
+const n2una = await num2De('URI', ['Hurto calificado'], 'num2una');
+log(!!n2una && n2una.celdas.join('|') === '1. Hurto calificado|||',
+  'Con una sola conducta se numera igual y las otras tres casillas quedan vacías', n2una && n2una.celdas[0]);
+
+/* ═══════════ Género marcado con X en los apartados 4, 5 y 6 ═══════════
+   El formato trae dos casillas, M y F, que se marcan con una X. La app no
+   guardaba el género en ninguna parte: las dos casillas salían siempre en
+   blanco para diligenciarlas a mano. */
+sec('Género — la X en la casilla que corresponde');
+// El dato se pide en el formulario de persona (wizard y registro comparten modal).
+await page.evaluate(() => openPersonModal('capturados', -1, { sexo: 'F' }, true));
+await page.waitForTimeout(200);
+log(await page.isVisible('#pm-sexo'), 'El formulario de persona pide el género');
+log(await page.inputValue('#pm-sexo') === 'F', 'Y lo muestra ya seleccionado al editar a alguien');
+const opciones = await page.evaluate(() => Array.from(document.querySelectorAll('#pm-sexo option')).map(o => o.value));
+log(opciones.join(',') === ',M,F,I', 'Con el mismo vocabulario del módulo de orden judicial (M/F/I)', opciones.join(','));
+await page.evaluate(() => closeModal());
+// Normalización: lo que venga de un caso viejo, de un import o del simulador.
+const norm = await page.evaluate(() => ['M', 'masculino', 'Hombre', 'F', 'FEMENINO', 'Mujer', 'I', 'Otro', ''].map(lcSexo).join('|'));
+log(norm === 'M|M|M|F|F|F|I||', '⚠️ «Mujer» no se lee como masculino: se normaliza por palabra, no por inicial', norm);
+// Y se guarda de verdad, también desde el registro de Personas.
+await page.evaluate(() => openPersonForm({ priNom: 'GENERO', priApe: 'PRUEBA', numDoc: '9090909' }));
+await page.waitForTimeout(200);
+await page.selectOption('#pm-sexo', 'F');
+await page.click('#modal-c .btn.bp.bbl');
+await page.waitForTimeout(300);
+log(await page.evaluate(() => (DB.getPersons().find(p => p.numDoc === '9090909') || {}).sexo === 'F'),
+  'El registro de Personas lo guarda con la persona');
+/* El documento: capturado masculino, víctima femenina y testigo sin dato. */
+async function generoDe(tipo, sexos, tag) {
+  const id = await page.evaluate(async ([tp, sx]) => {
+    const mk = (s) => ({ id: uid(), priNom: 'X', priApe: 'Y', tipoDoc: 'CC', numDoc: '1', edad: '30', fn: '1996-06-16', sexo: s });
+    const c = {
+      id: 'GEN' + Date.now() + Math.random().toString(36).slice(2, 6), tipo: tp, estado: 'Registrado',
+      nunc: '0500160002062026', fechaProc: '2026-07-30', destino: 'Fiscalía', conductas: ['Hurto'], articulosCP: ['239'],
+      capturados: sx.caps.map(mk), victimas: sx.vics.map(mk), testigos: sx.tests.map(mk),
+      sinVictima: !sx.vics.length, sinTestigo: !sx.tests.length,
+      lugar: { dir: 'CL 1', depto: 'Antioquia', muni: 'Medellín' }, narracion: {},
+      servidor: { grado: 'PT', nombre: 'X', ident: '1', entidad: 'E' }, hayVehiculos: false, vehiculos: []
+    };
+    await DB.saveCase(c); return c.id;
+  }, [tipo, sexos]);
+  const x = await docXmlDe(id, 'CARTA', tag);
+  if (!x) return null;
+  const cs = celdas(x);
+  // Las casillas se localizan por la etiqueta «Género:» del propio formato: dos
+  // celdas más allá está la de M y cuatro más allá la de F, en los tres apartados.
+  const cajas = [];
+  for (let i = 0; i < cs.length; i++) if (textoCelda(cs[i]).trim() === 'Género:') cajas.push([textoCelda(cs[i + 2]).trim(), textoCelda(cs[i + 4]).trim()]);
+  return { xml: x, cajas, crudas: cs };
+}
+const g1 = await generoDe('URI', { caps: ['M'], vics: ['F'], tests: [''] }, 'genuri');
+log(!!g1 && g1.cajas.length === 3, 'El documento trae los tres apartados con su casilla de género', g1 && g1.cajas.length);
+log(!!g1 && g1.cajas[0].join('|') === 'X|', '⚠️ Capturado masculino: X en la casilla M (apartado 4)', g1 && JSON.stringify(g1.cajas[0]));
+log(!!g1 && g1.cajas[1].join('|') === '|X', 'Víctima femenina: X en la casilla F (apartado 5)', g1 && JSON.stringify(g1.cajas[1]));
+log(!!g1 && g1.cajas[2].join('|') === '|', 'Testigo sin dato: las dos casillas en blanco, nada inventado', g1 && JSON.stringify(g1.cajas[2]));
+log(!!g1 && (g1.xml.match(/<w:tbl>/g) || []).length === 35, 'El formato conserva sus 35 tablas', g1 && (g1.xml.match(/<w:tbl>/g) || []).length);
+const g2 = await generoDe('CESPA', { caps: ['M'], vics: ['F'], tests: [''] }, 'gencespa');
+log(!!g2 && g2.cajas[0].join('|') === 'X|' && g2.cajas[1].join('|') === '|X', 'CESPA marca exactamente igual');
+/* ⚠️ La casilla F no trae run en URI y trae uno sin tamaño en CESPA: la X salía
+   con el cuerpo por defecto de Word, distinto del de la casilla M. */
+const iGen = g2 ? g2.crudas.findIndex(c => textoCelda(c).trim() === 'Género:') : -1;
+const szF = iGen >= 0 && /<w:sz w:val="22"\/>/.test(g2.crudas[iGen + 4]);
+log(szF, 'La X de la casilla F sale con el mismo cuerpo de letra que la de M');
+// Varias personas por rol: la copia NO puede heredar la marca de la anterior.
+const g3 = await generoDe('URI', { caps: ['M', 'F', 'I'], vics: [], tests: [] }, 'genmulti');
+log(!!g3 && g3.cajas[0].join('|') === 'X|' && g3.cajas[1].join('|') === '|X' && g3.cajas[2].join('|') === '|',
+  '⚠️ Las copias 4.1 y 4.2 llevan SU género: la X no viaja de una persona a la siguiente', g3 && JSON.stringify(g3.cajas.slice(0, 3)));
+log(!!g3 && g3.cajas[2].join('|') === '|', 'Con «Intersexual / no informa» las dos quedan en blanco: el formato no tiene esa casilla');
+
 /* ═══════════ El Dossier conserva TODO su funcionamiento ═══════════ */
 sec('El Dossier no perdió nada');
 await page.evaluate((id) => { abrirDossierCaso(id); }, caso);
