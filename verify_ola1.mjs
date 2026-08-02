@@ -66,10 +66,13 @@ const reqPaso1 = await page.evaluate(() => {
   return { total: marcas.length, etiquetas };
 });
 log(reqPaso1.total >= 3, 'El paso 1 marca sus campos obligatorios con asterisco', reqPaso1.etiquetas.join(' · '));
-log(reqPaso1.etiquetas.some(e => /No\. de la orden/.test(e)) &&
-    reqPaso1.etiquetas.some(e => /Finalidad/.test(e)) &&
-    reqPaso1.etiquetas.some(e => /Fecha de expedición/.test(e)),
-  'Son exactamente los que bloquean el documento (V02, V03, V04)');
+/* ⚠️ Mejora 2 (obs. 2): el paso 1 es ahora el numeral 1 del formato — la
+   identificación del capturado —, así que sus obligatorios son los de la
+   persona (V08, V09), no los de la orden. */
+log(reqPaso1.etiquetas.some(e => /Primer nombre/.test(e)) &&
+    reqPaso1.etiquetas.some(e => /Primer apellido/.test(e)) &&
+    reqPaso1.etiquetas.some(e => /Número de documento/.test(e)),
+  'Son exactamente los que bloquean el documento (V08, V09)', reqPaso1.etiquetas.join(' · '));
 
 const avisoPaso = await page.textContent('#wz-prog');
 log(/dato.*obligatorio.*sin diligenciar en este paso/i.test(avisoPaso),
@@ -115,19 +118,25 @@ log(orden7.hay === true, 'El paso 7 lista los datos obligatorios que faltan');
 log(orden7.antes === true, 'Y los lista ARRIBA, antes del formulario (no tras 8 pantallas de scroll)');
 log(orden7.botones >= 4, 'Cada falta trae su botón para ir a diligenciarla', orden7.botones + ' botones');
 
-await page.evaluate(() => {
+const destinoSalto = await page.evaluate(() => {
   const b = document.querySelector('#wz-panels .oj-alert.dura button[onclick^="wizGoto"]');
+  const esperado = b ? parseInt(b.getAttribute('onclick').match(/\d+/)[0], 10) : -1;
   if (b) b.click();
+  return esperado;
 });
 await page.waitForTimeout(250);
-log(await page.evaluate(() => ws) === 0, 'Tocar una falta abre el paso donde se diligencia');
+log(await page.evaluate(() => ws) === destinoSalto,
+  'Tocar una falta abre el paso donde se diligencia', 'paso ' + (destinoSalto + 1));
 
 /* ─────────── 4. Borrador automático ─────────── */
+// El paso donde vive la orden es ahora el 2 (numeral 2 del formato).
+await page.evaluate(() => wizGoto(1));
+await page.waitForTimeout(250);
 await page.fill('#oj-o-num', '7788');
 await page.fill('#oj-o-fexp', new Date(Date.now() - 20 * 86400000).toISOString().slice(0, 10));
 await page.selectOption('#oj-o-fin', 'CONDENA');
 await page.fill('#oj-d-nom', 'Juzgado Cuarto Penal del Circuito de Prueba');
-await page.click('button[onclick="wizNext()"]');
+await page.evaluate(() => wizGoto(0));
 await page.waitForTimeout(300);
 
 const trasPaso = await page.evaluate(() => ({
@@ -143,7 +152,7 @@ log(trasPaso.enLista === 0 && trasPaso.personas === 0,
   'El borrador NO ensucia la lista de capturas ni el registro de personas', trasPaso.enLista + ' casos / ' + trasPaso.personas + ' personas');
 log(trasPaso.claveCifrada === true && trasPaso.planoEnDisco === false,
   'Va cifrado en su propia clave lc_draft (datos de una persona, igual que un caso)');
-log(trasPaso.paso === 1, 'Recuerda en qué paso iba', 'paso ' + (trasPaso.paso + 1));
+log(trasPaso.paso === 0, 'Recuerda en qué paso iba', 'paso ' + (trasPaso.paso + 1));
 
 // Guardado diferido mientras se escribe dentro de una misma pantalla
 await page.fill('#oj-r-pn', 'CARLOS');
@@ -167,7 +176,7 @@ const tarjeta = await page.evaluate(() => {
   return { html: el ? el.textContent.trim() : '', botones: el ? el.querySelectorAll('button').length : 0 };
 });
 log(/Captura sin terminar/.test(tarjeta.html), 'Tras recargar, Capturas ofrece recuperar la captura a medias', tarjeta.html.slice(0, 70));
-log(/Paso 2 de 4/.test(tarjeta.html), 'La tarjeta dice en qué pantalla se quedó');
+log(/Paso 1 de 4/.test(tarjeta.html), 'La tarjeta dice en qué pantalla se quedó');
 log(tarjeta.botones === 2, 'Con las dos salidas: Continuar y Descartar');
 
 await page.evaluate(() => wizRetomarBorrador());
@@ -178,7 +187,7 @@ const retomado = await page.evaluate(() => ({
   despacho: wc.oj.requerido.priNom,
   visible: document.getElementById('screen-wizard').classList.contains('on')
 }));
-log(retomado.visible && retomado.paso === 1, 'Continuar reabre el wizard en el paso correcto', 'paso ' + (retomado.paso + 1));
+log(retomado.visible && retomado.paso === 0, 'Continuar reabre el wizard en el paso correcto', 'paso ' + (retomado.paso + 1));
 log(retomado.numero === '7788' && /CARLOS/.test(retomado.despacho),
   'Y con todo lo diligenciado intacto', retomado.numero + ' · ' + retomado.despacho);
 
@@ -276,6 +285,8 @@ log(limpio.dialogo === false && limpio.pantalla === true && limpio.borrador === 
 /* ─────────── 11. Se avisa antes de pisar un borrador ajeno ─────────── */
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
+await page.evaluate(() => wizGoto(1));          // numeral 2: donde vive la orden
+await page.waitForTimeout(250);
 await page.fill('#oj-o-num', '9999');
 await page.evaluate(() => wizGuardarBorrador());
 await page.waitForTimeout(300);
@@ -312,7 +323,7 @@ await page.evaluate(() => guestEntrar());
 await page.waitForTimeout(300);
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
-await page.fill('#oj-o-num', '5555');
+await page.fill('#oj-r-pn', 'INVITADO');
 await page.click('button[onclick="wizNext()"]');
 await page.waitForTimeout(400);
 const invitado = await page.evaluate(() => {

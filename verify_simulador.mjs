@@ -138,13 +138,16 @@ const oj = await page.evaluate(() => {
   // Rutas del modelo caso.oj que el oficio imprime y que nunca deben ir vacías.
   const RUTAS = [
     'orden.numero', 'orden.tipoOrden', 'orden.finalidad', 'orden.estado', 'orden.fechaExpedicion',
-    'orden.autoridadSolicitante', 'orden.dirigidaA', 'orden.motivoTextual',
-    'orden.verificacion.sistema', 'orden.verificacion.fecha', 'orden.verificacion.hora',
+    'orden.autoridadSolicitante',
+    /* ⚠️ Mejora 2: `dirigidaA`, `motivoTextual` (fusionado con la finalidad),
+       `verificacion.sistema` y `verificacion.resultado` como campos del
+       formulario salieron del modelo o dejaron de pedirse (obs. 5 y 6): el
+       simulador ya no los inventa porque el wizard tampoco los produce. */
+    'orden.verificacion.fecha', 'orden.verificacion.hora',
     'orden.verificacion.funcionario', 'orden.verificacion.resultado', 'orden.verificacion.observacion',
-    'despacho.nombre', 'despacho.tipo', 'despacho.especialidad', 'despacho.municipio', 'despacho.departamento',
-    'despacho.direccion', 'despacho.telefono', 'despacho.correo', 'despacho.identificacion',
-    'despacho.funcionarioResponsable', 'despacho.juezNombre', 'despacho.juezCargo', 'despacho.firma',
-    'proceso.radicado', 'proceso.codigoInterno', 'proceso.fechaHechos', 'proceso.fechaDecision', 'proceso.descripcionJuridica',
+    'despacho.nombre', 'despacho.tipo', 'despacho.municipio', 'despacho.departamento',
+    'despacho.direccion', 'despacho.telefono', 'despacho.correo',
+    'proceso.radicado', 'proceso.codigoInterno', 'proceso.fechaHechos', 'proceso.fechaDecision',
     'requerido.tipoDoc', 'requerido.numDoc', 'requerido.expedidoEn', 'requerido.priNom', 'requerido.priApe',
     'requerido.segApe', 'requerido.fechaNac', 'requerido.edad', 'requerido.sexo', 'requerido.nacionalidad',
     'requerido.estadoCivil', 'requerido.profesion', 'requerido.resDireccion', 'requerido.resBarrio',
@@ -159,7 +162,7 @@ const oj = await page.evaluate(() => {
     'actuacion.derechos.fecha', 'actuacion.derechos.hora', 'actuacion.derechos.lugar', 'actuacion.derechos.observacion',
     'actuacion.defensor.tipo', 'actuacion.fuerza.tipo', 'actuacion.valoracion.entidad',
     'actuacion.valoracion.fecha', 'actuacion.valoracion.hora', 'actuacion.observaciones',
-    'destino.tipo', 'destino.nombre', 'destino.direccion', 'destino.municipio', 'destino.departamento',
+    'destino.via', 'destino.tipo', 'destino.nombre', 'destino.direccion', 'destino.municipio', 'destino.departamento',
     'destino.telefono', 'destino.correo', 'destino.fechaEntrega', 'destino.horaEntrega',
     'destino.recibeNombre', 'destino.recibeCargo', 'destino.reglaAplicada', 'destino.fundamento',
     // Encabezado / custodia / firma: aunque Ajustes esté vacío (V26–V31 son DURAS).

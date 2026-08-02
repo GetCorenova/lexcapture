@@ -90,11 +90,17 @@ log(aislado.casos === 0 && aislado.personas === 0, 'Ni sus capturas ni sus perso
 await page.evaluate(() => go('nueva'));
 await page.click('button[onclick="startWizard(\'OJ\')"]');
 await page.waitForTimeout(250);
-log(await page.isVisible('#oj-o-num'), 'El invitado tiene el formulario completo de orden judicial');
+log(await page.isVisible('#oj-r-pn'), 'El invitado tiene el formulario completo de orden judicial');
 
 const hoy = new Date();
 const exp = new Date(hoy.getTime() - 20 * 86400000).toISOString().slice(0, 10);
 const fechaDil = hoy.toISOString().slice(0, 10);
+/* Mejora 2 (obs. 2): el paso 1 es el numeral 1 del formato (el capturado) y el
+   paso 2 el numeral 2 (el proceso judicial). */
+await page.fill('#oj-r-pn', 'INVITADO');
+await page.fill('#oj-r-pa', 'REQUERIDO');
+await page.fill('#oj-r-nd', '99887766');
+await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-o-num', '778');
 await page.selectOption('#oj-o-fin', 'MEDIDA_ASEGURAMIENTO');
 await page.fill('#oj-o-fexp', exp);
@@ -105,13 +111,10 @@ await page.click('button[onclick="ojListaAgregar(\'delitos\')"]'); await page.wa
 await page.fill('#ojl-delitos-0-nombre', 'Hurto agravado con violencia');
 await page.fill('#ojl-delitos-0-articulo', '240');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-await page.fill('#oj-r-pn', 'INVITADO');
-await page.fill('#oj-r-pa', 'REQUERIDO');
-await page.fill('#oj-r-nd', '99887766');
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-g-fec', fechaDil);
 await page.fill('#oj-g-hor', '10:20');
-await page.fill('#oj-g-dir', 'Calle 59 con carrera 52');
+await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
+await page.fill('#oj-g-dir__libre', 'Calle 59 con carrera 52');
 // Sin perfil configurado no hay funcionario precargado: el invitado lo escribe.
 await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-funcionarios-0-grado', 'Patrullero');

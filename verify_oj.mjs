@@ -60,6 +60,12 @@ await page.evaluate(() => {
   cfg.ojCustDireccion = 'Calle de custodia 9';
   cfg.ojCustTelefono = '6041111111';
   cfg.ojCustCorreo = 'custodia@prueba.test';
+  /* Fiscalía destinataria (Mejora 2, obs. 1): se configura UNA vez y de aquí
+     sale el encabezado del oficio cuando el informe se remite a la Fiscalía. */
+  cfg.ojFiscaliaNombre = 'FISCALIA URI DE PRUEBA';
+  cfg.ojFiscaliaDireccion = 'Carrera 64C 67-300, barrio Caribe';
+  cfg.ojFiscaliaMunicipio = 'Ciudad Fiscalia';
+  cfg.ojFiscaliaDepartamento = 'Departamento Prueba';
   cfg.perfiles = [{ id: 'pf1', grado: 'Subintendente', nombre: 'Nombre Firmante', cedula: '1.111.111', telefono: '3000000000', cargo: 'Integrante patrulla de vigilancia', correo: 'firmante@prueba.test' }];
   cfg.perfilActivo = 'pf1';
   DB.saveConfig(cfg);
@@ -118,9 +124,13 @@ const destinos = await page.evaluate(() => {
   c = base(); c.oj.orden.finalidad = 'CONDENA'; c.oj.requerido.fechaNac = '2008-01-01'; c.oj.proceso.fechaHechos = '2024-06-01';
   out.srpa = ojResolverDestino(c).regla;
   out.termino = ojTermino(c).acc;
-  // Orden vencida: no se propone destinatario.
+  /* Orden vencida (Mejora 2, obs. 3): la advertencia se antepone a la regla,
+     pero el destinatario SE SIGUE PROPONIENDO. Antes se devolvía R0 a secas y
+     el destinatario quedaba vacío → V22 dura → el funcionario se quedaba sin
+     documento y sin ninguna vía para desbloquearlo (la prórroga se retiró). */
   c = base(); c.oj.orden.finalidad = 'CONDENA'; c.oj.orden.fechaExpedicion = '2015-01-01';
-  out.vencida = ojResolverDestino(c).regla;
+  const venc = ojResolverDestino(c);
+  out.vencida = venc.regla; out.vencidaNombre = venc.nombre;
   return out;
 });
 log(destinos.imputacion === 'R3-FISCAL-INVESTIGACION', 'Imputación → fiscal que dirige la investigación', destinos.imputacion);
@@ -131,7 +141,9 @@ log(/^R4-/.test(destinos.condena), 'Condena → juez de conocimiento / ejecució
 log(/C-042 de 2018/.test(destinos.condenaFund), 'La ruta de condena cita C-042 de 2018');
 log(destinos.srpa === 'R1-SRPA', 'Adolescente al momento de los hechos → SRPA', destinos.srpa);
 log(destinos.termino === 'aprehensión', 'Terminología de menores: aprehensión, no captura', destinos.termino);
-log(destinos.vencida === 'R0-ORDEN-VENCIDA', 'Orden vencida bloquea la propuesta de destinatario', destinos.vencida);
+log(destinos.vencida.indexOf('R0-ORDEN-VENCIDA') === 0, 'Orden vencida antepone su advertencia a la regla', destinos.vencida);
+log(destinos.vencidaNombre === 'Juzgado de prueba',
+  'Pero el destinatario se sigue proponiendo: la vigencia advierte, no deja sin salida', destinos.vencidaNombre);
 
 /* ─────────── 3. Validación ─────────── */
 const validaciones = await page.evaluate(() => {
@@ -158,34 +170,60 @@ await page.evaluate(() => go('nueva'));
 await page.click('button[onclick="startWizard(\'OJ\')"]');
 await page.waitForTimeout(250);
 const pasos = await page.$$eval('#wz-prog .wd', els => els.length);
-log(pasos === 4, 'El wizard de orden judicial tiene 4 pantallas (Ola 4: agrupadas por fuente del dato)', pasos);
-log(await page.isVisible('#oj-o-num'), 'Paso 1 muestra los campos de la orden');
+log(pasos === 4, 'El wizard de orden judicial tiene 4 pantallas', pasos);
+/* ⚠️ Mejora 2 (obs. 2): el formulario sigue el orden del formato. El informe
+   abre por «1. IDENTIFICACIÓN DEL CAPTURADO», así que el paso 1 también. */
+const rotulos = await page.evaluate(() => getWizConfig().steps.join(' | '));
+log(rotulos === 'El capturado | El proceso judicial | La materialización | Revisión',
+  'Y sus pasos son, uno a uno, los numerales del formato', rotulos);
+log(await page.isVisible('#oj-r-pn'), 'Paso 1 · «1. Identificación del capturado» — el formulario abre por donde abre el informe');
+// Lo complementario viaja plegado. El test lo abre para diligenciarlo.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+await page.fill('#oj-r-pn', 'PRIMERNOMBRE');
+await page.fill('#oj-r-sn', 'SEGUNDONOMBRE');
+await page.fill('#oj-r-pa', 'PRIMERAPELLIDO');
+await page.fill('#oj-r-sa', 'SEGUNDOAPELLIDO');
+await page.fill('#oj-r-nd', '1.234.567.890');
+await page.fill('#oj-r-fn', '1992-08-14');
+// ⚠️ La fecha de nacimiento repinta el paso (recalcula la edad): hay que volver
+// a abrir los bloques plegados antes de seguir.
+await page.waitForTimeout(150);
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+await page.selectOption('#oj-r-sx', 'M');
+await page.fill('#oj-r-madre', 'MADRE DE PRUEBA');
+await page.fill('#oj-r-padre', 'PADRE DE PRUEBA');
+// La residencia usa el widget de dirección normalizada (consistencia con Mejora 1).
+await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10').catch(async () => {
+  await page.evaluate(() => lcDirModo('oj-r-rdir', 'libre'));
+  await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10');
+});
+await page.fill('#oj-r-sen', 'Cicatriz en el antebrazo izquierdo');
+await page.selectOption('#oj-r-imet', 'BIOMETRICO');
+
+await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(220);
+log(await page.isVisible('#oj-o-num'), 'Paso 2 · «2. Datos del proceso judicial»');
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+/* Las diez filas del numeral 2 se piden en su orden, y NADA más: se fueron
+   la prórroga (obs. 4), el motivo textual duplicado (obs. 5), el medio de
+   consulta y el resultado de la verificación (obs. 6). */
+const fuera = await page.evaluate(() => ['oj-list-prorrogas', 'oj-o-motivo', 'oj-o-vsis', 'oj-o-vres',
+  'oj-o-meses', 'oj-o-estado', 'oj-d-firma', 'oj-d-tipo', 'oj-o-solic']
+  .filter(id => !!document.getElementById(id)));
+log(fuera.length === 0, 'Y ya no pide prórroga, motivo textual, medio de consulta, resultado ni vigencia manual', fuera.join(',') || 'ninguno');
 
 await page.fill('#oj-o-num', '002');
-await page.selectOption('#oj-o-fin', 'CONDENA');
 const hoy = new Date();
 const expedicion = new Date(hoy.getTime() - 30 * 86400000).toISOString().slice(0, 10);
 await page.fill('#oj-o-fexp', expedicion);
-await page.fill('#oj-o-motivo', 'TEXTO ÍNTEGRO DE LA ORDEN TAL COMO LA EXPIDIÓ EL DESPACHO.');
-await page.fill('#oj-o-vhor', '07:40');
 await page.waitForTimeout(150);
 const vigTxt = await page.textContent('#oj-vig-box');
-log(/Vigente hasta/.test(vigTxt), 'El semáforo de vigencia se calcula en vivo', vigTxt.slice(0, 60));
+log(/Vigente hasta/.test(vigTxt), 'El semáforo de vigencia se calcula en vivo, sin pedir meses ni estado', vigTxt.slice(0, 60));
 
-log(await page.isVisible('#oj-d-nom'), 'Pantalla A · el despacho va en la misma pantalla que la orden');
-// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
-await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
-await page.fill('#oj-d-nom', 'Juzgado Tercero Penal del Circuito de Conocimiento');
-await page.selectOption('#oj-d-tipo', 'CONOCIMIENTO');
-await page.fill('#oj-d-mun', 'Ciudad Prueba');
-await page.fill('#oj-d-dep', 'Departamento Prueba');
-await page.fill('#oj-d-dir', 'Palacio de Justicia, oficina 301');
-await page.click('button[onclick="ojGuardarDespacho()"]'); await page.waitForTimeout(150);
-const guardados = await page.evaluate(() => (DB.getConfig().despachosPropios || []).length);
-log(guardados === 1, 'El despacho diligenciado a mano queda guardado para reutilizarlo', guardados);
-
-log(await page.isVisible('#oj-p-rad'), 'Pantalla A · y el proceso también: las tres salen del mismo papel');
+log(await page.isVisible('#oj-p-rad') && await page.isVisible('#oj-p-fdec'),
+  'El SPOA, el número interno y la Fecha Decisión están donde el formato los imprime');
 await page.fill('#oj-p-rad', '050016000206202504471');
+await page.fill('#oj-p-cod', 'INT-2026-77');
+await page.fill('#oj-p-fdec', '2024-03-10');
 await page.fill('#oj-p-fhec', '2024-03-15');
 await page.click('button[onclick="ojListaAgregar(\'delitos\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-delitos-0-nombre', 'Hurto calificado y agravado');
@@ -196,34 +234,31 @@ await page.fill('#ojl-delitos-1-articulo', '365');
 const nDelitos = await page.$$eval('#oj-list-delitos .oj-row', e => e.length);
 log(nDelitos === 2, 'La lista de delitos admite N registros', nDelitos);
 
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-r-pn'), 'Pantalla B · la persona requerida');
-// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
-await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
-await page.fill('#oj-r-pn', 'PRIMERNOMBRE');
-await page.fill('#oj-r-sn', 'SEGUNDONOMBRE');
-await page.fill('#oj-r-pa', 'PRIMERAPELLIDO');
-await page.fill('#oj-r-sa', 'SEGUNDOAPELLIDO');
-await page.fill('#oj-r-nd', '1.234.567.890');
-await page.fill('#oj-r-fn', '1992-08-14');
-// Sexo, estado civil, nacionalidad y alias viven plegados desde la Ola 3: no
-// salen en el oficio, alimentan el registro de Personas.
-await page.evaluate(() => { const d = document.querySelector('.oj-mas'); if (d) d.open = true; });
-await page.selectOption('#oj-r-sx', 'M');
-await page.fill('#oj-r-madre', 'MADRE DE PRUEBA');
-await page.fill('#oj-r-padre', 'PADRE DE PRUEBA');
-await page.fill('#oj-r-rdir', 'Carrera 100 # 5-10');
-await page.fill('#oj-r-sen', 'Cicatriz en el antebrazo izquierdo');
-await page.selectOption('#oj-r-imet', 'BIOMETRICO');
+/* Autoridad solicitante = despacho que libró la orden: UN solo campo desde
+   Mejora 2 (antes eran dos, uno en cada paso, para el mismo dato). */
+log(await page.isVisible('#oj-d-nom'), 'La autoridad solicitante es el dato 8 del numeral 2, en su sitio');
+await page.fill('#oj-d-nom', 'Juzgado Tercero Penal del Circuito de Conocimiento');
+await page.fill('#oj-d-mun', 'Ciudad Prueba');
+await page.fill('#oj-d-dep', 'Departamento Prueba');
+await page.click('button[onclick="ojGuardarDespacho()"]'); await page.waitForTimeout(150);
+const guardados = await page.evaluate(() => (DB.getConfig().despachosPropios || []).length);
+log(guardados === 1, 'El despacho diligenciado a mano queda guardado para reutilizarlo', guardados);
+const espejoSolic = await page.evaluate(() => { ojCollect(); return wc.oj.orden.autoridadSolicitante; });
+log(espejoSolic === 'Juzgado Tercero Penal del Circuito de Conocimiento',
+  'Un solo campo alimenta la autoridad solicitante — sin duplicar la pregunta', espejoSolic);
 
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
-log(await page.isVisible('#oj-g-fec'), 'Pantalla C · la materialización');
-// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+await page.selectOption('#oj-o-fin', 'CONDENA'); await page.waitForTimeout(200);
+await page.fill('#oj-o-vhor', '07:40');
+
+await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(220);
+log(await page.isVisible('#oj-g-fec'), 'Paso 3 · «3. Materialización de la captura»');
+// Lo complementario viaja plegado. El test abre todo para diligenciarlo.
 await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 const fechaDil = hoy.toISOString().slice(0, 10);
 await page.fill('#oj-g-fec', fechaDil);
 await page.fill('#oj-g-hor', '07:11');
-await page.fill('#oj-g-dir', 'Calle 53 con carrera 51');
+await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
+await page.fill('#oj-g-dir__libre', 'Calle 53 con carrera 51');
 await page.fill('#oj-g-bar', 'Barrio de Prueba');
 await page.fill('#oj-g-mun', 'Ciudad Prueba');
 await page.fill('#oj-g-dep', 'Departamento Prueba');
@@ -235,7 +270,7 @@ await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
 const reloj = await page.textContent('#wz-panels');
 log(/Término de 36 horas/.test(reloj), 'El reloj de 36 horas aparece desde el paso de materialización');
 
-log(await page.isVisible('#oj-a-dhor'), 'Pantalla C · y la actuación: todo lo que acaba de pasar, junto');
+log(await page.isVisible('#oj-a-dhor'), 'Paso 3 · y la actuación: todo lo que acaba de pasar, junto');
 await page.check('#oj-a-dler');
 await page.fill('#oj-a-dfec', fechaDil);
 await page.fill('#oj-a-dhor', '08:40');
@@ -260,15 +295,42 @@ await page.check('#oj-a-anx1');
 await page.check('#oj-a-anx2');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
-log(await page.isVisible('#oj-x-nom'), 'Pantalla D · revisión y puesta a disposición');
-// Ola 4: lo complementario viaja plegado. El test abre todo para diligenciarlo.
+log(await page.isVisible('#oj-x-nom'), 'Paso 4 · revisión y puesta a disposición');
+// Lo complementario viaja plegado. El test abre todo para diligenciarlo.
 await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+
+/* ── Mejora 2, obs. 1: ¿a quién se remite el informe? ─────────────────────── */
+const viaUI = await page.evaluate(() => ({
+  botones: [...document.querySelectorAll('.oj-via')].map(b => b.querySelector('b').textContent),
+  marcada: (document.querySelector('.oj-via.on') || {}).textContent || '',
+  via: wc.oj.destino.via
+}));
+log(viaUI.botones.join(',') === 'Fiscalía,Juzgado',
+  'La app pregunta a quién va dirigido el informe: Fiscalía o Juzgado', viaUI.botones.join(' / '));
+log(viaUI.via === 'JUZGADO' && /Juzgado/.test(viaUI.marcada),
+  'Y la propone según la regla: captura por condena → el juzgado que libró la orden', viaUI.via);
 const sugerido = await page.inputValue('#oj-x-nom');
 log(sugerido === 'Juzgado Tercero Penal del Circuito de Conocimiento',
-  'El destinatario se propone solo a partir de la finalidad de la orden', sugerido);
+  'Con vía «Juzgado», el destinatario se hereda de la autoridad solicitante — no se vuelve a teclear', sugerido);
+
+/* La Fiscalía sale de Ajustes; el juzgado, de la autoridad solicitante. */
+const viaFis = await page.evaluate(async () => {
+  ojCambiarVia('FISCALIA');
+  await new Promise(r => setTimeout(r, 150));
+  const d = wc.oj.destino;
+  return { n: d.nombre, dir: d.direccion, mun: d.municipio, pideDir: !!document.getElementById('oj-x-dir') };
+});
+log(viaFis.n === 'FISCALIA URI DE PRUEBA' && viaFis.dir === 'Carrera 64C 67-300, barrio Caribe' && viaFis.mun === 'Ciudad Fiscalia',
+  'Con vía «Fiscalía», nombre y dirección salen de Ajustes: la captura no los vuelve a pedir',
+  viaFis.n + ' · ' + viaFis.dir);
+await page.evaluate(async () => { ojCambiarVia('JUZGADO'); await new Promise(r => setTimeout(r, 150)); });
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 await page.fill('#oj-x-dir', 'Palacio de Justicia, oficina 301');
 await page.fill('#oj-x-mun', 'Ciudad Prueba');
 await page.fill('#oj-x-dep', 'Departamento Prueba');
+const dirVuelve = await page.evaluate(() => { ojCollect(); return wc.oj.despacho.direccion; });
+log(dirVuelve === 'Palacio de Justicia, oficina 301',
+  'La dirección del juzgado (que el formato no recoge) vuelve al despacho y queda reutilizable', dirVuelve);
 // Encabezado, custodia y firma llegan solos desde Ajustes: el usuario que sí
 // configuró su equipo no vuelve a escribirlos.
 log((await page.inputValue('#oj-e-uni')) === 'UNIDAD DE PRUEBA' &&
@@ -351,10 +413,13 @@ log(doc.fuenteNoArial === false, 'Tipografía única de amplia compatibilidad (A
 /* ── Geometría del formato «Propuesta Plantilla OJ»: si uno de estos valores
       cambia, el documento dejó de ser el formato oficial. ── */
 log(doc.tablas === 3, 'Exactamente las 3 tablas del formato (identificación, proceso, materialización)', doc.tablas);
-log(doc.filas === 23, 'Filas fijas 9 + 10 + 4: ninguna se omite aunque el dato esté vacío', doc.filas);
+/* ⚠️ Mejora 2 (obs. 3): 9 + 10 + 3. El numeral 3 del formato tiene TRES filas;
+   la cuarta que imprimía la app («Forma de ubicación») no existe en la
+   plantilla — el dato sigue saliendo, pero en el relato de los hechos. */
+log(doc.filas === 22, 'Filas fijas 9 + 10 + 3, las del formato: ninguna se omite aunque el dato esté vacío', doc.filas);
 log(doc.anchoTabla === 3, 'Las 3 tablas ocupan el área de contenido (9405 twips)', doc.anchoTabla);
 log(doc.gridEtiqueta === 3, 'Columna de etiquetas a 3119 twips como el formato', doc.gridEtiqueta);
-log(doc.tramaEtiqueta === 23, 'Trama EFEFEF en todas las celdas de etiqueta', doc.tramaEtiqueta);
+log(doc.tramaEtiqueta === 22, 'Trama EFEFEF en todas las celdas de etiqueta', doc.tramaEtiqueta);
 log(doc.fileteSeccion === 3, 'Los 3 títulos llevan el filete inferior 404040 del formato', doc.fileteSeccion);
 log(/w:pgMar w:top="1985" w:right="1134" w:bottom="1701" w:left="1701"/.test(doc.sectPr) &&
   /w:titlePg/.test(doc.sectPr),
@@ -379,13 +444,21 @@ log(tiene('1.  IDENTIFICACIÓN DEL CAPTURADO') && tiene('2.  DATOS DEL PROCESO J
   'Los 3 apartados numerados del formato, con su redacción exacta');
 log(tiene('Señor(a)') && tiene('De manera atenta y respetuosa me permito dejar a disposición de ese despacho a la persona capturada que se identifica a continuación:'),
   'Encabezamiento y presentación literales del formato');
+/* ⚠️ Las 22 etiquetas de «Propuesta Plantilla OJ», en su orden. «Despacho que
+   la libró» y «Forma de ubicación» NO están en el formato: eran adiciones de la
+   app — la primera duplicaba «Autoridad solicitante» (obs. 5) y la segunda una
+   fila inexistente (obs. 3). «Fecha Decisión» sí está y faltaba. */
 log(['Nombres y apellidos','Documento de identidad','Fecha y lugar de nacimiento','Edad','Profesión u ocupación',
      'Nombres de los padres','Residencia','Teléfono','Señales particulares','No. de la orden','Fecha de expedición',
-     'Autoridad solicitante','Despacho que la libró','SPOA','Número Interno','Fecha de los Hechos',
-     'Delito(s) Imputado(s)','Marco Procesal','Motivo de la Captura','Fecha y hora','Lugar','Tipo de lugar',
-     'Forma de ubicación'].every(tiene),
-  'Las 23 etiquetas del formato, con su texto exacto');
-log(tiene('«TEXTO ÍNTEGRO DE LA ORDEN TAL COMO LA EXPIDIÓ EL DESPACHO.»'), 'El motivo de la orden se cita íntegro y literal');
+     'SPOA','Número Interno','Fecha Decisión','Fecha de los Hechos','Delito(s) Imputado(s)','Autoridad solicitante',
+     'Marco Procesal','Motivo de la Captura','Fecha y hora','Lugar','Tipo de lugar'].every(tiene),
+  'Las 22 etiquetas del formato, con su texto exacto');
+log(tiene('Despacho que la libró') === false && tiene('Forma de ubicación') === false,
+  'Y ninguna fila que el formato no tenga: el informe ES la plantilla');
+log(tiene('Cumplimiento de condena ejecutoriada'),
+  'El «Motivo de la Captura» sale del único campo que ahora lo pide (finalidad)');
+log(tiene('INT-2026-77') && tiene('10 de marzo de 2024'),
+  'Número Interno y Fecha Decisión llegan al informe');
 log(tiene('Hurto calificado y agravado') && tiene('Fabricación y porte de armas'), 'Los N delitos llegan al documento');
 log(tiene('Art. 240 del Código Penal'), 'Artículos del Código Penal mapeados');
 log(tiene('050016000206202504471'), 'Radicado transcrito completo, sin recortar a 16 dígitos');
@@ -481,14 +554,38 @@ log(custom.tiposOfrecidos.indexOf('oj_membrete') < 0 && custom.tiposOfrecidos.in
 log(custom.tieneNuevo === true && custom.repiteViejo === 0,
   'El cuerpo lo sigue generando la app con los datos del caso');
 
-/* ─────────── 8. Bloqueo por validación dura ─────────── */
+/* ─────────── 8. Orden vencida: advertencia, no callejón sin salida ───────────
+   Mejora 2 (obs. 3 y 4). La verificación de vigencia es la misma; lo que cambia
+   es la consecuencia: se advierte tres veces (cuadro en el paso 2, banner en la
+   revisión y confirmación al generar) y ya no bloquea — con el apartado de
+   prórroga retirado, bloquear dejaba al funcionario sin ninguna salida. */
 const bloqueo = await page.evaluate(async () => {
   const c = JSON.parse(JSON.stringify(DB.getCases()[0]));
   c.oj.orden.fechaExpedicion = '2010-01-01';            // orden vencida
-  const duras = ojDuras(c).map(v => v.id);
-  return { duras, tieneV01: duras.includes('V01') };
+  const todas = ojValidar(c);
+  const v01 = todas.find(v => v.id === 'V01');
+  const files = await (async () => {
+    const out = await buildOficioOJBlob(c, 'CARTA');
+    const f = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+    return new TextDecoder().decode(f['word/document.xml']);
+  })();
+  return {
+    duras: ojDuras(c).map(v => v.id),
+    nivelV01: v01 && v01.nivel,
+    avisa: !!v01 && /VENCIDA/.test(v01.msg),
+    aviso: !!ojVigenciaVencida(c),
+    // El relato no puede afirmar «confirmada la vigencia» si estaba vencida.
+    relatoHonesto: files.indexOf('Confirmada la vigencia de la orden') < 0 &&
+                   files.indexOf('vigencia expirada al momento de la diligencia') >= 0
+  };
 });
-log(bloqueo.tieneV01 === true, 'Una orden vencida produce validación dura que impide generar', bloqueo.duras.join(','));
+log(bloqueo.nivelV01 === 'BLANDA' && bloqueo.avisa === true,
+  'Una orden vencida se ADVIERTE con todas sus letras (art. 298 CPP · AP4491-2016)', bloqueo.nivelV01);
+log(bloqueo.duras.includes('V01') === false,
+  'Pero ya no bloquea: al retirarse la prórroga, bloquear dejaba al funcionario sin salida', bloqueo.duras.join(',') || 'ninguna dura');
+log(bloqueo.aviso === true, 'Y las tres salidas piden confirmarlo antes de producir el oficio');
+log(bloqueo.relatoHonesto === true,
+  '⚠️ El relato NO dice «confirmada la vigencia» cuando estaba vencida: deja la constancia de que lo estaba');
 
 /* ─────────── 8b. Salidas del caso (descarga y envío) ─────────── */
 await page.evaluate(() => { DB.saveTemplates(DB.getTemplates().filter(t => t.id !== 'tpl_oj_test')); });

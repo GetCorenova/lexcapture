@@ -1011,6 +1011,119 @@ abriendo los `.docx` en Word real (capturado M, víctima F, testigo sin dato).
 - Regresiones en verde: **mejora1 129** · OJ 138 · export 74 · simulador 41 · personas 24 ·
   invitado 33 · multipersona (todo OK). Anti-caché `?v=45` / `cache-v45`, `_BUILD=45`.
 
+## Mejora 2 (2026-08-02) — el módulo OJ, rediligenciado contra su propio formato
+Seis observaciones de campo sobre el wizard de orden judicial (`Documentos/Otro/Mejora 2.docx`,
+texto + 6 pantallazos con recuadro rojo numerado). No eran retoques: el formulario pedía datos que
+el informe no imprime, imprimía filas que el formato no tiene, y no preguntaba lo único que de
+verdad cambia entre un informe y otro. Verificado con `verify_mejora2.mjs` (**38 checks**, nuevo) y
+abriendo los `.docx` en **Word real** (COM → PDF → render con Edge, 2 páginas, 3 tablas, sin pedir
+reparar).
+
+- ⚠️ **El hallazgo de fondo: el formulario no era la preimagen del documento.** La Ola 4 agrupó los
+  pasos por «fuente del dato»; era mejor que la taxonomía jurídica anterior, pero seguía siendo un
+  orden propio de la app. El informe abre por el capturado y el formulario abría por la orden. Ahora
+  las tres pantallas de diligenciamiento **son** los tres numerales de «Propuesta Plantilla OJ»:
+  `OJ_STEPS = ['El capturado','El proceso judicial','La materialización','Revisión']`, con
+  `OJ_PANT = {requerido:0, orden:1, despacho:1, proceso:1, diligencia:2, actuacion:2, disposicion:3}`.
+  Los **bloques no se reescribieron**: se recomponen — `ojCollect` recolecta por presencia en el DOM
+  (Ola 4), así que repartir las pantallas de otro modo no obligó a tocarlo.
+
+### Obs. 1 · Destinatario del informe: Juzgado o Fiscalía
+La app **nunca preguntaba** a quién iba dirigido, y es lo único que cambia de verdad entre un informe
+y otro. Nuevo `caso.oj.destino.via` (`FISCALIA` / `JUZGADO` / `ADOLESCENTES`), con selector de
+botones grandes en la revisión (`.oj-vias`, `ojDestinatarioHtml`).
+- **FISCALÍA** → nombre y dirección salen de **Ajustes → Oficio de orden judicial → Fiscalía
+  destinataria** (`cfg.ojFiscalia*`, con caída a `cfg.destUri`): se pregunta **una vez**, no en cada
+  captura. Mismo criterio que el membrete y la custodia (Ola 4).
+- **JUZGADO** → es la **autoridad solicitante del numeral 2**. El formato solo recoge su *nombre*,
+  así que la dirección se pide aquí y `ojCollectDisposicion` la **devuelve al despacho**, que va al
+  registro reutilizable (`despachosPropios`): se escribe una vez por juzgado, no una por captura.
+- La vía **la propone el motor**: cada una de las siete reglas de `ojResolverDestino` declara ahora
+  su `via` (R3/R6 → Fiscalía; R2 según el nombre del despacho; R4-A/R4-B → juzgado; R1 →
+  adolescentes). El funcionario confirma o cambia, y el cambio queda trazable.
+- ⚠️ **Medido: el documento es el mismo en las dos vías salvo 3 líneas** — el encabezado del
+  destinatario y la frase de la puesta a disposición («de la Fiscalía General de la Nación» / «del
+  despacho judicial que libró la orden»). Hay un check que genera las dos y las compara fragmento a
+  fragmento.
+- ⚠️ **Los cuatro campos del destinatario se pintan SIEMPRE**, con vía o sin ella: si `#oj-x-nom`
+  desapareciera, `ojCollectDisposicion` —que se autolimita mirando ese id— dejaría de recolectar
+  también el membrete, la custodia y la firma. Plegar no es borrar; no pintar, tampoco.
+
+### Obs. 3 · Numerales 2 y 3: los datos del formato, en su orden
+- **Numeral 2**: se imprimían **«Despacho que la libró»** (fila que el formato NO tiene, duplicaba
+  «Autoridad solicitante») y **faltaba «Fecha Decisión»** (que sí está). Las diez filas quedaron en
+  el orden exacto del formato, y el paso 2 las pide en ese mismo orden.
+- **Numeral 3**: el formato tiene **TRES** filas (Fecha y hora · Lugar · Tipo de lugar). La app
+  imprimía una cuarta, «Forma de ubicación». El dato **no se perdió**: abre el relato de los hechos
+  («en desarrollo de …»), que es donde el formato lo pone. Total de filas: **23 → 22**.
+- ⚠️ **`verify_mejora2.mjs` lee las etiquetas del `.docx` REAL** de `Documentos/Otro/Propuesta
+  Plantilla OJ.docx` (lector ZIP propio con `inflateRawSync`) y las compara una a una con las del
+  documento generado. No hay lista escrita a mano: si el formato cambia, el test lo dice.
+- **La vigencia se conserva intacta** (`ojVigencia` sin tocar) y se calcula sola: se retiraron los
+  campos «Vigencia (meses)» y «Estado», que pedían a mano un dato que fija la ley.
+
+### Obs. 4 · Prórroga eliminada — y qué pasó con el bloqueo por orden vencida
+El apartado se eliminó del formulario, del catálogo `OJ_LISTS` y del modelo.
+⚠️ **`ojVigencia` sigue leyendo `o.prorrogas`**: una captura guardada con prórroga conserva
+exactamente la vigencia con la que se emitió (hay un check).
+- ⚠️ **Consecuencia que había que resolver, no ignorar:** la prórroga era la **única** vía para
+  levantar el bloqueo por orden vencida (V01 era DURA). Sin ella, una orden vencida dejaba al
+  funcionario **sin documento y sin salida**, en un procedimiento ya realizado. Y `ojResolverDestino`
+  devolvía R0 sin destinatario, lo que además disparaba V22.
+- **V01 pasa a BLANDA**, y a cambio la advertencia es imposible de no ver: cuadro rojo en el paso 2,
+  banner en la revisión con botón «Revisar la fecha», y **confirmación obligatoria** antes de
+  producir el oficio (`ojConfirmarVigencia`), citando art. 298 CPP y CSJ AP4491-2016. Rige en las
+  **tres** salidas (descargar, imprimir y enviar) — descargar y enviar no pueden discrepar, misma
+  lección que las validaciones duras.
+- **R0 pasa a ser un prefijo**, no una regla terminal: `'R0-ORDEN-VENCIDA · R4-A-JUEZ-DISPONIBLE'`.
+  El destinatario se sigue proponiendo.
+- ⚠️ **El relato no miente**: con orden vencida, la narración NO dice «Confirmada la vigencia de la
+  orden» — deja constancia de que figuraba vencida y de que se comunicó a quien la libró.
+
+### Obs. 5 · Información duplicada, unificada
+- **Finalidad + «Motivo — texto íntegro de la orden»**: dos campos para la fila «Motivo de la
+  Captura». Ahora es uno: selector del catálogo, y la opción **«Otra prevista en la ley»** abre un
+  campo para escribirlo a mano (`orden.finalidadOtra`, `ojMotivoTexto`). El textarea de seis líneas
+  desapareció. `ojMigrarMejora2` pasa el `motivoTextual` de una captura guardada a `finalidadOtra`.
+- **«Autoridad solicitante» + «Despacho que libró la orden»**: dos campos en dos pasos distintos
+  para el mismo despacho. Se unificó en `caso.oj.despacho` —que además trae dirección y el registro
+  reutilizable— y `orden.autoridadSolicitante` se mantiene **sincronizado** para no romper el
+  simulador, el espejo del dossier ni las capturas ya guardadas.
+
+### Obs. 6 · Información irrelevante, eliminada
+Fuera del formulario y del modelo: **sistema o medio de consulta** y **resultado de la verificación**
+(el resultado solo se imprimía cuando NO era positivo; el medio se sustituye por «el sistema de
+información institucional», que es cierto sin inventar nada — y si una captura vieja trae el medio,
+se sigue imprimiendo tal cual), **tipo de despacho**, **firma que trae la orden** (con V19),
+**teléfono y correo del despacho**, **vigencia en meses** y **estado de la orden**. Con ellos se
+retiraron los catálogos `OJ_CAT.especialidad` y `OJ_CAT.firmaOrden`: no queda código muerto.
+Los **cinco rasgos físicos** se plegaron (son UNA fila del formato, se pedían con seis controles).
+
+### Revisión técnica — lo que salió del análisis, no del documento
+- **La fila «Edad» salía en blanco** en toda captura que no hubiera pasado por el formulario
+  (simulador, import, caso guardado antes de que el campo existiera): la edad se calculaba solo **al
+  pintar** el paso. Ahora se deriva de la fecha de nacimiento **al imprimir**, que es donde se usa.
+- **Los anexos automáticos se recalculaban solo al pintar el paso**: marcar «se leyeron los
+  derechos» y generar sin volver a renderizar dejaba el acta de derechos fuera de la lista del
+  oficio. `ojAnexosAuto` corre también al recolectar (y sigue sin tocar nada si el usuario ya marcó
+  a mano).
+- **`cfg.destUriDir` se leía y nunca se escribía**: el oficio de Disposición de flagrancia
+  (`genDocDisposicion`, token `{{DESTINATARIO_DIR}}`) salía con esa línea en blanco desde siempre.
+  Ahora la dirección de la fiscalía vive en `cfg.ojFiscaliaDireccion`, con campo en Ajustes.
+- **Direcciones normalizadas en OJ** (`lcDirWidget`, Mejora 1): la residencia del requerido y el
+  lugar de la diligencia usan el mismo widget que flagrancia y el registro de Personas — el módulo
+  de orden judicial era el único que seguía pidiéndolas como texto suelto. ⚠️ **El modelo no
+  cambia**: el widget escribe en un `<input type="hidden">` con el id de siempre, así `ojCollect`
+  no se entera.
+- ⚠️ **`lcProducir` y `ojProducirOficio` se partieron en dos** (`…Ahora`) porque la confirmación de
+  vigencia es asíncrona por callback y no se puede `await` en medio de un `async` que ya empezó a
+  generar. Mismo patrón en `_abrirEnvioSheet` / `_abrirEnvioSheetAhora`.
+- **Medido**: 4 pantallas, **65 campos visibles** (eran 74 tras la Ola 4, 120 antes de la auditoría)
+  y **17 pantallas de scroll** (eran 20 tras la Ola 4, 32 antes).
+- Regresiones en verde: **mejora2 38** · OJ 151 · ola1 38 · ola2 34 · ola3 33 · ola4 22 ·
+  invitado 33 · simulador 41 · export 74 · envío 39 · mejora1 129 · multipersona (todo OK) ·
+  personas 24 · DS 10. Anti-caché `?v=46` / `cache-v46`, `_BUILD=46`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

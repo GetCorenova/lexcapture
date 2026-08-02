@@ -83,7 +83,7 @@ log(homonimoAprendido === 'Antioquia', 'Lo aprendido resuelve el homónimo de SU
 /* ─────────── 2. Inferencia en el formulario ─────────── */
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
-await page.evaluate(() => wizGoto(0));   // el despacho vive en la pantalla A
+await page.evaluate(() => wizGoto(1));   // Mejora 2: el despacho vive en el numeral 2
 await page.waitForTimeout(250);
 await page.fill('#oj-d-mun', 'Medellín');
 await page.waitForTimeout(150);
@@ -149,7 +149,7 @@ log(/R3/.test(noHerencia.regla) && noHerencia.dir === '',
 
 /* ─────────── 4. Tipo de documento por edad ─────────── */
 const docMenor = await page.evaluate(() => {
-  wc = ojNuevoCaso(); ws = 1;
+  wc = ojNuevoCaso(); ws = 0;              // Mejora 2: el requerido es el paso 1
   wc.oj.requerido.fechaNac = '2010-05-05';
   wc.oj.proceso.fechaHechos = '2026-01-10';       // 15 años al momento de los hechos
   renderWiz();
@@ -166,7 +166,7 @@ log(docManual === 'CE', '⚠️ Si el usuario elige el tipo a mano, la inferenci
 
 /* ─────────── 5. Edad calculada ─────────── */
 const edad = await page.evaluate(() => {
-  wc = ojNuevoCaso(); ws = 1;
+  wc = ojNuevoCaso(); ws = 0;
   wc.oj.requerido.fechaNac = '2000-06-15';
   renderWiz();
   const el = document.getElementById('oj-r-ed');
@@ -224,7 +224,8 @@ log(anexosManual.length === 1 && anexosManual[0] === 'Registro fotográfico',
   '⚠️ En cuanto el usuario toca una casilla, la app deja de proponer', anexosManual.join(','));
 
 /* ─────────── 8. Delito ⇒ artículo del Código Penal ─────────── */
-await page.evaluate(() => { wc = ojNuevoCaso(); ws = 0; renderWiz(); });
+// Mejora 2: los delitos son la fila 7 del numeral 2, o sea el paso 2.
+await page.evaluate(() => { wc = ojNuevoCaso(); ws = 1; renderWiz(); });
 await page.waitForTimeout(200);
 await page.click('button[onclick="ojListaAgregar(\'delitos\')"]');
 await page.waitForTimeout(200);
@@ -249,7 +250,7 @@ await page.evaluate(async () => {
   });
   await DB.savePerson({ id: 'per2', rol: 'Capturado', tipoDoc: 'CC', numDoc: '99999999', priNom: 'OTRA', priApe: 'PERSONA' });
 });
-await page.evaluate(() => { wc = ojNuevoCaso(); ws = 1; renderWiz(); });
+await page.evaluate(() => { wc = ojNuevoCaso(); ws = 0; renderWiz(); });
 await page.waitForTimeout(200);
 await page.evaluate(() => ojCargarPersona());
 await page.waitForTimeout(250);

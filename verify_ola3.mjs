@@ -88,8 +88,10 @@ log(penaCondena === false, 'El bloque de pena tampoco aparece en una captura por
 
 /* ─────────── 2. Los que alimentan el registro quedan plegados ─────────── */
 const plegados = await page.evaluate(() => {
-  ws = 1; renderWiz();
-  const det = document.querySelector('.oj-mas');
+  ws = 0; renderWiz();            // Mejora 2: el requerido es el paso 1
+  // ⚠️ Ese paso tiene ahora DOS bloques plegados (rasgos físicos y registro):
+  // se busca el que contiene los campos que interesan, no «el primero».
+  const det = [...document.querySelectorAll('.oj-mas')].find(d => d.querySelector('#oj-r-sx'));
   return {
     hay: !!det,
     abierto: det ? det.open : null,
@@ -168,7 +170,9 @@ const forma = await page.evaluate(async () => {
 });
 // El membrete es una tabla aparte, en word/header1.xml: el cuerpo trae 3.
 log(forma.tablas === 3, 'El cuerpo conserva sus 3 tablas, una por apartado', forma.tablas);
-log(forma.filas === 23, 'Y sus 23 filas fijas (9 + 10 + 4): no se añadió ninguna', forma.filas);
+/* Mejora 2 (obs. 3): 9 + 10 + 3. El numeral 3 del formato tiene TRES filas —
+   la cuarta que imprimía la app no existe en «Propuesta Plantilla OJ». */
+log(forma.filas === 22, 'Y sus 22 filas fijas (9 + 10 + 3), las del formato: ninguna se añade', forma.filas);
 log(forma.secciones === 3, 'Y sus 3 apartados numerados, ni uno más', forma.secciones);
 log(['1.  IDENTIFICACIÓN', '2.  DATOS DEL PROCESO JUDICIAL', '3.  MATERIALIZACIÓN']
   .every(s => forma.txt.includes(s)), 'Con la misma redacción del formato');
@@ -202,10 +206,17 @@ const conteo = await page.evaluate(() => {
   }
   return { pasos: out, total: out.reduce((a, b) => a + b, 0) };
 });
-log(conteo.total === 74, 'El formulario visible baja de 120 campos a ' + conteo.total +
-  ' (13 eliminados en la Ola 3 y el resto plegado por fuente del dato en la Ola 4)',
+/* La Ola 3 lo dejó en 74; Mejora 2 retiró además la prórroga, el motivo
+   textual, el medio y el resultado de la verificación, la vigencia manual, el
+   tipo y la firma del despacho, y plegó los cinco rasgos físicos. */
+log(conteo.total <= 66, 'El formulario visible baja de 120 campos a ' + conteo.total,
   'por paso: ' + conteo.pasos.join(' · '));
-log(conteo.pasos[1] === 28, 'La pantalla del requerido pliega de verdad sus cuatro campos de registro', conteo.pasos[1]);
+/* ⚠️ 27 controles en la pantalla del capturado, pero CINCO son las casillas
+   pequeñas del widget de dirección normalizada (vía · número · cruce · placa ·
+   complemento), que ocupan un solo renglón: son el mismo campo que antes se
+   escribía a mano suelto. Sin ellas, 23 — con los cinco rasgos físicos y los
+   cuatro datos de registro plegados. */
+log(conteo.pasos[0] <= 27, 'La pantalla del capturado pliega de verdad sus rasgos y sus campos de registro', conteo.pasos[0]);
 
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 console.log('\n' + (fails ? `❌ ${fails} de ${n} comprobaciones fallaron` : `✅ ${n} comprobaciones, todas en verde`));

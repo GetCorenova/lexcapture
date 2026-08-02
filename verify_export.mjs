@@ -332,8 +332,11 @@ const trama = await page.evaluate(async () => {
   return r;
 });
 log(trama.css === true, 'La vista declara print-color-adjust:exact — Chrome no puede descartar los fondos');
-log(trama.total === 23, 'Las 23 celdas de etiqueta conservan su trama gris en la vista de impresión', trama.total);
-log(trama.porTabla.length === 3 && trama.porTabla.join(',') === '9,10,4',
+/* ⚠️ Mejora 2 (obs. 3): el numeral 3 del formato tiene TRES filas —Fecha y hora,
+   Lugar y Tipo de lugar—. La cuarta que imprimía la app («Forma de ubicación»)
+   no existe en «Propuesta Plantilla OJ»: 9 + 10 + 3 = 22 etiquetas. */
+log(trama.total === 22, 'Las 22 celdas de etiqueta conservan su trama gris en la vista de impresión', trama.total);
+log(trama.porTabla.length === 3 && trama.porTabla.join(',') === '9,10,3',
   'Y se conserva en las TRES tablas, no solo en la primera', trama.porTabla.join(' · '));
 
 /* ═══════════ 8. Paginación real ═══════════ */

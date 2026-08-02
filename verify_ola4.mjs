@@ -61,16 +61,27 @@ const estructura = await page.evaluate(() => ({
   paneles: ojWizConfig().panels.length
 }));
 log(estructura.puntos === 4 && estructura.paneles === 4, 'El wizard tiene 4 pantallas', estructura.puntos);
-log(estructura.nombres.join(' · ') === 'La orden · El requerido · El procedimiento · Revisión',
-  'Nombradas por la fuente del dato, no por el capítulo jurídico', estructura.nombres.join(' · '));
+/* ⚠️ Mejora 2 (obs. 2) rebautizó y reordenó las pantallas: ya no se agrupan por
+   «fuente del dato» sino por los numerales del formato, que es el orden en que
+   el informe se lee. Los BLOQUES siguen siendo los mismos y se recomponen. */
+log(estructura.nombres.join(' · ') === 'El capturado · El proceso judicial · La materialización · Revisión',
+  'Nombradas como los numerales del formato, en su orden', estructura.nombres.join(' · '));
 
 const pantallaA = await page.evaluate(() => ({
-  orden: !!document.getElementById('oj-o-num'),
-  despacho: !!document.getElementById('oj-d-nom'),
-  proceso: !!document.getElementById('oj-p-rad')
+  requerido: !!document.getElementById('oj-r-pn'),
+  sinOrden: !document.getElementById('oj-o-num')
 }));
-log(pantallaA.orden && pantallaA.despacho && pantallaA.proceso,
-  'Pantalla A reúne los tres bloques que se transcriben del mismo papel');
+log(pantallaA.requerido && pantallaA.sinOrden,
+  'Pantalla 1 es el numeral 1 del formato: la identificación del capturado');
+
+const pantallaB = await page.evaluate(() => {
+  ws = 1; renderWiz();
+  return { orden: !!document.getElementById('oj-o-num'),
+           despacho: !!document.getElementById('oj-d-nom'),
+           proceso: !!document.getElementById('oj-p-rad') };
+});
+log(pantallaB.orden && pantallaB.despacho && pantallaB.proceso,
+  'Pantalla 2 es el numeral 2 completo: orden, proceso y autoridad solicitante');
 
 const pantallaC = await page.evaluate(() => {
   ws = 2; renderWiz();
@@ -81,7 +92,7 @@ log(pantallaC.diligencia && pantallaC.actuacion,
 
 /* ─────────── 2. La recolección ya no depende del número de paso ─────────── */
 const recoleccion = await page.evaluate(() => {
-  wc = ojNuevoCaso(); ws = 0; go('wizard'); renderWiz();
+  wc = ojNuevoCaso(); ws = 1; go('wizard'); renderWiz();   // numeral 2 del formato
   document.getElementById('oj-o-num').value = 'A-1';
   document.getElementById('oj-d-nom').value = 'DESPACHO A';
   document.getElementById('oj-p-rad').value = 'RAD-1';
@@ -94,7 +105,7 @@ log(recoleccion.orden === 'A-1' && recoleccion.despacho === 'DESPACHO A' && reco
 // ⚠️ Y no toca los bloques que no están en pantalla
 const noPisa = await page.evaluate(() => {
   wc.oj.requerido.priNom = 'NO SE DEBE BORRAR';
-  ws = 0; renderWiz(); ojCollect();
+  ws = 1; renderWiz(); ojCollect();
   return wc.oj.requerido.priNom;
 });
 log(noPisa === 'NO SE DEBE BORRAR',
@@ -106,7 +117,7 @@ const plegado = await page.evaluate(() => {
   wc.oj.requerido.sexo = 'F'; wc.oj.requerido.alias = 'LA FLACA';
   wc.oj.actuacion.comunicacion = { nombre: 'MARIA', parentesco: 'MADRE', telefono: '300', hora: '10:00' };
   wc.oj.actuacion.valoracion = { realizada: 'SI', entidad: 'HOSPITAL', fecha: '', hora: '', renuencia: false };
-  ws = 1; renderWiz(); ojCollect();       // pantalla del requerido, bloque plegado
+  ws = 0; renderWiz(); ojCollect();       // pantalla del requerido, bloque plegado
   ws = 2; renderWiz(); ojCollect();       // pantalla del procedimiento, bloques plegados
   return {
     sexo: wc.oj.requerido.sexo, alias: wc.oj.requerido.alias,
@@ -128,12 +139,12 @@ const validaciones = await page.evaluate(() => {
   return { por, pantallas: OJ_STEPS.length, max: Math.max(...v.map(x => x.paso)) };
 });
 log(validaciones.max <= 3, 'Ninguna validación apunta a una pantalla que ya no existe', 'máx ' + validaciones.max);
-log(validaciones.por.V02 === 0 && validaciones.por.V05 === 0,
-  'La orden y el despacho apuntan a la pantalla A', 'V02→' + validaciones.por.V02 + ' V05→' + validaciones.por.V05);
-log(validaciones.por.V08 === 1, 'El requerido, a la B', 'V08→' + validaciones.por.V08);
+log(validaciones.por.V02 === 1 && validaciones.por.V05 === 1,
+  'La orden y la autoridad solicitante apuntan al numeral 2', 'V02→' + validaciones.por.V02 + ' V05→' + validaciones.por.V05);
+log(validaciones.por.V08 === 0, 'El capturado, al numeral 1', 'V08→' + validaciones.por.V08);
 log(validaciones.por.V14 === 2 && validaciones.por.V16 === 2,
-  'El lugar y los derechos, a la C', 'V14→' + validaciones.por.V14 + ' V16→' + validaciones.por.V16);
-log(validaciones.por.V22 === 3, 'El destinatario, a la D', 'V22→' + validaciones.por.V22);
+  'El lugar y los derechos, al numeral 3', 'V14→' + validaciones.por.V14 + ' V16→' + validaciones.por.V16);
+log(validaciones.por.V22 === 3, 'El destinatario, a la revisión', 'V22→' + validaciones.por.V22);
 // El membrete solo falta si el equipo no está configurado: se fuerza el caso.
 const membrete = await page.evaluate(() => {
   const c = ojNuevoCaso();
@@ -188,7 +199,8 @@ const doc = await page.evaluate(async () => {
   };
 });
 log(doc.duras.length === 0, 'Un caso completo no deja validaciones duras', doc.duras.join(',') || 'ninguna');
-log(doc.tablas === 3 && doc.filas === 23, 'El oficio conserva sus 3 tablas y 23 filas', doc.tablas + ' tablas / ' + doc.filas + ' filas');
+/* Mejora 2: 9 + 10 + 3 = 22. El numeral 3 del formato tiene TRES filas. */
+log(doc.tablas === 3 && doc.filas === 22, 'El oficio conserva sus 3 tablas y las 22 filas del formato', doc.tablas + ' tablas / ' + doc.filas + ' filas');
 log(['CARLOS GOMEZ', 'Hurto agravado', '05001600020620261234', 'Juzgado Quinto de Ejecución de Penas']
   .every(s => doc.txt.includes(s)), 'Y todos los datos llegan igual que antes de reagrupar');
 
@@ -196,16 +208,17 @@ log(['CARLOS GOMEZ', 'Hurto agravado', '05001600020620261234', 'Juzgado Quinto d
 await page.evaluate(() => { wc = null; DB.clearDraft(); startWizard('OJ'); });
 await page.waitForTimeout(250);
 const hoy = new Date().toISOString().slice(0, 10);
+await page.fill('#oj-r-pn', 'ANA'); await page.fill('#oj-r-pa', 'RUIZ'); await page.fill('#oj-r-nd', '123456');
+await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 await page.fill('#oj-o-num', '900');
 await page.fill('#oj-o-fexp', new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10));
 await page.selectOption('#oj-o-fin', 'IMPUTACION');
 await page.fill('#oj-d-nom', 'Juzgado de Garantías de Prueba');
 await page.fill('#oj-p-rad', '999');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
-await page.fill('#oj-r-pn', 'ANA'); await page.fill('#oj-r-pa', 'RUIZ'); await page.fill('#oj-r-nd', '123456');
-await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 await page.fill('#oj-g-fec', hoy); await page.fill('#oj-g-hor', '08:00');
-await page.fill('#oj-g-dir', 'Carrera 70 con calle 44');
+await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
+await page.fill('#oj-g-dir__libre', 'Carrera 70 con calle 44');
 await page.check('#oj-a-dler');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
 await page.fill('#oj-x-nom', 'Fiscalía URI de Prueba');
