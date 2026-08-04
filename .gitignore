@@ -20,3 +20,7 @@ verify_m2_*.docx
 verify_m2_*.pdf
 verify_m2_*.png
 ~WRL*.tmp
+
+# Salidas de verify_firma (documento y render de revisión)
+verify_firma_salida.docx
+verify_firma_salida.pdf

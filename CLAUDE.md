@@ -1124,6 +1124,71 @@ Los **cinco rasgos físicos** se plegaron (son UNA fila del formato, se pedían 
   invitado 33 · simulador 41 · export 74 · envío 39 · mejora1 129 · multipersona (todo OK) ·
   personas 24 · DS 10. Anti-caché `?v=46` / `cache-v46`, `_BUILD=46`.
 
+## Firma digital del funcionario (2026-08-04) — manuscrita en el teléfono, solo en el oficio OJ
+El bloque de firma del oficio de orden judicial dejaba **tres renglones en blanco** para firmar a
+mano. Ahora el funcionario firma **una vez** con el dedo, un lápiz táctil o el mouse, y esa firma se
+imprime sola encima de su nombre en cada oficio. Verificado con `verify_firma.mjs` (**53 checks**,
+nuevo) y abriendo el `.docx` en **Word real** (COM → PDF → render con Edge).
+
+- **Dónde se firma**: Perfil → botón **«Firma»** de cada tarjeta (`openFirmaModal`). Lienzo
+  `<canvas>` con **Pointer Events**, que unifica mouse, dedo y stylus en un solo camino — sin ramas
+  por dispositivo y sin librerías. Botones Borrar / Guardar (que dice «Actualizar firma» si ya hay
+  una) / Eliminar, y vista previa de la guardada. La tarjeta del perfil enseña la miniatura.
+- ⚠️ **`touch-action:none` en el canvas es lo que hace que se pueda firmar en Android**: sin eso el
+  dedo hace scroll de la pantalla y el trazo se corta.
+- ⚠️ **El lienzo se escala por `devicePixelRatio`** (backing store) o el trazo sale pixelado en
+  cualquier teléfono. El trazo se **repinta entero** desde los puntos guardados en cada movimiento:
+  el suavizado por puntos medios (`quadraticCurveTo`) necesita el punto anterior y el siguiente, y
+  así la firma queda curva y natural en vez de una polilínea con picos. La presión del stylus
+  modula el grosor; con dedo o mouse queda constante. Un toque sin arrastre es un punto legítimo
+  (la tilde, el punto de una i) y se conserva.
+- **PNG transparente, recortado y reducido** (`fwExportar`): se recorre el canal alfa para hallar el
+  rectángulo de la tinta, se recorta con 6 px de aire y se reduce a 1000 px de ancho como máximo.
+  ⚠️ **Sin recorte la firma arrastraría todo el margen vacío del lienzo** y en el documento saldría
+  diminuta y descentrada. El lienzo **nunca se rellena**, así que el fondo es transparente de
+  verdad — comprobado pintando el PNG **sobre rojo** y leyendo el píxel (un fondo blanco pasaría
+  cualquier chequeo de cabecera pero taparía el papel).
+- ⚠️ **NO vive en `cfg.perfiles[]`: `lc_cfg` se guarda en localStorage EN CLARO.** Una firma
+  manuscrita es un rasgo biométrico y con ella se suscriben documentos judiciales, así que va en su
+  propia clave **`lc_firmas`, cifrada con AES-GCM** igual que las capturas, con caché en memoria
+  (`_firmasCache`) cargada al desbloquear — mismo patrón que `_casesCache`/`_personsCache`, que es
+  lo que permite que `DB.getFirma` sea síncrona. En **modo invitado** no se escribe un solo byte
+  (comprobado con la huella completa de `localStorage`). Al borrar un perfil se borra su firma.
+- **Una sola firma por usuario**: `DB.saveFirma(idPerfil, …)` reemplaza. `fwGuardar` **espera al
+  guardado real** antes de decir «Firma guardada ✓» (lección de la Fase H, cuando `wizSave`
+  confirmaba éxito sin haber persistido nada).
+- ⚠️ **La firma se busca por el NOMBRE de quien suscribe** (`lcFirmaDe`), no por el perfil activo:
+  `caso.oj.firma` se puede diligenciar a mano y ser otra persona. **Estampar la firma manuscrita de
+  un funcionario en un documento que suscribe otro sería falsificarla** — ante la duda no se pone
+  ninguna y el espacio queda en blanco, como se hacía antes. La comparación normaliza acentos y
+  espacios sobrantes.
+- **Colocación en el oficio** (`ojxFirmaImg`, referencia visual del requerimiento): va **encima del
+  nombre y centrada respecto a él**. ⚠️ La caja se mide con el **ancho real del nombre** en Arial
+  11 pt negrita (`lcAnchoTexto`, medido con canvas), no con una fracción del ancho de página: así
+  «ocupa aproximadamente el ancho del nombre» con cualquier nombre y cualquier tamaño de hoja, y el
+  centrado se reduce a una **sangría** (`w:ind`) — sin cajas flotantes, que en Word se despegan del
+  párrafo al repaginar y acabarían sobre el texto. La proporción no se toca: se ajusta al ancho y,
+  si eso la haría más alta que `OJX_FIRMA_MAXH` (850 tw ≈ 1,5 cm), se recalcula el ancho desde el
+  alto. `keepNext` impide que la firma y el nombre se separen en un salto de página.
+- ⚠️ **Sin firma guardada el bloque queda EXACTAMENTE como estaba** (`ojxVacio(3)`): no se embebe
+  imagen, no se declara la extensión `png` y no queda ninguna relación rota. El documento no puede
+  fallar porque el funcionario no haya firmado.
+- **Solo el oficio OJ.** El FPJ-5 se compone de las plantillas de la Fiscalía, cuyas casillas se
+  firman a mano, y ninguna otra salida la toca (hay un check que lo mide).
+- **Paquete**: `word/media/firma.png` + relación **rId6** en `word/_rels/document.xml.rels` (⚠️ la
+  del logo vive en `header1.xml.rels` porque el logo va en el encabezado; la firma va en el cuerpo)
+  + `Default Extension="png"` en `[Content_Types].xml`, **declarada una sola vez** aunque el logo ya
+  sea png — repetirla deja el paquete inválido y Word pide reparar. `ojCfgDoc` resuelve la firma en
+  `cfg._firma`, el único punto donde se arma la configuración efectiva, para que el paquete y el
+  cuerpo no puedan discrepar.
+- **La vista de impresión (PDF) la pinta sola**: `lcRunHtml` ya traducía `w:drawing` → `<img>` con
+  data URI, así que no hizo falta tocar el traductor.
+- **Medido en Word real**: 2 páginas, 1 imagen en el cuerpo de 152,8 × 42,5 pt (= los 3056 × 850
+  twips calculados), Word abre sin pedir reparar. Regresiones en verde: **firma 53** · OJ 151 ·
+  mejora1 129 · mejora2 38 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona · DS 10.
+  Anti-caché `?v=47` / `cache-v47`, `_BUILD=47`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
