@@ -160,8 +160,11 @@ const validaciones = await page.evaluate(() => {
 log(validaciones.duras.includes('V01') === false, 'Sin fecha de expedición no se inventa una orden vencida');
 // V13 (fecha/hora) y V15 (funcionarios) no aparecen porque el caso nuevo ya los
 // precarga con la hora actual y el perfil activo: eso es lo esperado.
-log(['V02', 'V03', 'V04', 'V05', 'V08', 'V09', 'V14', 'V16', 'V22'].every(id => validaciones.duras.includes(id)),
-  'Un caso vacío dispara las validaciones duras de orden, despacho, identidad, lugar, derechos y destino',
+/* ⚠️ V16 (lectura de derechos) salió de la lista con Mejora 3, obs. 4: la
+   constancia se deriva de la diligencia y el acta viaja como anexo marcado
+   solo, así que bloquear el oficio por una casilla dejó de tener sentido. */
+log(['V02', 'V03', 'V04', 'V05', 'V08', 'V09', 'V14', 'V22'].every(id => validaciones.duras.includes(id)),
+  'Un caso vacío dispara las validaciones duras de orden, despacho, identidad, lugar y destino',
   validaciones.duras.join(','));
 log(validaciones.menor === true, 'Menor de 14 años al momento de los hechos → validación dura');
 
@@ -176,19 +179,24 @@ log(pasos === 4, 'El wizard de orden judicial tiene 4 pantallas', pasos);
 const rotulos = await page.evaluate(() => getWizConfig().steps.join(' | '));
 log(rotulos === 'El capturado | El proceso judicial | La materialización | Revisión',
   'Y sus pasos son, uno a uno, los numerales del formato', rotulos);
-log(await page.isVisible('#oj-r-pn'), 'Paso 1 · «1. Identificación del capturado» — el formulario abre por donde abre el informe');
+/* ⚠️ Mejora 3 (obs. 1): el paso 1 es la TARJETA del capturado, con «Agregar» y
+   «Buscar existente» como en flagrancia; los campos viven en un modal. */
+log(await page.isVisible('.oj-persona.vacia') && await page.isVisible('button[onclick="ojAbrirRequerido()"]'),
+  'Paso 1 · «1. Identificación del capturado» — tarjeta y dos salidas, como en flagrancia');
+await page.click('button[onclick="ojAbrirRequerido()"]'); await page.waitForTimeout(200);
+log(await page.isVisible('#oj-r-pn'), 'Los datos se diligencian en un modal enfocado');
 // Lo complementario viaja plegado. El test lo abre para diligenciarlo.
-await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+await page.evaluate(() => document.querySelectorAll('#modal-c details').forEach(d => d.open = true));
 await page.fill('#oj-r-pn', 'PRIMERNOMBRE');
 await page.fill('#oj-r-sn', 'SEGUNDONOMBRE');
 await page.fill('#oj-r-pa', 'PRIMERAPELLIDO');
 await page.fill('#oj-r-sa', 'SEGUNDOAPELLIDO');
 await page.fill('#oj-r-nd', '1.234.567.890');
 await page.fill('#oj-r-fn', '1992-08-14');
-// ⚠️ La fecha de nacimiento repinta el paso (recalcula la edad): hay que volver
-// a abrir los bloques plegados antes de seguir.
+// ⚠️ La fecha de nacimiento repinta el formulario del modal (recalcula la edad):
+// hay que volver a abrir los bloques plegados antes de seguir.
 await page.waitForTimeout(150);
-await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
+await page.evaluate(() => document.querySelectorAll('#modal-c details').forEach(d => d.open = true));
 await page.selectOption('#oj-r-sx', 'M');
 await page.fill('#oj-r-madre', 'MADRE DE PRUEBA');
 await page.fill('#oj-r-padre', 'PADRE DE PRUEBA');
@@ -199,6 +207,10 @@ await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10').catch(async () => {
 });
 await page.fill('#oj-r-sen', 'Cicatriz en el antebrazo izquierdo');
 await page.selectOption('#oj-r-imet', 'BIOMETRICO');
+await page.click('button[onclick="ojGuardarRequerido()"]'); await page.waitForTimeout(220);
+const tarjeta = await page.textContent('.pcard .pinfo').catch(() => '');
+log(/PRIMERNOMBRE/.test(tarjeta) && /PRIMERAPELLIDO/.test(tarjeta),
+  'Al guardar, el paso muestra la tarjeta de la persona y ni un campo suelto', tarjeta);
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(220);
 log(await page.isVisible('#oj-o-num'), 'Paso 2 · «2. Datos del proceso judicial»');
@@ -248,7 +260,12 @@ log(espejoSolic === 'Juzgado Tercero Penal del Circuito de Conocimiento',
   'Un solo campo alimenta la autoridad solicitante — sin duplicar la pregunta', espejoSolic);
 
 await page.selectOption('#oj-o-fin', 'CONDENA'); await page.waitForTimeout(200);
-await page.fill('#oj-o-vhor', '07:40');
+/* ⚠️ Mejora 3 (obs. 2): la hora de verificación de la orden ya no se teclea —
+   se deriva de la diligencia, porque es el mismo momento y el mismo funcionario. */
+const verFuera = await page.evaluate(() => ['oj-o-vfun', 'oj-o-vfec', 'oj-o-vhor', 'oj-o-vobs']
+  .filter(id => !!document.getElementById(id)));
+log(verFuera.length === 0, 'La verificación de la orden ya no repite funcionario, fecha ni hora',
+  verFuera.join(',') || 'ningún duplicado');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(220);
 log(await page.isVisible('#oj-g-fec'), 'Paso 3 · «3. Materialización de la captura»');
@@ -262,7 +279,6 @@ await page.fill('#oj-g-dir__libre', 'Calle 53 con carrera 51');
 await page.fill('#oj-g-bar', 'Barrio de Prueba');
 await page.fill('#oj-g-mun', 'Ciudad Prueba');
 await page.fill('#oj-g-dep', 'Departamento Prueba');
-await page.fill('#oj-g-coord', '6.244203, -75.581212');
 await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-funcionarios-1-grado', 'Patrullero');
 await page.fill('#ojl-funcionarios-1-nombre', 'ACOMPANANTE DE PRUEBA');
@@ -270,29 +286,23 @@ await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
 const reloj = await page.textContent('#wz-panels');
 log(/Término de 36 horas/.test(reloj), 'El reloj de 36 horas aparece desde el paso de materialización');
 
-log(await page.isVisible('#oj-a-dhor'), 'Paso 3 · y la actuación: todo lo que acaba de pasar, junto');
-await page.check('#oj-a-dler');
-await page.fill('#oj-a-dfec', fechaDil);
-await page.fill('#oj-a-dhor', '08:40');
-await page.fill('#oj-a-dlug', 'Instalaciones de la unidad');
-await page.fill('#oj-a-cnom', 'FAMILIAR DE PRUEBA');
-await page.selectOption('#oj-a-cpar', 'MADRE');
-await page.selectOption('#oj-a-fza', 'MEDIOS_RIGIDOS');
-await page.check('#oj-a-hayinc');
-await page.click('button[onclick="ojListaAgregar(\'incautaciones\')"]'); await page.waitForTimeout(150);
-await page.fill('#ojl-incautaciones-0-descripcion', 'Un teléfono móvil');
-await page.fill('#ojl-incautaciones-0-cantidad', '1');
-await page.fill('#ojl-incautaciones-0-rotulo', 'RC-0001');
+/* ⚠️ Mejora 3 (obs. 4 y 5): el bloque «Actuación policial» y el de elementos
+   incautados desaparecieron. Queda el relato y la comprobación de los anexos. */
+const actFuera = await page.evaluate(() => ['oj-a-dler', 'oj-a-dhor', 'oj-a-dlug', 'oj-a-cnom',
+  'oj-a-fza', 'oj-a-vmed', 'oj-a-nov', 'oj-a-hayinc', 'oj-list-incautaciones']
+  .filter(id => !!document.getElementById(id)));
+log(actFuera.length === 0, 'Paso 3 · sin actuación policial ni cadena de custodia',
+  actFuera.join(',') || 'ninguno de los 19 controles');
 // Narración libre: el espacio nace vacío y lo escribe el usuario.
 log((await page.inputValue('#oj-a-obs')) === '', 'El espacio de narración de los hechos nace en blanco');
 await page.fill('#oj-a-obs', 'RELATO LIBRE ESCRITO POR EL FUNCIONARIO.');
-// Anexos 0, 1 y 2 del catálogo: informe, acta de derechos y copia de la orden.
-const anx2 = await page.textContent('label[for], .oj-chk:has(#oj-a-anx2)').catch(() => '');
-log(/Copia orden de captura oficio No\. 002/.test(anx2),
-  'El anexo de la copia de la orden ya muestra su número, tomado del paso 1');
-await page.check('#oj-a-anx0');
-await page.check('#oj-a-anx1');
-await page.check('#oj-a-anx2');
+// Los anexos se marcan solos (obs. 6): el del oficio ya trae su número resuelto.
+const anx3 = await page.textContent('.oj-chk:has(#oj-a-anx3)').catch(() => '');
+log(/Copia orden de captura oficio No\. 002/.test(anx3),
+  'El anexo de la copia de la orden ya muestra su número, tomado del paso 2');
+const anxAuto = await page.evaluate(() => { ojCollect(); return wc.oj.actuacion.anexos; });
+log(anxAuto.length === 4 && anxAuto[1] === 'Acta de derechos del capturado y constancia de buen trato',
+  'Y los cuatro que siempre viajan quedan marcados sin tocar una casilla', anxAuto.length + ' anexos');
 
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 log(await page.isVisible('#oj-x-nom'), 'Paso 4 · revisión y puesta a disposición');
@@ -342,8 +352,12 @@ log((await page.inputValue('#oj-c-est')) === 'Estación de Prueba Custodia' &&
 log((await page.inputValue('#oj-f-nom')) === 'Nombre Firmante' &&
     (await page.inputValue('#oj-f-car')) === 'Integrante patrulla de vigilancia',
   'La firma se carga del perfil activo');
+/* ⚠️ Mejora 3 (obs. 7): el fundamento de la propuesta pasó a un plegable dentro
+   del bloque del destinatario — es justificación, no acción, y era parte de lo
+   que sepultaba la decisión. Sigue citado y a un toque. */
 const panel7 = await page.textContent('#wz-panels');
-log(/Destinatario propuesto/.test(panel7) && /C-042 de 2018/.test(panel7), 'La propuesta muestra su fundamento legal citado');
+log(/Por qué se propone este destinatario/.test(panel7) && /C-042 de 2018/.test(panel7),
+  'La propuesta muestra su fundamento legal citado, a un toque del destinatario');
 log(/Faltan datos obligatorios/.test(panel7) === false, 'Sin validaciones duras pendientes al completar el formulario');
 
 /* ─────────── 5. Guardado y espejo para las pantallas compartidas ─────────── */
@@ -462,9 +476,11 @@ log(tiene('INT-2026-77') && tiene('10 de marzo de 2024'),
 log(tiene('Hurto calificado y agravado') && tiene('Fabricación y porte de armas'), 'Los N delitos llegan al documento');
 log(tiene('Art. 240 del Código Penal'), 'Artículos del Código Penal mapeados');
 log(tiene('050016000206202504471'), 'Radicado transcrito completo, sin recortar a 16 dígitos');
-log(tiene('6.244203, -75.581212'), 'Coordenadas geográficas');
+/* ⚠️ Mejora 3 (obs. 3 y 5): coordenadas y cadena de custodia dejaron de pedirse,
+   así que un caso diligenciado hoy no las lleva — y el documento no las inventa. */
+log(!tiene('6.244203, -75.581212'), 'Sin coordenadas: ya no se piden y el oficio no las inventa');
 log(tiene('ACOMPANANTE DE PRUEBA'), 'Los N funcionarios participantes llegan al documento');
-log(tiene('RC-0001'), 'Rótulo de cadena de custodia del elemento incautado');
+log(!/cadena de custodia/.test(T), 'Sin cadena de custodia: no aplica a una captura por orden judicial');
 log(/artículo 303 de la Ley 906 de 2004/.test(T), 'Constancia de lectura de derechos (art. 303 CPP)');
 log(/treinta y seis \(36\) horas/.test(T) && /artículo 28 de la Constitución/.test(T), 'Vencimiento del término constitucional en el relato');
 log(tiene('Subintendente NOMBRE FIRMANTE'), 'Firma: grado como se escribió y nombre en mayúsculas, como el formato');
@@ -485,10 +501,10 @@ log(tiene('Estación de Prueba Custodia') && tiene('Calle de custodia 9') &&
   'La constancia usa la estación, dirección, teléfono y correo diligenciados');
 log(tiene('Teléfono: 6041111111 · custodia@prueba.test') && tiene('www.prueba.test'),
   'El bloque de contacto del final usa los mismos datos de la custodia');
-log(tiene('Anexos: tres (3)'), 'La app cuenta los anexos y los escribe en letras');
-log(tiene('– Informe dejando a disposición') && tiene('– Acta de derechos del capturado') &&
-    tiene('– Copia orden de captura oficio No. 002'),
-  'Anexos en el orden marcado, con el No. de la orden ya resuelto');
+log(tiene('Anexos: cuatro (4)'), 'La app cuenta los anexos y los escribe en letras');
+log(tiene('– Informe dejando a disposición') && tiene('– Acta de derechos del capturado y constancia de buen trato') &&
+    tiene('– Copia documento de identificación') && tiene('– Copia orden de captura oficio No. 002'),
+  'Anexos en el orden que fijó el usuario (Mejora 3, obs. 6), con el No. de la orden resuelto');
 log(T.indexOf('– Informe dejando a disposición') < T.indexOf('– Copia orden de captura oficio No. 002'),
   'Se respeta el orden en que el usuario los señaló');
 
@@ -776,7 +792,8 @@ const viejaOk = await page.evaluate(async id => {
   const caso = ojDesdeLegado(DB.getCase(id));
   caso.oj.encabezado = { ministerio: 'MINISTERIO X', institucion: 'INSTITUCIÓN Y', unidad: 'UNIDAD Z', dependencia: 'ESTACIÓN W' };
   caso.oj.custodia = { estacion: 'Estación W', direccion: 'Calle 48 # 55-50', telefono: '3127324069', correo: 'w@ejemplo.test', web: 'www.ejemplo.test' };
-  caso.oj.actuacion.anexos = ['Informe dejando a disposición', 'Acta de derechos del capturado', 'Copia orden de captura oficio No. {{ORD_NUMERO}}'];
+  caso.oj.actuacion.anexos = ['Informe dejando a disposición', 'Acta de derechos del capturado y constancia de buen trato', 'Copia orden de captura oficio No. {{ORD_NUMERO}}'];
+  caso.oj.actuacion.anexosManual = true;   // los fija el test, no el automatismo
   const out = await buildOficioOJBlob(caso, 'CARTA');
   const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
   const dec = p => new TextDecoder().decode(files[p]);

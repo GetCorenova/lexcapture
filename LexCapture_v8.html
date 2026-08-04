@@ -1230,6 +1230,97 @@ body.guest{padding-top:38px}
 .oj-mas[open]>summary{margin-bottom:10px}
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   MEJORA 3 — el formulario deja de parecer un documento de papel
+   Cuatro piezas, todas con tokens del Design System v2 (nada hardcodeado):
+     .oj-auto     · «esto lo pone la app» — sustituye a un bloque que se retiró
+     .oj-persona  · estado vacío de la tarjeta del capturado (obs. 1)
+     .oj-estado   · faltantes y advertencias en UNA línea desplegable (obs. 7)
+     .oj-dest     · el destinatario como protagonista de la revisión (obs. 7)
+═══════════════════════════════════════════════════════════════════════════ */
+.oj-auto{
+  display:flex;align-items:flex-start;gap:7px;margin:0 0 2px;
+  font-size:12px;line-height:1.45;color:var(--text-3);
+}
+.oj-auto svg{width:14px;height:14px;flex:0 0 auto;margin-top:2px;color:var(--ok)}
+
+/* Estado vacío del capturado: una silueta, una frase y las dos salidas. Lo que
+   había antes era el formulario entero desplegado — de ahí la sensación de
+   «rellenar un Word». */
+.oj-persona.vacia{
+  background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius);
+  padding:26px 18px;text-align:center;
+}
+.oj-persona-ic{
+  width:44px;height:44px;margin:0 auto 10px;border-radius:999px;
+  background:var(--surface-3);color:var(--text-3);
+  display:flex;align-items:center;justify-content:center;
+}
+.oj-persona-ic svg{width:22px;height:22px}
+.oj-persona.vacia p{margin:0;font-size:14px;font-weight:600;color:var(--text)}
+.oj-persona.vacia small{display:block;margin-top:5px;font-size:12px;line-height:1.45;color:var(--text-3)}
+
+/* Estado del expediente. Antes era una lista abierta de hasta diez faltas con
+   su botón: cuatro pantallas de scroll por delante de la única decisión del
+   paso. Ahora es una barra con el número; se abre si interesa. */
+.oj-estado{border-radius:var(--radius-sm);border:1px solid;margin-bottom:10px;overflow:hidden}
+.oj-estado>summary{
+  cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;
+  padding:11px 13px;font-size:13px;
+}
+.oj-estado>summary::-webkit-details-marker{display:none}
+.oj-estado>summary::after{content:"▾";margin-left:auto;font-size:11px;opacity:.7;transition:transform var(--d2) var(--ease)}
+.oj-estado[open]>summary::after{transform:rotate(180deg)}
+.oj-estado>summary b{font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.oj-estado>summary span{
+  font-variant-numeric:tabular-nums;font-weight:700;font-size:12px;
+  min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.oj-estado.dura{background:var(--errB);border-color:var(--danger)}
+.oj-estado.dura>summary b,.oj-estado.dura>summary::after{color:var(--danger)}
+.oj-estado.dura>summary span{background:var(--danger);color:#fff}
+.oj-estado.blanda{background:var(--warn-bg);border-color:rgba(232,165,79,.35)}
+.oj-estado.blanda>summary b,.oj-estado.blanda>summary::after{color:var(--warn)}
+.oj-estado.blanda>summary span{background:var(--warn);color:var(--acc-fg)}
+.oj-estado-it{padding:6px 13px 0;font-size:13px;line-height:1.5;color:var(--text)}
+.oj-estado-it:last-child{padding-bottom:12px}
+
+/* El plazo constitucional, en un renglón (el cuadro completo vive en el paso 3). */
+.oj-plazo{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:9px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);
+  background:var(--surface-2);font-size:12.5px;color:var(--text-2);margin-bottom:10px;
+}
+.oj-plazo.dura{border-color:var(--danger);background:var(--errB)}
+.oj-plazo.blanda{border-color:rgba(232,165,79,.35);background:var(--warn-bg)}
+
+/* Destinatario del informe: el bloque por el que existe la pantalla. Se le da
+   el peso visual que tiene en el procedimiento — borde de acento del módulo,
+   título grande y el destinatario resuelto en una tarjeta legible de un vistazo. */
+.oj-dest{
+  background:var(--surface-2);border:1px solid var(--ojBd);border-left:3px solid var(--oj);
+  border-radius:var(--radius);padding:16px 14px;margin-bottom:14px;
+}
+.oj-dest-hd{
+  font-size:15px;font-weight:650;color:var(--text);margin-bottom:12px;
+  display:flex;align-items:center;
+}
+.oj-dest .oj-vias{margin-bottom:12px}
+.oj-dest-box{
+  background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:12px 14px;margin-bottom:10px;
+}
+.oj-dest-box.falta{color:var(--text-3);font-size:13px;border-style:dashed}
+.oj-dest-nom{font-size:15px;font-weight:650;line-height:1.35;color:var(--text)}
+.oj-dest-dir{font-size:13px;line-height:1.45;color:var(--text-2);margin-top:3px}
+.oj-dest-src{
+  font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:650;
+  color:var(--ok);margin-top:8px;
+}
+.oj-dest-mas{margin-top:4px}
+.oj-dest-mas+.oj-dest-mas{border-top:1px solid var(--border);padding-top:8px}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    MEJORA 1 — direcciones normalizadas, listas repetibles y fecha/hora
    Un único juego de clases para los widgets nuevos, usados en los tres sitios
    donde se pide una dirección (lugar de los hechos, personas del wizard y
@@ -2039,7 +2130,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 47;
+var _BUILD = 48;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2276,7 +2367,24 @@ function _compartirDoc(out) {
 }
 
 function openModal(html) { document.getElementById('modal-c').innerHTML = html; document.getElementById('modal').classList.add('open'); }
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
+/* ⚠️ MEJORA 3 — cerrar un modal VACÍA su contenido. Antes solo se le quitaba la
+   clase `open` y el HTML seguía en el DOM, invisible. Eso era inofensivo mientras
+   los modales solo mostraban listas, pero desde la obs. 1 el formulario del
+   capturado vive en uno: `ojCollectRequerido` se autolimita mirando `#oj-r-pn`,
+   lo encontraba en el modal cerrado y volcaba al modelo los valores VIEJOS que
+   habían quedado ahí — pisando, por ejemplo, la persona que se acababa de traer
+   del registro. Un formulario que no se ve no puede seguir dictando el modelo.
+   Y antes de vaciar se recoge lo tecleado: cerrar tocando fuera del modal
+   (el `onclick` del fondo) no puede perder lo que el funcionario acaba de
+   escribir. */
+function closeModal() {
+  var mc = document.getElementById('modal-c');
+  try {
+    if (mc && wc && wc.ojv === 2 && mc.querySelector('#oj-r-pn')) ojCollectRequerido();
+  } catch (e) {}
+  document.getElementById('modal').classList.remove('open');
+  if (mc) mc.innerHTML = '';
+}
 
 /* ═══ FASE E — CIFRADO AES-GCM + PIN ═══ */
 var _sessionKey = null;
@@ -2991,6 +3099,17 @@ function wizMontarAutoguardado(){
   if (!panel) return;
   panel.addEventListener('input', wizAutoguardar);
   panel.addEventListener('change', wizAutoguardar);
+  /* ⚠️ Mejora 3 — parte del diligenciamiento pasó a un modal (los datos del
+     capturado, obs. 1), y los modales viven FUERA de `#wz-panels`: sin esto,
+     escribir ahí no guardaba borrador y una app que muriera con el modal
+     abierto se llevaba lo tecleado. Vale también para el modal de persona de
+     flagrancia, que tenía el mismo hueco desde la Ola 1. `wizAutoguardar` ya
+     comprueba que haya un wizard vivo (`if (wc)`). */
+  var modal = document.getElementById('modal-c');
+  if (modal){
+    modal.addEventListener('input', wizAutoguardar);
+    modal.addEventListener('change', wizAutoguardar);
+  }
   _wizDraftListo = true;
 }
 // Al guardar o generar el documento el borrador deja de tener sentido.
@@ -3133,10 +3252,20 @@ function renderWiz() {
       '" title="'+escAttr(tit)+'" aria-label="'+escAttr('Paso '+(i+1)+': '+tit)+'"'+
       (i===ws?' aria-current="step"':'')+' onclick="wizGoto('+i+')">'+(i+1)+'</button>';
   });
+  var nav = (ws>0?'<button class="btn bs" onclick="wizPrev()">← Anterior</button>':'<div></div>')+
+    (ws<maxWs?'<button class="btn bp" onclick="wizNext()">Siguiente →</button>':'<button class="btn bp" onclick="wizSave()">Guardar</button>');
+  /* ⚠️ Los paneles se pintan ANTES que el aviso de progreso: el texto del aviso
+     depende de si el paso enseña asteriscos. Desde Mejora 3 (obs. 1) el paso del
+     capturado no tiene campos —su formulario vive en un modal—, así que decir
+     «van marcados con *» ahí mandaba a buscar una marca que no está en pantalla. */
+  document.getElementById('wz-panels').innerHTML =
+    '<div class="wpn on">'+cfg.panels[ws]()+'</div><div class="wnav">'+nav+'</div>';
   var nPaso = faltas[ws]||0;
+  var hayMarcas = !!document.querySelector('#wz-panels .req');
   var avisoPaso = nPaso
     ? '<div class="wz-falta"><b>'+nPaso+' dato'+(nPaso===1?'':'s')+' obligatorio'+(nPaso===1?'':'s')+
-      '</b> sin diligenciar en este paso — van marcados con <span class="req">*</span></div>'
+      '</b> sin diligenciar en este paso'+
+      (hayMarcas?' — van marcados con <span class="req">*</span>':'')+'</div>'
     : (wc && wc.ojv===2 && !Object.keys(faltas).length
         ? '<div class="wz-ok">Todos los datos obligatorios están diligenciados.</div>' : '');
   document.getElementById('wz-prog').innerHTML =
@@ -3145,10 +3274,6 @@ function renderWiz() {
       '<div class="wz-bar"><div class="wz-fill" style="width:'+pct+'%"></div></div>' +
     '</div>' +
     '<div class="wz-dots">'+dots+'</div>' + avisoPaso;
-  var nav = (ws>0?'<button class="btn bs" onclick="wizPrev()">← Anterior</button>':'<div></div>')+
-    (ws<maxWs?'<button class="btn bp" onclick="wizNext()">Siguiente →</button>':'<button class="btn bp" onclick="wizSave()">Guardar</button>');
-  document.getElementById('wz-panels').innerHTML =
-    '<div class="wpn on">'+cfg.panels[ws]()+'</div><div class="wnav">'+nav+'</div>';
   wizMontarAutoguardado();
   lcGeoPintarDatalist();      // sugerencias de municipio, incluidas las aprendidas
   lcDtPrev();                 // desglose D/M/A + hora tal como se imprimirá
@@ -4784,9 +4909,9 @@ var SIM={
     g.lugarBarrio=this.r(this.B);
     g.lugarMunicipio=muni; g.lugarDepartamento=g.lugarDepartamento||'Antioquia';
     g.lugarTipo=this.r(['VIA_PUBLICA','RESIDENCIA','ESTABLECIMIENTO','TRANSPORTE']);
-    g.coordenadas=(6+Math.random()*.4).toFixed(6)+', -'+(75+Math.random()*.4).toFixed(6);
-    g.formaUbicacion=this.r(['PATRULLAJE','CONTROL_ANTECEDENTES','PUESTO_CONTROL','LABORES','PRESENTACION']);
-    g.formaUbicacionOtra='';
+    /* ⚠️ Mejora 3 (obs. 3) — coordenadas y forma de ubicación dejaron de pedirse.
+       El simulador NO las inventa: un caso de demostración solo sirve si enseña
+       lo que produce hoy el formulario. */
     g.unidad=g.unidad||this.gUnidad(cfg);
     g.patrulla=g.patrulla||String(this.ri(1,60));
     g.vehiculo='Vehículo de patrullaje de placas '+this.rPlaca();
@@ -4866,51 +4991,23 @@ var SIM={
     r.identidadObservacion=r.identidadMetodo==='DOCUMENTO'?''
       :'Se contrastaron nombres, número de documento y fecha de nacimiento con los registrados en la orden, descartando homonimia.';
 
-    /* Verificación de la orden: la constancia de que se comprobó la vigencia
-       ANTES de materializar (por eso va unos minutos antes de la diligencia). */
-    var tVer=this.masMin(t,-this.ri(10,45));
-    /* ⚠️ `sistema` y `resultado` dejaron de ser campos del formulario (Mejora 2,
-       obs. 6). El simulador ya no los inventa: reproduce lo que produce hoy el
-       wizard, que es de lo único que sirve un caso de demostración. */
-    o.verificacion={sistema:'',
-      fecha:this.fISO(tVer),hora:this.hHM(tVer),
-      funcionario:[g.funcionarios[0].grado,g.funcionarios[0].nombre].filter(Boolean).join(' '),
-      resultado:'POSITIVO',
-      observacion:'La consulta arrojó orden de captura vigente a nombre del requerido.'};
+    /* ⚠️ Mejora 3 (obs. 2, 4 y 5) — la verificación de la orden, la lectura de
+       derechos, la comunicación, la defensa, el uso de la fuerza, la valoración
+       médica, las novedades y las incautaciones dejaron de ser campos: se
+       derivan de la diligencia o se cuentan en el relato. El simulador tampoco
+       los inventa — si lo hiciera, el caso de demostración enseñaría un oficio
+       que el formulario de hoy no puede producir. */
 
-    /* 6 · La actuación */
-    var tDer=this.masMin(t,this.ri(3,20));
-    a.derechos={leidos:true,fecha:this.fISO(tDer),hora:this.hHM(tDer),lugar:ojLugarTexto(g),
-      observacion:'Manifestó comprender los derechos que le fueron leídos y se le entregó copia del acta.'};
-    var logro=this.rb(.75);
-    a.comunicacion=logro
-      ? {seLogro:true,nombre:this.r(this.N)+' '+this.r(this.A),parentesco:this.r(['MADRE','PADRE','CONYUGE','HERMANO']),
-         telefono:this.rTel(),hora:this.hHM(this.masMin(tDer,this.ri(2,25)))}
-      : {seLogro:false,nombre:'',parentesco:'',telefono:'',hora:''};
-    var defTipo=this.r(['CONFIANZA','PUBLICO','NO_DESIGNA']);
-    a.defensor=defTipo==='NO_DESIGNA'
-      ? {tipo:defTipo,nombre:'',telefono:''}
-      : {tipo:defTipo,nombre:this.r(this.N)+' '+this.r(this.A)+' '+this.r(this.A),telefono:this.rTel()};
-    var fuerza=this.rb(.5)?'NINGUNO':this.r(['VERBAL','CONTROL_FISICO','MEDIOS_RIGIDOS']);
-    a.fuerza={tipo:fuerza,descripcion:fuerza==='NINGUNO'?''
-      :'Se empleó el medio estrictamente necesario y proporcional para asegurar la diligencia.'};
-    a.lesiones={hubo:false,descripcion:''};
-    a.valoracion={realizada:true,entidad:'Instituto Nacional de Medicina Legal y Ciencias Forenses',
-      fecha:this.fISO(tDer),hora:this.hHM(this.masMin(tDer,this.ri(40,180))),renuencia:false};
-    a.hayIncautacion=this.rb(.5);
-    a.incautaciones=a.hayIncautacion?this.rN(this.EMP,this.ri(1,2)).map(function(desc,i){
-      return {descripcion:desc,cantidad:'1',
-        rotulo:SIM.pad(SIM.ri(1,999999),6)+'-'+String(new Date().getFullYear()),
-        entregadoA:'Unidad de policía judicial'};
-    }):[];
-    // Los anexos se toman del catálogo por índice: nunca se repite el literal.
-    a.anexos=[OJ_CAT.anexos[0],OJ_CAT.anexos[1],OJ_CAT.anexos[2],OJ_CAT.anexos[3]];
-    if(a.hayIncautacion) a.anexos.push(OJ_CAT.anexos[4]);
-    if(this.rb(.5)) a.anexos.push(OJ_CAT.anexos[6]);
-    a.novedades=this.rb(.25)?'Sin novedades que reportar durante el traslado.':'';
+    /* 6 · La actuación: el relato con las palabras del funcionario (que es lo
+       único que ya no puede poner la app) y los anexos, marcados por la misma
+       función que los marca en el wizard. */
+    a.anexos=[]; a.anexosManual=false;
+    ojAnexosAuto(c);
+    if(this.rb(.5)) a.anexos.push('Registro fotográfico');
     a.observaciones='La persona requerida fue ubicada en la dirección indicada y no opuso resistencia. '+
-      'Se verificó la vigencia de la orden antes de materializarla y se le informó el motivo de la '+
-      (esc.menor?'aprehensión':'captura')+', el despacho que la libró y el proceso al que corresponde.';
+      'Se le informó el motivo de la '+(esc.menor?'aprehensión':'captura')+', el despacho que libró la orden '+
+      'y el proceso al que corresponde. Se comunicó con un familiar y no se empleó la fuerza durante el '+
+      'procedimiento.';
 
     /* 7 · Encabezado, custodia y firma: lo que Ajustes no tenga, lo inventa el
        simulador — si no, la validación dura (V26-V31) impediría el oficio. */
@@ -5167,7 +5264,13 @@ function genSeccionContent(sec, caso, cfg) {
     case 'conductas':
       var delito=(caso.conductas||[]).filter(Boolean).join(' / ');
       if(!delito) return '—';
-      if(caso.tipo==='OJ')    return 'Captura por orden judicial, delito '+delito;
+      /* Para un adolescente rige «aprehensión», no «captura» — la misma
+         diferencia legal que separa URI de CESPA, aplicada también a la orden
+         judicial (Ley 1098 de 2006). */
+      if(caso.tipo==='OJ'){
+        var esAdo=caso.ojv===2&&caso.oj&&typeof ojEsAdolescente==='function'&&ojEsAdolescente(caso);
+        return (esAdo?'Aprehensión':'Captura')+' por orden judicial, delito '+delito;
+      }
       if(caso.tipo==='CESPA') return 'Aprehensión por '+delito;
       return 'Captura por '+delito;
     case 'fecha_hora':
@@ -5194,7 +5297,17 @@ function genSeccionContent(sec, caso, cfg) {
       if(caso.numIncidente) parts.push('Incidente: '+caso.numIncidente);
       return parts.join(', ');
     case 'conocieron':
+      /* ⚠️ Mejora 3 (obs. 8) — «si bien el informe de captura por orden judicial
+         lo firma un solo funcionario, en el caso del dossier siempre se registran
+         los datos de la patrulla». Manda lo configurado en Ajustes (que es lo que
+         hoy sale bien y con las abreviaturas que usa la unidad); la patrulla y
+         los funcionarios de la propia captura entran solo si Ajustes está en
+         blanco — así un equipo sin configurar deja de imprimir la sección vacía
+         en vez de no imprimirla, y uno configurado no cambia una coma. */
       var partes=[], pat=patrullaLabel(cfg), func=getConocieronList(cfg);
+      var dil=(caso&&caso.ojv===2&&caso.oj)?caso.oj.diligencia:null;
+      if(!pat&&dil) pat=[dil.patrulla?(/patrulla/i.test(dil.patrulla)?dil.patrulla:'PATRULLA '+dil.patrulla):'',dil.unidad||''].filter(Boolean).join(' ');
+      if(!func.length&&dil) func=(dil.funcionarios||[]).map(function(f){return [f.grado,f.nombre].filter(Boolean).join(' ');}).filter(Boolean);
       if(pat) partes.push(pat);
       if(func.length) partes.push(func.join(' / '));
       return partes.join(' — ');
@@ -5207,6 +5320,14 @@ function genSeccionContent(sec, caso, cfg) {
 
 function genDossier(caso) {
   var cfg=DB.getConfig();
+  /* ⚠️ Mejora 3 (obs. 8) — las capturas por orden judicial guardadas ANTES de
+     este cambio no traen `lugar` ni `narracion` en el espejo, así que su dossier
+     seguiría saliendo con «??/??/??» y «—, Barrio —». Se proyectan al leer,
+     sobre una COPIA: el caso guardado no se toca (nada se migra a la fuerza) y
+     el dossier sale completo desde la primera vez que se abre. */
+  if(caso&&caso.ojv===2&&caso.oj&&typeof ojEspejarDossier==='function'){
+    try{ caso=ojEspejarDossier(JSON.parse(JSON.stringify(caso))); }catch(e){}
+  }
   var secciones=getDosierSecciones();
   var isCespa=caso.tipo==='CESPA';
   var enc='*DIOS Y PATRIA MI '+(cfg.rangoComandante||'CORONEL')+' '+dosGreeting()+'*\n'+
@@ -7375,17 +7496,31 @@ var OJ_CAT = {
   /* Anexos. El orden de esta lista es el orden en que se imprimen (y detrás van
      los que el usuario escriba a mano, en el orden que los escribió).
      {{ORD_NUMERO}} se resuelve con el No. de la orden ya registrado en el paso 1:
-     el usuario no vuelve a escribirlo. */
+     el usuario no vuelve a escribirlo.
+     ⚠️ Mejora 3 (obs. 6) — el orden y el contenido los fijó el usuario en campo:
+       1. Informe dejando a disposición
+       2. Acta de derechos + constancia de buen trato → ES UN SOLO FORMATO, y así
+          se firma en la calle; eran dos casillas para un mismo papel.
+       3. Copia del documento de identificación (faltaba y siempre viaja)
+       4. Copia de la orden, con su número resuelto solo
+     Se retiró «Acta de incautación / rótulo de cadena de custodia»: en una
+     captura por orden judicial no hay incautación ni cadena de custodia
+     (obs. 5). Un caso guardado que la traiga la sigue imprimiendo. */
   anexos: [
     'Informe dejando a disposición',
-    'Acta de derechos del capturado',
+    'Acta de derechos del capturado y constancia de buen trato',
+    'Copia documento de identificación',
     'Copia orden de captura oficio No. {{ORD_NUMERO}}',
-    'Constancia de buen trato',
-    'Acta de incautación / rótulo de cadena de custodia',
     'Valoración médico-legal o constancia de renuencia',
     'Registro fotográfico',
     'Reseña decadactilar'
   ],
+  /* Anexos de capturas guardadas antes de Mejora 3 → su equivalente actual.
+     Nada se pierde y nada se duplica: dos casillas viejas caen en la misma. */
+  anexosLegado: {
+    'Acta de derechos del capturado':'Acta de derechos del capturado y constancia de buen trato',
+    'Constancia de buen trato':'Acta de derechos del capturado y constancia de buen trato'
+  },
   parentesco: [
     ['MADRE','Madre'],['PADRE','Padre'],['CONYUGE','Cónyuge / compañero(a)'],
     ['HIJO','Hijo(a)'],['HERMANO','Hermano(a)'],['OTRO','Otro familiar o allegado']
@@ -7431,13 +7566,12 @@ function ojNuevoCaso(){
   c.oj.diligencia.lugarDepartamento=reg.departamento||'';
   c.oj.diligencia.unidad=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim()||(cfg.nombreEstacion||'');
   c.oj.diligencia.patrulla=cfg.patrullaNum||'';
-  c.oj.orden.verificacion.fecha=c.oj.diligencia.fecha;
-  c.oj.actuacion.derechos.fecha=c.oj.diligencia.fecha;
+  /* ⚠️ Mejora 3 (obs. 2) — la verificación de la orden y la lectura de derechos
+     ya NO se preguntan: se DERIVAN de la diligencia (ojVerificacion / ojDerechos).
+     Preguntaban por segunda vez la fecha, la hora y el funcionario que la app ya
+     tenía tres campos más arriba. La constancia sigue imprimiéndose igual. */
   if(perfil.nombre){
     c.oj.diligencia.funcionarios=[{grado:perfil.grado||'',nombre:perfil.nombre||'',cedula:sinPuntos(perfil.cedula||''),placa:perfil.placa||''}];
-    // Quien consulta los antecedentes es, casi siempre, quien está haciendo el
-    // procedimiento: se propone y se puede cambiar.
-    c.oj.orden.verificacion.funcionario=[perfil.grado||'',perfil.nombre||''].filter(Boolean).join(' ');
   }
   // Departamento del municipio del perfil regional, si la zona lo tiene claro.
   if(c.oj.diligencia.lugarMunicipio&&!c.oj.diligencia.lugarDepartamento)
@@ -7486,6 +7620,12 @@ function ojEstructura(){
          esta clave se mantiene SINCRONIZADA para no romper el simulador, el
          espejo del dossier ni las capturas ya guardadas. */
       autoridadSolicitante:'',
+      /* ⚠️ Mejora 3 (obs. 2) — `verificacion` dejó de ser un formulario. Sus
+         cuatro campos repetían datos que la diligencia ya tiene (el funcionario
+         que verifica ES el que captura; la fecha y la hora, las mismas). Se
+         derivan en `ojVerificacion()`. Las claves siguen en el modelo porque una
+         captura guardada antes de Mejora 3 conserva sus valores y los imprime
+         tal cual: lo que se registró no se reescribe nunca. */
       verificacion:{ sistema:'', fecha:'', hora:'', funcionario:'', resultado:'POSITIVO', observacion:'' }
     },
     /* La autoridad solicitante (= despacho que libró la orden). Su dirección
@@ -7510,13 +7650,26 @@ function ojEstructura(){
       senales:'', otrosDatos:'',
       identidadMetodo:'DOCUMENTO', identidadObservacion:''
     },
+    /* ⚠️ Mejora 3 (obs. 3) — `formaUbicacion` y `coordenadas` dejaron de pedirse:
+       el informe no las lleva en ninguna fila. La forma de ubicación abría el
+       relato («en desarrollo de …») y ahora lo abre una fórmula fija y cierta
+       («labores propias del servicio»); una captura guardada con su forma
+       registrada la sigue imprimiendo. */
     diligencia:{
       fecha:'', hora:'',
       lugarDireccion:'', lugarBarrio:'', lugarMunicipio:'', lugarDepartamento:'',
       lugarTipo:'VIA_PUBLICA', coordenadas:'',
-      formaUbicacion:'CONTROL_ANTECEDENTES', formaUbicacionOtra:'',
+      formaUbicacion:'', formaUbicacionOtra:'',
       unidad:'', patrulla:'', vehiculo:'', funcionarios:[]
     },
+    /* ⚠️ Mejora 3 (obs. 4 y 5) — de esta rama solo se PIDEN ya `observaciones`
+       (el relato con las palabras del funcionario) y `anexos`. Los derechos se
+       derivan de la diligencia; la comunicación, la defensa, el uso de la
+       fuerza, las lesiones, la valoración y las novedades se cuentan en el
+       relato, que es el espacio que el formato tiene para los hechos; y en una
+       captura por orden judicial no hay incautación ni cadena de custodia.
+       Las claves se conservan para que las capturas ya guardadas —y el módulo
+       de casos del formato anterior— sigan imprimiendo lo que registraron. */
     actuacion:{
       derechos:{ leidos:false, fecha:'', hora:'', lugar:'', observacion:'' },
       comunicacion:{ seLogro:null, nombre:'', parentesco:'', telefono:'', hora:'' },
@@ -7568,10 +7721,66 @@ function ojNormalizar(c){
   if(!Array.isArray(c.oj.actuacion.incautaciones)) c.oj.actuacion.incautaciones=[];
   if(!Array.isArray(c.oj.actuacion.anexos)) c.oj.actuacion.anexos=[];
   ojMigrarMejora2(c);
+  ojMigrarMejora3(c);
+  /* ⚠️ Los anexos se marcaban solos al PINTAR el paso de la narración y al
+     recolectarlo. Un caso que nunca pasó por esa pantalla —el que se genera
+     desde la tarjeta de la captura, el del simulador, el importado— llegaba al
+     documento con «Anexos:» y nada debajo. Se recalculan aquí, que es por donde
+     pasan TODOS los caminos que abren un caso (incluido buildOficioOJBlob), y
+     sigue sin tocarse nada en cuanto el usuario marcó a mano (`anexosManual`). */
+  ojAnexosAuto(c);
   // Encabezado, custodia y firma: si el caso no los trae (creado antes de que
   // existieran, o en un equipo sin configurar), se toman de Ajustes al abrirlo.
   ojPrellenarDeCfg(c);
   return c;
+}
+/* Capturas guardadas antes de Mejora 3. Igual que ojMigrarMejora2: EN MEMORIA,
+   no destructiva. Lo único que hay que reubicar son los anexos, porque dos de
+   sus literales se fusionaron en uno (obs. 6) y otro desapareció (obs. 5): sin
+   esto, una casilla marcada en un caso viejo dejaría de encontrarse en el
+   catálogo y se imprimiría como «otro anexo» al final de la lista. */
+function ojMigrarMejora3(c){
+  var a=c.oj.actuacion;
+  if(!Array.isArray(a.anexos)||!a.anexos.length) return c;
+  var out=[];
+  a.anexos.forEach(function(x){
+    var nuevo=OJ_CAT.anexosLegado[x]||x;
+    if(out.indexOf(nuevo)<0) out.push(nuevo);
+  });
+  // Y se reordena al orden del catálogo, que es el orden en que se imprimen.
+  a.anexos=OJ_CAT.anexos.filter(function(x){ return out.indexOf(x)>=0; })
+    .concat(out.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }));
+  return c;
+}
+/* ── Datos que la app DERIVA en vez de preguntar (Mejora 3, obs. 2 y 4) ──────
+   Regla: lo que la app puede saber no se pregunta, y lo que el usuario escribió
+   no se pisa nunca. Por eso las dos funciones anteponen SIEMPRE lo que traiga el
+   caso guardado y solo rellenan el hueco.
+     · La verificación de la orden la hace quien realiza el procedimiento, en el
+       mismo momento: funcionario, fecha y hora salen de la diligencia.
+     · La lectura de derechos (art. 303 CPP) ocurre en el sitio y a la hora de la
+       captura, y el acta viaja como anexo — que la app marca sola. */
+function ojVerificacion(c){
+  var v=c.oj.orden.verificacion||{}, g=c.oj.diligencia||{};
+  var func=ojListaFuncionarios(g);
+  return {
+    funcionario:v.funcionario||func[0]||'',
+    fecha:v.fecha||g.fecha||'',
+    hora:v.hora||g.hora||'',
+    sistema:v.sistema||'',
+    resultado:v.resultado||'POSITIVO',
+    observacion:v.observacion||''
+  };
+}
+function ojDerechos(c){
+  var d=c.oj.actuacion.derechos||{}, g=c.oj.diligencia||{};
+  return {
+    leidos:true,
+    fecha:d.fecha||g.fecha||'',
+    hora:d.hora||g.hora||'',
+    lugar:d.lugar||g.lugarDireccion||'',
+    observacion:d.observacion||''
+  };
 }
 /* Capturas guardadas con la estructura anterior a Mejora 2. Nada se pierde:
    lo que se dejó de pedir se reubica en el campo que ahora lo imprime.
@@ -7934,7 +8143,9 @@ function ojValidar(c){
   else if(vig.estado==='CANCELADA') add('V01b','DURA',OJ_PANT.orden,'La orden figura CANCELADA: no puede sustentar una puesta a disposición.');
   else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',OJ_PANT.orden,'La orden figura SUSPENDIDA: verifica su estado con el despacho antes de generar el informe.');
   else if(vig.estado==='POR_VENCER') add('V01d','BLANDA',OJ_PANT.orden,'La orden vence en '+vig.dias+' día(s) ('+ojFechaCorta(vig.hasta)+').');
-  if(!o.verificacion.hora) add('V17','BLANDA',OJ_PANT.orden,'Sin hora de verificación de la orden: es la constancia de que se comprobó la vigencia antes de materializar.');
+  /* ⚠️ V17 («sin hora de verificación») se retiró con Mejora 3 (obs. 2): la hora
+     de la verificación ya no se teclea, se deriva de la diligencia — advertir de
+     un dato que la app pone sola es ruido puro. */
   // Autoridad solicitante = despacho que libró la orden (numeral 2, dato 8).
   if(!d.nombre) add('V05','DURA',OJ_PANT.despacho,'Falta la autoridad solicitante (el despacho que libró la orden): es el dato 8 del numeral 2 del informe.');
   if(!(pr.delitos||[]).length) add('V07','BLANDA',OJ_PANT.proceso,'No se registró ningún delito: el art. 298 CPP exige que la orden lo indique.');
@@ -7953,11 +8164,13 @@ function ojValidar(c){
   if(!dl.lugarDireccion) add('V14','DURA',OJ_PANT.diligencia,'Falta el lugar exacto de la '+ojTermino(c).acc+'.');
   if(!(dl.funcionarios||[]).length) add('V15','DURA',OJ_PANT.diligencia,'Registra al menos un funcionario que participó en la diligencia.');
 
-  // Paso 6 — la actuación
-  if(!ac.derechos.leidos) add('V16','DURA',OJ_PANT.actuacion,'Debe constar la lectura de los derechos del '+ojTermino(c).sust+' (art. 303 CPP).');
-  else if(!ac.derechos.hora) add('V16b','DURA',OJ_PANT.actuacion,'Falta la hora de lectura de los derechos: sin ella la constancia del art. 303 CPP queda incompleta.');
-  if(ac.hayIncautacion&&(ac.incautaciones||[]).some(function(e){return !e.rotulo;}))
-    add('V20','BLANDA',OJ_PANT.actuacion,'Hay elementos incautados sin rótulo de cadena de custodia.');
+  /* ── La actuación ──
+     ⚠️ Mejora 3 (obs. 4 y 5): V16/V16b (lectura de derechos) y V20 (rótulo de
+     cadena de custodia) desaparecen. La lectura de derechos ya no es una casilla
+     que el funcionario tenga que marcar —se deriva, y el acta viaja como anexo
+     marcado solo (ojAnexosAuto)—, así que bloquear el oficio por ella era pedir
+     un clic para desbloquear algo que la app ya daba por cierto. Y en una
+     captura por orden judicial no hay incautación que rotular. */
   if(!(ac.anexos||[]).length) add('V21','BLANDA',OJ_PANT.actuacion,'No se marcó ningún anexo. El acta de derechos y la copia de la orden viajan con el oficio.');
 
   // Paso 4 — la disposición (revisión)
@@ -8077,14 +8290,12 @@ var OJ_LISTS={
       {k:'cedula',l:'Cédula',ph:'Sin puntos',mono:true,par:'b'},
       {k:'nombre',l:'Nombres y apellidos',ph:'Nombre completo'},
       {k:'placa',l:'Placa institucional',ph:'Opcional',mono:true}
-    ]},
-  incautaciones:{ path:'actuacion.incautaciones', et:'Elemento', vacio:'Sin elementos registrados.',
-    campos:[
-      {k:'descripcion',l:'Descripción del elemento',ph:'Ej: un teléfono móvil marca…'},
-      {k:'cantidad',l:'Cantidad',ph:'Ej: 1',par:'a'},
-      {k:'rotulo',l:'Rótulo de cadena de custodia',ph:'No. del rótulo',mono:true,par:'b'},
-      {k:'entregadoA',l:'Entregado a',ph:'Unidad o funcionario que lo recibe'}
     ]}
+  /* ⚠️ La lista `incautaciones` se eliminó con Mejora 3 (obs. 5): por lógica del
+     procedimiento, una captura por orden judicial no produce incautación ni
+     cadena de custodia — si en la diligencia aparece algo, es un delito NUEVO y
+     se documenta como captura en flagrancia aparte, con su FPJ-5 y su rótulo.
+     `ojRelato` sigue relacionando los elementos de una captura ya guardada. */
 };
 /* Delito ⇒ artículo del Código Penal. Solo las conductas del catálogo que ya
    usa flagrancia, y solo cuando el artículo está vacío: la orden manda, y hay
@@ -8301,22 +8512,22 @@ function ojStep1(){
         : '')+
     '</div>'+
 
-    /* Constancia de verificación. Se pliega y solo queda lo que el informe
-       imprime: quién comprobó la orden y cuándo.
-       ⚠️ «Sistema o medio de consulta» y «Resultado» se eliminaron (obs. 6):
-       eran dos selectores que saturaban la recolección y no aportaban al
-       informe — el resultado solo se imprimía cuando NO era positivo, y el
-       medio se sustituye por la fórmula genérica del relato. */
-    '<details class="oj-blk oj-mas"'+(o.verificacion.hora?'':' open')+'>'+
-      '<summary>Verificación de la orden antes de materializar <small>— constancia de que se comprobó la vigencia</small></summary>'+
-      '<p class="oj-hint">No basta decir «registraba orden vigente»: hay que decir quién lo comprobó y cuándo.</p>'+
-      ojwF('Funcionario que verificó',ojwIn('oj-o-vfun',o.verificacion.funcionario,'Grado y nombre'))+
-      ojwR(
-        ojwF('Fecha',ojwDt('oj-o-vfec',o.verificacion.fecha)),
-        ojwF('Hora',ojwHr('oj-o-vhor',o.verificacion.hora))
-      )+
-      ojwF('Observación de la verificación',ojwIn('oj-o-vobs',o.verificacion.observacion,'Opcional'))+
-    '</details>';
+    /* ⚠️ Mejora 3 (obs. 2) — aquí vivía «Verificación de la orden antes de
+       materializar»: funcionario, fecha, hora y observación. Los tres primeros
+       son EXACTAMENTE los mismos datos que el paso 3 ya pide (quien verifica la
+       orden es quien hace la captura, y lo hace en el mismo momento), así que se
+       preguntaban dos veces en dos pantallas distintas. Ahora se derivan
+       (`ojVerificacion`) y la constancia se sigue imprimiendo en el relato con
+       su hora y su funcionario. */
+    ojNotaDerivada('La constancia de verificación de la orden la arma el informe con el '+
+      'funcionario, la fecha y la hora del paso 3. No hay que escribirla otra vez.');
+}
+/* Nota de «esto lo pone la app»: sustituye a un bloque de campos que se retiró.
+   Se ve una vez, ocupa un renglón y evita que el funcionario busque en el
+   formulario un dato que el informe ya trae. */
+function ojNotaDerivada(txt){
+  return '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'+escHtml(txt)+'</p>';
 }
 
 /* ── Registro de despachos ─────────────────────────────────────────────────
@@ -8407,22 +8618,116 @@ function ojGuardarDespacho(){
    informe (obs. 3 y 6). La dirección del despacho sigue existiendo, pero se
    pide solo cuando hace falta — al remitir a un juzgado (obs. 1). */
 
-// ── Paso 1 · «1. IDENTIFICACIÓN DEL CAPTURADO» ──
+/* ── Paso 1 · «1. IDENTIFICACIÓN DEL CAPTURADO» ─────────────────────────────
+   ⚠️ MEJORA 3 (obs. 1) — la pantalla ya no es el formulario, es la TARJETA de la
+   persona. Antes desplegaba de golpe los 25 campos de identificación (seis
+   bloques, cuatro pantallas de scroll) más un botón «Cargar desde Personas» que
+   abría una lista: entrar al paso era encontrarse un formulario de papel.
+   Ahora sigue el patrón que flagrancia ya usaba y que el usuario reconoce
+   (`rMultiPerson`): tarjeta + «Agregar» + «Buscar existente», y el
+   diligenciamiento ocurre en un modal enfocado, como en URI y CESPA.
+   ⚠️ La diferencia jurídica se mantiene: en flagrancia se capturan N personas en
+   un mismo hecho; una orden judicial se libra contra UNA persona y el numeral 1
+   del formato tiene una sola tabla — por eso aquí la tarjeta es una y los
+   botones desaparecen en cuanto está diligenciada. */
 function ojStep4(){
+  var r=wc.oj.requerido, t=ojTermino(wc);
+  var edad=ojEdadEnHechos(wc);
+  var aviso='';
+  if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>Al momento de los hechos tenía '+edad+' años: no es responsable penalmente. No procede el informe de captura; corresponde activar la ruta de protección.</div>';
+  else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Sistema de responsabilidad penal para adolescentes</b>Al momento de los hechos tenía '+(edad===null?'menos de 18':edad)+' años: el documento hablará de «aprehensión» y el destino será el sistema de adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
+  return '<div class="st" style="margin-top:0">1. Identificación del '+escHtml(t.sust)+'</div>'+
+    '<p class="oj-hint">La identidad es la verificación central de una captura por orden judicial: es lo que descarta una homonimia.</p>'+
+    aviso+ojRequeridoCard();
+}
+/* Tarjeta del requerido (o el estado vacío con las dos salidas). El resumen
+   enseña lo que va impreso en el numeral 1, no todo lo que se guardó: nombre,
+   documento y edad — que es como se identifica a alguien de un vistazo. */
+function ojRequeridoCard(){
+  var r=wc.oj.requerido, t=ojTermino(wc);
+  var nom=ojNombreRequerido(r);
+  var faltan=ojFaltasRequerido(r);
+  if(!nom){
+    return '<div class="oj-persona vacia">'+
+      '<div class="oj-persona-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '+
+        'stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>'+
+      '<p>Sin '+escHtml(t.sust)+' registrado</p>'+
+      '<small>Agrégalo a mano o tráelo del registro de Personas: si ya estuvo capturado, sus datos vuelven solos.</small>'+
+    '</div>'+ojRequeridoBotones();
+  }
+  return '<div class="pcard">'+
+      '<div><div class="pinfo">'+escHtml(nom)+'</div>'+
+      '<div class="pdoc">'+escHtml(ojDocRequerido(r)||'Sin documento')+
+        (r.edad?' · '+escHtml(r.edad)+' años':'')+'</div></div>'+
+      '<div class="pcard-actions">'+
+        '<button class="pcard-btn" onclick="ojAbrirRequerido()" title="Editar" aria-label="Editar">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
+          '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
+        '<button class="pcard-btn del" onclick="ojQuitarRequerido()" title="Quitar" aria-label="Quitar">✕</button>'+
+      '</div>'+
+    '</div>'+
+    (faltan.length
+      ? '<div class="oj-alert dura" style="margin-top:10px"><b>Faltan datos obligatorios</b>'+escHtml(faltan.join(' · '))+
+        '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="ojAbrirRequerido()">Completar</button></div>'
+      : '<button class="btn bs bbl bsm" style="margin-top:4px" onclick="ojAbrirRequerido()">Ver o corregir los datos</button>');
+}
+function ojRequeridoBotones(){
+  var t=ojTermino(wc);
+  return '<div class="flx g8" style="margin-top:12px">'+
+    '<button class="btn bp bsm" style="flex:1" onclick="ojAbrirRequerido()">+ Agregar '+escHtml(t.sust)+'</button>'+
+    '<button class="btn bs bsm" style="flex:1" onclick="ojCargarPersona()">Buscar existente</button></div>';
+}
+// Las mismas faltas que bloquean el oficio (V08/V09), dichas en corto.
+function ojFaltasRequerido(r){
+  var f=[];
+  if(!r.priNom||!r.priApe) f.push('nombre completo');
+  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') f.push('número de documento');
+  return f;
+}
+function ojQuitarRequerido(){
+  var base=ojEstructura().requerido, r=wc.oj.requerido;
+  Object.keys(base).forEach(function(k){ r[k]=(base[k]&&typeof base[k]==='object')?JSON.parse(JSON.stringify(base[k])):base[k]; });
+  r.tipoDocManual=false;
+  renderWiz(); wizGuardarBorrador(true);
+}
+/* El formulario completo, dentro de un modal. Es el MISMO contenido de antes
+   (mismos ids, mismos bloques): `ojCollectRequerido` se autolimita mirando
+   `#oj-r-pn`, así que fuera del modal simplemente no recolecta — plegar no es
+   borrar, y no estar en pantalla, tampoco. */
+function ojAbrirRequerido(){
+  ojCollect();                       // no perder lo que haya en el paso visible
+  var t=ojTermino(wc);
+  openModal('<div class="mh"><h2>Datos del '+escHtml(t.sust)+'</h2>'+
+      '<button class="mx" onclick="ojCerrarRequerido()">✕</button></div>'+
+      '<div id="oj-req-form">'+ojRequeridoForm()+'</div>'+
+      '<button class="btn bp bbl mt16" onclick="ojGuardarRequerido()">Guardar</button>');
+}
+/* La fecha de nacimiento cambia la edad, el tipo de documento (T.I. si era
+   adolescente) y el aviso del SRPA: se repinta el formulario del modal, no el
+   paso de detrás — que está tapado y perdería lo tecleado al volver. */
+function ojRequeridoRefrescar(){
+  ojCollectRequerido();
+  var box=document.getElementById('oj-req-form');
+  if(box) box.innerHTML=ojRequeridoForm();
+}
+function ojCerrarRequerido(){ ojCollectRequerido(); closeModal(); renderWiz(); wizGuardarBorrador(true); }
+function ojGuardarRequerido(){
+  ojCollectRequerido();
+  var f=ojFaltasRequerido(wc.oj.requerido);
+  closeModal(); renderWiz(); wizGuardarBorrador(true);
+  if(f.length) toast('Guardado — todavía falta: '+f.join(', '),5000);
+}
+function ojRequeridoForm(){
   var r=wc.oj.requerido, t=ojTermino(wc);
   /* Adolescente al momento de los hechos ⇒ el documento de identidad es la
      tarjeta de identidad. El FPJ-5 ya lo resolvía (markDocType); aquí no, y el
      tipo se quedaba en «C.C.» por defecto en un caso del SRPA. Solo se cambia
      mientras el usuario no haya elegido a mano (tipoDocManual). */
   if(!r.tipoDocManual && r.tipoDoc==='CC' && ojEsAdolescente(wc)) r.tipoDoc='TI';
-  var edad=ojEdadEnHechos(wc);
-  var aviso='';
-  if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>Al momento de los hechos tenía '+edad+' años: no es responsable penalmente. No procede el informe de captura; corresponde activar la ruta de protección.</div>';
-  else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Sistema de responsabilidad penal para adolescentes</b>Al momento de los hechos tenía '+(edad===null?'menos de 18':edad)+' años: el documento hablará de «aprehensión» y el destino será el sistema de adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
-  return '<div class="st" style="margin-top:0">1. Identificación del '+escHtml(t.sust)+'</div>'+
-    '<p class="oj-hint">El informe abre por aquí, así que el formulario también (Mejora 2, obs. 2). En una captura por orden judicial la verificación central es la identidad: estos datos son los que permiten descartar una homonimia.</p>'+
-    aviso+
-    '<button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="ojCargarPersona()">Cargar desde Personas</button>'+
+  var edad=ojEdadEnHechos(wc), aviso='';
+  if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>No es responsable penalmente: no procede el informe de captura, corresponde la ruta de protección.</div>';
+  else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Adolescente</b>El documento hablará de «aprehensión» y el destino será el sistema de responsabilidad penal para adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
+  return aviso+
 
     '<div class="oj-blk">'+
       '<div class="st">Identificación</div>'+
@@ -8449,7 +8754,7 @@ function ojStep4(){
          a solo lectura y se explica de dónde sale; sin fecha se puede escribir,
          porque algunas órdenes solo traen la edad. */
       ojwR(
-        ojwF('Fecha de nacimiento',ojwDt('oj-r-fn',r.fechaNac,' onchange="ojCollect();renderWiz()"')),
+        ojwF('Fecha de nacimiento',ojwDt('oj-r-fn',r.fechaNac,' onchange="ojRequeridoRefrescar()"')),
         ojwF('Edad',ojwIn('oj-r-ed',r.fechaNac?String(calcAgeVal(r.fechaNac)):r.edad,'Años',
           {mono:true,extra:' inputmode="numeric"'+(r.fechaNac?' readonly':'')}),
           r.fechaNac?'Calculada de la fecha de nacimiento.':'')
@@ -8604,14 +8909,9 @@ function ojReloj36Html(){
   return '<div class="oj-alert '+cls+'"><b>Término de 36 horas — '+p.semaforo+'</b>'+escHtml(txt)+
     '<div class="oj-fund">Art. 28 de la Constitución Política · art. 297 CPP</div></div>';
 }
-function ojGPS(){
-  if(!navigator.geolocation){ toast('Este equipo no reporta ubicación'); return; }
-  toast('Obteniendo coordenadas…');
-  navigator.geolocation.getCurrentPosition(function(pos){
-    var el=document.getElementById('oj-g-coord');
-    if(el){ el.value=pos.coords.latitude.toFixed(6)+', '+pos.coords.longitude.toFixed(6); toast('Coordenadas capturadas ✓'); }
-  },function(){ toast('No se pudo obtener la ubicación'); },{enableHighAccuracy:true,timeout:10000});
-}
+/* ⚠️ `ojGPS` y el campo de coordenadas se eliminaron con Mejora 3 (obs. 3): no
+   salen en ninguna fila del formato y el relato las citaba como un paréntesis
+   que nadie pide. Un caso guardado con coordenadas las sigue imprimiendo. */
 /* ── Paso 3 · «3. MATERIALIZACIÓN DE LA CAPTURA» ────────────────────────────
    El numeral 3 del formato tiene TRES filas: Fecha y hora · Lugar · Tipo de
    lugar (obs. 3). Se piden primero y en ese orden. Lo demás de esta pantalla no
@@ -8639,10 +8939,12 @@ function ojStep5(){
       ojwF('Tipo de lugar',ojwSel('oj-g-tlug','tipoLugar',g.lugarTipo,''))+
     '</div>'+
 
-    /* Lo que sigue NO es una fila del formato: alimenta el relato de los hechos.
-       Por eso va después del numeral y, salvo los funcionarios (obligatorios),
-       plegado. Las coordenadas bajaron aquí: no salen en ninguna fila y son
-       opcionales — pero cuando se toman, el relato las cita. */
+    /* Lo que sigue NO es una fila del formato: es quién firma el relato de los
+       hechos. ⚠️ Mejora 3 (obs. 3) — aquí estaban «Forma de ubicación» y las
+       coordenadas: dos controles más para un dato que el informe no lleva en
+       ninguna fila. El relato abre ahora con una fórmula fija y cierta
+       («en desarrollo de labores propias del servicio»), y lo que tenga de
+       particular el procedimiento se cuenta en la narración. */
     '<div class="oj-blk">'+
       '<div class="st">Quién hizo la diligencia</div>'+
       ojwR(
@@ -8652,101 +8954,46 @@ function ojStep5(){
       '<label class="fl" style="margin-top:4px">Funcionarios participantes'+
         ((wc.oj.diligencia.funcionarios||[]).length?'':'<span class="req" title="Obligatorio: debe constar al menos un funcionario">*</span>')+'</label>'+
       ojListaBtn('funcionarios','Agregar funcionario')+
-      ojwF('Forma de ubicación',ojwSel('oj-g-form','formaUbicacion',g.formaUbicacion,'',' onchange="ojCollect();renderWiz()"'),
-        'Abre el relato de los hechos: «en desarrollo de …».')+
-      (g.formaUbicacion==='OTRA'?ojwF('Describe la forma de ubicación',ojwIn('oj-g-formo',g.formaUbicacionOtra,'')):'')+
-      '<details class="oj-mas"'+(g.coordenadas?' open':'')+'>'+
-        '<summary>Coordenadas geográficas <small>— opcionales; el relato las cita si se toman</small></summary>'+
-        ojwF('Latitud, longitud',ojwIn('oj-g-coord',g.coordenadas,'Latitud, longitud',{mono:true}))+
-        '<button class="btn bs bsm" onclick="ojGPS()">Tomar del GPS del equipo</button>'+
-      '</details>'+
+      ojNotaDerivada('El oficio lo firma un solo funcionario (paso 4); el dossier registra la patrulla completa que ves aquí.')+
     '</div>';
 }
+/* ── El relato y los anexos ──────────────────────────────────────────────────
+   ⚠️ MEJORA 3 (obs. 4 y 5) — esta pantalla era «ACTUACIÓN POLICIAL»: cuatro
+   bloques y diecinueve controles (derechos leídos con su fecha, hora, lugar y
+   observación; comunicación y defensa; uso de la fuerza, lesiones, valoración
+   médica y novedades; elementos incautados y cadena de custodia).
+   Qué se hizo con cada cosa y por qué:
+     · Derechos → se DERIVAN (`ojDerechos`). Se leen en el sitio y a la hora de la
+       captura, que la app ya tiene, y el acta es un documento aparte que viaja
+       como anexo —marcado solo—. La constancia del art. 303 CPP se sigue
+       imprimiendo en el relato, palabra por palabra.
+     · Comunicación, defensa, fuerza, lesiones, valoración y novedades → se
+       cuentan en la NARRACIÓN, que es el espacio que el formato tiene para los
+       hechos. Eran catorce controles para alimentar frases que el funcionario
+       escribe mejor con sus palabras.
+     · Incautaciones → no existen en una captura por orden judicial (obs. 5).
+   Lo que quedó es lo que el informe necesita y nadie más puede escribir: el
+   relato, y la comprobación de los anexos. */
 function ojStep6(){
-  var a=wc.oj.actuacion, t=ojTermino(wc), g=wc.oj.diligencia;
-  /* Los derechos se leen al momento de la captura, en el mismo sitio: si no hay
-     nada diligenciado se propone la hora y el lugar de la diligencia, que es lo
-     que el funcionario iba a escribir. Se puede corregir; solo se rellena una
-     vez y nunca se pisa lo escrito. */
-  if(!a.derechos.hora && g.hora) a.derechos.hora=g.hora;
-  if(!a.derechos.lugar && g.lugarDireccion) a.derechos.lugar=g.lugarDireccion;
-  if(!a.derechos.fecha && g.fecha) a.derechos.fecha=g.fecha;
+  var a=wc.oj.actuacion, t=ojTermino(wc);
   ojAnexosAuto(wc);
-  ojPost(function(){ ojListaPintar('incautaciones'); });
   var anexosSel=a.anexos||[];
   var anexosHtml=OJ_CAT.anexos.map(function(x,i){
     // El del oficio de la orden se muestra ya con su número resuelto: el usuario
-    // no lo escribe, sale del paso 1.
+    // no lo escribe, sale del paso 2.
     return ojwChk('oj-a-anx'+i,anexosSel.indexOf(x)>=0,ojAnexoTexto(x,wc),'',
       ' onchange="wc.oj.actuacion.anexosManual=true"');
   }).join('');
   var otros=anexosSel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }).join(', ');
   var nAnx=anexosSel.length;
-  return '<div class="st">Actuación policial</div>'+
-
-    '<div class="oj-blk">'+
-      '<div class="st">Derechos del '+escHtml(t.sust)+'</div>'+
-      '<p class="oj-hint">La app no genera el acta de derechos: se diligencia aparte y viaja como anexo. Aquí queda la constancia de que se leyeron, con hora y lugar (art. 303 CPP).</p>'+
-      ojwChk('oj-a-dler',a.derechos.leidos,'Se leyeron y materializaron los derechos'+(a.derechos.leidos?'':' *'),'Guardar silencio, designar defensor, ser informado del hecho y de quién ordenó la captura, comunicar su situación.')+
-      ojwR3(
-        ojwF('Fecha',ojwDt('oj-a-dfec',a.derechos.fecha)),
-        ojwF('Hora (24 h)',ojwHr('oj-a-dhor',a.derechos.hora),'',a.derechos.leidos&&!a.derechos.hora),
-        ojwF('Lugar',ojwIn('oj-a-dlug',a.derechos.lugar,'Dónde se leyeron'))
-      )+
-      ojwF('Observación',ojwIn('oj-a-dobs',a.derechos.observacion,'Opcional'))+
-    '</div>'+
-
-    '<details class="oj-blk oj-mas"'+(a.comunicacion.nombre||a.defensor.tipo?' open':'')+'>'+
-      '<summary>Comunicación y defensa <small>— art. 303 CPP; se imprime en el oficio</small></summary>'+
-      ojwR(
-        ojwF('Persona a quien se comunicó',ojwIn('oj-a-cnom',a.comunicacion.nombre,'Nombre')),
-        ojwF('Parentesco',ojwSel('oj-a-cpar','parentesco',a.comunicacion.parentesco,'— Selecciona —'))
-      )+
-      ojwR(
-        ojwF('Teléfono',ojwIn('oj-a-ctel',a.comunicacion.telefono,'',{mono:true})),
-        ojwF('Hora de la comunicación',ojwHr('oj-a-chor',a.comunicacion.hora))
-      )+
-      ojwR(
-        ojwF('Defensor',ojwSel('oj-a-dtipo','defensor',a.defensor.tipo,'— Selecciona —')),
-        ojwF('Nombre del defensor',ojwIn('oj-a-dnom',a.defensor.nombre,'Si lo designó'))
-      )+
-    '</details>'+
-
-    /* Uso de la fuerza, lesiones, valoración y novedades: en la inmensa mayoría
-       de los procedimientos no hubo nada de esto. Se pliega, y se abre solo si
-       ya hay algo registrado. */
-    '<details class="oj-blk oj-mas"'+
-      ((a.fuerza.tipo&&a.fuerza.tipo!=='NINGUNO')||a.lesiones.hubo||a.valoracion.realizada||a.novedades?' open':'')+'>'+
-      '<summary>Uso de la fuerza, salud y novedades <small>— si no hubo nada, no hay que tocarlo</small></summary>'+
-      ojwF('Uso de la fuerza',ojwSel('oj-a-fza','usoFuerza',a.fuerza.tipo,''))+
-      ojwF('Descripción del uso de la fuerza',ojwIn('oj-a-fzad',a.fuerza.descripcion,'Solo si se empleó'))+
-      ojwChk('oj-a-lhubo',a.lesiones.hubo,'Se presentaron lesiones')+
-      ojwF('Descripción de las lesiones',ojwIn('oj-a-ldesc',a.lesiones.descripcion,'Opcional'))+
-      ojwR(
-        ojwF('Valoración médica',
-          '<select class="fs" id="oj-a-vmed">'+
-          [['','— Selecciona —'],['SI','Realizada'],['NO','No realizada'],['RENUENCIA','El '+t.sust+' se negó']].map(function(x){
-            return '<option value="'+x[0]+'"'+((a.valoracion.realizada||'')===x[0]?' selected':'')+'>'+escHtml(x[1])+'</option>';
-          }).join('')+'</select>'),
-        ojwF('Entidad que la practicó',ojwIn('oj-a-vent',a.valoracion.entidad,'Opcional'))
-      )+
-      ojwF('Novedades de la diligencia',ojwTA('oj-a-nov',a.novedades,'Solo si hubo alguna novedad que deba conocer la autoridad receptora.',3))+
-    '</details>'+
-
-    '<div class="oj-blk">'+
+  return '<div class="oj-blk">'+
       '<div class="st">Narración de los hechos</div>'+
-      '<p class="oj-hint">Espacio libre. El oficio ya arma solo el relato con los datos que registraste '+
-      '(fecha, hora, lugar, verificación de la orden, lectura de derechos, puesta a disposición y la unidad '+
-      'donde queda el '+escHtml(t.sust)+'). Escribe aquí lo que solo tú sabes del procedimiento: se imprime al '+
-      'final de la narración bajo el título «Observaciones».</p>'+
-      ojwF('Relato del procedimiento',ojwTA('oj-a-obs',a.observaciones,'Cuenta el procedimiento con tus palabras. Este espacio va en blanco hasta que lo escribas.',7))+
+      '<p class="oj-hint">El oficio arma solo el relato con lo que ya registraste: fecha, hora, lugar, '+
+      'verificación de la orden, lectura de derechos y puesta a disposición. Escribe aquí lo que solo tú '+
+      'sabes — cómo se ubicó, si hubo uso de la fuerza, lesiones o novedades, con quién se comunicó. '+
+      'Se imprime al final, bajo «Observaciones».</p>'+
+      ojwF('Relato del procedimiento',ojwTA('oj-a-obs',a.observaciones,'Cuenta el procedimiento con tus palabras.',8))+
     '</div>'+
-
-    '<details class="oj-blk oj-mas"'+(a.hayIncautacion?' open':'')+'>'+
-      '<summary>Elementos incautados y cadena de custodia <small>— solo si se incautó algo</small></summary>'+
-      ojwChk('oj-a-hayinc',a.hayIncautacion,'Se incautaron elementos en la diligencia','Si el hallazgo constituye un delito nuevo, se registra como caso de flagrancia aparte: este informe solo lo menciona.')+
-      ojListaBtn('incautaciones','Agregar elemento')+
-    '</details>'+
 
     /* Los anexos se marcan solos desde la Ola 2: se pliegan porque ya no son una
        tarea, son una comprobación. */
@@ -8757,23 +9004,35 @@ function ojStep6(){
       ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas — se imprimen en el orden que los escribas'))+
     '</details>';
 }
+/* ── Paso 4 · REVISIÓN Y PUESTA A DISPOSICIÓN ───────────────────────────────
+   ⚠️ MEJORA 3 (obs. 7) — «es una información sumamente importante y relevante
+   […] y queda visualmente perdida en su totalidad».
+   Diagnóstico: la decisión que da sentido a esta pantalla —a quién se remite el
+   informe— quedaba en el sexto lugar de la lectura, detrás del reloj de las 36
+   horas, de una lista de diez faltantes con dos renglones cada una y de un
+   cuadro de fundamento legal. Todo lo de arriba era ESTADO (informa) y lo de
+   abajo, ACCIÓN (decide): el orden estaba invertido.
+   Ahora: el destinatario abre la pantalla y es lo único que se ve entero; el
+   estado se resume en una barra que se despliega si interesa; y el resto
+   (constancia de entrega, membrete, firma) sigue plegado como estaba. */
 function ojStep7(){
   var d=wc.oj.destino, s=ojAplicarSugerencia(wc);
   var vals=ojValidar(wc), duras=vals.filter(function(v){return v.nivel==='DURA';}), blandas=vals.filter(function(v){return v.nivel!=='DURA';});
-  var sug='<div class="oj-alert '+(s.regla.indexOf('R0')===0?'dura':'info')+'">'+
-    '<b>Destinatario propuesto'+(s.nombre?' — '+escHtml(ojLbl('tipoDespacho',s.tipo)||s.tipo):'')+'</b>'+
-    (s.nombre?escHtml(s.nombre)+'<br>':'')+escHtml(s.nota)+
-    '<div class="oj-fund">'+escHtml(s.regla)+' · '+escHtml(s.fundamento)+'</div></div>';
   /* Cada falta lleva su propio botón: tocarla abre el paso donde se diligencia.
      Antes era texto plano al final de ocho pantallas de scroll — el funcionario
-     leía «falta el número de la orden» y tenía que volver a mano. */
-  var lista=function(arr,cls,titulo){
+     leía «falta el número de la orden» y tenía que volver a mano.
+     ⚠️ Y ahora va PLEGADO: diez faltas eran cuatro pantallas de scroll entre el
+     funcionario y la única decisión de este paso. La barra dice cuántas son y de
+     qué color, que es lo que hay que saber para decidir si abrirla. */
+  var lista=function(arr,cls,titulo,abierto){
     if(!arr.length) return '';
-    return '<div class="oj-alert '+cls+'"><b>'+titulo+'</b>'+arr.map(function(v){
-      return '<div style="margin:4px 0">· '+escHtml(v.msg)+
-        ' <button class="btn bs bsm" style="margin-left:2px;min-height:30px;padding:4px 10px;font-size:12px" '+
-        'onclick="wizGoto('+v.paso+')">Ir al paso '+(v.paso+1)+' · '+escHtml(OJ_STEPS[v.paso])+'</button></div>';
-    }).join('')+'</div>';
+    return '<details class="oj-estado '+cls+'"'+(abierto?' open':'')+'>'+
+      '<summary><b>'+escHtml(titulo)+'</b><span>'+arr.length+'</span></summary>'+
+      arr.map(function(v){
+        return '<div class="oj-estado-it">· '+escHtml(v.msg)+
+          ' <button class="btn bs bsm" style="margin-left:2px;min-height:30px;padding:4px 10px;font-size:12px" '+
+          'onclick="wizGoto('+v.paso+')">Ir al paso '+(v.paso+1)+' · '+escHtml(OJ_STEPS[v.paso])+'</button></div>';
+      }).join('')+'</details>';
   };
   var e=wc.oj.encabezado, cu=wc.oj.custodia, fi=wc.oj.firma, t=ojTermino(wc);
   var faltaEnc=(!e.ministerio||!e.institucion||!e.unidad||!e.dependencia);
@@ -8791,13 +9050,12 @@ function ojStep7(){
     : '';
   return '<div class="st" style="margin-top:0">Revisión y puesta a disposición</div>'+
     avisoVig+
-    ojReloj36Html()+
-    /* ⚠️ El estado del expediente va ARRIBA, no al final. Este paso mide varias
-       pantallas de teléfono: dejar el resumen de faltantes abajo obligaba a
-       recorrerlo entero solo para enterarse de que faltaba un dato del paso 1. */
-    lista(duras,'dura','Faltan datos obligatorios ('+duras.length+')')+
-    sug+
+    // 1 · La decisión. Lo primero y lo más grande de la pantalla.
     ojDestinatarioHtml(d,s)+
+    // 2 · El estado del expediente, en una línea que se despliega.
+    lista(duras,'dura','Faltan datos obligatorios',false)+
+    ojPlazoBarraHtml()+
+    ojResumenHtml(wc)+
 
     /* La entrega se diligencia AL ENTREGAR, que es después de imprimir el
        oficio: por eso va plegada y no estorba mientras se prepara el documento.
@@ -8867,10 +9125,40 @@ function ojStep7(){
       )+
     '</details>'+
 
-    lista(blandas,'blanda','Advertencias ('+blandas.length+')')+
-    (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles. Guarda el caso y genera el oficio desde la tarjeta de la captura.</div>')+
+    lista(blandas,'blanda','Advertencias',false)+
+    (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles.</div>')+
     '<button class="btn boj bbl" onclick="ojGenerarDesdeWizard()" style="margin-top:6px">Generar oficio de puesta a disposición</button>'+
     '<p class="oj-hint" style="margin-top:8px">Generar el oficio guarda antes el caso.</p>';
+}
+/* El reloj de las 36 horas, en una línea. En el paso 3 va como cuadro completo
+   (es donde se registra la hora de la que arranca); aquí basta el estado. */
+function ojPlazoBarraHtml(){
+  var p=ojPlazo36(wc);
+  if(!p.vence) return '';
+  var cls={OK:'ok',ALERTA:'blanda',URGENTE:'dura',VENCIDO:'dura'}[p.semaforo]||'info';
+  var horas=Math.floor(Math.abs(p.horas)), mins=Math.round((Math.abs(p.horas)-horas)*60);
+  return '<div class="oj-plazo '+cls+'"><span class="oj-sem '+cls+'">36 h · '+escHtml(p.semaforo)+'</span>'+
+    '<span>'+(p.horas<0?'Venció hace ':'Quedan ')+horas+' h '+mins+' min — '+escHtml(p.vence)+'</span></div>';
+}
+/* Resumen de lo que va a salir impreso, para revisar sin volver paso a paso.
+   Plegado: es una comprobación, no una tarea. */
+function ojResumenHtml(c){
+  var r=c.oj.requerido, o=c.oj.orden, p=c.oj.proceso, g=c.oj.diligencia, t=ojTermino(c);
+  var kv=[
+    [t.Sust,ojNombreRequerido(r)+(ojDocRequerido(r)?' · '+ojDocRequerido(r):'')],
+    ['Orden',(o.numero?'No. '+o.numero:'')+(o.fechaExpedicion?' del '+ojFechaCorta(o.fechaExpedicion):'')],
+    ['Delito(s)',ojDelitosTexto(c)],
+    ['Autoridad solicitante',c.oj.despacho.nombre||''],
+    ['SPOA',p.radicado||''],
+    [t.Acc,ojFechaHora(g.fecha,g.hora)],
+    ['Lugar',ojLugarTexto(g)],
+    ['Firma',[c.oj.firma.grado,c.oj.firma.nombre].filter(Boolean).join(' ')]
+  ].filter(function(x){ return (x[1]||'').trim(); });
+  if(!kv.length) return '';
+  return '<details class="oj-blk oj-mas">'+
+    '<summary>Resumen del informe <small>— lo que va a salir impreso</small></summary>'+
+    kv.map(function(x){ return '<div class="oj-kv"><span>'+escHtml(x[0])+'</span><span>'+escHtml(x[1])+'</span></div>'; }).join('')+
+  '</details>';
 }
 /* Anexos deducibles de lo que ya se registró: el informe y la copia de la orden
    viajan SIEMPRE; el acta de derechos, si consta que se leyeron; el acta de
@@ -8882,10 +9170,15 @@ function ojAnexosAuto(c){
   if(a.anexosManual) return;
   var sel=(a.anexos||[]).slice(), tiene=function(x){ return sel.indexOf(x)>=0; };
   var add=function(x){ if(!tiene(x)) sel.push(x); };
+  /* ⚠️ Mejora 3 (obs. 6) — los tres primeros viajan SIEMPRE con el oficio: el
+     informe, el acta de derechos con la constancia de buen trato (un solo
+     formato, y la lectura de derechos ya no es una casilla que marcar) y la
+     copia del documento de identificación. La copia de la orden, en cuanto hay
+     número — y su número lo pone la app. */
   add('Informe dejando a disposición');
+  add('Acta de derechos del capturado y constancia de buen trato');
+  if(c.oj.requerido.numDoc) add('Copia documento de identificación');
   if(c.oj.orden.numero) add('Copia orden de captura oficio No. {{ORD_NUMERO}}');
-  if(a.derechos.leidos) add('Acta de derechos del capturado');
-  if(a.hayIncautacion&&(a.incautaciones||[]).length) add('Acta de incautación / rótulo de cadena de custodia');
   // Se respeta el orden del catálogo (es el orden en que se imprimen).
   a.anexos=OJ_CAT.anexos.filter(function(x){ return sel.indexOf(x)>=0; })
     .concat(sel.filter(function(x){ return OJ_CAT.anexos.indexOf(x)<0; }));
@@ -8920,45 +9213,87 @@ function ojDestinatarioHtml(d,s){
      la vía (incluso sin elegir). Dos razones: el funcionario tiene que poder
      escribir el destinatario a mano en cualquier caso, y `ojCollectDisposicion`
      se autolimita mirando `#oj-x-nom` — si ese campo desapareciera, dejaría de
-     recolectar también el membrete, la custodia y la firma de este paso. */
-  var guia, etiqueta, botones='';
+     recolectar también el membrete, la custodia y la firma de este paso.
+     Desde Mejora 3 (obs. 7) van dentro de un `<details>`: plegar los deja en el
+     DOM (solo cambia su `display`), así que se siguen recolectando igual. */
+  var etiqueta, accion='', fuente='', aviso='';
   if(via==='FISCALIA'){
     etiqueta='Fiscalía destinataria';
-    guia = fis.nombre
-      ? '<p class="oj-hint">Viene de <b>Ajustes → Oficio de orden judicial → Fiscalía destinataria</b>: no se diligencia '+
-        'en cada captura. Si esta vez va a otra fiscalía, corrígelo aquí — solo afecta a este informe.</p>'
-      : '<div class="oj-alert dura"><b>La fiscalía no está configurada</b>Escríbela una sola vez en '+
-        '<b>Ajustes → Oficio de orden judicial → Fiscalía destinataria</b> y el oficio la usará en todas las capturas.'+
-        '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="go(\'ajustes\')">Ir a Ajustes</button></div>';
+    /* «Como por lo general es una sola por municipio, esta se debe cargar de las
+       que se tienen guardadas por defecto desde ajustes»: se carga sola y aquí
+       solo se dice de dónde salió. */
+    if(fis.nombre) fuente='Cargada de Ajustes · Fiscalía destinataria';
+    else aviso='<div class="oj-alert dura"><b>La fiscalía no está configurada</b>Escríbela abajo una sola vez: '+
+        'se guarda como la fiscalía por defecto del equipo y las próximas capturas ya la traerán cargada.'+
+        '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="go(\'ajustes\')">Configurarla en Ajustes</button></div>';
   } else if(via==='JUZGADO'){
     etiqueta='Juzgado destinatario';
-    guia='<p class="oj-hint">Es el despacho que registraste como <b>autoridad solicitante</b> en el numeral 2. '+
-      'El formato de la orden solo recoge su nombre: escribe aquí la dirección una vez y quedará guardada con el '+
-      'despacho para las próximas actuaciones.</p>';
-    botones='<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDestino()">Buscar en despachos guardados</button>';
+    /* «El usuario solo selecciona juzgado y automáticamente se carga»: el botón
+       de elegir es la acción principal, y de la selección salen nombre,
+       dirección, ciudad y teléfono sin teclear nada. */
+    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino()">'+
+      (d.nombre?'Elegir otro juzgado':'Elegir juzgado de los registrados')+'</button>';
+    if(d.nombre) fuente=(d.nombre===wc.oj.despacho.nombre)
+      ? 'Es la autoridad solicitante del numeral 2'
+      : 'Despacho registrado';
   } else if(via==='ADOLESCENTES'){
     etiqueta='Autoridad destinataria';
-    guia='<p class="oj-hint">El requerido era adolescente al momento de los hechos: el informe se remite al centro '+
-      'de servicios judiciales para adolescentes.</p>';
-    botones='<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDestino()">Buscar en despachos guardados</button>';
+    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino()">Elegir de los registrados</button>';
+    fuente='Sistema de responsabilidad penal para adolescentes · Ley 1098 de 2006';
   } else {
     etiqueta='Autoridad ante la que se deja a disposición';
-    guia='<div class="oj-alert blanda"><b>Elige a quién se remite</b>El encabezado del oficio y una frase de la '+
-      'narración dependen de esta decisión. La propuesta de arriba sale del motivo de la captura que registraste.</div>';
+    aviso='<div class="oj-alert blanda"><b>Elige a quién se remite</b>De esta decisión dependen el encabezado del '+
+      'oficio y una frase de la narración.</div>';
   }
-  return '<div class="oj-blk">'+
-    '<div class="st">¿A quién se remite el informe?'+(via?'':'<span class="req" title="Obligatorio: define el encabezado del oficio">*</span>')+'</div>'+
+  // Tarjeta con el destinatario ya resuelto: es lo que va impreso arriba del oficio.
+  var resumen = d.nombre
+    ? '<div class="oj-dest-box">'+
+        '<div class="oj-dest-nom">'+escHtml(d.nombre)+'</div>'+
+        (d.direccion?'<div class="oj-dest-dir">'+escHtml(d.direccion)+'</div>':'')+
+        ([d.municipio,d.departamento].filter(Boolean).length
+          ? '<div class="oj-dest-dir">'+escHtml([d.municipio,d.departamento].filter(Boolean).join(', '))+'</div>':'')+
+        (fuente?'<div class="oj-dest-src">'+escHtml(fuente)+'</div>':'')+
+      '</div>'
+    : (via?'<div class="oj-dest-box falta">Sin destinatario: elígelo o escríbelo abajo.</div>':'');
+  var abrirCampos = !d.nombre || (via==='JUZGADO'&&!d.direccion) || !via;
+  return '<div class="oj-dest">'+
+    '<div class="oj-dest-hd">¿A quién se remite el informe?'+(via?'':'<span class="req" title="Obligatorio: define el encabezado del oficio">*</span>')+'</div>'+
     '<div class="oj-vias">'+opciones+'</div>'+
-    guia+botones+
-    ojwF(etiqueta,ojwIn('oj-x-nom',d.nombre,'Nombre completo del despacho o la fiscalía'),
-      'Un nombre largo no descuadra el documento: ocupa las líneas que necesite.',!d.nombre)+
-    ojwF('Dirección',ojwIn('oj-x-dir',d.direccion,'Ej: Carrera 64C # 67-300, barrio Caribe'),'',via==='JUZGADO'&&!d.direccion)+
-    ojwR(
-      ojwF('Ciudad',ojwMun('oj-x-mun',d.municipio,'oj-x-dep','Ej: Medellín')),
-      ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Se completa solo'))
-    )+
-    (via==='FISCALIA'?'':'<button class="btn bs bsm" onclick="ojGuardarDestinatario()">Guardar este despacho para reutilizarlo</button>')+
+    aviso+accion+resumen+
+    '<details class="oj-mas oj-dest-mas"'+(abrirCampos?' open':'')+'>'+
+      '<summary>'+(d.nombre?'Corregir para este informe':'Escribir el destinatario a mano')+
+        ' <small>— solo afecta a esta captura</small></summary>'+
+      ojwF(etiqueta,ojwIn('oj-x-nom',d.nombre,'Nombre completo del despacho o la fiscalía'),'',!d.nombre)+
+      ojwF('Dirección',ojwIn('oj-x-dir',d.direccion,'Ej: Carrera 64C # 67-300, barrio Caribe'),'',via==='JUZGADO'&&!d.direccion)+
+      ojwR(
+        ojwF('Ciudad',ojwMun('oj-x-mun',d.municipio,'oj-x-dep','Ej: Medellín')),
+        ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Se completa solo'))
+      )+
+      (via==='FISCALIA'
+        ? '<button class="btn bs bsm bbl" onclick="ojGuardarFiscaliaDefecto()">Guardar como fiscalía por defecto del equipo</button>'
+        : '<button class="btn bs bsm bbl" onclick="ojGuardarDestinatario()">Guardar este despacho para reutilizarlo</button>')+
+    '</details>'+
+    // El fundamento de la propuesta: interesa una vez, no en cada captura.
+    '<details class="oj-mas oj-dest-mas">'+
+      '<summary>Por qué se propone este destinatario <small>— '+escHtml(s.regla)+'</small></summary>'+
+      '<p class="oj-hint" style="margin:0">'+escHtml(s.nota)+'</p>'+
+      '<div class="oj-fund">'+escHtml(s.fundamento)+'</div>'+
+    '</details>'+
   '</div>';
+}
+/* La fiscalía es del EQUIPO, no de la captura: se pregunta una vez y de ahí en
+   adelante se carga sola (obs. 7). Este botón es el atajo para el funcionario
+   que la escribió en la primera captura sin haber pasado por Ajustes. */
+function ojGuardarFiscaliaDefecto(){
+  ojCollect();
+  var x=wc.oj.destino;
+  if(!x.nombre){ toast('Escribe primero el nombre de la fiscalía'); return; }
+  var cfg=DB.getConfig();
+  cfg.ojFiscaliaNombre=x.nombre; cfg.ojFiscaliaDireccion=x.direccion||'';
+  cfg.ojFiscaliaMunicipio=x.municipio||''; cfg.ojFiscaliaDepartamento=x.departamento||'';
+  DB.saveConfig(cfg);
+  renderWiz();
+  toast('Fiscalía guardada — las próximas capturas la traerán cargada ✓');
 }
 function ojSelectorDestino(){ ojSelectorDespacho(true); }
 /* El destinatario del oficio también es un despacho reutilizable: quien lo
@@ -9007,11 +9342,9 @@ function ojCollectOrden(){
   o.fechaExpedicion=ojV('oj-o-fexp');
   /* ⚠️ `vigenciaMeses` y `estado` ya no son campos: la vigencia se calcula sola
      (art. 298 CPP). Se dejan como estén en el modelo para que una captura
-     guardada con otros valores conserve su cálculo. */
-  o.verificacion.funcionario=ojV('oj-o-vfun');
-  o.verificacion.fecha=ojV('oj-o-vfec');
-  o.verificacion.hora=ojV('oj-o-vhor');
-  o.verificacion.observacion=ojV('oj-o-vobs');
+     guardada con otros valores conserve su cálculo. Lo mismo con `verificacion`
+     desde Mejora 3 (obs. 2): se deriva de la diligencia y NO se toca aquí — si
+     se sobrescribiera, una captura vieja perdería lo que registró. */
   o.vigenciaHasta=ojVigencia(o).hasta;
 }
 /* La autoridad solicitante y el despacho que libró la orden son el mismo dato
@@ -9059,33 +9392,21 @@ function ojCollectDiligencia(){
   var g=wc.oj.diligencia;
   g.fecha=ojV('oj-g-fec'); g.hora=ojV('oj-g-hor');
   g.lugarDireccion=ojV('oj-g-dir'); g.lugarBarrio=ojV('oj-g-bar'); g.lugarTipo=ojV('oj-g-tlug');
-  g.lugarMunicipio=ojV('oj-g-mun'); g.lugarDepartamento=ojV('oj-g-dep'); g.coordenadas=ojV('oj-g-coord');
-  g.formaUbicacion=ojV('oj-g-form');
-  if(document.getElementById('oj-g-formo')) g.formaUbicacionOtra=ojV('oj-g-formo');
+  g.lugarMunicipio=ojV('oj-g-mun'); g.lugarDepartamento=ojV('oj-g-dep');
+  /* ⚠️ `coordenadas`, `formaUbicacion` y `formaUbicacionOtra` ya no son campos
+     (Mejora 3, obs. 3): no se leen ni se borran — lo que traiga una captura
+     guardada se conserva y se sigue imprimiendo. */
   g.unidad=ojV('oj-g-uni'); g.patrulla=ojV('oj-g-pat');
   ojListaLeer('funcionarios');
 }
 function ojCollectActuacion(){
-  if(!document.getElementById('oj-a-dhor')) return;
+  if(!document.getElementById('oj-a-obs')) return;
   var a=wc.oj.actuacion;
-  a.derechos={leidos:ojC('oj-a-dler'),fecha:ojV('oj-a-dfec'),hora:ojV('oj-a-dhor'),
-    lugar:ojV('oj-a-dlug'),observacion:ojV('oj-a-dobs')};
   a.observaciones=ojV('oj-a-obs');
-  a.hayIncautacion=ojC('oj-a-hayinc');
-  ojListaLeer('incautaciones');
-  // Bloques complementarios: solo se leen si el usuario los desplegó.
-  if(document.getElementById('oj-a-cnom')){
-    a.comunicacion={nombre:ojV('oj-a-cnom'),parentesco:ojV('oj-a-cpar'),telefono:ojV('oj-a-ctel'),
-      hora:ojV('oj-a-chor'),seLogro:!!ojV('oj-a-cnom')};
-    a.defensor={tipo:ojV('oj-a-dtipo'),nombre:ojV('oj-a-dnom'),telefono:a.defensor.telefono||''};
-  }
-  if(document.getElementById('oj-a-fza')){
-    a.fuerza={tipo:ojV('oj-a-fza'),descripcion:ojV('oj-a-fzad')};
-    a.lesiones={hubo:ojC('oj-a-lhubo'),descripcion:ojV('oj-a-ldesc')};
-    a.valoracion={realizada:ojV('oj-a-vmed'),entidad:ojV('oj-a-vent'),fecha:a.valoracion.fecha||'',
-      hora:a.valoracion.hora||'',renuencia:ojV('oj-a-vmed')==='RENUENCIA'};
-    a.novedades=ojV('oj-a-nov');
-  }
+  /* ⚠️ Mejora 3 (obs. 4 y 5): derechos, comunicación, defensa, fuerza, lesiones,
+     valoración, novedades e incautaciones ya no tienen campos. NO se tocan: una
+     captura guardada conserva lo que registró y lo sigue imprimiendo. Lo nuevo
+     se cuenta en `observaciones`. */
   if(document.getElementById('oj-a-anx0')){
     var anx=[];
     OJ_CAT.anexos.forEach(function(x,i){ if(ojC('oj-a-anx'+i)) anx.push(x); });
@@ -9628,28 +9949,36 @@ function ojRelato(c,cfg){
   var func=ojListaFuncionarios(g);
   var quien=func.length? (func.length===1?'el suscrito '+func[0]:'los suscritos '+func.slice(0,-1).join(', ')+' y '+func[func.length-1]) : '';
   var unidad=[g.unidad,g.patrulla?'patrulla '+g.patrulla:''].filter(Boolean).join(', ');
+  /* ⚠️ Mejora 3 (obs. 3) — «forma de ubicación» dejó de preguntarse. El relato
+     abre con una fórmula fija y cierta; si la captura viene del formato anterior
+     y trae su forma registrada, se imprime la suya: lo escrito no se pisa. */
+  var enDesarrollo = g.formaUbicacion
+    ? (g.formaUbicacion==='OTRA'?(g.formaUbicacionOtra||'labores propias del servicio'):ojLbl('formaUbicacion',g.formaUbicacion).toLowerCase())
+    : 'labores propias del servicio de vigilancia y control';
   pars.push(ojFrase([
     g.fecha?'El día '+ojFechaLarga(g.fecha):'En la fecha',
     g.hora?', siendo las '+g.hora+' horas':'',
     quien?', '+quien:'',
     unidad?', adscrito(s) a '+unidad:'',
-    ', en desarrollo de '+(g.formaUbicacion==='OTRA'?(g.formaUbicacionOtra||'labores del servicio'):ojLbl('formaUbicacion',g.formaUbicacion).toLowerCase()),
+    ', en desarrollo de '+enDesarrollo,
     ojLugarTexto(g)?', en '+ojLugarTexto(g):'',
     g.coordenadas?' (coordenadas '+g.coordenadas+')':'',
     ', se ubicó e individualizó a '+(ojNombreRequerido(r).toUpperCase()||'la persona requerida'),
     ojDocRequerido(r)?', identificado(a) con '+ojDocRequerido(r):'',
     '.'
   ]));
-  /* ⚠️ El medio de consulta dejó de pedirse (obs. 6): si la captura lo trae
-     —porque se guardó antes de Mejora 2— se sigue imprimiendo tal cual; si no,
-     se usa la fórmula genérica, que es cierta sin inventar nada. */
-  var medio=o.verificacion.sistema?ojLbl('sistemaConsulta',o.verificacion.sistema).toLowerCase():'';
+  /* ⚠️ El medio de consulta dejó de pedirse (Mejora 2, obs. 6) y el funcionario,
+     la fecha y la hora dejaron de pedirse con Mejora 3 (obs. 2): se derivan de la
+     diligencia, porque quien verifica la orden es quien hace la captura y lo hace
+     en ese mismo momento. Una captura guardada imprime lo que registró. */
+  var ver=ojVerificacion(c);
+  var medio=ver.sistema?ojLbl('sistemaConsulta',ver.sistema).toLowerCase():'';
   var vencidaAlCapturar=(vig.estado==='VENCIDA');
   pars.push(ojFrase([
     'Verificada la información en '+(medio||'el sistema de información institucional'),
-    o.verificacion.fecha?' el '+ojFechaCorta(o.verificacion.fecha):'',
-    o.verificacion.hora?' a las '+o.verificacion.hora+' horas':'',
-    o.verificacion.funcionario?', por '+o.verificacion.funcionario:'',
+    ver.fecha?' el '+ojFechaCorta(ver.fecha):'',
+    ver.hora?' a las '+ver.hora+' horas':'',
+    ver.funcionario?', por '+ver.funcionario:'',
     ', se estableció que registra orden de captura No. '+(o.numero||'________'),
     o.fechaExpedicion?', expedida el '+ojFechaCorta(o.fechaExpedicion):'',
     d.nombre?' por el '+d.nombre:'',
@@ -9669,15 +9998,16 @@ function ojRelato(c,cfg){
   /* Si la orden figuraba vencida al momento de la diligencia, el relato NO
      puede decir «confirmada la vigencia»: sería una afirmación falsa en un
      documento judicial. Se dice lo que ocurrió y se deja la constancia. */
+  var der=ojDerechos(c);
   pars.push(ojFrase([
     vencidaAlCapturar
       ? 'Se deja constancia de que la orden figuraba con vigencia expirada al momento de la diligencia, hecho que se comunica a la autoridad que la libró y a la Fiscalía para lo de su competencia'
       : 'Confirmada la vigencia de la orden',
-    a.derechos.hora?', siendo las '+a.derechos.hora+' horas':'',
-    a.derechos.lugar?', en '+a.derechos.lugar:'',
+    der.hora?', siendo las '+der.hora+' horas':'',
+    der.lugar?', en '+der.lugar:'',
     ', se procedió a leer y materializar los derechos del '+t.sust+
     ', conforme al artículo 303 de la Ley 906 de 2004.',
-    a.derechos.observacion?' '+a.derechos.observacion:''
+    der.observacion?' '+der.observacion:''
   ]));
   /* ── Ola 3 · lo que se pedía y no salía en ninguna parte ──────────────────
      Comunicación a un tercero, defensor y valoración médica son garantías del
@@ -9721,16 +10051,17 @@ function ojRelato(c,cfg){
     ]));
   }
   // Resultado de la verificación cuando NO fue positivo: es una alerta para el
-  // despacho, y era justo lo que se registraba y se perdía.
-  if(o.verificacion.resultado&&o.verificacion.resultado!=='POSITIVO'){
+  // despacho, y era justo lo que se registraba y se perdía. Solo puede venir de
+  // una captura guardada: el formulario ya no lo pregunta.
+  if(ver.resultado&&ver.resultado!=='POSITIVO'){
     pars.push(ojFrase([
       'La verificación de la orden en el sistema arrojó resultado '+
-      (o.verificacion.resultado==='NEGATIVO'?'negativo':'pendiente de confirmar'),
-      o.verificacion.observacion?': '+o.verificacion.observacion:'',
+      (ver.resultado==='NEGATIVO'?'negativo':'pendiente de confirmar'),
+      ver.observacion?': '+ver.observacion:'',
       '.'
     ]));
-  } else if(o.verificacion.observacion){
-    pars.push('Sobre la verificación de la orden se deja la siguiente constancia: '+o.verificacion.observacion+'.');
+  } else if(ver.observacion){
+    pars.push('Sobre la verificación de la orden se deja la siguiente constancia: '+ver.observacion+'.');
   }
   if(a.fuerza.tipo&&a.fuerza.tipo!=='NINGUNO'){
     pars.push(ojFrase([
@@ -10245,7 +10576,31 @@ function ojEspejar(c){
   c.juzgadoOrden=c.oj.despacho.nombre||'';
   c.delitoOrden=(c.conductas[0]||'');
   c.destino=c.oj.destino.nombre||'';
+  ojEspejarDossier(c);
   return persona;
+}
+/* ⚠️ MEJORA 3 (obs. 8) — el dossier de una captura por orden judicial salía con
+   «CUÁNDO ??/??/?? a las ??:?? horas» y «DÓNDE —, Barrio —, — - —».
+   Causa: el dossier es del módulo de flagrancia y lee `caso.narracion.fechaCap*`
+   / `caso.horaCap*` y `caso.lugar.*`; el espejo de OJ llenaba el capturado, los
+   delitos y el destino, pero NUNCA esas dos ramas — el módulo guarda la fecha,
+   la hora y el lugar en `oj.diligencia`, con otros nombres. No faltaba el dato:
+   faltaba la proyección.
+   Se resuelve aquí, en el único punto por el que pasan los dos caminos que crean
+   un caso OJ (el wizard y el simulador), y no en `genSeccionContent` — así el
+   dossier de flagrancia no se toca y las dos rutas no pueden discrepar. */
+function ojEspejarDossier(c){
+  var g=c.oj.diligencia, f=String(g.fecha||c.fechaProc||'').split('-'), h=String(g.hora||'').split(':');
+  c.lugar=c.lugar||{};
+  c.lugar.dir=g.lugarDireccion||''; c.lugar.barrio=g.lugarBarrio||'';
+  c.lugar.muni=g.lugarMunicipio||''; c.lugar.depto=g.lugarDepartamento||'';
+  c.narracion=c.narracion||{};
+  c.narracion.fechaCapA=f[0]||''; c.narracion.fechaCapM=f[1]||''; c.narracion.fechaCapD=f[2]||'';
+  c.narracion.horaCapH=h[0]||''; c.narracion.horaCapM=h[1]||'';
+  /* «CÓMO» quedaba fuera del dossier de OJ porque `narracion.texto` iba vacío.
+     El relato que escribe el funcionario es exactamente eso: cómo ocurrió. */
+  c.narracion.texto=c.oj.actuacion.observaciones||'';
+  return c;
 }
 async function ojGuardarCaso(silencioso){
   ojCollect();

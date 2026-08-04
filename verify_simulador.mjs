@@ -142,9 +142,9 @@ const oj = await page.evaluate(() => {
     /* ⚠️ Mejora 2: `dirigidaA`, `motivoTextual` (fusionado con la finalidad),
        `verificacion.sistema` y `verificacion.resultado` como campos del
        formulario salieron del modelo o dejaron de pedirse (obs. 5 y 6): el
-       simulador ya no los inventa porque el wizard tampoco los produce. */
-    'orden.verificacion.fecha', 'orden.verificacion.hora',
-    'orden.verificacion.funcionario', 'orden.verificacion.resultado', 'orden.verificacion.observacion',
+       simulador ya no los inventa porque el wizard tampoco los produce.
+       ⚠️ Mejora 3 (obs. 2): la verificación entera dejó de ser un formulario —
+       se deriva de la diligencia. Se comprueba lo derivado, no el campo. */
     'despacho.nombre', 'despacho.tipo', 'despacho.municipio', 'despacho.departamento',
     'despacho.direccion', 'despacho.telefono', 'despacho.correo',
     'proceso.radicado', 'proceso.codigoInterno', 'proceso.fechaHechos', 'proceso.fechaDecision',
@@ -158,10 +158,12 @@ const oj = await page.evaluate(() => {
     'requerido.identidadMetodo',
     'diligencia.fecha', 'diligencia.hora', 'diligencia.lugarDireccion', 'diligencia.lugarBarrio',
     'diligencia.lugarMunicipio', 'diligencia.lugarDepartamento', 'diligencia.lugarTipo',
-    'diligencia.coordenadas', 'diligencia.formaUbicacion', 'diligencia.unidad', 'diligencia.patrulla', 'diligencia.vehiculo',
-    'actuacion.derechos.fecha', 'actuacion.derechos.hora', 'actuacion.derechos.lugar', 'actuacion.derechos.observacion',
-    'actuacion.defensor.tipo', 'actuacion.fuerza.tipo', 'actuacion.valoracion.entidad',
-    'actuacion.valoracion.fecha', 'actuacion.valoracion.hora', 'actuacion.observaciones',
+    'diligencia.unidad', 'diligencia.patrulla', 'diligencia.vehiculo',
+    /* ⚠️ Mejora 3 — el simulador dejó de inventar lo que el formulario ya no pide:
+       coordenadas y forma de ubicación (obs. 3), y la rama de la actuación entera
+       salvo el relato (obs. 2, 4 y 5). Un caso de demostración solo sirve si
+       enseña lo que produce hoy el wizard. */
+    'actuacion.observaciones',
     'destino.via', 'destino.tipo', 'destino.nombre', 'destino.direccion', 'destino.municipio', 'destino.departamento',
     'destino.telefono', 'destino.correo', 'destino.fechaEntrega', 'destino.horaEntrega',
     'destino.recibeNombre', 'destino.recibeCargo', 'destino.reglaAplicada', 'destino.fundamento',
@@ -203,8 +205,18 @@ const oj = await page.evaluate(() => {
     if (c.oj.orden.tipoOrden === 'SRPA') out.srpa.push({ edadH, term: ojTermino(c).acc, regla: c.oj.destino.reglaAplicada, doc: c.oj.requerido.tipoDoc });
     else out.adultos.push({ edadH, term: ojTermino(c).acc });
 
-    // Un caso OJ no tiene víctimas, ni testigos, ni EMP, ni vehículos de flagrancia.
-    if ((c.victimas || []).length || (c.testigos || []).length || c.vehiculos || c.narracion) out.contaminados.push(c.id);
+    /* Un caso OJ no tiene víctimas, ni testigos, ni EMP, ni vehículos de
+       flagrancia. ⚠️ Mejora 3 (obs. 8): SÍ tiene `narracion` y `lugar` — son la
+       proyección que el dossier necesita para imprimir CUÁNDO y DÓNDE. Lo que se
+       comprueba es que traiga la fecha, la hora y el lugar de la diligencia. */
+    if ((c.victimas || []).length || (c.testigos || []).length || c.vehiculos) out.contaminados.push(c.id);
+    if (!c.narracion || !c.narracion.horaCapH || !c.lugar || c.lugar.dir !== c.oj.diligencia.lugarDireccion)
+      out.espejoMal.push('dossier');
+    // La verificación de la orden, derivada de la diligencia (obs. 2).
+    const ver = ojVerificacion(c);
+    if (!ver.fecha || !ver.hora || !ver.funcionario) out.huecos.push('verificacion derivada');
+    const der = ojDerechos(c);
+    if (!der.leidos || !der.hora || !der.lugar) out.huecos.push('derechos derivados');
     // Espejo hacia las pantallas compartidas.
     if (!c.capturados.length || !c.conductas.length || !c.spoa || !c.fechaProc || !c.destino) out.espejoMal.push('espejo');
     if (/\./.test(c.capturados[0].numDoc)) out.espejoMal.push('numDoc con puntos');
@@ -233,8 +245,8 @@ log(oj.srpa.length > 0 && oj.srpa.every(s => s.edadH >= 14 && s.edadH < 18 && s.
 log(oj.adultos.every(a => a.term === 'captura'), 'Fuera de SRPA el documento dice «captura»');
 log(oj.sinFuncionario === 0, 'Siempre hay al menos un funcionario en la diligencia (V15)');
 log(oj.anexosMin >= 4, 'Los anexos se marcan desde el catálogo', 'mínimo ' + oj.anexosMin);
-log(oj.rotuloFalta === 0, 'Todo elemento incautado lleva su rótulo de cadena de custodia (V20)');
-log(oj.contaminados.length === 0, 'Un caso OJ no trae víctimas, testigos, vehículos ni narración de flagrancia');
+log(oj.rotuloFalta === 0, 'Sin incautaciones: no aplican a una captura por orden judicial (Mejora 3, obs. 5)');
+log(oj.contaminados.length === 0, 'Un caso OJ no trae víctimas, testigos ni vehículos de flagrancia');
 log(oj.espejoMal.length === 0, 'El espejo hacia lista/personas/dossier queda completo', oj.espejoMal[0] || 'capturados, conductas, spoa y destino');
 
 /* El oficio real, sin haber configurado NADA en Ajustes. */

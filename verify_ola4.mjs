@@ -67,8 +67,11 @@ log(estructura.puntos === 4 && estructura.paneles === 4, 'El wizard tiene 4 pant
 log(estructura.nombres.join(' · ') === 'El capturado · El proceso judicial · La materialización · Revisión',
   'Nombradas como los numerales del formato, en su orden', estructura.nombres.join(' · '));
 
+/* ⚠️ Mejora 3 (obs. 1): la pantalla 1 sigue siendo el numeral 1, pero se
+   presenta como la tarjeta del capturado — sus campos viven en un modal, igual
+   que en flagrancia. */
 const pantallaA = await page.evaluate(() => ({
-  requerido: !!document.getElementById('oj-r-pn'),
+  requerido: !!document.querySelector('.oj-persona.vacia, .pcard'),
   sinOrden: !document.getElementById('oj-o-num')
 }));
 log(pantallaA.requerido && pantallaA.sinOrden,
@@ -83,12 +86,14 @@ const pantallaB = await page.evaluate(() => {
 log(pantallaB.orden && pantallaB.despacho && pantallaB.proceso,
   'Pantalla 2 es el numeral 2 completo: orden, proceso y autoridad solicitante');
 
+/* ⚠️ Mejora 3 (obs. 4): de «la actuación» solo queda el relato de los hechos —
+   los derechos se derivan y lo demás se cuenta ahí mismo. */
 const pantallaC = await page.evaluate(() => {
   ws = 2; renderWiz();
-  return { diligencia: !!document.getElementById('oj-g-fec'), actuacion: !!document.getElementById('oj-a-dhor') };
+  return { diligencia: !!document.getElementById('oj-g-fec'), actuacion: !!document.getElementById('oj-a-obs') };
 });
 log(pantallaC.diligencia && pantallaC.actuacion,
-  'Pantalla C reúne todo lo que acaba de pasar: materialización y actuación');
+  'Pantalla C reúne todo lo que acaba de pasar: materialización y relato');
 
 /* ─────────── 2. La recolección ya no depende del número de paso ─────────── */
 const recoleccion = await page.evaluate(() => {
@@ -142,8 +147,10 @@ log(validaciones.max <= 3, 'Ninguna validación apunta a una pantalla que ya no 
 log(validaciones.por.V02 === 1 && validaciones.por.V05 === 1,
   'La orden y la autoridad solicitante apuntan al numeral 2', 'V02→' + validaciones.por.V02 + ' V05→' + validaciones.por.V05);
 log(validaciones.por.V08 === 0, 'El capturado, al numeral 1', 'V08→' + validaciones.por.V08);
-log(validaciones.por.V14 === 2 && validaciones.por.V16 === 2,
-  'El lugar y los derechos, al numeral 3', 'V14→' + validaciones.por.V14 + ' V16→' + validaciones.por.V16);
+/* ⚠️ V16 (lectura de derechos) se retiró con Mejora 3, obs. 4: la constancia se
+   deriva de la diligencia y el acta viaja como anexo marcado solo. */
+log(validaciones.por.V14 === 2 && validaciones.por.V16 === undefined,
+  'El lugar apunta al numeral 3, y los derechos ya no bloquean', 'V14→' + validaciones.por.V14);
 log(validaciones.por.V22 === 3, 'El destinatario, a la revisión', 'V22→' + validaciones.por.V22);
 // El membrete solo falta si el equipo no está configurado: se fuerza el caso.
 const membrete = await page.evaluate(() => {
@@ -208,7 +215,10 @@ log(['CARLOS GOMEZ', 'Hurto agravado', '05001600020620261234', 'Juzgado Quinto d
 await page.evaluate(() => { wc = null; DB.clearDraft(); startWizard('OJ'); });
 await page.waitForTimeout(250);
 const hoy = new Date().toISOString().slice(0, 10);
+// Mejora 3 (obs. 1): el capturado se diligencia en su modal, como en flagrancia.
+await page.click('button[onclick="ojAbrirRequerido()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-r-pn', 'ANA'); await page.fill('#oj-r-pa', 'RUIZ'); await page.fill('#oj-r-nd', '123456');
+await page.click('button[onclick="ojGuardarRequerido()"]'); await page.waitForTimeout(250);
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 await page.fill('#oj-o-num', '900');
 await page.fill('#oj-o-fexp', new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10));
@@ -219,8 +229,10 @@ await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 await page.fill('#oj-g-fec', hoy); await page.fill('#oj-g-hor', '08:00');
 await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
 await page.fill('#oj-g-dir__libre', 'Carrera 70 con calle 44');
-await page.check('#oj-a-dler');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
+// Mejora 3 (obs. 7): el destinatario se muestra resuelto y sus campos viajan
+// plegados; el test los abre para escribirlo a mano.
+await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 await page.fill('#oj-x-nom', 'Fiscalía URI de Prueba');
 const recorrido = await page.evaluate(() => { ojCollect(); return { duras: ojDuras(wc).map(v => v.id), paso: ws }; });
 log(recorrido.paso === 3, 'Tres toques de «Siguiente» llegan a la revisión (antes seis)', 'ws=' + recorrido.paso);

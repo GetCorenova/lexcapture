@@ -153,9 +153,14 @@ const docMenor = await page.evaluate(() => {
   wc.oj.requerido.fechaNac = '2010-05-05';
   wc.oj.proceso.fechaHechos = '2026-01-10';       // 15 años al momento de los hechos
   renderWiz();
-  return { tipo: wc.oj.requerido.tipoDoc, adolescente: ojEsAdolescente(wc) };
+  // ⚠️ Mejora 3 (obs. 1): la inferencia vive donde vive el campo — el formulario
+  // del capturado, que ahora se abre en un modal.
+  ojAbrirRequerido();
+  const tipo = wc.oj.requerido.tipoDoc, sel = (document.getElementById('oj-r-td') || {}).value;
+  closeModal(); renderWiz();
+  return { tipo, sel, adolescente: ojEsAdolescente(wc) };
 });
-log(docMenor.adolescente === true && docMenor.tipo === 'TI',
+log(docMenor.adolescente === true && docMenor.tipo === 'TI' && docMenor.sel === 'TI',
   'Adolescente al momento de los hechos ⇒ tipo de documento T.I. automático', docMenor.tipo);
 const docManual = await page.evaluate(() => {
   wc.oj.requerido.tipoDocManual = true; wc.oj.requerido.tipoDoc = 'CE';
@@ -168,34 +173,41 @@ log(docManual === 'CE', '⚠️ Si el usuario elige el tipo a mano, la inferenci
 const edad = await page.evaluate(() => {
   wc = ojNuevoCaso(); ws = 0;
   wc.oj.requerido.fechaNac = '2000-06-15';
-  renderWiz();
+  renderWiz(); ojAbrirRequerido();          // Mejora 3: el campo vive en el modal
   const el = document.getElementById('oj-r-ed');
-  return { valor: el.value, soloLectura: el.hasAttribute('readonly') };
+  const out = { valor: el.value, soloLectura: el.hasAttribute('readonly') };
+  closeModal(); renderWiz();
+  return out;
 });
 log(edad.valor === String(new Date().getFullYear() - 2000 - (new Date() < new Date(new Date().getFullYear(), 5, 15) ? 1 : 0)),
   'La edad se calcula de la fecha de nacimiento', edad.valor);
 log(edad.soloLectura === true, 'Y deja de ser un campo que haya que diligenciar');
 const edadSinFecha = await page.evaluate(() => {
-  wc.oj.requerido.fechaNac = ''; renderWiz();
-  return document.getElementById('oj-r-ed').hasAttribute('readonly');
+  wc.oj.requerido.fechaNac = ''; renderWiz(); ojAbrirRequerido();
+  const ro = document.getElementById('oj-r-ed').hasAttribute('readonly');
+  closeModal(); renderWiz();
+  return ro;
 });
 log(edadSinFecha === false, 'Sin fecha de nacimiento sigue siendo editable (hay órdenes que solo traen la edad)');
 
-/* ─────────── 6. Derechos: hora y lugar heredados ─────────── */
+/* ─────────── 6. Derechos: hora y lugar heredados ───────────
+   ⚠️ Mejora 3 (obs. 4): la lectura de derechos dejó de ser un formulario. La
+   herencia sigue siendo la misma idea —hora y lugar salen de la diligencia—,
+   solo que ahora se DERIVA al imprimir en vez de rellenar unos campos. */
 const derechos = await page.evaluate(() => {
   wc = ojNuevoCaso(); ws = 2;
   wc.oj.diligencia.hora = '14:35';
   wc.oj.diligencia.lugarDireccion = 'Calle 53 con carrera 51';
   renderWiz();
-  return { hora: wc.oj.actuacion.derechos.hora, lugar: wc.oj.actuacion.derechos.lugar };
+  return ojDerechos(wc);
 });
-log(derechos.hora === '14:35' && /Calle 53/.test(derechos.lugar),
-  'La hora y el lugar de lectura de derechos se proponen desde la diligencia',
+log(derechos.hora === '14:35' && /Calle 53/.test(derechos.lugar) && derechos.leidos === true,
+  'La hora y el lugar de lectura de derechos salen de la diligencia',
   derechos.hora + ' · ' + derechos.lugar);
 const derechosRespeta = await page.evaluate(() => {
   wc.oj.actuacion.derechos.hora = '20:00'; wc.oj.diligencia.hora = '07:00';
   renderWiz();
-  return wc.oj.actuacion.derechos.hora;
+  return ojDerechos(wc).hora;
 });
 log(derechosRespeta === '20:00', '⚠️ Y no se pisan si ya estaban diligenciadas', derechosRespeta);
 
@@ -203,16 +215,17 @@ log(derechosRespeta === '20:00', '⚠️ Y no se pisan si ya estaban diligenciad
 const anexos = await page.evaluate(() => {
   wc = ojNuevoCaso(); ws = 2;
   wc.oj.orden.numero = '002';
-  wc.oj.actuacion.derechos.leidos = true;
-  wc.oj.actuacion.hayIncautacion = true;
-  wc.oj.actuacion.incautaciones = [{ descripcion: 'un teléfono', rotulo: '123' }];
+  wc.oj.requerido.numDoc = '1234567890';
   renderWiz();
   return wc.oj.actuacion.anexos;
 });
+/* ⚠️ Mejora 3 (obs. 6): el catálogo y las reglas cambiaron — el acta de derechos
+   y la constancia de buen trato son UN formato y viajan siempre, y se añade la
+   copia del documento de identificación. */
 log(anexos.includes('Informe dejando a disposición') &&
     anexos.includes('Copia orden de captura oficio No. {{ORD_NUMERO}}') &&
-    anexos.includes('Acta de derechos del capturado') &&
-    anexos.includes('Acta de incautación / rótulo de cadena de custodia'),
+    anexos.includes('Acta de derechos del capturado y constancia de buen trato') &&
+    anexos.includes('Copia documento de identificación'),
   'Los anexos se marcan solos según lo ya registrado', anexos.length + ' anexos');
 const anexosManual = await page.evaluate(() => {
   wc.oj.actuacion.anexosManual = true;
@@ -271,9 +284,12 @@ log(traida.ecivil === 'CASADO', 'Y el estado civil, traducido al código del cat
 log(traida.nacMun === 'Bello' && traida.nacDep === 'Antioquia',
   'El lugar de nacimiento se reparte en municipio y departamento', traida.nacMun + ', ' + traida.nacDep);
 
-/* ─────────── 10. El funcionario que verifica sale del perfil ─────────── */
-const verif = await page.evaluate(() => ojNuevoCaso().oj.orden.verificacion.funcionario);
-log(/JUAN PEREZ/.test(verif), 'El funcionario que verifica la orden se propone del perfil activo', verif);
+/* ─────────── 10. El funcionario que verifica sale del perfil ───────────
+   ⚠️ Mejora 3 (obs. 2): ya no se precarga en un campo — se deriva del
+   funcionario de la diligencia, que a su vez sale del perfil activo. Es la misma
+   inferencia, un paso más arriba y sin campo que rellenar. */
+const verif = await page.evaluate(() => ojVerificacion(ojNuevoCaso()).funcionario);
+log(/JUAN PEREZ/.test(verif), 'El funcionario que verifica la orden sale del perfil activo', verif);
 
 /* ─────────── 11. Cuánto se ahorró ─────────── */
 await page.evaluate(() => {

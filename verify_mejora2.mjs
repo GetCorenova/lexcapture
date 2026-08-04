@@ -189,7 +189,9 @@ const orden = await page.evaluate(() => {
   for (let i = 0; i < 4; i++) {
     ws = i; renderWiz();
     bloques.push({
-      requerido: !!document.getElementById('oj-r-pn'),
+      // Mejora 3 (obs. 1): el bloque del capturado se presenta como tarjeta y su
+      // formulario vive en un modal — sigue siendo el numeral 1 de la pantalla 1.
+      requerido: !!document.querySelector('#wz-panels .oj-persona.vacia, #wz-panels .pcard'),
       orden: !!document.getElementById('oj-o-num'),
       proceso: !!document.getElementById('oj-p-rad'),
       solicitante: !!document.getElementById('oj-d-nom'),

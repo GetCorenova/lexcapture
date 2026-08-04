@@ -90,6 +90,8 @@ log(aislado.casos === 0 && aislado.personas === 0, 'Ni sus capturas ni sus perso
 await page.evaluate(() => go('nueva'));
 await page.click('button[onclick="startWizard(\'OJ\')"]');
 await page.waitForTimeout(250);
+// Mejora 3 (obs. 1): el capturado se diligencia en su modal, como en flagrancia.
+await page.click('button[onclick="ojAbrirRequerido()"]'); await page.waitForTimeout(200);
 log(await page.isVisible('#oj-r-pn'), 'El invitado tiene el formulario completo de orden judicial');
 
 const hoy = new Date();
@@ -100,6 +102,7 @@ const fechaDil = hoy.toISOString().slice(0, 10);
 await page.fill('#oj-r-pn', 'INVITADO');
 await page.fill('#oj-r-pa', 'REQUERIDO');
 await page.fill('#oj-r-nd', '99887766');
+await page.click('button[onclick="ojGuardarRequerido()"]'); await page.waitForTimeout(200);
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(200);
 await page.fill('#oj-o-num', '778');
 await page.selectOption('#oj-o-fin', 'MEDIDA_ASEGURAMIENTO');
@@ -119,12 +122,10 @@ await page.fill('#oj-g-dir__libre', 'Calle 59 con carrera 52');
 await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await page.waitForTimeout(150);
 await page.fill('#ojl-funcionarios-0-grado', 'Patrullero');
 await page.fill('#ojl-funcionarios-0-nombre', 'FUNCIONARIO INVITADO');
-// Ola 4: los anexos viajan plegados; el test los abre para marcarlos.
+/* Ola 4: los anexos viajan plegados; el test los abre para comprobarlos.
+   ⚠️ Mejora 3 (obs. 4 y 6): la lectura de derechos ya no es una casilla y los
+   anexos se marcan solos — no hay nada que tocar aquí. */
 await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
-await page.check('#oj-a-dler');
-await page.fill('#oj-a-dhor', '10:40');
-await page.check('#oj-a-anx0');
-await page.check('#oj-a-anx1');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
 
 /* El equipo no está configurado: la app pide unidad, dependencia y firma. */

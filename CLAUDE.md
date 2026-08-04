@@ -1189,6 +1189,136 @@ nuevo) y abriendo el `.docx` en **Word real** (COM → PDF → render con Edge).
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona · DS 10.
   Anti-caché `?v=47` / `cache-v47`, `_BUILD=47`.
 
+## Mejora 3 (2026-08-04) — el módulo OJ deja de parecer un formulario de papel
+Ocho observaciones de campo sobre el wizard de orden judicial (`Documentos/Otro/Mejora 3.docx`,
+texto + 8 pantallazos con recuadro rojo numerado). Verificado con `verify_mejora3.mjs` (**51 checks**,
+nuevo) y abriendo el `.docx` en **Word real** (COM → PDF → render con Edge, 3 páginas, 3 tablas, sin
+pedir reparar). Las 13 suites previas siguen en verde.
+
+- ⚠️ **El hilo que une las ocho observaciones**: el formulario pedía cosas que el informe no
+  imprime, las pedía **dos veces**, y presentaba de golpe lo que debería revelarse por pasos. El
+  usuario lo dijo con una frase que vale como criterio: *«la sensación es de un Word o PDF que
+  visualmente se hace aburrido y agotador, es como rellenar información dentro de un documento
+  básico»*. La respuesta no fue maquillar: fue **quitar 42 controles** y reordenar lo que queda.
+- **Medido en el mismo teléfono de la auditoría (384×800)**: **74 → 25 campos a la vista**,
+  **17 → 6,6 pantallas de scroll**, y el paso del capturado pasó de **4 pantallas a media**.
+
+### Obs. 1 · El capturado se toma igual que en flagrancia
+El paso 1 desplegaba de golpe los 25 campos de identificación (seis bloques) más un botón «Cargar
+desde Personas» que abría una lista. Ahora sigue el patrón que flagrancia ya usaba y que el usuario
+reconoce (`rMultiPerson`): **tarjeta + «Agregar» + «Buscar existente»**, y el diligenciamiento
+ocurre en un **modal enfocado** (`ojAbrirRequerido` / `ojRequeridoForm` / `ojGuardarRequerido`).
+- ⚠️ **La diferencia jurídica se mantiene**: en flagrancia se capturan N personas de un mismo hecho;
+  una orden judicial se libra contra UNA y el numeral 1 del formato tiene una sola tabla. Por eso la
+  tarjeta es una y los botones desaparecen cuando ya está diligenciada. **No se copió el módulo, se
+  copió el patrón.**
+- ⚠️ **`ojCollectRequerido` no necesitó cambiar**: se autolimita mirando `#oj-r-pn`, así que fuera
+  del modal simplemente no recolecta (Ola 4, «recolectar por presencia en el DOM»).
+- ⚠️ **Bug real que destapó el cambio, y que existía desde siempre**: `closeModal()` solo quitaba la
+  clase `open` — **el HTML del modal seguía en el DOM**. Era inofensivo mientras los modales solo
+  mostraban listas, pero con un formulario dentro, `ojCollect()` encontraba `#oj-r-pn` en el modal
+  cerrado y **volcaba al modelo los valores viejos**, pisando (por ejemplo) la persona que se acababa
+  de traer del registro. Ahora `closeModal()` **recoge lo tecleado y vacía el contenedor**: un
+  formulario que no se ve no puede seguir dictando el modelo, y cerrar tocando fuera no pierde nada.
+- ⚠️ **El autoguardado (Ola 1) no cubría los modales**: el listener vivía en `#wz-panels` y los
+  modales están fuera. `wizMontarAutoguardado` engancha ahora también `#modal-c` — cubre de paso el
+  modal de persona de flagrancia, que tenía el mismo hueco desde la Ola 1.
+
+### Obs. 2 · Lo que se preguntaba dos veces
+El bloque «Verificación de la orden antes de materializar» pedía **funcionario, fecha y hora**: los
+tres son exactamente los mismos datos del paso 3 (quien verifica la orden **es** quien hace la
+captura, y lo hace en ese momento). Se eliminó el bloque; `ojVerificacion(c)` los **deriva**.
+- La constancia **sigue imprimiéndose** en el relato con su funcionario y su hora — se dejó de pedir,
+  no de imprimir. V17 desapareció: advertir de un dato que la app pone sola es ruido.
+- ⚠️ **Lo que registró una captura vieja NO se pisa**: las funciones derivadas anteponen siempre lo
+  que traiga el caso guardado y solo rellenan el hueco.
+
+### Obs. 3 · «Forma de ubicación» y coordenadas, fuera
+No salen en ninguna fila del formato. La forma de ubicación abría el relato («en desarrollo de …»)
+y ahora lo abre una fórmula fija y cierta: **«labores propias del servicio de vigilancia y
+control»**. Se fue con ella `ojGPS` y el campo de coordenadas. Una captura guardada que las traiga
+las sigue imprimiendo.
+
+### Obs. 4 y 5 · «Actuación policial» e incautaciones
+Cuatro bloques y **19 controles** (derechos leídos con fecha/hora/lugar/observación; comunicación y
+defensa; uso de la fuerza, lesiones, valoración médica y novedades; elementos incautados y cadena de
+custodia). Qué se hizo con cada cosa:
+- **Derechos** → se **derivan** (`ojDerechos`): se leen en el sitio y a la hora de la captura, y el
+  acta es un documento aparte que viaja como anexo —marcado solo—. La constancia del art. 303 CPP se
+  sigue imprimiendo palabra por palabra. **V16 y V16b dejaron de bloquear**: pedir un clic para
+  desbloquear algo que la app ya daba por cierto no protegía nada.
+- **Comunicación, defensa, fuerza, lesiones, valoración y novedades** → se cuentan en la
+  **NARRACIÓN**, que es el espacio que el formato tiene para los hechos. Eran 14 controles para
+  alimentar frases que el funcionario escribe mejor con sus palabras.
+- **Incautaciones** → *«por lógica las capturas por orden judicial no hay incautaciones ni cadena de
+  custodia»*. Fuera el bloque, `OJ_LISTS.incautaciones` y V20. Si en la diligencia aparece algo, es
+  un **delito nuevo** y se documenta como captura en flagrancia aparte, con su FPJ-5 y su rótulo.
+- ⚠️ **Las claves del modelo se conservan** y `ojRelato` las sigue imprimiendo: una captura guardada
+  con esos datos no pierde una línea. Hay un check que lo mide con comunicación, fuerza y rótulo.
+
+### Obs. 6 · Los anexos, en el orden que fijó el usuario
+`OJ_CAT.anexos` = informe · **acta de derechos + constancia de buen trato** (⚠️ *«es un solo
+formato»*: eran dos casillas para el mismo papel) · **copia documento de identificación** (faltaba y
+siempre viaja) · copia de la orden con su número resuelto solo · valoración médico-legal · registro
+fotográfico · reseña decadactilar. Los cuatro primeros se marcan solos.
+- `OJ_CAT.anexosLegado` + `ojMigrarMejora3` reubican los literales antiguos **sin duplicar**.
+- ⚠️ **`ojAnexosAuto` se movió a `ojNormalizar`**: se recalculaba solo al pintar o recolectar el paso
+  de la narración, así que un caso que nunca pasó por esa pantalla (el que se genera desde la tarjeta
+  de la captura, el del simulador, el importado) llegaba al documento con «Anexos:» y nada debajo.
+  Ahora pasa por ahí **todo** camino que abra un caso, `buildOficioOJBlob` incluido.
+
+### Obs. 7 · «Dejando a disposición», rediseñado
+*«Es una información sumamente importante […] y queda visualmente perdida en su totalidad»*.
+Diagnóstico: la decisión que da sentido a la pantalla —a quién se remite el informe— quedaba en
+**sexto lugar**, detrás del reloj de 36 horas, de una lista de diez faltantes de dos renglones cada
+una y de un cuadro de fundamento legal. **Todo lo de arriba era ESTADO y lo de abajo, ACCIÓN**: el
+orden estaba invertido.
+- Nuevo bloque **`.oj-dest`**: abre la pantalla, con borde de acento, el selector Fiscalía/Juzgado y
+  el destinatario **resuelto en una tarjeta legible** que dice de dónde salió.
+- **Fiscalía** → *«como por lo general es una sola por municipio»*: se carga sola de Ajustes
+  (`ojFiscaliaCfg`) y aquí solo se muestra. `ojGuardarFiscaliaDefecto()` es el atajo para quien la
+  escribió en la primera captura sin pasar por Ajustes: se pregunta **una vez**, no una por captura.
+- **Juzgado** → *«el usuario solo selecciona juzgado y automáticamente se carga»*: la acción
+  principal es **«Elegir juzgado de los registrados»** y de la selección salen nombre, dirección,
+  ciudad y teléfono sin teclear nada.
+- La lista de faltantes pasa a **`.oj-estado`**: una barra roja con el número que se despliega. Sigue
+  arriba y cada falta conserva su botón «Ir al paso N» (Ola 1) — lo que cambia es que **desplegada
+  eran cuatro pantallas de scroll** por delante de la única decisión del paso. El fundamento de la
+  propuesta y el resumen del informe también se pliegan.
+- ⚠️ **Plegar no es borrar, y los `<details>` mantienen sus hijos en el DOM**: los cuatro campos del
+  destinatario se siguen recolectando con el bloque cerrado — si `#oj-x-nom` desapareciera,
+  `ojCollectDisposicion` dejaría de recolectar también el membrete, la custodia y la firma.
+
+### Obs. 8 · El dossier de orden judicial
+Salía con **«CUÁNDO ??/??/?? a las ??:?? horas»** y **«DÓNDE —, Barrio —, — - —»**. El dossier es del
+módulo de flagrancia y lee `caso.narracion.fechaCap*` y `caso.lugar.*`; el espejo de OJ llenaba el
+capturado, los delitos y el destino pero **nunca esas dos ramas** — el módulo guarda esos datos en
+`oj.diligencia`, con otros nombres. **No faltaba el dato: faltaba la proyección.**
+- `ojEspejarDossier(c)` la hace, dentro de `ojEspejar` — el único punto por el que pasan los dos
+  caminos que crean un caso OJ (wizard y simulador). El dossier de flagrancia no se toca.
+- ⚠️ **Las capturas ya guardadas también salen bien**: `genDossier` proyecta al leer, **sobre una
+  copia** (nada se migra a la fuerza).
+- **«CÓMO»** dejó de quedarse fuera: `narracion.texto` recibe el relato del funcionario.
+- **La patrulla**: *«si bien el informe lo firma un solo funcionario, en el dossier siempre se
+  registran los datos de la patrulla»*. Manda lo configurado en Ajustes (que es lo que ya salía
+  bien, con las abreviaturas de la unidad); la patrulla y los funcionarios **del caso** entran solo
+  si Ajustes está en blanco. Un equipo configurado no cambia una coma.
+- Con un adolescente el dossier dice **«Aprehensión por orden judicial»** (Ley 1098 de 2006).
+
+### Rediseño visual
+Cuatro piezas nuevas, todas con tokens del Design System v2 (sin colores hardcodeados, sin
+gradientes, sin emojis): `.oj-auto` (la línea «esto lo pone la app» que sustituye a un bloque
+retirado), `.oj-persona` (estado vacío del capturado), `.oj-estado` (faltantes y advertencias en una
+barra) y `.oj-dest` con su tarjeta. Comprobado en **tema claro y oscuro**.
+- ⚠️ **El aviso de progreso ya no dice «van marcados con *» cuando el paso no enseña asteriscos**:
+  `renderWiz` pinta los paneles **antes** que la barra para poder mirarlo. Mandar a buscar una marca
+  que no está en pantalla es exactamente la incoherencia que hace que una app parezca un formulario.
+- ⚠️ **El formato del informe no se tocó**: 3 tablas, 22 filas fijas, sus tres numerales y su pie.
+  Hay checks que lo miden.
+- Regresiones en verde: **mejora3 51** · OJ 155 · mejora2 38 · mejora1 129 · ola1 38 · ola2 34 ·
+  ola3 33 · ola4 22 · invitado 33 · simulador 41 · export 74 · firma 53 · envío 39 · multipersona ·
+  personas 24 · DS 10. Anti-caché `?v=48` / `cache-v48`, `_BUILD=48`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

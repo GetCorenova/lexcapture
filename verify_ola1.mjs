@@ -60,12 +60,18 @@ await page.evaluate(() => {
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
 
+/* ⚠️ Mejora 3 (obs. 1): el paso 1 es la TARJETA del capturado y sus campos viven
+   en un modal, así que el asterisco se mide donde ahora está el formulario. La
+   pantalla, además, dice en corto qué falta y ofrece completarlo. */
 const reqPaso1 = await page.evaluate(() => {
-  const marcas = [...document.querySelectorAll('#wz-panels .req')];
+  const enPaso = document.querySelector('#wz-panels').textContent;
+  ojAbrirRequerido();
+  const marcas = [...document.querySelectorAll('#modal-c .req')];
   const etiquetas = marcas.map(m => m.parentElement.textContent.replace('*', '').trim());
-  return { total: marcas.length, etiquetas };
+  closeModal(); renderWiz();
+  return { total: marcas.length, etiquetas, enPaso };
 });
-log(reqPaso1.total >= 3, 'El paso 1 marca sus campos obligatorios con asterisco', reqPaso1.etiquetas.join(' · '));
+log(reqPaso1.total >= 3, 'El formulario del capturado marca sus obligatorios con asterisco', reqPaso1.etiquetas.join(' · '));
 /* ⚠️ Mejora 2 (obs. 2): el paso 1 es ahora el numeral 1 del formato — la
    identificación del capturado —, así que sus obligatorios son los de la
    persona (V08, V09), no los de la orden. */
@@ -100,12 +106,17 @@ const pasoTrasSalto = await page.evaluate(() => ws);
 log(pasoTrasSalto === 3, 'El wizard queda realmente en la pantalla de revisión', 'ws=' + pasoTrasSalto);
 
 /* ─────────── 3. Faltantes al INICIO del paso 7, con salto ─────────── */
+/* ⚠️ Mejora 3 (obs. 7): la lista de faltantes sigue arriba y con sus botones,
+   pero PLEGADA en una barra con el número — desplegada era lo que enterraba la
+   única decisión del paso (a quién se remite el informe). */
 const orden7 = await page.evaluate(() => {
   const panel = document.querySelector('#wz-panels .wpn');
-  const alerta = panel.querySelector('.oj-alert.dura');
+  const alerta = panel.querySelector('.oj-estado.dura');
+  // Delante de la barra solo va el destinatario (`.oj-dest`), que con Mejora 3
+  // es la decisión del paso; los bloques de formulario van todos detrás.
   const primerBloque = panel.querySelector('.oj-blk');
   if (!alerta || !primerBloque) return { hay: !!alerta, antes: null };
-  // ¿La alerta de faltantes va antes del primer bloque de formulario?
+  // ¿La barra de faltantes va antes de los bloques de formulario?
   const pos = alerta.compareDocumentPosition(primerBloque);
   return {
     hay: true,
@@ -119,7 +130,7 @@ log(orden7.antes === true, 'Y los lista ARRIBA, antes del formulario (no tras 8 
 log(orden7.botones >= 4, 'Cada falta trae su botón para ir a diligenciarla', orden7.botones + ' botones');
 
 const destinoSalto = await page.evaluate(() => {
-  const b = document.querySelector('#wz-panels .oj-alert.dura button[onclick^="wizGoto"]');
+  const b = document.querySelector('#wz-panels .oj-estado.dura button[onclick^="wizGoto"]');
   const esperado = b ? parseInt(b.getAttribute('onclick').match(/\d+/)[0], 10) : -1;
   if (b) b.click();
   return esperado;
@@ -154,7 +165,11 @@ log(trasPaso.claveCifrada === true && trasPaso.planoEnDisco === false,
   'Va cifrado en su propia clave lc_draft (datos de una persona, igual que un caso)');
 log(trasPaso.paso === 0, 'Recuerda en qué paso iba', 'paso ' + (trasPaso.paso + 1));
 
-// Guardado diferido mientras se escribe dentro de una misma pantalla
+/* Guardado diferido mientras se escribe dentro de una misma pantalla.
+   ⚠️ Mejora 3 (obs. 1): los datos del capturado se diligencian en un modal, que
+   vive fuera de `#wz-panels` — el autoguardado tiene que cubrirlo igual. */
+await page.evaluate(() => ojAbrirRequerido());
+await page.waitForTimeout(200);
 await page.fill('#oj-r-pn', 'CARLOS');
 await page.waitForTimeout(2900);
 const trasEscribir = await page.evaluate(() => {
@@ -323,7 +338,11 @@ await page.evaluate(() => guestEntrar());
 await page.waitForTimeout(300);
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
+await page.evaluate(() => ojAbrirRequerido());
+await page.waitForTimeout(200);
 await page.fill('#oj-r-pn', 'INVITADO');
+await page.evaluate(() => ojGuardarRequerido());
+await page.waitForTimeout(200);
 await page.click('button[onclick="wizNext()"]');
 await page.waitForTimeout(400);
 const invitado = await page.evaluate(() => {

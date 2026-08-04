@@ -89,15 +89,18 @@ log(penaCondena === false, 'El bloque de pena tampoco aparece en una captura por
 /* ─────────── 2. Los que alimentan el registro quedan plegados ─────────── */
 const plegados = await page.evaluate(() => {
   ws = 0; renderWiz();            // Mejora 2: el requerido es el paso 1
-  // ⚠️ Ese paso tiene ahora DOS bloques plegados (rasgos físicos y registro):
-  // se busca el que contiene los campos que interesan, no «el primero».
-  const det = [...document.querySelectorAll('.oj-mas')].find(d => d.querySelector('#oj-r-sx'));
-  return {
+  // ⚠️ Mejora 3 (obs. 1): el formulario del capturado vive en un modal — el paso
+  // solo muestra su tarjeta. Los bloques plegados siguen siendo los mismos.
+  ojAbrirRequerido();
+  const det = [...document.querySelectorAll('#modal-c .oj-mas')].find(d => d.querySelector('#oj-r-sx'));
+  const out = {
     hay: !!det,
     abierto: det ? det.open : null,
     resumen: det ? det.querySelector('summary').textContent.trim() : '',
     campos: det ? ['oj-r-sx', 'oj-r-ec', 'oj-r-nac', 'oj-r-ali'].filter(i => det.querySelector('#' + i)).length : 0
   };
+  closeModal(); renderWiz();
+  return out;
 });
 log(plegados.hay && plegados.abierto === false, 'Sexo, estado civil, nacionalidad y alias quedan plegados');
 log(plegados.campos === 4, 'Los cuatro siguen disponibles dentro del bloque', plegados.campos + '/4');
