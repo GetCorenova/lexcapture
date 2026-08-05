@@ -1380,6 +1380,128 @@ huérfano al pie de una hoja (convención del resto del módulo).
   export 74 · simulador 41 · invitado 33 · multipersona · envío 39 · personas 24 · ola1 38 ·
   ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=49` / `cache-v49`, `_BUILD=49`.
 
+## Acta de derechos del capturado — FPJ-6 (2026-08-04)
+El acta se diligenciaba **a mano** aunque la app ya tenía casi todos sus datos: el funcionario volvía
+a escribir nombre, documento, fecha de nacimiento, padres, dirección, delito, fecha, hora y lugar solo
+para poder imprimirla, hacerla firmar y tomar la huella. Ahora se genera sola desde el caso.
+Verificado con `verify_fpj6.mjs` (**81 checks**) y abriendo los `.docx` en **Word real**
+(COM → PDF → render con Edge, 2 páginas, 5 tablas, sin pedir reparar).
+
+### La decisión de arquitectura, y por qué NO fue un módulo de primer nivel
+Se evaluaron las tres opciones planteadas. El acta es un producto de **un procedimiento sobre una
+persona** —la misma persona capturada dos veces tiene dos actas, con distinta fecha, hora, lugar y
+delito—, así que:
+- **Módulo de primer nivel (opción A): descartado por precedente propio.** Es exactamente lo que se
+  hizo con el Dossier y se revirtió el 2026-07-22: entraba vacío y obligaba a **volver a elegir un
+  caso** de una lista que duplicaba la de Capturas. Además el bottom bar tiene 5 slots y el CTA
+  central solo queda centrado con 5 (`.bn-item{flex:1}`).
+- **Dentro de Personas (opción B): imposible.** `DB.persons` no tiene caso: ni fecha, ni hora, ni
+  lugar, ni delito. Obligaría a re-preguntar justo lo que el requerimiento prohíbe.
+- **Acción contextual del caso (opción C): la elegida.** El acta es otra **salida** del caso, como el
+  documento oficial y el dossier, y entra por el mismo sheet (`openCaseSheet` → «Acta de derechos»).
+- ⚠️ **El dato que decidió el mapeo:** `caso.capturados[]` **ya es el punto donde convergen los dos
+  flujos** — flagrancia lo escribe directo y el módulo OJ lo proyecta con `ojEspejar()`. Un solo
+  mapeo (`f6Mapa`) sirve para los dos **sin una línea de código específica por flujo**, y el wizard
+  no gana un paso, un campo ni una validación (hay un check que lo mide sobre el código fuente de
+  `collectStep`/`wizSave`/`getWizConfig`/`startWizard`).
+
+### Lo extensible no está en la pantalla: `LC_DOCS`
+`lcExportarCaso`, `lcProducirAhora` y `_pregenShareDoc` ramificaban con un booleano `esOJ` **repetido
+en tres sitios que podían discrepar**. Se sustituyó por un **registro de documentos**: una entrada por
+formato con `lbl`, `soloWord`, `anchoFijo` y `build(ctx, papel)`. `lcExportSoloWord`,
+`lcPapelesDe`, `lcPapelEfectivo`, `lcDocNota` y el nuevo productor único `lcProducirDoc` leen de ahí.
+⚠️ **Agregar otro formato oficial es agregar una entrada y su `build`**: ni el diálogo de exportación,
+ni la lista de papeles, ni la descarga cambian. `lcPapelesFPJ()`/`lcPapelSirveFPJ()` se conservan
+porque los usan las suites.
+
+### Mapeo — qué se reutiliza y qué se pregunta
+De los campos del formato, **el usuario solo teclea 9** (los que no existen en ningún otro sitio):
+nombre identitario · LGBTI (SI/NO) y «¿cuál?» · pertenencia étnica y comunidad · redes sociales ·
+persona a quien se comunica la captura (nombre, identificación, teléfono y **hora**) · observaciones.
+Todo lo demás sale del caso y del capturado, y el modal lo enseña en un `<details>` («Lo que ya trae
+el sistema»).
+- **Dónde vive cada dato.** Los **atributos de la persona** (identitario, LGBTI, etnia, redes) van en
+  `capturados[i]` y en el registro de Personas, así una segunda captura ya no los pregunta; lo del
+  **procedimiento** (a quién se comunicó y a qué hora, observaciones) va en `caso.actas[]`, una
+  entrada por persona. Ni un solo campo que el caso ya tenga se guarda aquí.
+- ⚠️ **Bug latente que este trabajo destapó y corrigió:** `savePersonModal` y `openPersonForm`
+  **reconstruían la persona desde cero** (`p = {id:…, …}`) y la sustituían. Cualquier campo que esos
+  formularios no pinten se borraba en silencio al editar — o sea, editar a un capturado después de
+  diligenciar su acta habría perdido los datos del FPJ-6. Los dos **fusionan** ahora
+  (`Object.assign`). Hay un check dedicado.
+- ⚠️ **La fecha, la hora y el lugar se leen de `narracion`/`lugar` y, si faltan, de
+  `oj.diligencia`** — los casos OJ anteriores a Mejora 3 no proyectan a `narracion`. La proyección se
+  hace **al leer**, sobre el mapa, sin migrar nada.
+- **Calidad procesal de la Constancia de Buen Trato («indiciado ___ o imputado ____»), regla del
+  usuario (2026-08-04):** flagrancia → **indiciado** (nadie ha formulado cargos todavía); orden
+  judicial → **imputado** (para librar la orden ya hubo actuación del despacho); **única excepción**,
+  la orden cuya finalidad es *formular la imputación* → indiciado, porque esa audiencia aún no
+  ocurre. ⚠️ **La casilla se marca SIEMPRE**: dejarla en blanco obliga a diligenciarla a mano, que es
+  justo el trabajo que este módulo elimina. Hay un check con la tabla completa de finalidades.
+
+### Motor documental
+`TPL_FPJ6` embebida en base64 junto a `TPL_URI`/`TPL_CESPA`, con su escudo (`word/media/image1.jpeg`,
+4,7 KB — es el formato de la Fiscalía, mismo criterio que el FPJ-5). Se escribe por **índice plano de
+celda** con `setTc` (113 celdas, 5 tablas): **no se reconstruye ni una tabla**, el diseño oficial
+queda intacto. Reutiliza `unzipDocx`, `_buildZip`, `setTc`, `_setParForce`, `sinPuntos`, `mayus` y
+`fpjAplicarPapel` — la plantilla comparte el `pgSz` del FPJ-5 (12242 × 15842), así que el papel se
+aplica con la misma función sin cambios.
+- ⚠️ **ZIP stored obligatorio.** `unzipDocx` lee el tamaño comprimido del local header y decodifica
+  directo, **no infla**: la plantilla se reempaquetó sin compresión (335 KB → 446 KB de base64).
+- ⚠️ **Las casillas de LGBTI y pertenencia étnica traen su PROPIA etiqueta dentro de la celda** («SI»,
+  «AFROCOLOMBIANO»…): no hay casilla vacía al lado, así que `_fpjMarcaX` —que escribe solo la X— las
+  borraría. `_f6Marca` conserva la etiqueta y **antepone** la X. **Antes y no detrás, medido sobre el
+  render**: «AFROCOLOMBIANO» ocupa la celda entera y una X al final se iba sola al renglón siguiente,
+  donde podía leerse como marca de la casilla de abajo.
+- **Constancia de Buen Trato** (`_f6Blancos`): se rellenan los **13 grupos de guiones bajos** del
+  párrafo, en orden, sin reescribir el texto del formato. ⚠️ El guion relleno se sustituye **entero**
+  y el espacio se ajusta según lo que tenga delante y detrás — conservar el sobrante dejaba
+  «de 32____años de edad», que se lee como si faltara algo por escribir. **Un valor vacío deja el
+  guion como está**: el renglón en blanco es el del formato.
+- **Las 21 casillas del encabezado** (`f6Nunc` + `_f6Nunc`) llevan números distintos según el tipo:
+  - **Flagrancia → el NUNC.** Sus 16 primeros dígitos —Dpto (2) + Municipio (3) + Entidad (2) +
+    Unidad receptora (5) + Año (4)— son **fijos de la unidad** y viven en Ajustes, que es de donde el
+    wizard los precarga. Las **5 últimas (Consecutivo) quedan en blanco**: las asigna el SPOA y no se
+    conocen en el sitio. ⚠️ Si el caso no trae NUNC (importado, del simulador, anterior al campo) se
+    **cae a los de Ajustes** — es el mismo número que el wizard le habría puesto, no un dato
+    fabricado.
+  - **Orden judicial → el radicado del proceso** (`oj.proceso.radicado`, recogido en «El proceso
+    judicial»), que llena **las 21 casillas**, Consecutivo incluido.
+- ⚠️ **Radicado de más de 21 dígitos (23 es corriente en Ley 906): no cabe, y se comprobó midiendo el
+  render, no suponiéndolo.** Meter los sobrantes en la última casilla los **apila en vertical** y
+  estira la fila del encabezado; con `w:tcFitText` la fila se conserva pero tres dígitos condensados
+  en 2 mm salen **ilegibles**; y dejar que Word los corte es inaceptable — esa fila trae
+  `w:trHeight hRule="exact"` y **recorta sin avisar** (misma trampa de «El documento tiene que poder
+  editarse»), y perder dígitos de un radicado judicial en silencio es el peor resultado posible.
+  Solución: las 21 casillas llevan los 21 primeros y **el número completo se imprime, en orden y sin
+  casillas, en el renglón que el formato ya tiene vacío inmediatamente debajo del encabezado**. No se
+  toca ni una celda, no se pierde ni un dígito y se lee de corrido. `_f6BajoEncabezado` localiza ese
+  párrafo **recorriendo los hijos del `body`**, nunca por índice plano — `pars` incluye los párrafos
+  de dentro de las celdas.
+- ⚠️ **Sin número el acta SÍ se genera, con las casillas en blanco.** A diferencia del FPJ-5 —que
+  bloquea—, el acta se firma en el sitio de la captura, cuando el consecutivo del SPOA puede no
+  existir todavía; bloquearla dejaría al funcionario sin el papel que tiene que hacer firmar. Lo
+  que tampoco se hace aquí es **inventar dígitos**.
+- ⚠️ **Los renglones de firma quedan EXACTAMENTE como los trae el formato** (capturado, huella, dos
+  servidores y fiscal). El acta se imprime para firmarse y estamparse a mano; escribir el nombre del
+  servidor sobre esa línea le quitaría el espacio a la firma. Hay un check que lo mide.
+
+### Solo Word, como el FPJ-5 — decisión medida, no heredada
+El flujo pedido terminaba en «Descargar PDF». Se midió la plantilla antes de decidir: usa **5
+`w:trHeight`, 5 `w:vMerge`, `w:tcW` en las 113 celdas, listas `w:numPr` y el escudo en VML
+(`<w:pict>`)** — exactamente las construcciones que el traductor OOXML→HTML **no implementa** y por
+las que el FPJ-5 quedó en solo-Word («Exportación v2»). Un PDF que se *parece* al formato oficial de
+la Fiscalía es peor que no tener PDF. **Confirmado con el usuario antes de implementar.** La guarda
+es **estructural**: `buildActaBlob` marca `out.noPDF` y `lcImprimir()` lo rechaza, así ninguna ruta
+futura puede imprimirlo por descuido.
+
+- Regresiones en verde: **fpj6 91** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=50` / `cache-v50`, `_BUILD=50`.
+  ⚠️ `verify_personas` subió su sheet de captura de 6 a **7 acciones** (el acta es la nueva salida);
+  `verify_fpj6` escribe sus `.docx` en el **temporal del sistema**, no en el directorio del proyecto:
+  abrir uno en Word lo deja bloqueado y la siguiente corrida moría con `EBUSY` antes de comprobar nada.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

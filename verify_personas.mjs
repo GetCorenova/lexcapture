@@ -114,7 +114,10 @@ await page.screenshot({ path: OUT('07_capturas') });
 await page.click('.cc .prow-more');
 await page.waitForTimeout(450);
 const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
-log(ccItems.length === 6, 'Sheet de captura con 6 acciones etiquetadas', JSON.stringify(ccItems));
+// 7 desde que el acta de derechos (FPJ-6) es otra salida del caso, junto al
+// documento oficial y el dossier. Todas siguen etiquetadas y sin duplicarse.
+log(ccItems.length === 7 && ccItems.includes('Acta de derechos'),
+  'Sheet de captura con 7 acciones etiquetadas', JSON.stringify(ccItems));
 log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
 await page.screenshot({ path: OUT('08_capturas_sheet') });
 

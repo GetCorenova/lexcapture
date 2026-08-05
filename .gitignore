@@ -28,3 +28,6 @@ verify_firma_salida.pdf
 # Salida de verify_editable + respaldos que deja la reparación de un .docx
 verify_editable_oj.docx
 *.docx.bak
+
+# Salida suelta de una corrida anterior de verify_fpj6 (ahora escribe en el temporal del sistema)
+verify_fpj6_*.docx
