@@ -1495,7 +1495,7 @@ la Fiscalía es peor que no tener PDF. **Confirmado con el usuario antes de impl
 es **estructural**: `buildActaBlob` marca `out.noPDF` y `lcImprimir()` lo rechaza, así ninguna ruta
 futura puede imprimirlo por descuido.
 
-- Regresiones en verde: **fpj6 107** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+- Regresiones en verde: **fpj6 111** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
   editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=50` / `cache-v50`, `_BUILD=50`.
   ⚠️ `verify_personas` subió su sheet de captura de 6 a **7 acciones** (el acta es la nueva salida);
@@ -1555,9 +1555,25 @@ render con Edge, 2 páginas, 5 tablas, sin pedir reparar).
   Observaciones quedan **byte a byte** como en el formato; y no se subraya donde la «línea» es el
   borde de una celda. Solo se reduce el cuerpo de la etiqueta que lo necesita: «INDÍGENA» se queda
   en 22.
-- Regresiones en verde: **fpj6 107** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+### Segundo pase, sobre el propio build de Mejora 4 (mismo día)
+Dos defectos reportados en campo con el documento a la vista. `verify_fpj6.mjs` sube a **111 checks**.
+- ⚠️ **La segunda línea de la dirección salía 137 twips (2,4 mm) a la izquierda de la primera.** La
+  sangría del párrafo de continuación se derivaba del `tblGrid` (4924) mientras Word coloca la celda
+  por el `tcW` (4787): **la misma trampa que ya había documentado para el ancho de ajuste de línea y
+  que no apliqué aquí**. Ahora `_f6SangriaLugar` la deriva de la celda. Medido sobre el render,
+  píxel a píxel: las dos líneas arrancan en el mismo x.
+- ⚠️ **Una observación de más de un renglón salía CORTADA a media frase.** `_docSobreLinea` devuelve
+  lo que no cupo y ese valor **se estaba descartando**: el acta que firma el capturado perdía texto
+  sin avisar — la misma familia de fallo que los EMP que nunca se imprimían (Mejora 1) y las personas
+  que no se reproducían (FPJ-5 v3). `_f6Observaciones` añade tantos renglones como haga falta,
+  **cada uno con su línea** (que es además lo que pedía la observación 6: «durante todo el texto debe
+  de ir línea»), con tope de 20 para que un dato absurdo no dispare el documento.
+- **Un renglón en blanco tras «Observaciones:»**, como en el formato diligenciado a mano, y
+  `w:keepNext` en el título y en los renglones escritos: el apartado no se parte en el salto de
+  página dejando el título huérfano al pie de la hoja anterior.
+- Regresiones en verde: **fpj6 111** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
   editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
-  ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=51` / `cache-v51`, `_BUILD=51`.
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=52` / `cache-v52`, `_BUILD=52`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

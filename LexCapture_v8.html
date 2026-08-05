@@ -2130,7 +2130,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 51;
+var _BUILD = 52;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6312,7 +6312,19 @@ var F6_CUERPO = 10540;
 /* Sangría del párrafo que recoge lo que no cupo en el renglón de «Lugar:»:
    la columna arranca a 10540 − 4924 del margen, más el margen de celda, para
    que la segunda línea quede alineada bajo la primera. */
-var F6_IND_LUGAR = (10540 - 4924) + 70;
+/* Sangría del párrafo que recoge lo que no cupo en el renglón de «Lugar:».
+   Tiene que arrancar EXACTAMENTE donde arranca el texto de esa celda: si no, la
+   segunda línea de la dirección queda corrida respecto de la primera y el
+   bloque se ve desordenado.
+   ⚠️ La posición se deriva del `w:tcW` —la celda es la última de su fila, así
+   que empieza donde termina el ancho de contenido menos su propio ancho— y NO
+   del `w:tblGrid`: con la tabla en porcentaje los dos difieren 137 twips
+   (2,4 mm), que es justo lo que se veía descuadrado. Misma trampa que ya costó
+   una pasada con el ancho de ajuste de línea. */
+var F6_CELMAR = 70;                          // tblCellMar izquierdo de esa tabla
+function _f6SangriaLugar(tc) {
+  return F6_CUERPO - _docAnchoUtil(tc, F6_CUERPO, 0) + F6_CELMAR;
+}
 
 /* ═══ CAPA DE MAQUETACIÓN «MÁQUINA DE ESCRIBIR» ════════════════════════════
    Las siete observaciones de «Mejora 4» son en el fondo UNA sola regla:
@@ -6632,7 +6644,52 @@ function _f6Blancos(p, vals) {
    línea. ⚠️ Se localiza recorriendo los hijos del `body` desde la tabla de
    fecha/hora, nunca por índice plano: `pars` incluye los párrafos de dentro de
    las celdas y el índice se movería con cualquier cambio de la plantilla. */
-function _f6ContinuarLugar(body, texto) {
+/* Observaciones. Dos cosas que el formato exige y que no se pueden dar por
+   supuestas:
+
+   ⚠️ 1. EL TEXTO NO PUEDE PERDERSE. `_docSobreLinea` devuelve lo que no cupo en
+   el renglón y ese valor se estaba ignorando: una observación de más de una
+   línea salía CORTADA a media frase, sin aviso. En un acta que el capturado
+   firma, perder texto en silencio es el peor resultado posible — la misma
+   familia de fallo que los EMP que nunca se imprimían (Mejora 1) y las personas
+   que no se reproducían (FPJ-5 v3). Ahora se añaden tantos renglones como haga
+   falta, cada uno con SU línea, que es además lo que pidió la observación 6
+   («durante todo el texto debe de ir línea»).
+
+   ⚠️ 2. UN RENGLÓN EN BLANCO tras «Observaciones:», como en el formato
+   diligenciado a mano: el texto no arranca pegado al título.
+
+   Los renglones nuevos se clonan de la línea que trae la plantilla —ANTES de
+   escribir en ella— así heredan su tipografía, su tamaño y su espaciado. */
+function _f6Observaciones(p, texto, anchoTw) {
+  if (!p || !p.parentNode) return false;
+  var plantilla = p.cloneNode(true);
+  var hueco = plantilla.cloneNode(true);
+  _docVaciarRuns(hueco);
+  p.parentNode.insertBefore(hueco, p);
+  /* El título «Observaciones:» y el hueco viajan con el texto: si no, el
+     apartado se parte por la mitad en el salto de página y el título queda
+     huérfano al pie de la hoja anterior. Misma convención que el módulo OJ. */
+  _docProp(_docPPr(hueco), 'keepNext', '1', _DOC_PPR);
+  var titulo = hueco.previousSibling;
+  while (titulo && titulo.nodeType !== 1) titulo = titulo.previousSibling;
+  if (titulo && titulo.localName === 'p') _docProp(_docPPr(titulo), 'keepNext', '1', _DOC_PPR);
+  var actual = p, resto = texto, vueltas = 0;
+  while (resto && vueltas++ < 20) {
+    resto = _docSobreLinea(actual, '', resto, anchoTw);
+    if (!resto) break;
+    _docProp(_docPPr(actual), 'keepNext', '1', _DOC_PPR);
+    var sig = plantilla.cloneNode(true);
+    actual.parentNode.insertBefore(sig, actual.nextSibling);
+    actual = sig;
+  }
+  return true;
+}
+function _docVaciarRuns(p) {
+  var rs = p.getElementsByTagNameNS(FPJ_W, 'r');
+  while (rs.length) rs[0].parentNode.removeChild(rs[0]);
+}
+function _f6ContinuarLugar(body, texto, sangriaTw) {
   var W = FPJ_W, n = body.firstChild, tablas = 0;
   while (n) {
     if (n.localName === 'tbl') tablas++;
@@ -6644,7 +6701,7 @@ function _f6ContinuarLugar(body, texto) {
          tipografía y su espaciado exactos — es lo mismo que pulsar Enter. */
       var cont = n.cloneNode(true);
       var ind = body.ownerDocument.createElementNS(W, 'w:ind');
-      ind.setAttributeNS(W, 'w:left', String(F6_IND_LUGAR));
+      ind.setAttributeNS(W, 'w:left', String(sangriaTw));
       _docPon(_docPPr(cont), ind, _DOC_PPR);
       n.parentNode.insertBefore(cont, n);
       return _setParForce(cont, texto);
@@ -6698,7 +6755,7 @@ function buildActaBlob(ctx, papel) {
     if (m.lugar) {
       var resto = _docSobreLinea(tcs[F6_C.LUGAR].getElementsByTagNameNS(W,'p')[0], 'Lugar: ', m.lugar,
                                  _docAnchoUtil(tcs[F6_C.LUGAR], F6_CUERPO));
-      if (resto) _f6ContinuarLugar(body, resto);
+      if (resto) _f6ContinuarLugar(body, resto, _f6SangriaLugar(tcs[F6_C.LUGAR]));
     }
 
     // 1. Mis datos personales son
@@ -6743,7 +6800,7 @@ function buildActaBlob(ctx, papel) {
     /* Obs. 6 — Observaciones. El texto va ENCIMA de la línea continua del
        formato, que se conserva de punta a punta; antes se sustituía por el
        texto y la línea desaparecía. Si no hay observaciones no se toca nada. */
-    if (m.obs) _docSobreLinea(pars[F6_P.OBS], '', m.obs, F6_CUERPO);
+    if (m.obs) _f6Observaciones(pars[F6_P.OBS], m.obs, F6_CUERPO);
 
     /* CONSTANCIA DE BUEN TRATO — los 13 espacios del párrafo, en su orden:
        municipio · día · mes · año · hora · nombre · documento · fecha de

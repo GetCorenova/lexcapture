@@ -641,6 +641,64 @@ log(m4Limpio.obsIgual,
 log(m4.tablaSinSubrayar,
   '⚠️ Y no se subraya donde la «línea» es el borde de una celda: solo sobre los renglones continuos del formato');
 
+/* ⚠️ Dos defectos reportados en campo sobre el propio build de «Mejora 4», que
+   esta sección fija para siempre:
+     · la segunda línea de la dirección salía 137 twips a la izquierda de la
+       primera — la sangría se derivaba del `tblGrid` en vez del `tcW`;
+     · una observación de más de un renglón salía CORTADA a media frase: el
+       sobrante que devuelve `_docSobreLinea` se estaba descartando. */
+const m4b = await page.evaluate(async () => {
+  const OBS = 'Se le informa a la señora la cual manifestó el capturado, es su hermana. ' +
+              'Se le dan todos los pormenores del caso.';
+  const c = {
+    id:'m4b', tipo:'URI', nunc:'1004420269484205', fechaProc:'2026-08-04', conductas:['Extorsión'],
+    lugar:{ dir:'Carrera 67 No 77-38', barrio:'San Benito', muni:'Bello', depto:'Antioquia' },
+    capturados:[{ id:'m4bp', tipoDoc:'CC', numDoc:'1122642840', priNom:'Brayan', priApe:'Restrepo' }],
+    narracion:{ fechaCapD:'04', fechaCapM:'08', fechaCapA:'2026', horaCapH:'09', horaCapM:'51' }
+  };
+  await DB.saveCase(c);
+  const acta = f6Estructura('m4bp'); acta.obs = OBS;
+  const out = buildActaBlob({ caso:c, capturado:c.capturados[0], acta }, 'OFICIO');
+  const xml = new TextDecoder().decode(out.files['word/document.xml']);
+  const ps = xml.split('<w:p ').join('<w:p>').split('<w:p>').slice(1).map(p => p.split('</w:p>')[0]);
+  const txt = s => (s.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g,'')).join('');
+  const limpio = s => txt(s).replace(/ /g, '').replace(/\s+/g, ' ').trim();
+  const iTitulo = ps.findIndex(p => /Observaciones:/.test(p));
+  // Renglones escritos del apartado: desde el título hasta el primero vacío tras ellos
+  const renglones = [];
+  for (let i = iTitulo + 1; i < ps.length && renglones.length < 8; i++) {
+    const t = limpio(ps[i]);
+    if (!t) { if (renglones.length) break; continue; }
+    if (/^_+$/.test(t)) break;
+    renglones.push(t);
+  }
+  const celdaLugar = xml.split('<w:tc>').slice(1)[66].split('</w:tc>')[0];
+  const cont = ps.find(p => /Bello - Antioquia/.test(p)) || '';
+  return {
+    obsCompleta: renglones.join(' ') === OBS,
+    obsRenglones: renglones.length,
+    obsTodosConLinea: renglones.length > 0 &&
+      ps.slice(iTitulo + 1, iTitulo + 1 + renglones.length + 2)
+        .filter(p => limpio(p)).every(p => /<w:u w:val="single"\/>/.test(p)),
+    huecoTrasTitulo: limpio(ps[iTitulo + 1]) === '',
+    sangria: +((cont.match(/<w:ind w:left="(\d+)"/) || [])[1] || 0),
+    // Donde Word arranca el texto de esa celda: ancho de contenido − ancho de la
+    // celda (derivado del tcW, que es al que obedece) + margen de celda.
+    sangriaEsperada: 10540 - Math.round(2271 / 5000 * 10540) + 70,
+    unido: renglones.join(' ')
+  };
+});
+log(m4b.obsCompleta,
+  '⚠️ Una observación larga llega COMPLETA: nada se corta en silencio',
+  m4b.obsRenglones + ' renglón(es) · ' + m4b.unido.slice(-38));
+log(m4b.obsRenglones >= 2 && m4b.obsTodosConLinea,
+  'Y cada renglón lleva su línea, no solo el primero');
+log(m4b.huecoTrasTitulo,
+  'Hay un renglón en blanco entre «Observaciones:» y el texto');
+log(m4b.sangria === m4b.sangriaEsperada,
+  '⚠️ La 2.ª línea de la dirección arranca EXACTAMENTE donde la 1.ª (sangría del `tcW`, no del `tblGrid`)',
+  m4b.sangria + ' twips, esperado ' + m4b.sangriaEsperada);
+
 log(errores.length === 0, 'Consola sin errores', errores.slice(0, 3).join(' | ') || 'ninguno');
 
 console.log(`\n${fails === 0 ? '✅ TODO OK' : '❌ ' + fails + ' FALLO(S)'} — ${n} comprobaciones`);
