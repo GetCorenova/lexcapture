@@ -24,3 +24,7 @@ verify_m2_*.png
 # Salidas de verify_firma (documento y render de revisión)
 verify_firma_salida.docx
 verify_firma_salida.pdf
+
+# Salida de verify_editable + respaldos que deja la reparación de un .docx
+verify_editable_oj.docx
+*.docx.bak

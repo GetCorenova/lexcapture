@@ -1319,6 +1319,67 @@ barra) y `.oj-dest` con su tarjeta. Comprobado en **tema claro y oscuro**.
   ola3 33 · ola4 22 · invitado 33 · simulador 41 · export 74 · firma 53 · envío 39 · multipersona ·
   personas 24 · DS 10. Anti-caché `?v=48` / `cache-v48`, `_BUILD=48`.
 
+## El documento tiene que poder editarse (2026-08-04) — el texto salía recortado en Word
+Reportado en campo con el pantallazo del documento abierto en Word: al escribir sobre el oficio, las
+palabras salían **cortadas por la mitad, «como si tuvieran una capa blanca encima»**. Verificado con
+`verify_editable.mjs` (**22 checks**, nuevo) y reproducido de raíz en **Word real** (COM → PDF →
+render con Edge) contra el build anterior y contra el corregido.
+
+- ⚠️ **No era una capa: era `w:lineRule="exact"`.** Los párrafos espaciadores del oficio (el aire
+  entre la última tabla y la narración, los dos filetes del membrete y del pie, y el párrafo de
+  cierre que evita la página en blanco) fijaban su alto con **alto de línea EXACTO** de 6 pt, 3 pt y
+  1 pt. Word **recorta sin avisar** lo que no cabe en un alto exacto. Mientras el párrafo está vacío
+  no se nota — es justo lo que lo hacía invisible en todas las verificaciones anteriores, que
+  medían el documento **recién salido de fábrica**. En cuanto el funcionario abre el `.docx` y
+  escribe ahí, o pulsa Enter y hereda ese formato del párrafo anterior, su texto de 11 pt queda
+  decapitado dentro de una caja de 6 pt.
+- **Reproducción exacta del reporte**: el pantallazo del usuario venía de
+  `Documentos/Otro/Propuesta Plantilla OJ.docx`, que es una salida de la app que él mismo completó a
+  mano. Escribió «HECHOS» en el espaciador que la app deja tras el numeral 3 y Word se lo cortó.
+  Reproducido tecleando ese mismo texto por COM sobre el oficio generado con el build anterior: el
+  texto sale con la mitad superior comida y encabalgado sobre la última fila de la tabla. Con el
+  build corregido, el mismo texto sale entero.
+- **El arreglo**: el alto se consigue ahora con **«mínimo» (atLeast) + una MARCA DE PÁRRAFO pequeña**
+  (`o.markSz` en `ojxP` → `w:pPr/w:rPr/w:sz`). ⚠️ **La cuenta que garantiza que el formato no se
+  movió**: la línea natural de la marca tiene que quedar **por debajo** del mínimo declarado, así
+  manda el mínimo y el hueco mide lo mismo al twip (Arial ≈ 1,15 em: marca de 5 pt ⇒ 115 tw < 120 tw;
+  de 2 pt ⇒ 46 tw < 60 tw). Vacío mide igual que antes; **con texto crece en vez de recortar**.
+- ⚠️ **Regla que deja este trabajo: en los documentos que compone la app no puede haber ni un solo
+  `w:lineRule="exact"`.** El `.docx` no es una foto — es un entregable que el funcionario abre,
+  completa y corrige en su computador o en su teléfono. Un documento que no se deja escribir está
+  roto aunque salga perfecto de fábrica. `verify_editable.mjs` [1] lo vigila en `document.xml`,
+  `header*.xml` y `footer*.xml`, y [12-15] escriben de verdad 11 pt dentro de cada espaciador y
+  miden que el bloque crece y que no queda una palabra fuera.
+- **La vista de impresión (PDF) tenía el mismo defecto latente**: `lcParHtml` traducía `exact` a
+  `height` fija, que en el navegador **también recorta**. Ahora los dos modos van a `min-height` —
+  el PDF no puede perder una palabra en silencio (misma regla del recorte silencioso de
+  «Exportación v2»). Y `lcParHtml` **lee la marca de párrafo** (`pPr/rPr/sz`) para fijar el
+  `font-size` del `<p>`: sin eso un espaciador vacío mediría una línea entera de 11 pt en la vista y
+  la paginación dejaría de coincidir con la de Word.
+- **El documento de referencia del usuario quedó reparado** (13 párrafos en `document.xml`,
+  `header1-3` y `footer1-3`), con respaldo `.bak` al lado. Word lo abre sin pedir reparar, sigue en
+  2 páginas y «HECHOS» se dibuja entero. `verify_mejora2.mjs` —que lee ese archivo para comparar las
+  etiquetas del formato— sigue en verde, así que el rezip no lo estropeó.
+- ⚠️ **El FPJ-5 no se toca**: sus plantillas son de la Fiscalía y su geometría está calibrada al twip
+  (v2.1–v2.3). Este arreglo es solo del motor OOXML del oficio OJ (`ojx*`), que compone la app.
+### El encabezado «HECHOS» del relato (mismo día) — DECISIÓN EXPLÍCITA DEL USUARIO
+Del mismo pantallazo salió una segunda petición: *«esa palabra HECHOS debe de quedar por defecto en
+el documento, queda predeterminada, tal y como está en negrilla»*. El oficio lo imprime ahora
+siempre, antes de la narración: **negrita, centrado, 11 pt**, con `keepNext` para que no quede
+huérfano al pie de una hoja (convención del resto del módulo).
+- ⚠️ **NO viene de «Propuesta Plantilla OJ»** — comprobado sobre el `document.xml` del formato
+  original (`Propuesta Plantilla OJ - copia.docx`), de `Pormt OJ.docx` y de `Mejora 3.docx`: en
+  ninguno aparece. Es una **adición pedida por el usuario**, no un elemento del formato que faltara.
+  Queda anotado aquí para que nadie la retire creyendo que viola la regla «el oficio ES el formato»
+  (mismo criterio con que se registró el escudo embebido).
+- ⚠️ **La palabra es neutra a propósito**: no se flexiona por terminología SRPA. En una orden de
+  adolescentes el encabezado sigue diciendo «HECHOS» mientras el resto del documento dice
+  «aprehensión» — hay un check que lo genera y lo mide, en vez de suponerlo.
+- El formato no se movió: 3 tablas, 22 filas y 3 páginas, igual que antes.
+- Regresiones en verde: **editable 28** · OJ 155 · mejora3 51 · mejora2 38 · mejora1 129 · firma 53 ·
+  export 74 · simulador 41 · invitado 33 · multipersona · envío 39 · personas 24 · ola1 38 ·
+  ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=49` / `cache-v49`, `_BUILD=49`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

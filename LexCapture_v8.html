@@ -2130,7 +2130,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 48;
+var _BUILD = 49;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -9534,8 +9534,11 @@ function ojxRun(txt,o){
 function ojxP(runs,o){
   o=o||{};
   // El orden de los hijos de w:pPr lo fija el esquema (pStyle → keepNext →
-  // keepLines → pBdr → shd → spacing → ind → jc): invertirlo hace que Word
+  // keepLines → pBdr → shd → spacing → ind → jc → rPr): invertirlo hace que Word
   // marque el documento como dañado.
+  // ⚠️ o.markSz = tamaño (en medios puntos) de la MARCA DE PÁRRAFO. Es lo que
+  // fija el alto de un párrafo vacío sin recurrir a w:lineRule="exact" — ver la
+  // nota de ojxAire(). Nunca se usa en párrafos con texto.
   var ppr='<w:pPr>'+
     (o.pStyle?'<w:pStyle w:val="'+o.pStyle+'"/>':'')+
     (o.keepNext?'<w:keepNext/>':'')+
@@ -9547,6 +9550,7 @@ function ojxP(runs,o){
     ((o.indL||o.indR||o.hang)?'<w:ind w:left="'+(o.indL||0)+'" w:right="'+(o.indR||0)+'"'+
       (o.hang?' w:hanging="'+o.hang+'"':'')+'/>':'')+
     (o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+
+    (o.markSz?'<w:rPr><w:sz w:val="'+o.markSz+'"/><w:szCs w:val="'+o.markSz+'"/></w:rPr>':'')+
     '</w:pPr>';
   return '<w:p>'+ppr+(Array.isArray(runs)?runs.join(''):(runs||''))+'</w:p>';
 }
@@ -9611,8 +9615,7 @@ function ojxFirmaImg(f,nombre){
 // tamaño normal y eso arrastra una página en blanco al final. Se cierra con un
 // párrafo de altura casi nula.
 function ojxCierre(){
-  return '<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>'+
-    '<w:rPr><w:sz w:val="2"/><w:szCs w:val="2"/></w:rPr></w:pPr></w:p>';
+  return ojxP('',{keepLines:false,before:0,after:0,line:20,lineRule:'atLeast',markSz:2});
 }
 /* Título de apartado («1.  IDENTIFICACIÓN DEL CAPTURADO»): estilo Ttulo1 con
    filete inferior 404040, tal como está en el formato. Dos espacios tras el
@@ -9624,11 +9627,21 @@ function ojxSeccion(txt){
 }
 /* Línea horizontal fina que separa el cuerpo del bloque de contacto final. */
 function ojxFilete(){
-  return ojxP('',{keepLines:false,before:560,after:150,line:120,lineRule:'exact',
+  return ojxP('',{keepLines:false,before:560,after:150,line:120,lineRule:'atLeast',markSz:10,
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
 }
-/* Espaciador de 6 pt entre la última tabla y la narración (formato original). */
-function ojxAire(){ return ojxP('',{keepLines:false,after:0,line:120,lineRule:'exact'}); }
+/* Espaciador de 6 pt entre la última tabla y la narración (formato original).
+   ⚠️ NUNCA w:lineRule="exact" — ni aquí ni en ningún otro párrafo del oficio.
+   «Exacto» fija la altura de la línea y Word RECORTA lo que no quepa: mientras
+   el párrafo está vacío no se nota, pero en cuanto el funcionario abre el .docx
+   y escribe ahí (o pulsa Enter, que hereda el formato del párrafo anterior) su
+   texto sale cortado por la mitad, como si tuviera una capa blanca encima.
+   El oficio tiene que poder editarse en un computador o en un teléfono, así que
+   el alto se consigue con «mínimo» (atLeast) + una marca de párrafo pequeña:
+   vacío mide exactamente lo mismo que antes, y con texto CRECE en vez de
+   recortar. Cuentas: marca de 5 pt ⇒ línea natural ≈115 tw < 120 tw, luego
+   manda el mínimo y el hueco sigue siendo de 6 pt al twip. */
+function ojxAire(){ return ojxP('',{keepLines:false,after:0,line:120,lineRule:'atLeast',markSz:10}); }
 /* Tabla etiqueta/valor de dos columnas — la única estructura tabular del oficio.
    Bordes exteriores sz6/808080, interiores sz4/BFBFBF, etiquetas con trama
    EFEFEF: los valores del formato, no una elección de la app.
@@ -9867,14 +9880,14 @@ function ojEncabezadoXml(cfg){
       '<w:tc><w:tcPr><w:tcW w:w="'+wTxt+'" w:type="dxa"/>'+sinBordes+'<w:vAlign w:val="center"/></w:tcPr>'+
         txt+'</w:tc>'+
     '</w:tr></w:tbl>';
-  return tbl+ojxP('',{keepLines:false,before:60,after:0,line:120,lineRule:'exact',
+  return tbl+ojxP('',{keepLines:false,before:60,after:0,line:120,lineRule:'atLeast',markSz:10,
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="1" w:color="808080"/></w:pBdr>'});
 }
 /* Pie: filete fino + «Página N de M» centrado en 9 pt gris, tal como el formato.
    El código/versión/clasificación del formato se imprimen a su izquierda solo si
    la unidad los tiene configurados (muchas no los usan). */
 function ojPieXml(cfg){
-  var out=ojxP('',{keepLines:false,after:80,line:60,lineRule:'exact',jc:'center',
+  var out=ojxP('',{keepLines:false,after:80,line:60,lineRule:'atLeast',markSz:4,jc:'center',
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
   /* ⚠️ El pie del formato lleva EXCLUSIVAMENTE «Página N de M» centrado, en 9 pt
      gris, bajo un filete fino. Nada más. Antes se imprimía además una línea con
@@ -10285,6 +10298,16 @@ function ojDocCuerpo(c,cfg){
   // quedó el capturado. Lo que el usuario escriba a mano va al final, bajo
   // «Observaciones», como en el formato.
   out+=ojxAire();
+  /* Encabezado «HECHOS» del relato: negrita, centrado y 11 pt.
+     ⚠️ NO viene de «Propuesta Plantilla OJ» —el formato de referencia no lo
+     trae, comprobado sobre su document.xml—: lo pidió el usuario de forma
+     explícita para que el relato deje de arrancar sin título, como sí lo tienen
+     los tres numerales. Va SIEMPRE, igual que el resto de la estructura.
+     ⚠️ La palabra es neutra a propósito: no se flexiona por terminología SRPA
+     (t.Sust/t.Acc), así que sirve igual en captura y en aprehensión.
+     keepNext: sin él, el título se queda huérfano al pie de la hoja y el relato
+     empieza en la siguiente — es la convención del resto del módulo. */
+  out+=ojxP(ojxRun('HECHOS',{b:true,sz:OJX_SZ}),{jc:'center',keepNext:true,before:240,after:240});
   var pars=ojRelato(c,cfg).concat(ojRelatoDisposicion(c,cfg));
   pars.forEach(function(par,i){
     out+=ojxP(ojxRun(par),{jc:'both',after:(i===pars.length-1&&!a.observaciones)?400:(i===pars.length-1?160:120)});
@@ -10791,7 +10814,11 @@ function lcParHtml(p,files,rels,opts){
       var af=lcAttr(sp,'after'); css.push('margin-bottom:'+lcPx(af===''?120:af)+'px');
       var line=lcAttr(sp,'line'), rule=lcAttr(sp,'lineRule');
       if(line){
-        if(rule==='exact'||rule==='atLeast') css.push((rule==='exact'?'height:':'min-height:')+lcPx(line)+'px');
+        /* ⚠️ Ni «exact» se traduce ya a height fija: un alto fijo RECORTA el
+           texto que no quepa, que es justo el defecto que se corrigió en el
+           .docx. El PDF no puede perder una palabra en silencio, así que los
+           dos modos van a min-height y el bloque crece si hace falta. */
+        if(rule==='exact'||rule==='atLeast') css.push('min-height:'+lcPx(line)+'px');
         else css.push('line-height:'+(Number(line)/240)+'');
       }
     } else { css.push('margin:0 0 8px'); }
@@ -10811,6 +10838,13 @@ function lcParHtml(p,files,rels,opts){
       });
     }
     if(lcHijo(pPr,'keepNext')) cls.push('keep');
+    /* Tamaño de la MARCA DE PÁRRAFO (w:pPr/w:rPr/w:sz). En un párrafo vacío es
+       lo único que fija su alto, así que sin esto los espaciadores del oficio
+       —que ahora usan marca pequeña + mínimo en vez de alto exacto— medirían
+       una línea entera de 11 pt en la vista y la paginación no coincidiría con
+       la de Word. */
+    var mrPr=lcHijo(pPr,'rPr'), msz=mrPr?lcHijo(mrPr,'sz'):null, mv=msz?lcAttr(msz,'val'):'';
+    if(mv) css.push('font-size:'+lcPt(mv)+'pt');
   }
   if(esVacio&&!runs) runs='&#8203;';                 // párrafo vacío conserva su alto
   return '<p class="'+cls.join(' ')+'" style="'+css.join(';')+'">'+runs+'</p>';
