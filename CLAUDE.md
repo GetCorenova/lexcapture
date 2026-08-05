@@ -1495,12 +1495,69 @@ la Fiscalía es peor que no tener PDF. **Confirmado con el usuario antes de impl
 es **estructural**: `buildActaBlob` marca `out.noPDF` y `lcImprimir()` lo rechaza, así ninguna ruta
 futura puede imprimirlo por descuido.
 
-- Regresiones en verde: **fpj6 91** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+- Regresiones en verde: **fpj6 107** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
   editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=50` / `cache-v50`, `_BUILD=50`.
   ⚠️ `verify_personas` subió su sheet de captura de 6 a **7 acciones** (el acta es la nueva salida);
   `verify_fpj6` escribe sus `.docx` en el **temporal del sistema**, no en el directorio del proyecto:
   abrir uno en Word lo deja bloqueado y la siguiente corrida moría con `EBUSY` antes de comprobar nada.
+
+## Mejora 4 (2026-08-04) — el acta deja de deformar el formato
+Siete observaciones de campo sobre el FPJ-6 generado (`Documentos/Otro/Mejora 4.docx`: 7 pantallazos
+con recuadro rojo numerado, unos del defecto y otros dibujando el resultado esperado). Verificado con
+`verify_fpj6.mjs` (**107 checks**, antes 91) y abriendo los `.docx` en **Word real** (COM → PDF →
+render con Edge, 2 páginas, 5 tablas, sin pedir reparar).
+
+- ⚠️ **El hilo que une las siete es UNA sola regla**, y de no tenerla escrita venían todas:
+  **la línea y la casilla son del FORMATO; el dato se escribe ENCIMA, nunca EN LUGAR DE ellas.**
+  El motor trataba cada renglón continuo como si fuera un campo vacío —escribía el valor y se llevaba
+  por delante la línea del formato oficial (obs. 3, 6 y 7)— y cada celda como una caja de texto
+  suelta, de ahí los dígitos pegados a la izquierda (1), los valores pegados al borde de arriba (4) y
+  la X que empujaba el renglón hacia abajo (5).
+- **La corrección NO son siete parches sino una capa de maquetación reutilizable** (`_doc*`), que
+  trabaja sobre celdas y párrafos de **cualquier** plantilla, no sobre índices del FPJ-6, y decide
+  con **métricas tipográficas reales** (`lcAnchoTexto`, que mide con canvas) en vez de constantes a
+  ojo: `_docCentrarCasilla` · `_docApoyarEnLinea` · `_docSobreLinea` (+ `_docAnchoRenglon`,
+  `_docPartirEnLinea`, `_docRelleno`) · `_docCabeEnUnaLinea` · `_docAnchoUtil` · `_docPon`/`_docProp`
+  (que respetan el orden de hijos que fija el esquema — ponerlos donde caiga hace que Word abra el
+  documento «dañado», lección ya pagada en `ojx*`).
+
+| Obs. | Causa técnica | Solución |
+|---|---|---|
+| 1 · dígitos descentrados | la plantilla no declara `jc` ni `vAlign` en las casillas, y Word los pinta arriba a la izquierda | `_docCentrarCasilla` en las 46 casillas (radicado, NUNC, fecha y hora) |
+| 2 · las casillas de fecha crecían | la fila trae `trHeight` **sin `hRule`** (= `atLeast`) y el «Lugar:» de dos renglones la estiraba | lo que no cabe **no se parte dentro de la celda**: la continuación va a un párrafo propio bajo la tabla |
+| 3 · la línea de «Lugar:» desaparecía | se sustituían los guiones bajos por el texto | el valor va **subrayado** y el subrayado se prolonga hasta donde llegaba la línea |
+| 4 · valores pegados arriba | las celdas de valor no declaran `vAlign` | `_docApoyarEnLinea` (`vAlign bottom`) **solo** en las celdas que la app diligencia |
+| 5 · la X empujaba el renglón | «AFROCOLOMBIANO» ocupa la casilla entera y la X la partía en dos | la X va **detrás** de la etiqueta y esa etiqueta **reduce su cuerpo** (22 → 20 medios puntos) hasta caber |
+| 6 y 7 · líneas perdidas en Observaciones y en la Constancia | mismo error que la 3 | mismo `_docSobreLinea`; en la constancia cada uno de los 13 espacios se sustituye por un **run subrayado propio** |
+
+- ⚠️ **El subrayado se eligió sobre los guiones bajos a propósito**: el usuario pidió poder seguir
+  escribiendo sobre la línea desde el computador o el celular «sin que esta se borre o modifique».
+  Con subrayado, lo que se teclea dentro del renglón continúa subrayado y **la línea crece con el
+  texto**; con guiones bajos, cada letra empuja un guion y descuadra el renglón.
+- ⚠️ **El relleno de la línea son espacios DUROS (U+00A0), no espacios normales.** Word descarta el
+  espacio en blanco final de un renglón al maquetarlo y con él se iba el subrayado: la línea
+  terminaba justo donde acababa el texto. Se vio en el render, no en el XML.
+- ⚠️ **Los anchos se leen del `w:tcW`, no del `w:tblGrid`.** Con la tabla en porcentaje —como todas
+  las del FPJ-6— Word obedece el `tcW` y los dos valores **no coinciden**: en la celda de «Lugar:»
+  difieren 137 twips, suficiente para que una palabra saltara de renglón y estirara la fila. Costó
+  dos pasadas de render descubrirlo; ahora `_docAnchoUtil` lo deriva de la plantilla y **no queda ni
+  un ancho de columna escrito a mano**.
+- ⚠️ **La continuación del «Lugar:» INSERTA un párrafo clonado del que el formato ya tiene ahí**, en
+  vez de escribir dentro de él: ese párrafo vacío es la separación con «Se cumple el
+  procedimiento…», y ocuparlo la hacía desaparecer. Clonar hereda tipografía y espaciado exactos.
+  ⚠️ Eso **corre los índices planos de párrafo**: `F6_P` sigue siendo válido porque `buildActaBlob`
+  toma las referencias de nodo ANTES de insertar, pero cualquier medición sobre el XML final tiene
+  que localizar por contenido (la suite lo hace).
+- **Control de calidad, medido y no supuesto**: el `.docx` generado conserva sus **113 celdas, 5
+  tablas** y su **geometría idéntica** a la plantilla —los `gridCol`, `tcW`, `tblW` y `trHeight` se
+  comparan byte a byte contra `TPL_FPJ6`—; sin dato, las casillas de etnia y el renglón de
+  Observaciones quedan **byte a byte** como en el formato; y no se subraya donde la «línea» es el
+  borde de una celda. Solo se reduce el cuerpo de la etiqueta que lo necesita: «INDÍGENA» se queda
+  en 22.
+- Regresiones en verde: **fpj6 107** · OJ 155 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=51` / `cache-v51`, `_BUILD=51`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

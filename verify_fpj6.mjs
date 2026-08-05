@@ -195,8 +195,8 @@ log(cUri.slice(33, 38).join('') === '',
 log(cUri[51] + cUri[52] === '03' && cUri[54] + cUri[55] === '08' && cUri.slice(57, 61).join('') === '2026',
   'La fecha del acta es la de la captura, casilla por casilla');
 log(cUri[62] + cUri[63] + ':' + cUri[64] + cUri[65] === '14:35', 'Y la hora');
-log(/Lugar:.*CL 52 # 50-31.*Candelaria.*Medellín/.test(cUri[66]),
-  'El lugar sale del lugar de los hechos, sin volver a preguntarlo', cUri[66]);
+log(/^Lugar: .*CL 52 # 50-31/.test(cUri[66]),
+  'El lugar sale del lugar de los hechos, sin volver a preguntarlo', cUri[66].slice(0, 60));
 
 // 1. Mis datos personales
 log(cUri[68] === 'Camila Restrepo', 'Nombre identitario (personas trans)');
@@ -212,12 +212,10 @@ log(cUri[86] === 'carlos@prueba.test', 'Correo electrónico');
 log(cUri[88] === '@carlosr', 'Redes sociales');
 
 // LGBTI y pertenencia étnica: X automática sin borrar la etiqueta del formato
-log(/^X\s+SI$/.test(cUri[90]) && cUri[91] === 'NO',
+log(/^SI\s+X$/.test(cUri[90]) && cUri[91] === 'NO',
   'La casilla SI se marca con X y la etiqueta del formato se conserva', `[${cUri[90]}] [${cUri[91]}]`);
 log(/¿CUAL\?\s+Transgénero/.test(cUri[92]), '«¿CUÁL?» se explica solo', cUri[92]);
-/* ⚠️ La X va DELANTE de la etiqueta: medido sobre el render, «AFROCOLOMBIANO»
-   ocupa la celda entera y una X al final caía sola en el renglón siguiente. */
-log(/^X\s+AFROCOLOMBIANO$/.test(cUri[98]), 'La pertenencia étnica marca su casilla', cUri[98]);
+log(/^AFROCOLOMBIANO\s+X$/.test(cUri[98]), 'La pertenencia étnica marca su casilla', cUri[98]);
 log(cUri[94] === 'INDÍGENA' && cUri[95] === 'NEGRO/A' && cUri[96] === 'RAIZAL' && cUri[99] === 'PALENQUERO/A' && cUri[100] === 'RROM',
   'Las otras cinco casillas quedan con su etiqueta y sin marca');
 log(cUri[102] === 'Consejo Comunitario San José', '¿A qué comunidad pertenece?');
@@ -511,6 +509,137 @@ const fpj5 = await page.evaluate(() => {
 log(fpj5.label === 'FPJ-5 URI', 'El FPJ-5 se sigue generando por su ruta de siempre');
 log(fpj5.tablas === 35 && fpj5.celdas === 308,
   'Y con su geometría intacta: 35 tablas y 308 celdas', fpj5.tablas + ' tablas / ' + fpj5.celdas + ' celdas');
+
+/* ══ H · «MEJORA 4» — EL FORMATO NO SE DEFORMA ════════════════════════════
+   Las siete observaciones son una sola regla: la línea y la casilla son del
+   FORMATO; el dato se escribe encima, nunca en lugar de ellas. Se mide contra
+   la plantilla embebida, que es el patrón de «original». */
+console.log('\n── H · Mejora 4: el dato va encima de la línea, sin deformar el formato ──');
+
+const m4 = await page.evaluate(async () => {
+  // Un caso con dirección larga (dos renglones), etnia de etiqueta larga,
+  // LGBTI y observaciones: el escenario exacto del reporte.
+  const c = {
+    id:'m4', tipo:'URI', nunc:'1004420269484205', fechaProc:'2026-08-01',
+    conductas:['Tráfico, fabricación o porte de estupefacientes','Extorsión'],
+    lugar:{ dir:'Calle 53 con carrera 52', barrio:'Guayaquil', muni:'La Estrella', depto:'Antioquia' },
+    capturados:[{ id:'m4p', rol:'Capturado', tipoDoc:'CC', numDoc:'1122642840', expEn:'Envigado',
+      priNom:'Brayan', priApe:'Restrepo', fn:'1970-11-13', edad:'55', ecivil:'Soltero/a',
+      lgbti:'SI', lgbtiCual:'Homosexual', etnia:'AFRO' }],
+    narracion:{ fechaCapD:'01', fechaCapM:'08', fechaCapA:'2026', horaCapH:'22', horaCapM:'43' }
+  };
+  await DB.saveCase(c);
+  const acta = f6Estructura('m4p');
+  acta.obs = 'Se le informo de su captura a la persona que este indico quien manifestó ser su amiga.';
+  const out = buildActaBlob({ caso:c, capturado:c.capturados[0], acta }, 'OFICIO');
+  const xml = new TextDecoder().decode(out.files['word/document.xml']);
+  const orig = new TextDecoder().decode(unzipDocx(TPL_FPJ6)['word/document.xml']);
+  const celdasDe = s => s.split('<w:tc>').slice(1).map(t => t.split('</w:tc>')[0]);
+  const geo = s => ({
+    grid: (s.match(/<w:gridCol[^>]*\/>/g) || []).join(''),
+    tcW:  (s.match(/<w:tcW[^>]*\/>/g) || []).join(''),
+    tr:   (s.match(/<w:trHeight[^>]*\/>/g) || []).join(''),
+    tbl:  (s.match(/<w:tblW[^>]*\/>/g) || []).join('')
+  });
+  const cs = celdasDe(xml), co = celdasDe(orig);
+  const txt = c2 => (c2.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g,'')).join('');
+  /* ⚠️ El tamaño se lee del RUN, no del primer `w:sz` de la celda: ese es el
+     del `pPr>rPr` del párrafo, que no se toca y siempre marca 22. */
+  const szRun = c2 => {
+    const r = (c2.match(/<w:r[ >][\s\S]*?<\/w:r>/) || [''])[0];
+    const m = r.match(/<w:sz w:val="(\d+)"/); return m ? +m[1] : 0;
+  };
+  /* ⚠️ Los párrafos se localizan POR CONTENIDO, no por índice: la continuación
+     del «Lugar:» inserta un párrafo y corre todos los índices siguientes. */
+  const pars = xml.split('<w:p ').join('<w:p>').split('<w:p>').slice(1).map(p => p.split('</w:p>')[0]);
+  const parCon = re => pars.find(p => re.test(p)) || '';
+  return {
+    geoIgual: JSON.stringify(geo(xml)) === JSON.stringify(geo(orig)),
+    celdas: cs.length, celdasOrig: co.length,
+    tablas: (xml.match(/<w:tbl>/g) || []).length,
+    // Obs 1 — casillas centradas en los dos ejes
+    casillaJc: /<w:jc w:val="center"\/>/.test(cs[20]) && /<w:jc w:val="center"\/>/.test(cs[51]),
+    casillaVAlign: /<w:vAlign w:val="center"\/>/.test(cs[20]) && /<w:vAlign w:val="center"\/>/.test(cs[51]),
+    // Obs 2 — el lugar no parte dentro de la celda: una sola línea allí
+    lugarCelda: txt(cs[66]),
+    lugarContinua: pars.some(p => /Guayaquil, La Estrella - Antioquia/.test(p) && /<w:ind w:left="\d+"/.test(p)),
+    // Obs 3 y 6 — la línea se conserva: valor subrayado + relleno subrayado
+    lugarSubrayado: /<w:u w:val="single"\/>/.test(cs[66]),
+    lugarRelleno: /\u00A0/.test(txt(cs[66])),
+    obsSubrayado: /<w:u w:val="single"\/>/.test(parCon(/manifestó ser su amiga/)),
+    obsRelleno: /\u00A0/.test(txt(parCon(/manifestó ser su amiga/))),
+    obsTexto: txt(parCon(/manifestó ser su amiga/)).slice(0, 90),
+    // Obs 4 — los valores se apoyan en la línea inferior
+    valorApoyado: /<w:vAlign w:val="bottom"\/>/.test(cs[70]) && /<w:vAlign w:val="bottom"\/>/.test(cs[106]),
+    etiquetaIntacta: !/<w:vAlign/.test(cs[69]) && !/<w:vAlign/.test(cs[105]),
+    // Obs 5 — X detrás de la etiqueta; la etiqueta larga se reduce para caber
+    afro: txt(cs[98]), afroSz: szRun(cs[98]), afroSzOrig: szRun(co[98]),
+    indigenaSz: szRun(cs[94]), indigenaSzOrig: szRun(co[94]),
+    // Obs 7 — la constancia con cada valor subrayado
+    constanciaSubrayados: (parCon(/suscribe la presente acta/).match(/<w:u w:val="single"\/>/g) || []).length,
+    /* Los valores de la tabla de datos personales NO se subrayan: allí la
+       línea es el borde de la celda, no un renglón continuo del formato. */
+    tablaSinSubrayar: ![70,72,74,84,106,108].some(i => /<w:u w:val="single"\/>/.test(cs[i]))
+  };
+});
+
+log(m4.celdas === m4.celdasOrig && m4.celdas === 113 && m4.tablas === 5,
+  'El formato conserva sus 113 celdas y sus 5 tablas', m4.celdas + ' celdas / ' + m4.tablas + ' tablas');
+log(m4.geoIgual,
+  '⚠️ Y su geometría IDÉNTICA a la plantilla: ni un ancho de columna, ni un ancho de celda, ni un alto de fila cambiaron');
+log(m4.casillaJc && m4.casillaVAlign,
+  'Obs. 1 — los dígitos van centrados en su casilla, en los dos ejes');
+log(!/Guayaquil/.test(m4.lugarCelda),
+  'Obs. 2 — lo que no cabe NO parte dentro de la celda: la fila de fecha y hora no se estira',
+  m4.lugarCelda.replace(/\u00A0/g, '·').slice(0, 55));
+log(m4.lugarContinua,
+  'Y la continuación va sangrada bajo la primera línea, en su propio párrafo');
+log(m4.lugarSubrayado && m4.lugarRelleno,
+  'Obs. 3 — la línea de «Lugar:» se conserva: el dato va subrayado y la línea sigue hasta el final');
+log(m4.valorApoyado, 'Obs. 4 — los valores se apoyan en la línea inferior de su casilla');
+log(m4.etiquetaIntacta,
+  '⚠️ Y las etiquetas del formato NO se tocan: solo se alinea lo que la app diligencia');
+log(/^AFROCOLOMBIANO\s+X$/.test(m4.afro),
+  'Obs. 5 — la X va detrás de la etiqueta, que se conserva entera', m4.afro);
+log(m4.afroSz > 0 && m4.afroSz < m4.afroSzOrig,
+  'Y la etiqueta larga reduce su cuerpo para que la X quepa en el mismo renglón',
+  m4.afroSzOrig + ' → ' + m4.afroSz + ' medios puntos');
+log(m4.indigenaSz === m4.indigenaSzOrig,
+  '⚠️ Solo la que lo necesita: las etiquetas que ya caben mantienen su tamaño',
+  'INDÍGENA ' + m4.indigenaSzOrig + ' → ' + m4.indigenaSz);
+log(m4.obsSubrayado && m4.obsRelleno && /manifestó ser su amiga/.test(m4.obsTexto),
+  'Obs. 6 — en Observaciones el texto va sobre la línea, que sigue hasta el margen',
+  m4.obsTexto.replace(/\u00A0/g, '·').slice(0, 60));
+log(m4.constanciaSubrayados >= 8,
+  'Obs. 7 — en la constancia cada dato va subrayado: la línea del formato nunca se sustituye',
+  m4.constanciaSubrayados + ' valores sobre su línea');
+
+/* ⚠️ Sin datos, el formato tiene que salir como sale de fábrica: la capa de
+   maquetación no puede dejar rastro donde la app no escribió nada. */
+const m4Limpio = await page.evaluate(() => {
+  const c = DB.getCase('f6-min'), cap = c.capturados[0];
+  const out = buildActaBlob({ caso:c, capturado:cap, acta:f6Estructura(cap.id) }, 'OFICIO');
+  const xml = new TextDecoder().decode(out.files['word/document.xml']);
+  const orig = new TextDecoder().decode(unzipDocx(TPL_FPJ6)['word/document.xml']);
+  const cel = s => s.split('<w:tc>').slice(1).map(t => t.split('</w:tc>')[0]);
+  const cs = cel(xml), co = cel(orig);
+  const pars = s => s.split('<w:p ').join('<w:p>').split('<w:p>').slice(1).map(p => p.split('</w:p>')[0]);
+  return {
+    etnia: [94,95,96,98,99,100].every(i => cs[i] === co[i]),
+    // El renglón de Observaciones es el párrafo siguiente al de su título.
+    obsIgual: (function() {
+      const tras = ps => { const i = ps.findIndex(p => /Observaciones:/.test(p)); return i < 0 ? null : ps[i + 1]; };
+      const a = tras(pars(xml)), b = tras(pars(orig));
+      return a !== null && a === b;
+    })(),
+  };
+});
+log(m4Limpio.etnia,
+  'Sin pertenencia étnica, esas seis casillas quedan byte a byte como en la plantilla');
+log(m4Limpio.obsIgual,
+  'Sin observaciones, su renglón queda byte a byte como en la plantilla');
+log(m4.tablaSinSubrayar,
+  '⚠️ Y no se subraya donde la «línea» es el borde de una celda: solo sobre los renglones continuos del formato');
 
 log(errores.length === 0, 'Consola sin errores', errores.slice(0, 3).join(' | ') || 'ninguno');
 

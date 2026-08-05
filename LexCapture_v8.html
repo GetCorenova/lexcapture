@@ -2130,7 +2130,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 50;
+var _BUILD = 51;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6289,17 +6289,252 @@ var F6_C = {
   COM_NOM: 106, COM_DOC: 108, COM_TEL: 110, COM_HORA: 112
 };
 var F6_P = { OBS: 135, CONSTANCIA: 154 };      // párrafos (índice plano)
+/* Casillas de un carácter: radicado interno, NUNC, y fecha/hora. Sus dígitos
+   van centrados en los dos ejes (observación 1). */
+var F6_CASILLAS = (function() {
+  var a = [], i;
+  for (i = 3;  i <= 15; i++) a.push(i);        // Radicado Interno (13)
+  for (i = 17; i <= 37; i++) a.push(i);        // NUNC / radicado del proceso (21)
+  [51,52, 54,55, 57,58,59,60, 62,63,64,65].forEach(function(x) { a.push(x); });
+  return a;
+})();
+/* Celdas de valor que deben apoyarse en la línea inferior de su casilla
+   (observación 4). Son solo las que la app diligencia: las etiquetas del
+   formato conservan la alineación que traen. */
+var F6_APOYADAS = [68,70,72,74,76,78,80,82,84,86,88, 102,103,104, 106,108,110,112];
+/* Ancho útil de las casillas con etiqueta propia, en twips: la columna del
+   `w:tblGrid` de la plantilla menos los márgenes de celda (70 + 70).
+   Área de contenido = 12242 − 851 − 851 = 10540. */
+/* Ancho de la caja de texto de la página: 12242 − 851 izq − 851 der. Los
+   anchos de celda se derivan de ella con `_docAnchoUtil`, leyendo el `w:tcW`
+   de la propia plantilla — no hay ni un ancho de columna escrito a mano. */
+var F6_CUERPO = 10540;
+/* Sangría del párrafo que recoge lo que no cupo en el renglón de «Lugar:»:
+   la columna arranca a 10540 − 4924 del margen, más el margen de celda, para
+   que la segunda línea quede alineada bajo la primera. */
+var F6_IND_LUGAR = (10540 - 4924) + 70;
 
-/* ⚠️ Estas casillas traen su PROPIA etiqueta dentro de la celda («SI», «NO»,
-   «INDÍGENA»…): no hay una casilla vacía al lado. Marcar con `_fpjMarcaX`
-   —que escribe solo la X— borraría la etiqueta del formato. Se conserva el
-   texto y se le antepone la X, que es donde se pone a mano.
-   ⚠️ ANTES y no detrás, medido sobre el render: «AFROCOLOMBIANO» ocupa la
-   celda entera, así que una X al final se iba sola al renglón siguiente y
-   quedaba ambigua —podía leerse como marca de la casilla de abajo—. Delante,
-   la X cae siempre en el arranque de la celda, junto a su etiqueta. */
-function _f6Marca(tcs, i, etiqueta, marcar) {
-  setTc(tcs, i, (marcar ? 'X   ' : '') + etiqueta);
+/* ═══ CAPA DE MAQUETACIÓN «MÁQUINA DE ESCRIBIR» ════════════════════════════
+   Las siete observaciones de «Mejora 4» son en el fondo UNA sola regla:
+
+       la línea y la casilla son del FORMATO;
+       el dato se escribe ENCIMA, nunca EN LUGAR DE ellas.
+
+   El motor anterior trataba cada renglón continuo como si fuera un campo
+   vacío: escribía el valor y con él se llevaba por delante la línea del
+   formato oficial. De ahí venían las observaciones 3, 6 y 7 (la línea que
+   desaparece), y de tratar cada celda como una caja de texto suelta venían la
+   1 (dígitos pegados a la izquierda), la 4 (valores pegados al borde superior)
+   y la 5 (la X que empuja el renglón hacia abajo).
+
+   Estas primitivas son GENÉRICAS —trabajan sobre celdas y párrafos de
+   cualquier plantilla, no sobre índices del FPJ-6— para que el próximo formato
+   oficial las herede sin reescribir nada. Las medidas salen de las métricas
+   tipográficas reales (`lcAnchoTexto`, que mide con canvas), no de constantes
+   estimadas a ojo.
+═══════════════════════════════════════════════════════════════════════════ */
+var _DOC_TCPR = ('cnfStyle tcW gridSpan hMerge vMerge tcBorders shd noWrap tcMar ' +
+                 'textDirection tcFitText vAlign hideMark').split(' ');
+var _DOC_PPR  = ('pStyle keepNext keepLines pageBreakBefore framePr widowControl numPr ' +
+                 'suppressLineNumbers pBdr shd tabs suppressAutoHyphens kinsoku wordWrap ' +
+                 'overflowPunct topLinePunct autoSpaceDE autoSpaceDN bidi adjustRightInd ' +
+                 'snapToGrid spacing ind contextualSpacing mirrorIndents suppressOverlap jc ' +
+                 'textDirection textAlignment textboxTightWrap outlineLvl divId cnfStyle rPr').split(' ');
+/* Inserta un hijo respetando el orden que fija el esquema. Ponerlo donde caiga
+   hace que Word abra el documento «dañado» — lección ya pagada en `ojx*`. */
+function _docPon(padre, nodo, orden) {
+  var pos = orden.indexOf(nodo.localName), ref = null;
+  for (var n = padre.firstChild; n; n = n.nextSibling) {
+    if (n.nodeType !== 1) continue;
+    if (orden.indexOf(n.localName) > pos) { ref = n; break; }
+  }
+  padre.insertBefore(nodo, ref);
+}
+function _docProp(padre, nombre, valor, orden) {
+  var W = FPJ_W, ya = padre.getElementsByTagNameNS(W, nombre)[0];
+  if (ya && ya.parentNode === padre) { ya.setAttributeNS(W, 'w:val', valor); return ya; }
+  var el = padre.ownerDocument.createElementNS(W, 'w:' + nombre);
+  el.setAttributeNS(W, 'w:val', valor);
+  _docPon(padre, el, orden);
+  return el;
+}
+function _docTcPr(tc) {
+  var W = FPJ_W, pr = tc.getElementsByTagNameNS(W, 'tcPr')[0];
+  if (!pr) { pr = tc.ownerDocument.createElementNS(W, 'w:tcPr'); tc.insertBefore(pr, tc.firstChild); }
+  return pr;
+}
+function _docPPr(p) {
+  var W = FPJ_W, pr = p.getElementsByTagNameNS(W, 'pPr')[0];
+  if (!pr) { pr = p.ownerDocument.createElementNS(W, 'w:pPr'); p.insertBefore(pr, p.firstChild); }
+  return pr;
+}
+/* Obs. 1 — CASILLA DE UN CARÁCTER: el dígito va centrado en los dos ejes.
+   La plantilla no declara `jc` ni `vAlign` en esas celdas, así que Word lo
+   pinta arriba a la izquierda; a mano nadie escribe así dentro de una casilla.
+   El centrado vertical además vuelve estable la casilla si su fila crece por
+   culpa de otra celda (observación 2). */
+function _docCentrarCasilla(tc) {
+  if (!tc) return;
+  _docProp(_docTcPr(tc), 'vAlign', 'center', _DOC_TCPR);
+  var ps = tc.getElementsByTagNameNS(FPJ_W, 'p');
+  for (var i = 0; i < ps.length; i++) _docProp(_docPPr(ps[i]), 'jc', 'center', _DOC_PPR);
+}
+/* Obs. 4 — VALOR QUE SE APOYA EN LA LÍNEA: el dato descansa sobre el borde
+   inferior de su celda, como al escribir a mano sobre un renglón, en vez de
+   quedar pegado al borde de arriba con el hueco debajo. */
+function _docApoyarEnLinea(tc) {
+  if (!tc) return;
+  _docProp(_docTcPr(tc), 'vAlign', 'bottom', _DOC_TCPR);
+}
+// Tamaño de letra de un run, en medios puntos, respetando el orden del esquema.
+function _docSz(r, medios) {
+  var W = FPJ_W, rPr = r.getElementsByTagNameNS(W, 'rPr')[0];
+  if (!rPr) { rPr = r.ownerDocument.createElementNS(W, 'w:rPr'); r.insertBefore(rPr, r.firstChild); }
+  ['sz', 'szCs'].forEach(function(k) {
+    var el = rPr.getElementsByTagNameNS(W, k)[0];
+    if (el) { el.setAttributeNS(W, 'w:val', String(medios)); return; }
+    el = r.ownerDocument.createElementNS(W, 'w:' + k);
+    el.setAttributeNS(W, 'w:val', String(medios));
+    _fpjRprPon(rPr, el);
+  });
+}
+function _docSzDe(r, porDefecto) {
+  var sz = r.getElementsByTagNameNS(FPJ_W, 'sz')[0];
+  var v = sz ? parseInt(sz.getAttributeNS(FPJ_W, 'val') || sz.getAttribute('w:val'), 10) : 0;
+  return v || porDefecto || 22;
+}
+/* Obs. 5 y 2 — CABER EN UN RENGLÓN SIN EMPUJAR EL FORMATO.
+   Si el texto de una celda no cabe a lo ancho, Word lo parte en dos renglones
+   y **estira la fila entera**: la casilla deja de medir lo que mide en el
+   formato oficial. En vez de dejar que eso ocurra se reduce el cuerpo de letra
+   hasta que quepa —que es exactamente lo que pidió el usuario para
+   «AFROCOLOMBIANO»— con un piso para que nunca quede ilegible.
+   Devuelve `true` si se logró que quepa. */
+function _docCabeEnUnaLinea(tc, anchoTw, minMedios) {
+  if (!tc) return false;
+  var W = FPJ_W, rs = tc.getElementsByTagNameNS(W, 'r');
+  if (!rs.length) return true;
+  var txt = _getElText(tc, W);
+  if (!txt) return true;
+  var base = _docSzDe(rs[0], 22), piso = minMedios || 14, medios = base;
+  while (medios > piso && lcAnchoTexto(txt, medios / 2) > anchoTw) medios -= 1;
+  if (medios === base) return lcAnchoTexto(txt, base / 2) <= anchoTw;
+  for (var i = 0; i < rs.length; i++) _docSz(rs[i], medios);
+  return lcAnchoTexto(txt, medios / 2) <= anchoTw;
+}
+/* Obs. 3, 6 y 7 — ESCRIBIR SOBRE EL RENGLÓN CONTINUO.
+   El renglón del formato son guiones bajos. Sustituirlos por el dato borra la
+   línea; escribir el dato **subrayado** y prolongar el subrayado hasta donde
+   llegaba la línea la conserva íntegra, con el texto encima y la línea visible
+   por debajo, igual que al diligenciar a mano.
+   ⚠️ Se usa subrayado y no guiones bajos a propósito: el usuario pidió poder
+   seguir escribiendo sobre la línea desde el computador o el celular sin que
+   se borre ni se desplace. Con subrayado, lo que se teclea dentro del renglón
+   continúa subrayado y la línea CRECE con el texto; con guiones bajos, cada
+   letra empuja un guion y descuadra el renglón. */
+function _docRunSobre(base, texto, subrayar) {
+  var W = FPJ_W, r = base.cloneNode(true), i;
+  var viejos = r.getElementsByTagNameNS(W, 't');
+  while (viejos.length) viejos[0].parentNode.removeChild(viejos[0]);
+  var rPr = r.getElementsByTagNameNS(W, 'rPr')[0];
+  if (subrayar && rPr && !rPr.getElementsByTagNameNS(W, 'u').length) {
+    var u = r.ownerDocument.createElementNS(W, 'w:u');
+    u.setAttributeNS(W, 'w:val', 'single');
+    _fpjRprPon(rPr, u);
+  }
+  var t = r.ownerDocument.createElementNS(W, 'w:t');
+  t.setAttribute('xml:space', 'preserve');
+  t.textContent = texto;
+  r.appendChild(t);
+  return r;
+}
+/* Relleno subrayado para prolongar la línea hasta donde llegaba la original.
+   ⚠️ Espacios DUROS (U+00A0), no espacios normales: Word descarta el espacio en
+   blanco final de un renglón al maquetarlo y con él se iba el subrayado, así que
+   la línea terminaba justo donde acababa el texto en vez de seguir hasta el
+   margen. Se comprobó sobre el render, no sobre el XML. El espacio duro es un
+   carácter como cualquier otro y sí se dibuja. */
+var _DOC_DURO = '\u00A0';                 // espacio duro, escrito con su escape para que se vea en el fuente
+function _docRelleno(anchoTw, pt) {
+  if (anchoTw <= 0) return '';
+  var unidad = lcAnchoTexto(new Array(11).join(_DOC_DURO), pt) / 10;
+  if (!unidad) return '';
+  var n = Math.max(0, Math.round(anchoTw / unidad));
+  return n ? new Array(n + 1).join(_DOC_DURO) : '';
+}
+/* Ancho ÚTIL de una celda, en twips, leído de la propia plantilla.
+   ⚠️ Se lee `w:tcW`, no el `w:tblGrid`: cuando la tabla está en porcentaje
+   —como las del FPJ-6— Word obedece el `tcW` y los dos valores NO coinciden
+   (en la celda de «Lugar:» difieren en 137 twips, suficiente para que una
+   palabra salte de renglón y estire la fila). Se comprobó midiendo el render.
+   `anchoContenido` es el ancho de la caja de texto de la página. */
+function _docAnchoUtil(tc, anchoContenido, margenTw) {
+  var W = FPJ_W, w = tc && tc.getElementsByTagNameNS(W, 'tcW')[0];
+  if (!w) return anchoContenido;
+  var v = parseInt(w.getAttributeNS(W, 'w') || w.getAttribute('w:w') || '0', 10);
+  var tipo = w.getAttributeNS(W, 'type') || w.getAttribute('w:type') || 'dxa';
+  var total = (tipo === 'pct') ? Math.round(v / 5000 * anchoContenido) : v;
+  return Math.max(0, total - (margenTw == null ? 140 : margenTw));
+}
+/* Hasta dónde llega el renglón del formato: se MIDE el texto que la plantilla
+   ya trae (la fila de guiones bajos), en vez de estimar el ancho de la celda.
+   Así la línea generada termina exactamente donde terminaba la original. */
+function _docAnchoRenglon(p) {
+  var W = FPJ_W, rs = p.getElementsByTagNameNS(W, 'r');
+  if (!rs.length) return 0;
+  return lcAnchoTexto(_getElText(p, W), _docSzDe(rs[0], 22) / 2);
+}
+/* Cuánto del texto cabe en `anchoTw`, cortando por palabra. Devuelve
+   [loQueCabe, loQueSobra]; nunca parte una palabra por la mitad. */
+function _docPartirEnLinea(texto, anchoTw, pt) {
+  if (lcAnchoTexto(texto, pt) <= anchoTw) return [texto, ''];
+  var palabras = String(texto).split(' '), linea = '', i;
+  for (i = 0; i < palabras.length; i++) {
+    var prueba = linea ? linea + ' ' + palabras[i] : palabras[i];
+    if (lcAnchoTexto(prueba, pt) > anchoTw) break;
+    linea = prueba;
+  }
+  if (!linea) { linea = palabras[0]; i = 1; }        // una sola palabra larguísima
+  return [linea, palabras.slice(i).join(' ')];
+}
+/* Escribe `valor` sobre el renglón de un párrafo, CONSERVANDO la línea.
+   `etiqueta` es el texto del formato que va delante y no se subraya («Lugar:»).
+   Devuelve lo que no cupo en el renglón, para que quien llama decida dónde
+   ponerlo — nunca se pierde y nunca desborda la línea. */
+function _docSobreLinea(p, etiqueta, valor, anchoUtilTw) {
+  if (!p) return null;
+  var W = FPJ_W, rs = p.getElementsByTagNameNS(W, 'r');
+  if (!rs.length) return null;
+  var base = rs[0].cloneNode(true);
+  var pt = _docSzDe(rs[0], 22) / 2;
+  /* ⚠️ El límite es el MENOR entre el largo de la línea original y el ancho
+     útil real del sitio donde vive el párrafo, con un margen de seguridad.
+     Medir solo la línea original no basta: el canvas y Word no cortan las
+     palabras en el mismo píxel, y pasarse por poco hace que Word envuelva el
+     texto y estire la fila — que es justo lo que la observación 2 prohíbe. */
+  var anchoTw = _docAnchoRenglon(p);                 // el largo de la línea original
+  if (anchoUtilTw) anchoTw = Math.min(anchoTw, anchoUtilTw);
+  anchoTw = Math.floor(anchoTw * 0.97);
+  var disponible = anchoTw - (etiqueta ? lcAnchoTexto(etiqueta, pt) : 0);
+  var corte = _docPartirEnLinea(valor || '', disponible, pt);
+  while (rs.length) rs[0].parentNode.removeChild(rs[0]);
+  var usado = 0;
+  if (etiqueta) { p.appendChild(_docRunSobre(base, etiqueta, false)); usado += lcAnchoTexto(etiqueta, pt); }
+  if (corte[0]) { p.appendChild(_docRunSobre(base, corte[0], true));  usado += lcAnchoTexto(corte[0], pt); }
+  var relleno = _docRelleno(anchoTw - usado, pt);
+  if (relleno) p.appendChild(_docRunSobre(base, relleno, true));
+  return corte[1];
+}
+/* Obs. 5 — Estas casillas traen su PROPIA etiqueta dentro de la celda («SI»,
+   «NO», «INDÍGENA»…): no hay una casilla vacía al lado, así que `_fpjMarcaX`
+   —que escribe solo la X— borraría la etiqueta del formato.
+   La X va DETRÁS de la etiqueta, como la pone a mano quien diligencia; y si con
+   ella el texto ya no cabe a lo ancho de la casilla, se reduce el cuerpo de
+   letra en vez de dejar que Word parta el renglón y estire la fila. */
+function _f6Marca(tcs, i, etiqueta, marcar, anchoTw) {
+  setTc(tcs, i, etiqueta + (marcar ? '   X' : ''));
+  // Sin marca no se toca nada: el formato queda exactamente como viene.
+  if (marcar && anchoTw) _docCabeEnUnaLinea(tcs[i], anchoTw, 14);
 }
 /* Las 21 casillas del encabezado, un dígito cada una. Los sobrantes de un
    radicado más largo (23 dígitos es corriente en Ley 906) se escriben SEGUIDOS
@@ -6364,22 +6599,59 @@ function _f6BajoEncabezado(body, texto) {
    refundirlos en el primero no cambia una sola letra de la tipografía. */
 function _f6Blancos(p, vals) {
   if (!p) return false;
-  var ts = p.getElementsByTagNameNS(FPJ_W, 't');
-  if (!ts.length) return false;
-  var txt = '', i;
-  for (i = 0; i < ts.length; i++) txt += ts[i].textContent;
-  var k = 0, puestos = 0;
-  var out = txt.replace(/_{2,}/g, function(m, off, s) {
+  var W = FPJ_W, rs = p.getElementsByTagNameNS(W, 'r');
+  if (!rs.length) return false;
+  var txt = _getElText(p, W), i;
+  /* Se parte el párrafo en tramos: el texto del formato tal cual, y cada valor
+     en su propio tramo. ⚠️ El valor va SUBRAYADO (observación 7): sustituir los
+     guiones bajos por texto plano borraba la línea del formato, y en el papel
+     el dato se escribe ENCIMA de la línea, no en su lugar. Un espacio que se
+     queda sin dato conserva sus guiones: nada se inventa. */
+  var tramos = [], k = 0, puestos = 0, ultimo = 0, re = /_{2,}/g, mm;
+  while ((mm = re.exec(txt)) !== null) {
     var v = vals[k++];
-    if (v === undefined || v === null || v === '') return m;
+    if (v === undefined || v === null || v === '') continue;   // el guion se queda
     v = String(v); puestos++;
-    var pre = off > 0 ? s.charAt(off - 1) : ' ';
-    var post = s.charAt(off + m.length) || ' ';
-    return (/\s/.test(pre) ? '' : ' ') + v + (/[\s,;.]/.test(post) ? '' : ' ');
-  });
-  ts[0].textContent = out; ts[0].setAttribute('xml:space','preserve');
-  for (i = 1; i < ts.length; i++) ts[i].textContent = '';
-  return puestos > 0;
+    var pre = mm.index > 0 ? txt.charAt(mm.index - 1) : ' ';
+    var post = txt.charAt(mm.index + mm[0].length) || ' ';
+    tramos.push({ t: txt.slice(ultimo, mm.index) + (/\s/.test(pre) ? '' : ' '), u: false });
+    tramos.push({ t: v, u: true });
+    if (!/[\s,;.]/.test(post)) tramos.push({ t: ' ', u: false });
+    ultimo = mm.index + mm[0].length;
+  }
+  if (!puestos) return false;
+  tramos.push({ t: txt.slice(ultimo), u: false });
+  var base = rs[0].cloneNode(true);
+  while (rs.length) rs[0].parentNode.removeChild(rs[0]);
+  for (i = 0; i < tramos.length; i++)
+    if (tramos[i].t) p.appendChild(_docRunSobre(base, tramos[i].t, tramos[i].u));
+  return true;
+}
+/* Lo que no cupo en el renglón de «Lugar:» va al párrafo que el formato ya
+   tiene vacío bajo esa tabla, sangrado para quedar alineado bajo la primera
+   línea. ⚠️ Se localiza recorriendo los hijos del `body` desde la tabla de
+   fecha/hora, nunca por índice plano: `pars` incluye los párrafos de dentro de
+   las celdas y el índice se movería con cualquier cambio de la plantilla. */
+function _f6ContinuarLugar(body, texto) {
+  var W = FPJ_W, n = body.firstChild, tablas = 0;
+  while (n) {
+    if (n.localName === 'tbl') tablas++;
+    else if (tablas === 3 && n.localName === 'p') {          // la 3.ª es fecha/hora/lugar
+      /* ⚠️ Se INSERTA un párrafo propio, clonado del que el formato ya tiene
+         ahí, en vez de escribir dentro de él: ese párrafo vacío es la
+         separación entre el encabezado y «Se cumple el procedimiento…», y
+         ocuparlo con la dirección la hacía desaparecer. Clonarlo hereda su
+         tipografía y su espaciado exactos — es lo mismo que pulsar Enter. */
+      var cont = n.cloneNode(true);
+      var ind = body.ownerDocument.createElementNS(W, 'w:ind');
+      ind.setAttributeNS(W, 'w:left', String(F6_IND_LUGAR));
+      _docPon(_docPPr(cont), ind, _DOC_PPR);
+      n.parentNode.insertBefore(cont, n);
+      return _setParForce(cont, texto);
+    }
+    n = n.nextSibling;
+  }
+  return false;
 }
 
 /* Produce el .docx. Misma forma que `buildFPJBlob` y `buildOficioOJBlob`:
@@ -6413,8 +6685,21 @@ function buildActaBlob(ctx, papel) {
     for (i = 0; i < 4; i++) setTc(tcs, F6_C.FA[i], m.fecha.a[i] || '');
     setTc(tcs, F6_C.HH[0], m.fecha.h[0] || ''); setTc(tcs, F6_C.HH[1], m.fecha.h[1] || '');
     setTc(tcs, F6_C.HM[0], m.fecha.mi[0] || ''); setTc(tcs, F6_C.HM[1], m.fecha.mi[1] || '');
-    // ⚠️ La celda trae la etiqueta «Lugar:» con su renglón: sin dato se deja tal cual.
-    if (m.lugar) setTc(tcs, F6_C.LUGAR, 'Lugar: ' + m.lugar);
+    /* Obs. 1 — cada dígito centrado en su casilla, en los dos ejes. */
+    F6_CASILLAS.forEach(function(x) { _docCentrarCasilla(tcs[x]); });
+    /* Obs. 2 y 3 — «Lugar:». La celda trae la etiqueta con su renglón continuo;
+       sin dato se deja tal cual. Con dato, el texto se escribe ENCIMA de la
+       línea (subrayado) y lo que no cabe NO se deja partir dentro de la celda:
+       eso estiraría la fila y con ella las casillas de fecha y hora, que
+       dejarían de medir lo que miden en el formato. La continuación va al
+       párrafo que el formato ya tiene vacío bajo la tabla, sangrado para que
+       quede alineado bajo la primera línea — y sin línea, porque la línea del
+       formato es una sola. */
+    if (m.lugar) {
+      var resto = _docSobreLinea(tcs[F6_C.LUGAR].getElementsByTagNameNS(W,'p')[0], 'Lugar: ', m.lugar,
+                                 _docAnchoUtil(tcs[F6_C.LUGAR], F6_CUERPO));
+      if (resto) _f6ContinuarLugar(body, resto);
+    }
 
     // 1. Mis datos personales son
     setTc(tcs, F6_C.IDENTITARIO, m.identitario);
@@ -6431,12 +6716,23 @@ function buildActaBlob(ctx, papel) {
     /* ⚠️ Las dos casillas se escriben SIEMPRE, la que no corresponde sin marca:
        si no se declara, no se marca ninguna — el formato no tiene una tercera
        opción y aquí no se inventa. */
-    _f6Marca(tcs, F6_C.LGBTI_SI, 'SI', m.lgbti === 'SI');
-    _f6Marca(tcs, F6_C.LGBTI_NO, 'NO', m.lgbti === 'NO');
+    _f6Marca(tcs, F6_C.LGBTI_SI, 'SI', m.lgbti === 'SI', _docAnchoUtil(tcs[F6_C.LGBTI_SI], F6_CUERPO));
+    _f6Marca(tcs, F6_C.LGBTI_NO, 'NO', m.lgbti === 'NO', _docAnchoUtil(tcs[F6_C.LGBTI_NO], F6_CUERPO));
     setTc(tcs, F6_C.LGBTI_CUAL, '¿CUAL?' + (m.lgbti === 'SI' && m.lgbtiCual ? '  ' + m.lgbtiCual : ''));
-    F6_ETNIA.forEach(function(e) { _f6Marca(tcs, F6_C.ETNIA[e[0]], e[1].toUpperCase(), m.etnia === e[0]); });
+    if (m.lgbti === 'SI' && m.lgbtiCual)
+      _docCabeEnUnaLinea(tcs[F6_C.LGBTI_CUAL], _docAnchoUtil(tcs[F6_C.LGBTI_CUAL], F6_CUERPO), 14);
+    /* Obs. 5 — la X va detrás de la etiqueta; si con ella el texto ya no cabe a
+       lo ancho de la casilla (el caso de «AFROCOLOMBIANO»), se reduce el cuerpo
+       de letra en vez de dejar que Word parta el renglón y estire la fila. */
+    F6_ETNIA.forEach(function(e) {
+      var celda = F6_C.ETNIA[e[0]];
+      _f6Marca(tcs, celda, e[1].toUpperCase(), m.etnia === e[0], _docAnchoUtil(tcs[celda], F6_CUERPO));
+    });
     setTc(tcs, F6_C.COMUNIDAD, m.comunidad);
     setTc(tcs, F6_C.COMUNIDAD_B, ''); setTc(tcs, F6_C.COMUNIDAD_C, '');
+    /* Obs. 4 — los valores se apoyan en la línea inferior de su casilla, no
+       quedan pegados al borde de arriba. */
+    F6_APOYADAS.forEach(function(x) { _docApoyarEnLinea(tcs[x]); });
 
     // 3. La persona a quien deseo se le comunique mi captura
     setTc(tcs, F6_C.COM_NOM, mayus(m.comunica.nombre));
@@ -6444,8 +6740,10 @@ function buildActaBlob(ctx, papel) {
     setTc(tcs, F6_C.COM_TEL, m.comunica.tel);
     setTc(tcs, F6_C.COM_HORA, m.comunica.hora);
 
-    // Observaciones — el renglón en blanco del formato solo se toca si hay algo que escribir
-    if (m.obs) _setParForce(pars[F6_P.OBS], m.obs);
+    /* Obs. 6 — Observaciones. El texto va ENCIMA de la línea continua del
+       formato, que se conserva de punta a punta; antes se sustituía por el
+       texto y la línea desaparecía. Si no hay observaciones no se toca nada. */
+    if (m.obs) _docSobreLinea(pars[F6_P.OBS], '', m.obs, F6_CUERPO);
 
     /* CONSTANCIA DE BUEN TRATO — los 13 espacios del párrafo, en su orden:
        municipio · día · mes · año · hora · nombre · documento · fecha de
