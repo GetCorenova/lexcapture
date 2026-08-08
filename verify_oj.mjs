@@ -534,39 +534,39 @@ log(sinDatos.filete === true && sinDatos.centrados >= 4,
   'Sin datos de custodia, el bloque de contacto conserva su filete y sus 4 renglones',
   sinDatos.centrados + ' renglones centrados');
 
-/* ─────────── 7. Las plantillas subidas quedaron descartadas ───────────
+/* ─────────── 7. Las plantillas subidas ya no existen ───────────
    Antes, una plantilla activa de tipo oj_membrete aportaba el paquete del
-   documento. Ahora el oficio sale SIEMPRE del formato del módulo: es la
-   garantía por construcción de que su diseño no se puede alterar. */
-const custom = await page.evaluate(async ([b64]) => {
-  DB.saveTemplate({ id: 'tpl_oj_test', nombre: 'Membrete de prueba', tipo: 'oj_membrete', activa: true, docxBase64: b64 });
-  DB.saveTemplate({ id: 'tpl_fpj_oj', nombre: 'FPJ-5 OJ de prueba', tipo: 'fpj5_oj', activa: true, docxBase64: b64 });
+   documento; OJ v2 dejó de leerla y ahora se retiró el subsistema entero
+   (pantalla, API de DB y las dos plantillas de Disposición embebidas). La
+   garantía de que el diseño del oficio no se puede alterar pasa de ser una
+   rama que se ignora a no existir código que la lea. */
+const custom = await page.evaluate(async () => {
   const c = DB.getCases()[0];
   c.oj.requerido.priApe = 'APELLIDONUEVO';
   const out = await buildOficioOJBlob(c);
   const buf = new Uint8Array(await out.blob.arrayBuffer());
   const files = await _unzipBufAsync(buf);
   const xml = new TextDecoder().decode(files['word/document.xml']);
-  // Y el botón de descarga tampoco se desvía a la ruta de plantillas.
-  const tiposOfrecidos = (function () {
-    openSubirPlantilla();
-    const sel = document.getElementById('tpl-tipo');
-    const v = sel ? Array.from(sel.options).map(o => o.value) : [];
-    closeModal();
-    return v;
-  })();
   return {
     origen: out.origen,
     tieneNuevo: xml.indexOf('APELLIDONUEVO') >= 0,
     repiteViejo: (xml.match(/PRIMERAPELLIDO/g) || []).length,
     tablas: (xml.match(/<w:tbl>/g) || []).length,
-    tiposOfrecidos
+    // Ni una sola vía sobreviviente para inyectar un .docx propio.
+    api: ['getTemplates', 'saveTemplate', 'saveTemplates', 'getActiveTemplate'].filter(k => typeof DB[k] === 'function'),
+    ui: ['renderPlantillas', 'openSubirPlantilla', 'genDocDisposicion', 'initDefaultTemplates'].filter(k => typeof window[k] === 'function'),
+    pantalla: screens.indexOf('plantillas'),
+    seccion: !!document.getElementById('screen-plantillas'),
+    // Y la clave que se comía ~3,6 MB de cuota queda purgada.
+    purgada: localStorage.getItem('lc_templates') === null
   };
-}, [doc.b64]);
+});
 log(custom.origen === 'formato oficial del módulo' && custom.tablas === 3,
-  'Una plantilla subida NO altera el oficio: se ignora por completo', custom.origen);
-log(custom.tiposOfrecidos.indexOf('oj_membrete') < 0 && custom.tiposOfrecidos.indexOf('fpj5_oj') < 0,
-  'Cargar plantillas ya no ofrece los tipos de orden judicial', custom.tiposOfrecidos.join(','));
+  'El oficio sale del formato del módulo', custom.origen);
+log(custom.api.length === 0 && custom.ui.length === 0 && custom.pantalla < 0 && custom.seccion === false,
+  'El subsistema de plantillas subidas ya no existe: ni API, ni pantalla, ni motor de inyección',
+  custom.api.concat(custom.ui).join(',') || 'nada');
+log(custom.purgada === true, 'La clave lc_templates queda purgada del localStorage');
 log(custom.tieneNuevo === true && custom.repiteViejo === 0,
   'El cuerpo lo sigue generando la app con los datos del caso');
 
@@ -604,7 +604,6 @@ log(bloqueo.relatoHonesto === true,
   '⚠️ El relato NO dice «confirmada la vigencia» cuando estaba vencida: deja la constancia de que lo estaba');
 
 /* ─────────── 8b. Salidas del caso (descarga y envío) ─────────── */
-await page.evaluate(() => { DB.saveTemplates(DB.getTemplates().filter(t => t.id !== 'tpl_oj_test')); });
 const idCaso = await page.evaluate(() => DB.getCases()[0].id);
 /* Toda salida pasa antes por el diálogo de salida; el helper lo atraviesa
    eligiendo Word/Carta, que es lo que estas pruebas miden.

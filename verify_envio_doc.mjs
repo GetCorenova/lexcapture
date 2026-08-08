@@ -228,11 +228,10 @@ const SEL_DL = '#share-it-dl';
   const r6 = await page.evaluate(() => ({ opened: window._opened, shared: window._shared }));
   log(dlBad === null && r6.opened === null && r6.shared === null, '[6] Caso con NUNC invalido NO descarga ni comparte', 'dl=' + (dlBad ? dlBad.suggestedFilename() : 'null') + ' shared=' + r6.shared);
 
-  // ---- 7. Caso OJ con plantilla activa ----
+  // ---- 7. Caso OJ ----
+  // (Ya no hay plantillas subidas que puedan secuestrar la salida: el oficio lo
+  //  compone siempre el módulo. La API de plantillas se retiró por completo.)
   const ojId = await page.evaluate(() => {
-    var ts = DB.getTemplates();
-    ts.forEach(function (t) { if (t.id === '_builtin_fiscalia') t.tipo = 'fpj5_oj'; });
-    DB.saveTemplates(ts);
     var c = SIM.genOJ();
     c.isTest = false;
     DB.saveCase(c);

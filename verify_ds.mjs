@@ -93,10 +93,8 @@ const starSvg = await page.$('.desp-fav svg');
 log(starSvg !== null, 'Favorito con estrella SVG');
 await page.screenshot({ path: OUT('09_despachos_dark') });
 
-// 9. Plantillas
-await page.evaluate(() => go('plantillas'));
-await page.waitForTimeout(300);
-await page.screenshot({ path: OUT('10_plantillas_dark') });
+// 9. (La pantalla Plantillas se retiró: ningún documento sale ya de un .docx
+//     cargado por el usuario, así que no hay captura que tomar.)
 
 // 10. Ajustes (con secciones SVG)
 await page.evaluate(() => go('ajustes'));

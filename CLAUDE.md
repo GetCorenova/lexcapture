@@ -1575,6 +1575,54 @@ Dos defectos reportados en campo con el documento a la vista. `verify_fpj6.mjs` 
   editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=52` / `cache-v52`, `_BUILD=52`.
 
+## Plantillas subidas: subsistema retirado (2026-08-08) — el HTML pasa de 5,76 MB a 2,16 MB
+El usuario preguntó, señalando el ítem del sidebar, «¿para qué ese espacio si no se está
+utilizando?». Al medirlo resultó que no era solo espacio de pantalla: era **el 63 % del peso de la
+app** sosteniendo una función que ya nadie podía alcanzar.
+
+- ⚠️ **Estaba muerta desde OJ v2 (2026-07-29), pero se quedó cobrando el peaje.** Su único consumidor
+  era `genDocDisposicion()`, y a esa función solo se llegaba desde el paso 7 del wizard **viejo**, es
+  decir con una captura OJ anterior al módulo (`ojv` ausente). Para esa misma captura, el botón de
+  encima ya generaba el oficio bueno con `ojDescargarOficio` — o sea que el formulario ofrecía **dos
+  documentos distintos para un mismo procedimiento**, y el de plantilla era el formato descartado.
+  Cuando se escribió «se acabaron las plantillas subidas para orden judicial» se cortó la **lectura**
+  (`ojPaquete` dejó de tener rama de plantilla) pero no se retiró **el resto del subsistema**.
+- **Lo que pesaba, medido, no estimado:** `_BUILTIN_TPL_FISCALIA_B64` (1 843 KB) y
+  `_BUILTIN_TPL_JUZGADO_B64` (1 846 KB) = **3,6 MB de base64** en el HTML. Dentro de cada `.docx`,
+  `word/media/image3.png` pesa **1,34 MB** y mide **1082×1052** — las mismas dimensiones exactas del
+  escudo de «Propuesta Plantilla OJ.docx», que para el oficio OJ se resampleó a 400×389 JPEG (85 KB)
+  precisamente para no cargarlo entero. Aquí estaba **dos veces, a resolución completa**, para
+  imprimirlo a 2 cm.
+- ⚠️ **Y ocupaba cuota de `localStorage`, que es lo escaso.** `initDefaultTemplates()` escribía las
+  dos plantillas en la clave `lc_templates` **en claro**, en el mismo origen donde viven las capturas
+  cifradas. Nuevo `_lcPurgarPlantillas()` en el arranque: la borra en silencio (no es un dato del
+  usuario, son formatos que la app se instalaba sola, y ya no existe la vía que los consumía).
+- **Qué se fue**: el ítem del sidebar y del sheet «Más», `#screen-plantillas`, `renderPlantillas` /
+  `openSubirPlantilla` / `guardarTemplate` / `activarTemplate` / `delTemplate` / `verCamposTemplate`
+  / `checkTplSize` / `_TIPO_LBL`, el motor `genDocDisposicion` + `_dispNarr2` + `normalizeXmlRuns`
+  (que solo él usaba), `initDefaultTemplates`, las dos constantes base64, `_guestTpls` y **las siete
+  funciones de plantillas de `DB`**. No queda código muerto.
+- ⚠️ **La garantía de que el formato del oficio no se puede alterar deja de ser una rama que se
+  ignora y pasa a ser código que no existe.** `verify_oj.mjs` lo mide como tal: ninguna función de la
+  API, ninguna de la UI, `screens.indexOf('plantillas') < 0`, sin `#screen-plantillas` y con
+  `lc_templates` purgada.
+- **El sidebar queda con «Recursos → Despachos» como sección de un solo ítem.** Es el patrón que ya
+  tenía «Análisis → Estadísticas»: se deja así en vez de rehacer la agrupación, que es una decisión
+  de navegación aparte.
+- ⚠️ **Dos checks del módulo OJ fallan los sábados, domingos y festivos, y NO son regresión de este
+  trabajo**: `verify_oj` [18] («el destinatario se sigue proponiendo») y `verify_ola2` [12]
+  («condena con despacho disponible ⇒ R4-A»). `ojResolverDestino` está funcionando bien — en día no
+  hábil no hay juzgado disponible y enruta correctamente a **R4-B** (juez de turno, C-042/2018); lo
+  que está mal es que las suites **dan por hecho un día hábil**. Comprobado: [18] falla idéntico
+  contra el build anterior (155 checks, 1 fallo), y el diff no toca `ojResolverDestino` ni el cálculo
+  de disponibilidad. Corregirlas es congelar la fecha en la prueba, no tocar el motor.
+- ⚠️ `verify_collapse.mjs`, citado en la sección «Dossier colapsado», **ya no existe en el
+  repositorio**. Obsoleto igual que `verify_fase_g.mjs` / `verify_fase_h.mjs`.
+- Regresiones en verde: fpj6 111 · OJ 156 (1 fallo de calendario, preexistente) · mejora1 129 ·
+  mejora2 38 · mejora3 51 · firma 53 · editable 28 · export 74 · envío 39 · invitado 33 ·
+  simulador 41 · personas 24 · multipersona · ola1 38 · ola2 34 (1 fallo de calendario,
+  preexistente) · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=53` / `cache-v53`, `_BUILD=53`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
