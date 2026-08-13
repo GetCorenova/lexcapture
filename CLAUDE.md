@@ -1762,6 +1762,42 @@ completo: «Calle 48 # 55–50, **barrio La Candelaria, Medellín**». Verificad
 - El simulador reparte los tres campos por separado, para que el caso de demostración enseñe el
   renglón completo. Anti-caché `?v=57` / `cache-v57`, `_BUILD=57`.
 
+### Un solo sitio: Ajustes → Estación (2026-08-13)
+El usuario señaló la sección **Estación** —que ya pedía Dirección y Teléfono— y pidió que el barrio y
+la ciudad se recogieran ahí. Al medirlo salió algo peor que una duplicación de pantalla.
+`verify_oj.mjs` sube a **176 checks** (antes 164).
+- ⚠️ **`cfg.dosDir` no la leía NINGÚN documento.** Aparecía tres veces en todo el archivo: el valor
+  por defecto, el `loadAjustesFields` que la pinta y el `saveAjustes` que la guarda. El usuario
+  escribía la dirección de su unidad en Ajustes → Estación y **se quedaba ahí**; mientras tanto, el
+  oficio pedía esa misma dirección otra vez, en otra sección, con otra clave (`ojCustDireccion`).
+  `dosTel` corría mejor suerte por poco: solo la leía el respaldo del teléfono del firmante.
+- **El contacto de la unidad se pide una vez, en Ajustes → Estación**: nombre para el oficio,
+  dirección, barrio, ciudad, teléfono, correo y sitio web. Los siete campos **escriben en las claves
+  que lee el oficio** (`ojCust*` + `ojPieWeb`), así que el motor documental no cambió ni una línea.
+  `dosDir`/`dosTel` se mantienen **en espejo** al guardar, para no romper una config exportada antes
+  (mismo criterio que `conocieronCaso`).
+- **La sección del oficio ya no los vuelve a pedir**: se retiraron sus siete campos duplicados y en
+  su lugar queda una línea que dice de dónde salen. ⚠️ Antes había **dos campos «Barrio»** en la
+  misma pantalla de Ajustes escribiendo en la misma clave, con dos etiquetas distintas.
+- ⚠️ **Lo ya escrito llega al documento sin volver a teclearlo**: `ojPrellenarDeCfg` lee
+  `ojCustDireccion || dosDir` y `ojCustTelefono || dosTel`, y el formulario los muestra. Hay un check
+  que siembra la configuración legada y comprueba que el oficio sale completo.
+- ⚠️ **`nombreEstacion` NO entra en esa cadena** aunque esté en la misma sección: viene sembrada con
+  un valor por defecto (`'CANDELARIA'`), así que fabricaría un lugar de custodia en un equipo sin
+  configurar y desactivaría la validación dura V29 — que es justo el fallo que se corrigió el
+  2026-07-30. Quien quiera otro rótulo lo escribe en «Nombre para el oficio».
+- **Seis claves huérfanas eliminadas de la configuración** (`_CFG_MUERTAS`): `ojConsecutivo`,
+  `ojCodigoFormato`, `ojVersionFormato`, `ojClasificacion`, `ojUbicacionTRD` y `ojReviso`. Sus campos
+  se retiraron en «OJ v2» y «OJ v2.1» y las claves se quedaron sembrándose en cada guardado y
+  viajando en cada exportación, **con cero lectores y cero escritores** —auditado clave por clave
+  sobre todo el archivo—. `_cfgConDefaults` las borra al leer, así desaparecen también de las
+  configuraciones ya guardadas. ⚠️ Las `ojPie*` son **distintas y se quedan**: tampoco tienen campo,
+  pero sí se **leen** como respaldo de una config anterior a «OJ v2.1».
+- Regresiones en verde: **OJ 176** · fpj6 122 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · tipografía OJ 36 · envío 39 · invitado 33 · simulador 41 · personas 24 ·
+  multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=58` / `cache-v58`, `_BUILD=58`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

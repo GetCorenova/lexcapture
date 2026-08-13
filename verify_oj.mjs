@@ -996,6 +996,118 @@ log(cust.cierreLegado[1] === 'Calle 48 # 55–50, barrio La Candelaria, Medellí
   '⚠️ Un caso guardado antes (todo en «dirección») sale idéntico — no se parte el texto viejo',
   cust.cierreLegado[1]);
 
+/* ─────────── 11. Un solo sitio: Ajustes → Estación ───────────
+   La sección «Estación» ya pedía Dirección y Teléfono... y NINGÚN documento las
+   leía (`cfg.dosDir` se guardaba y se quedaba ahí). El oficio pedía lo mismo
+   otra vez en su propia sección. Ahora el contacto de la unidad —nombre,
+   dirección, barrio, ciudad, teléfono, correo y web— se pide UNA vez aquí. */
+console.log('\n── 11 · El contacto de la unidad se pide en Ajustes → Estación ──');
+const est = await page.evaluate(async () => {
+  const txt = xml => (xml.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g, '')).join('');
+  const parrafos = xml => xml.split('<w:p ').join('<w:p>').split('<w:p>').slice(1)
+    .map(p => txt(p.split('</w:p>')[0]).trim()).filter(Boolean);
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; return !!el; };
+
+  // (a) Una configuración LEGADA: la dirección y el teléfono que el usuario
+  //     escribió en esta sección cuando no llegaban a ningún documento.
+  let cfg = DB.getConfig();
+  ['ojCustEstacion','ojCustDireccion','ojCustBarrio','ojCustCiudad',
+   'ojCustTelefono','ojCustCorreo','ojPieWeb'].forEach(k => { cfg[k] = ''; });
+  cfg.dosDir = 'Calle 48 # 55–50'; cfg.dosTel = '312 732 4069';
+  DB.saveConfig(cfg);
+
+  const leg = SIM.genOJ(); leg.id = 'est-legado'; leg.isTest = false;
+  leg.oj.custodia = { estacion:'La Candelaria', direccion:'', barrio:'', ciudad:'', telefono:'', correo:'', web:'' };
+  ojPrellenarDeCfg(leg, DB.getConfig());
+  const rescate = { dir: leg.oj.custodia.direccion, tel: leg.oj.custodia.telefono };
+
+  // (b) El usuario abre Ajustes: lo legado se ve en el formulario…
+  go('ajustes'); loadAjustesFields();
+  const vistos = {
+    dir: (document.getElementById('aj-dir') || {}).value,
+    tel: (document.getElementById('aj-tel') || {}).value
+  };
+  // …y diligencia los campos nuevos, todos en la misma sección.
+  const hay = ['aj-cest','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor','aj-web']
+    .every(id => set(id, ''));
+  set('aj-cest', 'La Candelaria'); set('aj-dir', 'Calle 48 # 55–50');
+  set('aj-bar', 'La Candelaria');  set('aj-ciu', 'Medellín');
+  set('aj-tel', '312 732 4069');   set('aj-cor', 'unidad@ejemplo.test');
+  set('aj-web', 'www.ejemplo.test');
+  saveAjustes();
+  cfg = DB.getConfig();
+
+  // (c) …y baja solo al oficio, sin tocar nada más.
+  const c = SIM.genOJ(); c.id = 'est-auto'; c.isTest = false;
+  c.oj.custodia = { estacion:'', direccion:'', barrio:'', ciudad:'', telefono:'', correo:'', web:'' };
+  ojPrellenarDeCfg(c, cfg); ojEspejar(c); await DB.saveCase(c);
+  const out = await buildOficioOJBlob(ojCasoParaDocumento(c), 'CARTA');
+  const ps = parrafos(new TextDecoder().decode(out.files['word/document.xml']));
+
+  return {
+    rescate, vistos, hay,
+    guardado: { est: cfg.ojCustEstacion, dir: cfg.ojCustDireccion, bar: cfg.ojCustBarrio,
+                ciu: cfg.ojCustCiudad, tel: cfg.ojCustTelefono, cor: cfg.ojCustCorreo, web: cfg.ojPieWeb },
+    espejo: { dosDir: cfg.dosDir, dosTel: cfg.dosTel },
+    // La sección del oficio ya no vuelve a preguntar lo mismo
+    duplicados: ['aj-oj-cest','aj-oj-cdir','aj-oj-cbar','aj-oj-cciu','aj-oj-ctel','aj-oj-ccor','aj-oj-pweb']
+      .filter(id => document.getElementById(id)),
+    cierre: ps.slice(-4),
+    narr: ps.find(p => /bajo custodia/.test(p)) || ''
+  };
+});
+log(est.hay, 'Ajustes → Estación pide los siete datos del contacto de la unidad');
+log(est.duplicados.length === 0,
+  '⚠️ La sección del oficio ya no los vuelve a pedir: un solo sitio, sin dos campos «Barrio»',
+  est.duplicados.join(', '));
+log(est.guardado.est === 'La Candelaria' && est.guardado.dir === 'Calle 48 # 55–50' &&
+    est.guardado.bar === 'La Candelaria' && est.guardado.ciu === 'Medellín' &&
+    est.guardado.tel === '312 732 4069' && est.guardado.cor === 'unidad@ejemplo.test' &&
+    est.guardado.web === 'www.ejemplo.test',
+  'Se guardan en las claves que lee el oficio', JSON.stringify(est.guardado));
+log(est.espejo.dosDir === 'Calle 48 # 55–50' && est.espejo.dosTel === '312 732 4069',
+  'Las claves legadas quedan en espejo (una config exportada antes no se rompe)',
+  JSON.stringify(est.espejo));
+log(est.rescate.dir === 'Calle 48 # 55–50' && est.rescate.tel === '312 732 4069',
+  '⚠️ Lo que el usuario ya había escrito ahí (y no leía ningún documento) llega ahora al oficio',
+  `dir «${est.rescate.dir}» · tel «${est.rescate.tel}»`);
+log(est.vistos.dir === 'Calle 48 # 55–50' && est.vistos.tel === '312 732 4069',
+  'Y se ve en el formulario, sin volver a teclearlo');
+log(est.cierre[1] === 'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+  'El bloque de contacto sale completo con lo diligenciado en Estación', est.cierre[1]);
+log(/Estación de Policía La Candelaria/.test(est.cierre[0]) &&
+    /312 732 4069/.test(est.cierre[2]) && /unidad@ejemplo\.test/.test(est.cierre[2]) &&
+    /www\.ejemplo\.test/.test(est.cierre[3]),
+  'Los otros tres renglones también', est.cierre[0] + ' | ' + est.cierre[2] + ' | ' + est.cierre[3]);
+log(est.narr.includes('Calle 48 # 55–50, barrio La Candelaria, Medellín'),
+  '⚠️ La constancia de la narración usa el mismo dato: no pueden discrepar');
+
+/* Y la sección del oficio se queda solo con lo que el documento imprime. */
+const limpio = await page.evaluate(() => {
+  // Se siembra una config con las claves de formatos que ya no se producen…
+  const crudo = JSON.parse(JSON.stringify(DB.getConfig()));
+  ['ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasificacion',
+   'ojUbicacionTRD','ojReviso'].forEach(k => { crudo[k] = 'residuo'; });
+  DB.saveConfig(crudo);
+  const tras = DB.getConfig();
+  const campos = [...document.querySelectorAll('#aj-body-oj-sec input')]
+    .map(i => i.id).filter(Boolean);
+  return {
+    muertas: _CFG_MUERTAS.filter(k => k in tras),
+    campos,
+    // Lo que el usuario ya tenía configurado no se toca
+    intacto: tras.ojMinisterio === crudo.ojMinisterio && tras.ojAsunto === crudo.ojAsunto
+  };
+});
+log(limpio.muertas.length === 0,
+  '⚠️ Las seis claves huérfanas (consecutivo, código/versión/clasificación, TRD, revisó) se retiran de la config',
+  limpio.muertas.join(', '));
+log(limpio.intacto, 'Sin tocar nada de lo que sí se imprime');
+log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep,aj-oj-logo-file,' +
+    'aj-oj-ciu,aj-oj-asunto,aj-oj-fnom,aj-oj-fdir,aj-oj-fmun,aj-oj-fdep,aj-oj-jini,aj-oj-jfin',
+  'La sección del oficio se queda solo con campos que el documento imprime o usa',
+  limpio.campos.join(', '));
+
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 
 /* Deja el .docx en disco para abrirlo en Word real. */
