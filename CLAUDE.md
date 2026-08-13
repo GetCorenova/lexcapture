@@ -1793,10 +1793,16 @@ la ciudad se recogieran ahí. Al medirlo salió algo peor que una duplicación d
   sobre todo el archivo—. `_cfgConDefaults` las borra al leer, así desaparecen también de las
   configuraciones ya guardadas. ⚠️ Las `ojPie*` son **distintas y se quedan**: tampoco tienen campo,
   pero sí se **leen** como respaldo de una config anterior a «OJ v2.1».
-- Regresiones en verde: **OJ 176** · fpj6 122 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+- **El escudo del membrete se pliega** (`<details class="oj-mas" id="aj-oj-logo-det">`). Ocupaba
+  media pantalla con una miniatura, un selector de archivo abierto y **dos frases que decían «no hay
+  que hacer nada»** — para algo que la app ya resuelve sola desde «Escudo embebido» (2026-07-30).
+  ⚠️ **No se borró**: es la única vía para que una unidad de otra institución ponga el suyo, y esa
+  posibilidad es deliberada. `renderLogoOJ` **lo abre solo si hay un escudo propio cargado**, así
+  quien lo cambió ve cuál quedó y puede deshacerlo, y quien usa el del formato no lo ve nunca.
+- Regresiones en verde: **OJ 177** · fpj6 122 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
   editable 28 · export 74 · tipografía OJ 36 · envío 39 · invitado 33 · simulador 41 · personas 24 ·
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
-  Anti-caché `?v=58` / `cache-v58`, `_BUILD=58`.
+  Anti-caché `?v=59` / `cache-v59`, `_BUILD=59`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

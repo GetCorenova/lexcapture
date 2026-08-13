@@ -1092,9 +1092,24 @@ const limpio = await page.evaluate(() => {
   const tras = DB.getConfig();
   const campos = [...document.querySelectorAll('#aj-body-oj-sec input')]
     .map(i => i.id).filter(Boolean);
+
+  // El escudo del formato viene embebido: su bloque no debe pedir nada.
+  const det = document.getElementById('aj-oj-logo-det');
+  const sinPropio = JSON.parse(JSON.stringify(tras)); sinPropio.ojLogoB64 = '';
+  renderLogoOJ(sinPropio);
+  const abiertoSinPropio = det.open;
+  const conPropio = JSON.parse(JSON.stringify(tras));
+  conPropio.ojLogoB64 = 'iVBORw0KGgo='; conPropio.ojLogoMime = 'image/png';
+  renderLogoOJ(conPropio);
+  const escudo = {
+    plegado: det.tagName === 'DETAILS' && det.className.includes('oj-mas'),
+    abiertoSinPropio, abiertoConPropio: det.open
+  };
+  renderLogoOJ(sinPropio);
+
   return {
     muertas: _CFG_MUERTAS.filter(k => k in tras),
-    campos,
+    campos, escudo,
     // Lo que el usuario ya tenía configurado no se toca
     intacto: tras.ojMinisterio === crudo.ojMinisterio && tras.ojAsunto === crudo.ojAsunto
   };
@@ -1103,6 +1118,9 @@ log(limpio.muertas.length === 0,
   '⚠️ Las seis claves huérfanas (consecutivo, código/versión/clasificación, TRD, revisó) se retiran de la config',
   limpio.muertas.join(', '));
 log(limpio.intacto, 'Sin tocar nada de lo que sí se imprime');
+log(limpio.escudo.plegado && !limpio.escudo.abiertoSinPropio && limpio.escudo.abiertoConPropio,
+  '⚠️ El escudo viene embebido: su bloque va plegado y solo se abre si hay uno propio cargado',
+  JSON.stringify(limpio.escudo));
 log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep,aj-oj-logo-file,' +
     'aj-oj-ciu,aj-oj-asunto,aj-oj-fnom,aj-oj-fdir,aj-oj-fmun,aj-oj-fdep,aj-oj-jini,aj-oj-jfin',
   'La sección del oficio se queda solo con campos que el documento imprime o usa',

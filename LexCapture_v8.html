@@ -1733,12 +1733,17 @@ body.guest{padding-top:38px}
           <p class="oj-hint">Ej: METROPOLITANA DEL VALLE DE ABURRÁ · METROPOLITANA DE BOGOTÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE INVESTIGACIÓN CRIMINAL E INTERPOL · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</p>
           <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Escribe solo el nombre: CANDELARIA" onblur="ojCompletarEstacion(this,true)"></div>
           <p class="oj-hint">Ej: ESTACIÓN DE POLICÍA CANDELARIA · ESTACIÓN DE POLICÍA CAÑASGORDAS · SECCIONAL DE INVESTIGACIÓN CRIMINAL</p>
-          <div class="fg"><label class="fl">Escudo del membrete</label></div>
-          <div id="aj-oj-logo-prev"></div>
-          <p class="oj-hint">Se imprime a 1,9 cm a la izquierda de las cuatro líneas. Viene cargado: no tienes que hacer nada. Cámbialo solo si tu unidad usa otro escudo.</p>
-          <div class="fg">
-            <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
-          </div>
+          <!-- ⚠️ Plegado: el escudo del formato viene embebido y se pone solo, así que
+               esto NO es un paso de configuración — es el reemplazo opcional para una
+               unidad que use otro. `renderLogoOJ` lo abre solo si hay uno propio
+               cargado, para que se vea cuál está en uso y se pueda deshacer. -->
+          <details class="oj-mas" id="aj-oj-logo-det"><summary>Escudo del membrete <small>— viene cargado, no hay que hacer nada</small></summary>
+            <div id="aj-oj-logo-prev"></div>
+            <p class="oj-hint">Se imprime a 1,9 cm a la izquierda de las cuatro líneas. Cámbialo solo si tu unidad usa otro escudo.</p>
+            <div class="fg">
+              <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
+            </div>
+          </details>
           <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
           <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
@@ -2110,7 +2115,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 58;
+var _BUILD = 59;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -7984,6 +7989,9 @@ function renderLogoOJ(cfg){
   // Siempre hay escudo: el del formato viene embebido. Aquí solo se ve cuál
   // está en uso y, si se cargó otro, se puede volver al del formato.
   var propio=!!cfg.ojLogoB64;
+  // Solo se despliega si hay uno propio: quien usa el del formato no tiene nada
+  // que mirar ahí, y quien lo cambió necesita ver cuál quedó y poder deshacerlo.
+  var det=document.getElementById('aj-oj-logo-det'); if(det) det.open=propio;
   el.innerHTML='<div class="flx g8" style="align-items:center;margin-top:8px">'+
     '<img src="data:'+escAttr(propio?(cfg.ojLogoMime||'image/png'):OJ_LOGO_MIME)+';base64,'+
       escAttr(propio?cfg.ojLogoB64:OJ_LOGO_B64)+'" '+
