@@ -145,7 +145,7 @@ log(await page.isVisible('#f6-obs'),
 
 const controles = await page.$$eval('#modal-c input, #modal-c select, #modal-c textarea',
   els => els.filter(e => e.type !== 'hidden' && e.offsetParent !== null).map(e => e.id));
-log(controles.length <= 10,
+log(controles.length <= 11,
   'El formulario pide solo lo que el sistema NO tiene', controles.length + ' controles: ' + controles.join(', '));
 
 const yaTiene = await page.$eval('#modal-c details', d => d.textContent);
@@ -154,6 +154,7 @@ log(/Restrepo/i.test(yaTiene) && /71234567/.test(yaTiene) && /03\/08\/2026/.test
 
 // Diligenciar SOLO lo que falta.
 await page.fill('#f6-identitario', 'Camila Restrepo');
+await page.selectOption('#f6-presento', 'NO');
 await page.selectOption('#f6-lgbti', 'SI');
 await page.waitForTimeout(80);
 log(await page.isVisible('#f6-lgbtiCual'), '«¿Cuál?» aparece solo al marcar SI');
@@ -201,7 +202,8 @@ log(/^Lugar: .*CL 52 # 50-31/.test(cUri[66]),
 // 1. Mis datos personales
 log(cUri[68] === 'Camila Restrepo', 'Nombre identitario (personas trans)');
 log(cUri[70] === 'CARLOS ANDRÉS RESTREPO GÓMEZ', 'Nombres y apellidos, en mayúsculas como el FPJ-5', cUri[70]);
-log(cUri[72] === 'CC 71234567 de Medellín', 'Identificación sin puntos', cUri[72]);
+log(cUri[72] === 'CC 71234567 de Medellín, No presenta documento físico',
+  'Identificación sin puntos, con si presentó o no el documento físico', cUri[72]);
 log(cUri[74] === '12/03/1994', 'Fecha de nacimiento');
 log(cUri[76] === 'Bello, Antioquia', 'Lugar de nacimiento');
 log(cUri[78] === 'María Gómez y Luis Restrepo', 'Nombre de los padres');
@@ -267,6 +269,20 @@ log(!!mapaOj.lugar, 'Y el lugar de la diligencia', mapaOj.lugar);
 log(!!mapaOj.nombres && !!mapaOj.doc, 'Y la persona requerida, que el módulo OJ ya espeja a capturados[]');
 log(mapaOj.calidad === 'IMPUTADO',
   'Con orden por medida de aseguramiento la calidad procesal es «imputado»', mapaOj.calidad);
+
+/* Si presentó o no el documento físico: hecho del PROCEDIMIENTO (`acta`), no
+   de la persona — se pregunta en cada acta, nunca se hereda del capturado. */
+const presentoTxts = await page.evaluate(id => {
+  const c = DB.getCase(id), cap = c.capturados[0];
+  const si = f6Mapa(c, cap, Object.assign(f6Estructura(cap.id), { presentoDoc:'SI' })).doc;
+  const no = f6Mapa(c, cap, Object.assign(f6Estructura(cap.id), { presentoDoc:'NO' })).doc;
+  const vacio = f6Mapa(c, cap, f6Estructura(cap.id)).doc;
+  return { si, no, vacio };
+}, idOj);
+log(/, Presenta documento físico$/.test(presentoTxts.si), 'Con SI, se imprime «Presenta documento físico»', presentoTxts.si);
+log(/, No presenta documento físico$/.test(presentoTxts.no), 'Con NO, se imprime «No presenta documento físico»', presentoTxts.no);
+log(!/documento físico/.test(presentoTxts.vacio),
+  '⚠️ Sin declarar, no se inventa ninguna de las dos', presentoTxts.vacio);
 
 /* Regla del usuario: orden judicial ⇒ IMPUTADO, porque para librarla ya hubo
    actuación del despacho. Única excepción: la orden que se libra PARA formular
@@ -402,6 +418,8 @@ function F6_ETNIA_OK(cc) {
 }
 log(cMin[106] === '' && cMin[108] === '' && cMin[110] === '' && cMin[112] === '',
   'Sin persona a quien comunicar, las cuatro casillas quedan en blanco');
+log(cMin[72] === 'CC 99887766',
+  'Sin declarar si presentó el documento, la casilla de identificación no lleva texto de más', cMin[72]);
 const txtMin = textoPlano(xmlMin).replace(/\s+/g, ' ');
 log(/indiciado \(a\) ___/.test(txtMin) === false && /X o imputado/.test(txtMin) === false ? true : /indiciado \(a\) ?X/.test(txtMin),
   'La calidad procesal se marca en flagrancia (indiciado)');
@@ -698,6 +716,109 @@ log(m4b.huecoTrasTitulo,
 log(m4b.sangria === m4b.sangriaEsperada,
   '⚠️ La 2.ª línea de la dirección arranca EXACTAMENTE donde la 1.ª (sangría del `tcW`, no del `tblGrid`)',
   m4b.sangria + ' twips, esperado ' + m4b.sangriaEsperada);
+
+/* ══ I · UN SOLO CUERPO DE LETRA ═══════════════════════════════════════════
+   Reportado en campo: los datos rellenados salían a tres tamaños distintos —el
+   NUNC a 12 pt, la mayoría a 11 y las observaciones a 10.
+   ⚠️ NO basta con mirar el `w:sz` del run: el defecto era justamente su
+   AUSENCIA. Un run sin `sz` propio no hereda el tamaño del formato, hereda el
+   del estilo por defecto del documento, y en esta plantilla `Normal` trae
+   sz=24 (12 pt). Por eso aquí se resuelve el tamaño EFECTIVO igual que Word:
+   rPr/sz → rStyle → estilo del párrafo (cadena `basedOn`) → docDefaults. */
+console.log('\n── I · Un solo cuerpo de letra para lo que rellena la app ──');
+
+const sz = await page.evaluate(async () => {
+  const W = FPJ_W, dec = new TextDecoder();
+  const c = {
+    id:'sz1', tipo:'URI', nunc:'0500160001202601', fechaProc:'2026-08-03', conductas:['Hurto'],
+    lugar:{ dir:'CL 52 # 50-31', barrio:'La Candelaria', muni:'Medellín', depto:'Antioquia' },
+    capturados:[{ id:'szp', tipoDoc:'CC', numDoc:'71234567', expEn:'Medellín',
+      priNom:'Carlos', priApe:'Restrepo', fn:'1994-03-12', lugNac:'Bello, Antioquia',
+      padres:'María Gómez y Luis Restrepo', ecivil:'Unión libre', ocup:'Comerciante',
+      dirRes:'KR 45 # 30-12', tel:'3001234567', correo:'c@prueba.test', redes:'@carlosr',
+      nombreIdentitario:'Camila Restrepo', lgbti:'SI', lgbtiCual:'Transgénero',
+      etnia:'AFRO', comunidadEtnica:'Consejo Comunitario San José' }],
+    narracion:{ fechaCapD:'03', fechaCapM:'08', fechaCapA:'2026', horaCapH:'14', horaCapM:'35' }
+  };
+  await DB.saveCase(c);
+  const acta = f6Estructura('szp');
+  acta.presentoDoc = 'NO';
+  acta.comunica = { nombre:'Luz Marina Gómez', numDoc:'43111222', tel:'3109998877', hora:'14:50' };
+  acta.obs = 'Manifiesta no requerir valoración médica en este momento y pide que se comunique ' +
+             'a su hermana, que se acercará a la unidad a conocer los pormenores del procedimiento.';
+  const out = buildActaBlob({ caso:c, capturado:c.capturados[0], acta }, 'OFICIO');
+
+  // ── Tamaño efectivo, resuelto como lo hace Word ──
+  const st = new DOMParser().parseFromString(dec.decode(out.files['word/styles.xml']), 'application/xml');
+  const v = (el, a) => el ? (el.getAttributeNS(W, a) || el.getAttribute('w:' + a)) : null;
+  const est = {}; let defPar = '';
+  Array.from(st.getElementsByTagNameNS(W, 'style')).forEach(s => {
+    const rpr = s.getElementsByTagNameNS(W, 'rPr')[0];
+    const t = rpr && rpr.getElementsByTagNameNS(W, 'sz')[0];
+    est[v(s, 'styleId')] = { sz: t ? +v(t, 'val') : 0, basedOn: v(s.getElementsByTagNameNS(W, 'basedOn')[0], 'val') || '' };
+    if (v(s, 'type') === 'paragraph' && v(s, 'default') === '1') defPar = v(s, 'styleId');
+  });
+  const szEst = id => { let k = id, i = 0; while (k && est[k] && i++ < 12) { if (est[k].sz) return est[k].sz; k = est[k].basedOn; } return 0; };
+  const dd = st.getElementsByTagNameNS(W, 'rPrDefault')[0];
+  const ddSz = dd && dd.getElementsByTagNameNS(W, 'sz')[0];
+  const BASE = (ddSz ? +v(ddSz, 'val') : 0) || szEst(defPar) || 20;
+
+  const doc = new DOMParser().parseFromString(dec.decode(out.files['word/document.xml']), 'application/xml');
+  const body = doc.getElementsByTagNameNS(W, 'body')[0];
+  function efectivo(r) {
+    const rPr = r.getElementsByTagNameNS(W, 'rPr')[0];
+    const propio = rPr && rPr.getElementsByTagNameNS(W, 'sz')[0];
+    if (propio) return +v(propio, 'val');
+    const rS = rPr && rPr.getElementsByTagNameNS(W, 'rStyle')[0];
+    if (rS && szEst(v(rS, 'val'))) return szEst(v(rS, 'val'));
+    let p = r.parentNode; while (p && p.localName !== 'p') p = p.parentNode;
+    const pS = p && p.getElementsByTagNameNS(W, 'pPr')[0] &&
+               p.getElementsByTagNameNS(W, 'pPr')[0].getElementsByTagNameNS(W, 'pStyle')[0];
+    if (pS && szEst(v(pS, 'val'))) return szEst(v(pS, 'val'));
+    return BASE;
+  }
+  const tam = el => [...new Set(Array.from(el.getElementsByTagNameNS(W, 'r'))
+    .filter(r => Array.from(r.getElementsByTagNameNS(W, 't')).map(t => t.textContent).join(''))
+    .map(efectivo))];
+
+  const tcs = Array.from(body.getElementsByTagNameNS(W, 'tc'));
+  const pars = Array.from(body.getElementsByTagNameNS(W, 'p'));
+  const conTexto = t => pars.filter(p => (p.textContent || '').includes(t));
+  const malas = [];
+  F6_RELLENA.forEach(i => { tam(tcs[i]).forEach(s => { if (s !== 22) malas.push(i + ':' + s); }); });
+  const obsRenglones = conTexto('Manifiesta no requerir').concat(conTexto('pormenores del procedimiento'));
+  return {
+    base: BASE, defPar,
+    malas, cuantas: F6_RELLENA.length,
+    lugar: tam(tcs[F6_C.LUGAR]),
+    obs: [...new Set(obsRenglones.flatMap(tam))],
+    obsRenglones: obsRenglones.length,
+    constancia: tam(conTexto('suscribe la presente acta')[0] || body),
+    // Etiquetas del formato: tienen que quedar exactamente como vienen
+    etiquetas: [...new Set([F6_C.NOMBRES - 1, F6_C.DOC - 1, F6_C.REDES - 1, F6_C.COMUNIDAD - 1].flatMap(i => tam(tcs[i])))],
+    tituloObs: tam(pars.find(p => /Observaciones\s*:/.test(p.textContent || '')) || body),
+    etniaSinMarcar: tam(tcs[F6_C.ETNIA.INDIGENA]),
+    etniaMarcada: tam(tcs[F6_C.ETNIA.AFRO])
+  };
+});
+
+log(sz.base === 24 && sz.defPar === 'Normal',
+  '⚠️ La causa de raíz: el estilo por defecto de la plantilla es 12 pt, así que un run SIN `sz` sale a 12',
+  `${sz.defPar} = ${sz.base} medios puntos (${sz.base / 2}pt)`);
+log(sz.malas.length === 0,
+  `Las ${sz.cuantas} casillas que rellena la app salen todas a 11 pt (sz 22)`,
+  sz.malas.length ? 'fuera de tamaño → ' + sz.malas.join(', ') : 'ninguna fuera');
+log(sz.lugar.length === 1 && sz.lugar[0] === 22, 'El renglón de «Lugar:» también', 'sz ' + sz.lugar.join('/'));
+log(sz.obs.length === 1 && sz.obs[0] === 22 && sz.obsRenglones >= 2,
+  'Y las observaciones, que salían a 10 pt por clonar la línea del formato',
+  `sz ${sz.obs.join('/')} en ${sz.obsRenglones} renglón(es)`);
+log(sz.constancia.length === 1 && sz.constancia[0] === 22, 'La constancia de buen trato se mantiene en 11 pt');
+log(sz.etiquetas.length === 1 && sz.etiquetas[0] === 22 && sz.tituloObs.length === 1 && sz.tituloObs[0] === 22,
+  '⚠️ Y las etiquetas del formato NO se tocan: siguen con el tamaño que traen',
+  'sz ' + sz.etiquetas.join('/'));
+log(sz.etniaSinMarcar.length === 1 && sz.etniaSinMarcar[0] === 22 && sz.etniaMarcada[0] === 20,
+  '⚠️ Excepción medida: «AFROCOLOMBIANO» sola ocupa 2102 de 2221 tw, así que con la X no cabe a 11 pt — se reduce, como fijó Mejora 4 obs. 5',
+  `sin marcar sz ${sz.etniaSinMarcar.join('/')} · marcada sz ${sz.etniaMarcada.join('/')}`);
 
 log(errores.length === 0, 'Consola sin errores', errores.slice(0, 3).join(' | ') || 'ninguno');
 

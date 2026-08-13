@@ -1623,6 +1623,125 @@ app** sosteniendo una función que ya nadie podía alcanzar.
   simulador 41 · personas 24 · multipersona · ola1 38 · ola2 34 (1 fallo de calendario,
   preexistente) · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=53` / `cache-v53`, `_BUILD=53`.
 
+## Acta de derechos — ¿presentó documento de identificación? (2026-08-13)
+Reportado en campo con el `.docx` a la vista (pantallazo con recuadro rojo sobre la casilla
+«IDENTIFICACION»): el acta nunca preguntaba si el capturado/aprehendido tenía o no su documento
+físico encima al momento de la captura, y ese dato se quedaba fuera del formato. Verificado con
+`verify_fpj6.mjs` (**115 checks**, antes 111).
+- **Nuevo campo `caso.actas[].presentoDoc`** (`'SI' | 'NO' | ''`). Va en el **acta** (dato del
+  procedimiento), no en `capturados[i]` (atributo de la persona): la misma persona puede presentar
+  el documento en una captura y no tenerlo encima en la siguiente — mismo criterio ya aplicado a
+  `comunica`/`obs` en este módulo.
+- **Pregunta nueva** en el modal del acta (`f6Abrir`), sección «Documento de identificación», justo
+  después de «Lo que ya trae el sistema» — select SI/NO/No informa, igual que el de LGBTI.
+- **Se imprime pegado a la identificación** en la misma casilla del formato (`F6_C.DOC`, celda 72):
+  «CC 71234567 de Medellín, Presenta documento físico» / «…, No presenta documento físico». Sin
+  declarar, no se inventa ninguna de las dos — mismo criterio que las casillas LGBTI y de etnia.
+- Regresiones en verde: **fpj6 115** (las 111 previas sin tocar sus expectativas). Anti-caché
+  `?v=54` / `cache-v54`, `_BUILD=54`.
+
+## El acta, en un solo cuerpo de letra (2026-08-13) — 12, 11 y 10 pt en el mismo documento
+Reportado en campo: en el FPJ-6 los datos rellenados salían a **tres tamaños distintos** —el NUNC a
+12 pt, la mayoría a 11 y las observaciones a 10—. Verificado con `verify_fpj6.mjs` (**122 checks**,
+antes 115) y abriendo el `.docx` en **Word real** (COM), que ahora reporta 11 pt en las 14 celdas de
+valor, en las 21 casillas del encabezado, en las observaciones y en la constancia.
+
+- ⚠️ **La causa no era que alguien hubiera pedido 12 pt en alguna parte: era la AUSENCIA de
+  `w:sz`.** Un run sin tamaño propio no hereda el del formato que lo rodea — hereda el del **estilo
+  por defecto del documento**, y en esta plantilla `Normal` declara `sz 24` = **12 pt**, mientras las
+  etiquetas del formato traen su `sz 22` = 11 pt **escrito en el run**. `setTc` escribe el texto y no
+  toca el `rPr`, así que todo lo que pasaba por ahí (NUNC, fecha, hora y las 18 celdas del apartado 1
+  y del 3) salía a 12 pt. Por abajo pasaba lo simétrico: quien escribe clonando un run del formato
+  hereda el tamaño de **ese** run, y la línea de «Observaciones:» es de 10 pt.
+- **El arreglo tiene dos piezas, y la segunda no es opcional:**
+  1. `_docSzTexto(nodo, medios)` — primitiva genérica que fija `sz`/`szCs` en los runs **con texto**
+     de una celda o párrafo. Se aplica en **una sola pasada al final** (`F6_RELLENA`, 51 celdas),
+     no en cada `setTc`: así una celda nueva se une a la lista y no hay forma de escribir a otro
+     tamaño por descuido.
+  2. `_docSobreLinea` recibe el tamaño **por parámetro** (`medios`). ⚠️ Tenía que ser una entrada y
+     no un retoque posterior: esa función **mide** el texto para cortar el renglón y para calcular
+     el relleno del subrayado, así que escribir a un tamaño y medir a otro haría que la línea se
+     pasara de largo, Word la envolviera y **estirara la fila** — justo lo que prohíbe Mejora 4
+     obs. 2. Cubre «Lugar:» y las observaciones.
+- ⚠️ **Los runs VACÍOS no se tocan**: una casilla sin dato queda byte a byte como en la plantilla
+  (los checks [108] y [109], que comparan contra el original, siguen en verde).
+- ⚠️ **Las etiquetas del formato no se tocan** — ya venían a 11 pt. La lista `F6_RELLENA` es solo de
+  **celdas de valor**; quedan fuera a propósito `LGBTI_*` y las seis de `ETNIA`, que traen DENTRO la
+  etiqueta del formato («SI», «AFROCOLOMBIANO»…).
+- ⚠️ **Una excepción, medida y no supuesta: «AFROCOLOMBIANO» marcada se queda en 10 pt.** La
+  etiqueta **sola** ocupa 2102 twips y su casilla tiene 2221 útiles: con la X no cabe a 11 pt **con
+  ningún espaciado** (se midieron las seis casillas con separadores de 1, 2 y 3 espacios). Reducir el
+  cuerpo ahí es la decisión que ya tomó Mejora 4 obs. 5 para que la fila no se estire; forzar 11 pt
+  la revertiría. Hay un check que lo fija con esa cifra.
+- ⚠️ **La regresión no mira el `w:sz` del run — resuelve el tamaño EFECTIVO como Word**
+  (`rPr/sz` → `rStyle` → estilo del párrafo con su cadena `basedOn` → `docDefaults`). Mirar el
+  atributo habría dado verde con el defecto puesto, porque el defecto **era** que no existía.
+  Comprobado que la guarda no es vacía: vaciando `F6_RELLENA` en caliente salen **62 runs a 12 pt**;
+  con el arreglo, 0.
+- Regresiones en verde: **fpj6 122** · OJ 156 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 · personas 24 · multipersona ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10. Anti-caché `?v=55` / `cache-v55`, `_BUILD=55`.
+
+## Auditoría tipográfica del oficio OJ (2026-08-13) — el estándar, y el único defecto real
+Pedida como normalización integral, con la dinámica de «El acta, en un solo cuerpo de letra».
+Verificado con `verify_tipografia_oj.mjs` (**36 checks**, nuevo) y abriendo el `.docx` en **Word
+real** (COM), que informa el tamaño carácter por carácter.
+
+### Norma aplicable — jerarquía de fuentes
+1. **El formato institucional `Documentos/Otro/Propuesta Plantilla OJ - copia.docx`** es el estándar
+   de ESTE documento y manda sobre cualquier guía genérica: es la plantilla aprobada, y la regla «el
+   oficio ES el formato» (OJ v2.1) ya lo fijó. La auditoría lo **midió**, no lo supuso.
+2. **GTC 185 (ICONTEC, documentación organizacional)** — márgenes sup 3-4 / inf 2-3 / izq 3-4 /
+   der 2-3 cm, interlineado sencillo, y la regla de que las **líneas especiales** (anexos, datos del
+   remitente) van «en la misma fuente pero con un tamaño de letra menor». ⚠️ El PDF de la norma tiene
+   protección de copia; no se sorteó — el contenido se tomó de manuales públicos que la desarrollan.
+3. **Acuerdo 060 de 2001 (AGN)** — obliga a normalizar formatos y remite a las normas ICONTEC.
+4. **Guía de Gestión Documental institucional** — fija el **membrete en Arial 10** en cuatro líneas.
+
+**Estándar resultante (los tres niveles ya eran los correctos):** fuente única **Arial**;
+**11 pt** cuerpo, títulos de numeral (estilo `Ttulo1`, negrita), «HECHOS» y nombre del firmante;
+**10 pt** tablas (etiqueta negrita + valor), membrete, cargo/contacto del firmante y anexos —las
+«líneas especiales» de la GTC 185—; **9 pt** bloque de contacto y pie. Márgenes 3,5 / 3,0 / 3,0 /
+2,0 cm (dentro de GTC 185). Cuerpo justificado, interlineado sencillo (`line 240 atLeast`).
+
+### Qué encontró la auditoría
+- ⚠️ **El documento ya estaba normalizado.** El perfilado clase por clase contra el formato dio
+  coincidencia exacta en cuerpo, negrita, alineación, estilo de Word, márgenes y membrete. **No se
+  cambió nada de eso**: inventar cambios para «verse activo» habría roto un formato calibrado.
+- ⚠️ **Un defecto real, visible en el pantallazo del usuario: «Página 1 de 2» salía con los números
+  más grandes que las palabras.** `ojxCampoNum`/`ojxCampoTot` eran **los dos únicos sitios del motor
+  que construían runs de texto a mano**, sin pasar por `ojxRun`, y por tanto sin `rPr`: heredaban el
+  estilo por defecto (**11 pt negro**) mientras «Página » y « de » iban a 9 pt gris `404040`. El
+  formato de referencia lleva los **doce** runs de su pie a 9 pt `404040`, campos incluidos.
+- **Es la misma familia de fallo que el acta**, por otra vía: allí faltaba `w:sz` en runs escritos
+  con `setTc`; aquí faltaba el `rPr` entero en runs escritos a mano. En ambos casos **el defecto era
+  la ausencia de la declaración**, no un valor equivocado.
+- **No hubo divergencia Word ↔ PDF**: la vista de impresión reproducía el mismo 11 pt en el número,
+  porque traduce el mismo `document.xml`. Los dos quedaron corregidos a la vez.
+- **Descartado tras medirlo**: en el formato, el nombre del firmante trae un run suelto a 10 pt (un
+  espacio tecleado a mano) entre runs de 11. La app lo emite uniforme a 11 pt — **más correcto que
+  la referencia**; no se copió el artefacto. Es el «no copies ciegamente sus valores» del encargo.
+
+### Qué se cambió
+- `ojxRPr(o)` se extrae de `ojxRun`: **único punto** donde se decide la tipografía de este oficio.
+- `ojxCampo(instr,o)` sustituye a los dos constructores a mano y pone el mismo `rPr` en **los cinco
+  runs** del campo (begin · instrucción · separate · resultado · end). ⚠️ Los cinco, no solo el del
+  resultado: cuando Word recalcula el campo al repaginar, el número toma el formato de esos runs —es
+  lo que hace el formato de referencia— y así no vuelve a crecer.
+- El pie arma un solo objeto de propiedades y lo pasa a palabras y campos: no puede volver a salir a
+  dos tamaños.
+- ⚠️ **La garantía es estructural, no un valor corregido**: `verify_tipografia_oj.mjs` [7] exige
+  **cero runs con texto sin `w:sz` propio** (y [8] sin `w:rFonts`) en `document.xml`, encabezados y
+  pies. Mirar «qué tamaños hay» no habría detectado nada, porque el defecto era la ausencia.
+  Comprobado que no es vacía: neutralizando `ojxCampo` salen **10 runs sin tamaño**; con el arreglo, 0.
+- La suite además compara **clase por clase contra el `.docx` de referencia** (no contra una lista
+  escrita a mano: si el formato cambia, el test lo dice), verifica los rangos de la GTC 185, la
+  equivalencia Word↔PDF en 9 clases, y que un oficio breve y uno extenso usen los mismos cuerpos.
+- **Medido en Word real**: 3 páginas, 3 tablas, márgenes 3,5/3/3/2 cm y el pie `P=9 á=9 … 1=9 … 3=9`.
+- Regresiones en verde: **tipografía OJ 36** · OJ 156 · fpj6 122 · export 74 · editable 28 ·
+  envío 39 · simulador 41 · firma 53 · mejora2 38 · mejora3 51 · invitado 33.
+  Anti-caché `?v=56` / `cache-v56`, `_BUILD=56`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

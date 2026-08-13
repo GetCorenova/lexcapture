@@ -2107,7 +2107,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 53;
+var _BUILD = 56;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6099,12 +6099,15 @@ function buildFPJBlob(c,papel){
    · Atributos de la PERSONA (nombre identitario, LGBTI, pertenencia étnica,
      redes sociales) → viajan en `capturados[i]` y en el registro de Personas,
      así una segunda captura de la misma persona ya no los vuelve a pedir.
-   · Datos del PROCEDIMIENTO (a quién se comunicó la captura y a qué hora, y
-     las observaciones) → viven en `caso.actas[]`, una entrada por persona.
+   · Datos del PROCEDIMIENTO (a quién se comunicó la captura y a qué hora, si
+     presentó documento de identificación, y las observaciones) → viven en
+     `caso.actas[]`, una entrada por persona. Si presentó o no el documento es
+     un hecho de ESTE procedimiento, no un atributo suyo — la misma persona
+     puede presentarlo en una captura y no tenerlo encima en la siguiente.
 
    Nada se duplica: ni un solo campo que el caso ya tenga se guarda aquí. */
 function f6Estructura(personaId) {
-  return { personaId: personaId || '', comunica: { nombre:'', numDoc:'', tel:'', hora:'' }, obs:'', updated:0 };
+  return { personaId: personaId || '', comunica: { nombre:'', numDoc:'', tel:'', hora:'' }, presentoDoc:'', obs:'', updated:0 };
 }
 function f6Acta(c, personaId) {
   var a = (c && c.actas) || [];
@@ -6211,6 +6214,13 @@ function f6Mapa(c, cap, acta) {
   var m = f6Momento(c), com = acta.comunica || {};
   var doc = [cap.tipoDoc || '', sinPuntos(cap.numDoc)].filter(Boolean).join(' ');
   if (doc && cap.expEn) doc += ' de ' + cap.expEn;
+  /* Presentó o no el documento físico: hecho del procedimiento (`acta`, no
+     `cap`). Sin respuesta no se inventa nada — mismo criterio que LGBTI y
+     etnia: si no se declara, no se imprime ninguna de las dos. */
+  var presentoDoc = acta.presentoDoc || '';
+  var presentoTxt = presentoDoc === 'SI' ? 'Presenta documento físico'
+                   : presentoDoc === 'NO' ? 'No presenta documento físico' : '';
+  if (presentoTxt) doc = [doc, presentoTxt].filter(Boolean).join(', ');
   var edad = cap.edad || (cap.fn ? calcAgeVal(cap.fn) : '');
   var nx = f6Nunc(c);
   return {
@@ -6218,7 +6228,7 @@ function f6Mapa(c, cap, acta) {
     fecha: m, lugar: f6Lugar(c),
     identitario: cap.nombreIdentitario || '',
     nombres: mayus(fullName(cap)),
-    doc: doc,
+    doc: doc, presentoDoc: presentoDoc,
     fnac: fmtDate(cap.fn) === '—' ? '' : fmtDate(cap.fn),
     lnac: cap.lugNac || '',
     padres: cap.padres || '',
@@ -6284,6 +6294,33 @@ var F6_CASILLAS = (function() {
    (observación 4). Son solo las que la app diligencia: las etiquetas del
    formato conservan la alineación que traen. */
 var F6_APOYADAS = [68,70,72,74,76,78,80,82,84,86,88, 102,103,104, 106,108,110,112];
+/* ── UN SOLO CUERPO DE LETRA: 11 pt (sz 22) ───────────────────────────────
+   Es el del formato: las etiquetas de la plantilla traen `sz 22` en el run.
+   Los datos salían a tres tamaños distintos —12 pt el NUNC, la fecha, la hora y
+   todo el apartado 1; 10 pt las observaciones; 11 pt el resto— y ninguno era una
+   decisión: ver `_docSzTexto`.
+   ⚠️ Esta lista es SOLO de celdas de valor, las que contienen únicamente lo que
+   escribe la app. Quedan fuera a propósito:
+     · las etiquetas del formato (celdas impares del apartado 1), que ya vienen
+       a 11 pt y no se tocan;
+     · `LUGAR` y el renglón de Observaciones, que llevan el tamaño por parámetro
+       de `_docSobreLinea` porque ahí el corte de línea depende de él;
+     · `LGBTI_*` y las seis de `ETNIA`, que traen DENTRO la etiqueta del formato
+       («SI», «AFROCOLOMBIANO»…). Esa etiqueta ya está a 11 pt, y cuando se marca
+       con X el bloque se reduce a propósito para que quepa en el renglón en vez
+       de estirar la fila (Mejora 4, obs. 5). Forzarlas aquí revertiría ese
+       arreglo. */
+var F6_SZ = 22;
+var F6_RELLENA = (function() {
+  var a = [], i;
+  for (i = 0; i < 21; i++) a.push(F6_C.NUNC + i);                    // NUNC / radicado
+  F6_C.FD.concat(F6_C.FM, F6_C.FA, F6_C.HH, F6_C.HM)                 // fecha y hora
+    .forEach(function(x) { a.push(x); });
+  ['IDENTITARIO','NOMBRES','DOC','FNAC','LNAC','PADRES','ECIVIL','OCUP','DIRTEL','CORREO','REDES',
+   'COMUNIDAD','COMUNIDAD_B','COMUNIDAD_C','COM_NOM','COM_DOC','COM_TEL','COM_HORA']
+    .forEach(function(k) { a.push(F6_C[k]); });
+  return a;
+})();
 /* Ancho útil de las casillas con etiqueta propia, en twips: la columna del
    `w:tblGrid` de la plantilla menos los márgenes de celda (70 + 70).
    Área de contenido = 12242 − 851 − 851 = 10540. */
@@ -6397,6 +6434,24 @@ function _docSzDe(r, porDefecto) {
   var v = sz ? parseInt(sz.getAttributeNS(FPJ_W, 'val') || sz.getAttribute('w:val'), 10) : 0;
   return v || porDefecto || 22;
 }
+/* UN SOLO CUERPO DE LETRA PARA LO QUE ESCRIBE LA APP.
+   ⚠️ Un run SIN `w:sz` propio no sale al tamaño del formato: sale al del estilo
+   por defecto del documento, y en la plantilla del FPJ-6 ese estilo (`Normal`)
+   declara **sz 24 = 12 pt**, mientras las etiquetas del formato traen su `sz 22`
+   = 11 pt escrito en el run. Por eso los datos rellenados salían más grandes que
+   el formato que los rodea sin que nadie hubiera pedido 12 pt en ninguna parte:
+   era el hueco lo que mandaba, no una decisión. Lo mismo por abajo — quien
+   escribe clonando un run del formato hereda el tamaño de ESE run (la línea de
+   Observaciones es de 10 pt), y el dato salía a 10.
+   ⚠️ Los runs VACÍOS no se tocan: una casilla sin dato tiene que quedar byte a
+   byte como en la plantilla (regla de siempre — sin dato no se toca nada). */
+function _docSzTexto(nodo, medios) {
+  if (!nodo) return 0;
+  var W = FPJ_W, rs = nodo.getElementsByTagNameNS(W, 'r'), n = 0, i;
+  for (i = 0; i < rs.length; i++)
+    if (_getElText(rs[i], W)) { _docSz(rs[i], medios); n++; }
+  return n;
+}
 /* Obs. 5 y 2 — CABER EN UN RENGLÓN SIN EMPUJAR EL FORMATO.
    Si el texto de una celda no cabe a lo ancho, Word lo parte en dos renglones
    y **estira la fila entera**: la casilla deja de medir lo que mide en el
@@ -6494,13 +6549,18 @@ function _docPartirEnLinea(texto, anchoTw, pt) {
 /* Escribe `valor` sobre el renglón de un párrafo, CONSERVANDO la línea.
    `etiqueta` es el texto del formato que va delante y no se subraya («Lugar:»).
    Devuelve lo que no cupo en el renglón, para que quien llama decida dónde
-   ponerlo — nunca se pierde y nunca desborda la línea. */
-function _docSobreLinea(p, etiqueta, valor, anchoUtilTw) {
+   ponerlo — nunca se pierde y nunca desborda la línea.
+   `medios` fija el cuerpo de letra de lo que se escribe. ⚠️ Tiene que ser un
+   PARÁMETRO y no un retoque posterior: el corte de línea y el relleno del
+   subrayado se calculan midiendo el texto, así que escribir a un tamaño y medir
+   a otro haría que el renglón se pasara de largo y Word lo envolviera —
+   estirando la fila, que es justo lo que la observación 2 prohíbe. */
+function _docSobreLinea(p, etiqueta, valor, anchoUtilTw, medios) {
   if (!p) return null;
   var W = FPJ_W, rs = p.getElementsByTagNameNS(W, 'r');
   if (!rs.length) return null;
   var base = rs[0].cloneNode(true);
-  var pt = _docSzDe(rs[0], 22) / 2;
+  var pt = (medios || _docSzDe(rs[0], 22)) / 2;
   /* ⚠️ El límite es el MENOR entre el largo de la línea original y el ancho
      útil real del sitio donde vive el párrafo, con un margen de seguridad.
      Medir solo la línea original no basta: el canvas y Word no cortan las
@@ -6512,11 +6572,16 @@ function _docSobreLinea(p, etiqueta, valor, anchoUtilTw) {
   var disponible = anchoTw - (etiqueta ? lcAnchoTexto(etiqueta, pt) : 0);
   var corte = _docPartirEnLinea(valor || '', disponible, pt);
   while (rs.length) rs[0].parentNode.removeChild(rs[0]);
+  function pon(txt, subrayar) {
+    var r = _docRunSobre(base, txt, subrayar);
+    if (medios) _docSz(r, medios);
+    p.appendChild(r);
+  }
   var usado = 0;
-  if (etiqueta) { p.appendChild(_docRunSobre(base, etiqueta, false)); usado += lcAnchoTexto(etiqueta, pt); }
-  if (corte[0]) { p.appendChild(_docRunSobre(base, corte[0], true));  usado += lcAnchoTexto(corte[0], pt); }
+  if (etiqueta) { pon(etiqueta, false); usado += lcAnchoTexto(etiqueta, pt); }
+  if (corte[0]) { pon(corte[0], true);  usado += lcAnchoTexto(corte[0], pt); }
   var relleno = _docRelleno(anchoTw - usado, pt);
-  if (relleno) p.appendChild(_docRunSobre(base, relleno, true));
+  if (relleno) pon(relleno, true);
   return corte[1];
 }
 /* Obs. 5 — Estas casillas traen su PROPIA etiqueta dentro de la celda («SI»,
@@ -6574,7 +6639,12 @@ function _f6BajoEncabezado(body, texto) {
   var W = FPJ_W, n = body.firstChild, vistaTabla = false;
   while (n) {
     if (n.localName === 'tbl') { if (vistaTabla) return false; vistaTabla = true; }
-    else if (vistaTabla && n.localName === 'p') return _setParForce(n, texto);
+    else if (vistaTabla && n.localName === 'p') {
+      // Renglón del formato, texto de la app: va al cuerpo de letra del acta.
+      var ok = _setParForce(n, texto);
+      if (ok) _docSzTexto(n, F6_SZ);
+      return ok;
+    }
     n = n.nextSibling;
   }
   return false;
@@ -6643,7 +6713,7 @@ function _f6Blancos(p, vals) {
 
    Los renglones nuevos se clonan de la línea que trae la plantilla —ANTES de
    escribir en ella— así heredan su tipografía, su tamaño y su espaciado. */
-function _f6Observaciones(p, texto, anchoTw) {
+function _f6Observaciones(p, texto, anchoTw, medios) {
   if (!p || !p.parentNode) return false;
   var plantilla = p.cloneNode(true);
   var hueco = plantilla.cloneNode(true);
@@ -6658,7 +6728,7 @@ function _f6Observaciones(p, texto, anchoTw) {
   if (titulo && titulo.localName === 'p') _docProp(_docPPr(titulo), 'keepNext', '1', _DOC_PPR);
   var actual = p, resto = texto, vueltas = 0;
   while (resto && vueltas++ < 20) {
-    resto = _docSobreLinea(actual, '', resto, anchoTw);
+    resto = _docSobreLinea(actual, '', resto, anchoTw, medios);
     if (!resto) break;
     _docProp(_docPPr(actual), 'keepNext', '1', _DOC_PPR);
     var sig = plantilla.cloneNode(true);
@@ -6686,7 +6756,10 @@ function _f6ContinuarLugar(body, texto, sangriaTw) {
       ind.setAttributeNS(W, 'w:left', String(sangriaTw));
       _docPon(_docPPr(cont), ind, _DOC_PPR);
       n.parentNode.insertBefore(cont, n);
-      return _setParForce(cont, texto);
+      // La 2.ª línea de la dirección es del mismo dato que la 1.ª: mismo cuerpo.
+      var ok = _setParForce(cont, texto);
+      if (ok) _docSzTexto(cont, F6_SZ);
+      return ok;
     }
     n = n.nextSibling;
   }
@@ -6736,7 +6809,7 @@ function buildActaBlob(ctx, papel) {
        formato es una sola. */
     if (m.lugar) {
       var resto = _docSobreLinea(tcs[F6_C.LUGAR].getElementsByTagNameNS(W,'p')[0], 'Lugar: ', m.lugar,
-                                 _docAnchoUtil(tcs[F6_C.LUGAR], F6_CUERPO));
+                                 _docAnchoUtil(tcs[F6_C.LUGAR], F6_CUERPO), F6_SZ);
       if (resto) _f6ContinuarLugar(body, resto, _f6SangriaLugar(tcs[F6_C.LUGAR]));
     }
 
@@ -6779,10 +6852,18 @@ function buildActaBlob(ctx, papel) {
     setTc(tcs, F6_C.COM_TEL, m.comunica.tel);
     setTc(tcs, F6_C.COM_HORA, m.comunica.hora);
 
+    /* UN SOLO CUERPO DE LETRA (11 pt) para todo lo que la app acaba de escribir.
+       ⚠️ Va DESPUÉS de todos los `setTc`: es una pasada sobre el resultado, no
+       una regla que cada llamada tenga que acordarse de aplicar — así una celda
+       nueva se une a la lista y no hay forma de escribir a otro tamaño por
+       descuido. Solo toca celdas de valor y solo si llevan dato: las etiquetas
+       del formato y las casillas vacías quedan como vienen. */
+    F6_RELLENA.forEach(function(x) { _docSzTexto(tcs[x], F6_SZ); });
+
     /* Obs. 6 — Observaciones. El texto va ENCIMA de la línea continua del
        formato, que se conserva de punta a punta; antes se sustituía por el
        texto y la línea desaparecía. Si no hay observaciones no se toca nada. */
-    if (m.obs) _f6Observaciones(pars[F6_P.OBS], m.obs, F6_CUERPO);
+    if (m.obs) _f6Observaciones(pars[F6_P.OBS], m.obs, F6_CUERPO, F6_SZ);
 
     /* CONSTANCIA DE BUEN TRATO — los 13 espacios del párrafo, en su orden:
        municipio · día · mes · año · hora · nombre · documento · fecha de
@@ -6883,6 +6964,16 @@ function f6Abrir(id, idx) {
     '<details class="oj-mas"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
     yaTiene + '</details>' +
 
+    '<div class="st">Documento de identificación</div>' +
+    '<div class="fg"><label class="fl">¿' + (menor ? 'La persona aprehendida' : 'El capturado') +
+    ' presentó su documento de identificación físico?</label>' +
+    '<select class="fs" id="f6-presento">' +
+    ['', 'SI', 'NO'].map(function(o) {
+      var lbl = o === 'SI' ? 'Sí, lo presentó' : o === 'NO' ? 'No lo presentó' : 'No informa';
+      return '<option value="' + o + '"' + ((acta.presentoDoc || '') === o ? ' selected' : '') + '>' + lbl + '</option>';
+    }).join('') + '</select></div>' +
+    '<p class="oj-hint">Se imprime junto a la identificación, en la casilla «Identificación» del acta.</p>' +
+
     '<div class="st">Identidad</div>' +
     '<div class="fg"><label class="fl">Nombre identitario (personas trans)</label>' +
     '<input class="fi" id="f6-identitario" value="' + escAttr(cap.nombreIdentitario) + '"></div>' +
@@ -6950,6 +7041,7 @@ function f6Leer() {
       etnia: v('etnia'), comunidadEtnica: v('comunidad'), redes: v('redes')
     },
     comunica: { nombre: v('com-nombre'), numDoc: sinPuntos(v('com-doc')), tel: v('com-tel'), hora: v('com-hora') },
+    presentoDoc: v('presento'),
     obs: v('obs')
   };
 }
@@ -6962,7 +7054,7 @@ async function f6Guardar() {
   var cap = (c.capturados || [])[ctx.idx]; if (!cap) return null;
   Object.assign(cap, datos.persona);
   var acta = f6Acta(c, cap.id) || f6Estructura(cap.id);
-  acta.comunica = datos.comunica; acta.obs = datos.obs;
+  acta.comunica = datos.comunica; acta.presentoDoc = datos.presentoDoc; acta.obs = datos.obs;
   f6Poner(c, acta);
   try {
     await DB.saveCase(c);
@@ -10255,16 +10347,27 @@ var OJX_SZ_TABLA=20;            // 10 pt — celdas de las tablas y bloque de fi
 var OJX_SZ_PIE=18;              // 9 pt  — bloque de contacto al pie
 var OJX_ET=OJX_ET_BASE;         // columna de etiquetas de las 3 tablas (según papel)
 function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
-function ojxRun(txt,o){
+/* Propiedades de un run. ⚠️ ÚNICO sitio donde se decide la tipografía de este
+   oficio: fuente y tamaño se declaran SIEMPRE y de forma explícita, nunca se
+   dejan heredar. Un run sin `w:sz` no sale con el tamaño del formato que lo
+   rodea — sale con el del estilo por defecto del documento (11 pt), que es
+   justamente lo que hacía que los números de página salieran más grandes que
+   las palabras del mismo renglón. Todo lo que lleve texto tiene que pasar por
+   aquí; ver la comprobación estructural de `verify_tipografia_oj.mjs`. */
+function ojxRPr(o){
   o=o||{};
   var sz=o.sz||OJX_SZ;
   // Mismo criterio que en w:pPr: el esquema exige rFonts → b → i → caps →
   // color → sz → u. Un orden distinto abre el documento "dañado" en Word.
-  var rpr='<w:rPr><w:rFonts w:ascii="'+OJX_FUENTE+'" w:hAnsi="'+OJX_FUENTE+'" w:cs="'+OJX_FUENTE+'"/>'+
+  return '<w:rPr><w:rFonts w:ascii="'+OJX_FUENTE+'" w:hAnsi="'+OJX_FUENTE+'" w:cs="'+OJX_FUENTE+'"/>'+
     (o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/><w:iCs/>':'')+
     (o.caps?'<w:caps/>':'')+(o.color?'<w:color w:val="'+o.color+'"/>':'')+
     '<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>'+
     (o.u?'<w:u w:val="single"/>':'')+'</w:rPr>';
+}
+function ojxRun(txt,o){
+  o=o||{};
+  var rpr=ojxRPr(o);
   var partes=String(txt==null?'':txt).split('\n');
   var cuerpo=partes.map(function(t,i){
     return (i?'<w:br/>':'')+'<w:t xml:space="preserve">'+ojxTxt(t)+'</w:t>';
@@ -10418,20 +10521,26 @@ function ojxTablaDatos(pares){
   }).join('');
   return '<w:tbl>'+pr+grid+trs+'</w:tbl>';
 }
-function ojxCampoNum(){
-  return '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
-    '<w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>'+
-    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
-    '<w:r><w:t>1</w:t></w:r>'+
-    '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+/* Campo de Word (PAGE / NUMPAGES). Un campo son CINCO runs —begin, instrucción,
+   separate, resultado cacheado y end— y el tamaño del número que se imprime lo
+   fija el run del resultado.
+   ⚠️ Estos runs se construyen a mano porque llevan `fldChar`/`instrText` en vez
+   de `w:t`, así que no pueden salir de `ojxRun`; pero SÍ tienen que llevar el
+   mismo `rPr`. Sin él heredaban el estilo por defecto y el pie salía
+   «Página 1 de 2» con las palabras en 9 pt gris y los números en 11 pt negro.
+   El `rPr` va en los cinco: cuando Word recalcula el campo, el resultado toma
+   el formato de esos runs, y así el número sigue igual tras una repaginación
+   (es exactamente lo que hace el formato de referencia). */
+function ojxCampo(instr,o){
+  var rpr=ojxRPr(o);
+  return '<w:r>'+rpr+'<w:fldChar w:fldCharType="begin"/></w:r>'+
+    '<w:r>'+rpr+'<w:instrText xml:space="preserve"> '+instr+' </w:instrText></w:r>'+
+    '<w:r>'+rpr+'<w:fldChar w:fldCharType="separate"/></w:r>'+
+    '<w:r>'+rpr+'<w:t>1</w:t></w:r>'+
+    '<w:r>'+rpr+'<w:fldChar w:fldCharType="end"/></w:r>';
 }
-function ojxCampoTot(){
-  return '<w:r><w:fldChar w:fldCharType="begin"/></w:r>'+
-    '<w:r><w:instrText xml:space="preserve"> NUMPAGES </w:instrText></w:r>'+
-    '<w:r><w:fldChar w:fldCharType="separate"/></w:r>'+
-    '<w:r><w:t>1</w:t></w:r>'+
-    '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
-}
+function ojxCampoNum(o){ return ojxCampo('PAGE',o); }
+function ojxCampoTot(o){ return ojxCampo('NUMPAGES',o); }
 
 /* ─────────────────────────────────────────────────────────────────────────
    I.11 · PAQUETE .DOCX
@@ -10634,8 +10743,11 @@ function ojPieXml(cfg){
      código de formato, versión y clasificación («INFORMACIÓN PÚBLICA»): eso no
      está en «Propuesta Plantilla OJ» y era una adición heredada del módulo
      anterior. No volver a agregar nada aquí. */
-  out+=ojxP(ojxRun('Página ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoNum()+
-            ojxRun(' de ',{sz:OJX_SZ_PIE,color:'404040'})+ojxCampoTot(),
+  /* Un solo juego de propiedades para TODO el renglón —palabras y números—:
+     el pie es un elemento único y no puede salir a dos tamaños. */
+  var pie={sz:OJX_SZ_PIE,color:'404040'};
+  out+=ojxP(ojxRun('Página ',pie)+ojxCampoNum(pie)+
+            ojxRun(' de ',pie)+ojxCampoTot(pie),
             {keepLines:false,after:30,line:220,jc:'center'});
   return out;
 }
