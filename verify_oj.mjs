@@ -918,6 +918,84 @@ const flagrancia = await page.evaluate(() => {
 });
 log(flagrancia.ok === true, 'El FPJ-5 de flagrancia sigue generándose sin cambios', flagrancia.nombre);
 
+/* ─────────── 10. Bloque de contacto: dirección + barrio + ciudad ───────────
+   El formato imprime «Calle 48 # 55–50, barrio La Candelaria, Medellín» bajo el
+   nombre de la unidad. Los tres datos se piden UNA vez en Ajustes y bajan solos
+   al oficio; y lo mismo se escribe en la constancia de custodia de la narración,
+   que en el formato es el mismo dato. */
+console.log('\n── 10 · Bloque de contacto y constancia de custodia ──');
+const cust = await page.evaluate(async () => {
+  const txt = xml => (xml.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g, '')).join('');
+  const parrafos = xml => xml.split('<w:p ').join('<w:p>').split('<w:p>').slice(1)
+    .map(p => txt(p.split('</w:p>')[0]).trim()).filter(Boolean);
+
+  // (a) Configurado UNA vez en Ajustes
+  const cfg = DB.getConfig();
+  cfg.ojCustEstacion = 'La Candelaria';
+  cfg.ojCustDireccion = 'Calle 48 # 55–50';
+  cfg.ojCustBarrio = 'La Candelaria';
+  cfg.ojCustCiudad = 'Medellín';
+  cfg.ojCustTelefono = '312 732 4069';
+  cfg.ojCustCorreo = 'unidad@ejemplo.test';
+  cfg.ojPieWeb = 'www.ejemplo.test';
+  DB.saveConfig(cfg);
+
+  const c = SIM.genOJ(); c.id = 'cust-auto'; c.isTest = false;
+  c.oj.custodia = { estacion:'', direccion:'', barrio:'', ciudad:'', telefono:'', correo:'', web:'' };
+  ojPrellenarDeCfg(c, DB.getConfig());        // ← lo que hace el wizard al abrir
+  ojEspejar(c); await DB.saveCase(c);
+  const out = await buildOficioOJBlob(ojCasoParaDocumento(c), 'CARTA');
+  const ps = parrafos(new TextDecoder().decode(out.files['word/document.xml']));
+
+  // (b) Un caso ANTERIOR: todo dentro de `direccion`, sin barrio ni ciudad
+  const v = SIM.genOJ(); v.id = 'cust-legado'; v.isTest = false;
+  v.oj.custodia = { estacion:'La Candelaria', direccion:'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+                    telefono:'312 732 4069', correo:'unidad@ejemplo.test', web:'www.ejemplo.test' };
+  ojEspejar(v); await DB.saveCase(v);
+  const outV = await buildOficioOJBlob(ojCasoParaDocumento(v), 'CARTA');
+  const psV = parrafos(new TextDecoder().decode(outV.files['word/document.xml']));
+
+  return {
+    compone: ojCustodiaDireccion({ direccion:'Calle 48 # 55–50', barrio:'La Candelaria', ciudad:'Medellín' }),
+    soloDir: ojCustodiaDireccion({ direccion:'Calle 48 # 55–50' }),
+    vacio: ojCustodiaDireccion({}),
+    sinDir: ojCustodiaDireccion({ barrio:'La Candelaria', ciudad:'Medellín' }),
+    // Ya escrito dentro de la dirección: no se repite
+    yaEscrito: ojCustodiaDireccion({ direccion:'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+                                     barrio:'La Candelaria', ciudad:'Medellín' }),
+    soloCiudadYa: ojCustodiaDireccion({ direccion:'Calle 48 # 55–50, Medellín',
+                                        barrio:'La Candelaria', ciudad:'Medellín' }),
+    cierre: ps.slice(-4),
+    custodiaNarr: ps.find(p => /bajo custodia/.test(p)) || '',
+    cierreLegado: psV.slice(-4),
+    campos: c.oj.custodia
+  };
+});
+log(cust.compone === 'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+  'Los tres datos se componen como en el formato', cust.compone);
+log(cust.soloDir === 'Calle 48 # 55–50' && cust.vacio === '' &&
+    cust.sinDir === 'barrio La Candelaria, Medellín',
+  '⚠️ Cada parte es opcional: sin barrio ni ciudad no quedan comas sueltas',
+  `«${cust.soloDir}» · «${cust.vacio}» · «${cust.sinDir}»`);
+log(cust.yaEscrito === 'Calle 48 # 55–50, barrio La Candelaria, Medellín' &&
+    cust.soloCiudadYa === 'Calle 48 # 55–50, Medellín, barrio La Candelaria',
+  '⚠️ No se repite lo que la dirección ya diga (había UN solo campo y el ejemplo pedía escribirlo todo dentro)',
+  `«${cust.yaEscrito}»`);
+log(cust.campos.barrio === 'La Candelaria' && cust.campos.ciudad === 'Medellín',
+  'Se piden una sola vez en Ajustes y bajan solos al caso',
+  `barrio «${cust.campos.barrio}» · ciudad «${cust.campos.ciudad}»`);
+log(cust.cierre[1] === 'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+  'El bloque de contacto imprime dirección, barrio y ciudad en su renglón',
+  cust.cierre[1]);
+log(/Estación de Policía La Candelaria/.test(cust.cierre[0]) &&
+    /312 732 4069/.test(cust.cierre[2]) && /www\./.test(cust.cierre[3]),
+  'Y los otros tres renglones del bloque siguen igual', cust.cierre[0]);
+log(cust.custodiaNarr.includes('Calle 48 # 55–50, barrio La Candelaria, Medellín'),
+  '⚠️ La constancia de la narración usa la MISMA dirección: no pueden discrepar');
+log(cust.cierreLegado[1] === 'Calle 48 # 55–50, barrio La Candelaria, Medellín',
+  '⚠️ Un caso guardado antes (todo en «dirección») sale idéntico — no se parte el texto viejo',
+  cust.cierreLegado[1]);
+
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 
 /* Deja el .docx en disco para abrirlo en Word real. */

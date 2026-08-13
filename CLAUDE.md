@@ -1742,6 +1742,26 @@ real** (COM), que informa el tamaño carácter por carácter.
   envío 39 · simulador 41 · firma 53 · mejora2 38 · mejora3 51 · invitado 33.
   Anti-caché `?v=56` / `cache-v56`, `_BUILD=56`.
 
+### Bloque de contacto: dirección, barrio y ciudad (2026-08-13)
+El renglón bajo el nombre de la unidad solo imprimía la **dirección**, y el formato lo escribe
+completo: «Calle 48 # 55–50, **barrio La Candelaria, Medellín**». Verificado con `verify_oj.mjs`
+(**164 checks**, antes 156) y abriendo el `.docx` en Word real.
+- `custodia` gana `barrio` y `ciudad`, con su espacio en **Ajustes → Oficio de orden judicial** (se
+  piden una vez, como el resto de la custodia) y en el paso 7 por si un procedimiento termina en
+  otro sitio. `ojPrellenarDeCfg` los baja al caso y `ojRecordarEncabezado` los devuelve a Ajustes.
+- **`ojCustodiaDireccion(cu)` es el único punto donde se componen**, con la redacción de
+  `ojLugarTexto` (el «barrio» en minúscula delante del nombre). Lo usan el bloque de contacto **y**
+  la constancia de custodia de la narración, que en el formato son el mismo dato y no pueden
+  discrepar. Cada parte es opcional: sin barrio ni ciudad no quedan comas sueltas.
+- ⚠️ **No se repite lo que la dirección ya diga, y la regresión atrapó el fallo.** Hasta ahora había
+  UN solo campo y el ejemplo de Ajustes pedía escribirlo todo dentro; al precargar barrio y ciudad
+  sobre una dirección que ya los traía salía «…, barrio La Candelaria, Medellín, barrio La
+  Candelaria, Medellín». El compositor se abstiene de añadir un dato ya presente — ⚠️ **no parte ni
+  reinterpreta el texto viejo**: una dirección mal interpretada manda al despacho al sitio
+  equivocado (misma regla que `lcDirParsear`). Una captura guardada antes sale byte a byte igual.
+- El simulador reparte los tres campos por separado, para que el caso de demostración enseñe el
+  renglón completo. Anti-caché `?v=57` / `cache-v57`, `_BUILD=57`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

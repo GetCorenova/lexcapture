@@ -1735,7 +1735,12 @@ body.guest{padding-top:38px}
           <div class="st">Lugar de custodia y bloque de contacto</div>
           <p class="oj-hint">Dónde queda normalmente el capturado. Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración y en el bloque de contacto del final. Si un procedimiento termina en otro sitio, se cambian en el paso 7 del formulario.</p>
           <div class="fg"><label class="fl">Estación o unidad de custodia</label><input class="fi" id="aj-oj-cest" placeholder="Escribe solo el nombre: La Candelaria" onblur="ojCompletarEstacion(this,false)"></div>
-          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Ej: Calle 48 # 55–50, barrio La Candelaria, Medellín"></div>
+          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-cdir" placeholder="Ej: Calle 48 # 55–50"></div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-oj-cbar" placeholder="Ej: La Candelaria"></div>
+            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-oj-cciu" list="dl-muni" placeholder="Ej: Medellín"></div>
+          </div>
+          <p class="oj-hint">El oficio los imprime juntos, en el renglón bajo el nombre de la unidad: <i>Calle 48 # 55–50, barrio La Candelaria, Medellín</i>.</p>
           <div class="fr">
             <div class="fg"><label class="fl">Abonado telefónico</label><input class="fi" id="aj-oj-ctel" placeholder="Teléfono de la unidad"></div>
             <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-oj-ccor" placeholder="Correo de la unidad"></div>
@@ -2107,7 +2112,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 56;
+var _BUILD = 57;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2891,7 +2896,8 @@ function _cfgConDefaults(stored) {
          El pie imprime la dependencia tal como debe verse (ojPieDependencia);
          la custodia se puede cambiar por procedimiento — el capturado no siempre
          queda en la misma estación. */
-      ojPieDependencia:'',ojCustEstacion:'',ojCustDireccion:'',ojCustTelefono:'',ojCustCorreo:'',
+      ojPieDependencia:'',ojCustEstacion:'',ojCustDireccion:'',ojCustBarrio:'',ojCustCiudad:'',
+      ojCustTelefono:'',ojCustCorreo:'',
       ojLogoB64:'',ojLogoMime:'',
       ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[],
       /* Tamaño del papel de la impresora de la unidad. Es propiedad del EQUIPO,
@@ -5068,7 +5074,9 @@ var SIM={
     if(!e.unidad)       e.unidad='UNIDAD DE DEMOSTRACIÓN';
     if(!e.dependencia)  e.dependencia='DEPENDENCIA DE DEMOSTRACIÓN';
     if(!cu.estacion)    cu.estacion='Estación de demostración';
-    if(!cu.direccion)   cu.direccion='Calle '+this.ri(40,70)+' No '+this.ri(40,70)+'-'+this.ri(10,99)+', '+muni;
+    if(!cu.direccion)   cu.direccion='Calle '+this.ri(40,70)+' # '+this.ri(40,70)+'–'+this.ri(10,99);
+    if(!cu.barrio)      cu.barrio=this.r(this.B);
+    if(!cu.ciudad)      cu.ciudad=muni;
     if(!cu.telefono)    cu.telefono=this.rFijo();
     if(!cu.correo)      cu.correo='custodia'+this.ri(10,99)+'@ejemplo.test';
     if(!cu.web)         cu.web='www.ejemplo.test';
@@ -7921,6 +7929,7 @@ function loadAjustesFields() {
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,'aj-oj-dep':cfg.ojDependencia,
     'aj-oj-ciu':cfg.ojCiudad,'aj-oj-asunto':cfg.ojAsunto,'aj-oj-pweb':cfg.ojPieWeb,
     'aj-oj-cest':cfg.ojCustEstacion,'aj-oj-cdir':cfg.ojCustDireccion,
+    'aj-oj-cbar':cfg.ojCustBarrio,'aj-oj-cciu':cfg.ojCustCiudad,
     'aj-oj-ctel':cfg.ojCustTelefono,'aj-oj-ccor':cfg.ojCustCorreo,
     'aj-oj-fnom':cfg.ojFiscaliaNombre,'aj-oj-fdir':cfg.ojFiscaliaDireccion,
     'aj-oj-fmun':cfg.ojFiscaliaMunicipio,'aj-oj-fdep':cfg.ojFiscaliaDepartamento,
@@ -8057,6 +8066,7 @@ function saveAjustes() {
     cfg.ojCiudad=v('aj-oj-ciu');
     cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
     cfg.ojCustEstacion=v('aj-oj-cest'); cfg.ojCustDireccion=v('aj-oj-cdir');
+    cfg.ojCustBarrio=v('aj-oj-cbar'); cfg.ojCustCiudad=v('aj-oj-cciu');
     cfg.ojCustTelefono=v('aj-oj-ctel'); cfg.ojCustCorreo=v('aj-oj-ccor');
     cfg.ojPieWeb=v('aj-oj-pweb');
     cfg.ojFiscaliaNombre=v('aj-oj-fnom'); cfg.ojFiscaliaDireccion=v('aj-oj-fdir');
@@ -8424,6 +8434,8 @@ function ojPrellenarDeCfg(c,cfg){
   if(!e.dependencia) e.dependencia=cfg.ojDependencia||'';
   if(!cu.estacion) cu.estacion=cfg.ojCustEstacion||cfg.ojPieDependencia||cfg.ojDependencia||'';
   if(!cu.direccion) cu.direccion=cfg.ojCustDireccion||cfg.ojPieDireccion||'';
+  if(!cu.barrio) cu.barrio=cfg.ojCustBarrio||'';
+  if(!cu.ciudad) cu.ciudad=cfg.ojCustCiudad||'';
   if(!cu.telefono) cu.telefono=cfg.ojCustTelefono||cfg.ojPieTelefonos||'';
   if(!cu.correo) cu.correo=cfg.ojCustCorreo||cfg.ojPieCorreo||'';
   if(!cu.web) cu.web=cfg.ojPieWeb||'';
@@ -8531,8 +8543,15 @@ function ojEstructura(){
     encabezado:{ ministerio:'', institucion:'', unidad:'', dependencia:'' },
     /* Lugar donde queda el capturado. Se usa DOS veces en el documento: en la
        constancia dentro de la narración y en el bloque de contacto del final
-       (que en el formato son los mismos datos). */
-    custodia:{ estacion:'', direccion:'', telefono:'', correo:'', web:'' },
+       (que en el formato son los mismos datos).
+       ⚠️ Dirección, barrio y ciudad van SEPARADOS porque el formato los imprime
+       juntos pero con su propia redacción («…, barrio La Candelaria, Medellín»),
+       y porque así se pueden pedir una sola vez en Ajustes. Los arma
+       `ojCustodiaDireccion`. Un caso guardado antes de esto trae la dirección
+       completa en `direccion` y sale exactamente igual: no se parte el texto
+       viejo — una dirección mal interpretada manda al despacho al sitio
+       equivocado (misma regla que `lcDirParsear`). */
+    custodia:{ estacion:'', direccion:'', barrio:'', ciudad:'', telefono:'', correo:'', web:'' },
     /* Quien firma. Se precarga del perfil activo; se puede diligenciar a mano
        (equipo prestado o modo invitado, donde no hay perfil configurado). */
     firma:{ grado:'', nombre:'', cargo:'', telefono:'', correo:'' }
@@ -9934,7 +9953,13 @@ function ojStep7(){
       '<p class="oj-hint">Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración '+
       'y en el bloque de contacto del final. Vienen de Ajustes, pero cámbialos si esta vez quedó en otro sitio.</p>'+
       ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}),'',!cu.estacion&&!cu.direccion)+
-      ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 No. 55-50, barrio La Candelaria, Medellín (Antioquia)'),'',!cu.estacion&&!cu.direccion)+
+      ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 # 55–50'),'',!cu.estacion&&!cu.direccion)+
+      ojwR(
+        ojwF('Barrio',ojwIn('oj-c-bar',cu.barrio,'Ej: La Candelaria')),
+        ojwF('Ciudad',ojwIn('oj-c-ciu',cu.ciudad,'Ej: Medellín',{extra:' list="dl-muni"'}))
+      )+
+      '<p class="oj-hint">Se imprimen en un solo renglón: <i>'+
+        escHtml(ojCustodiaDireccion(cu)||'Calle 48 # 55–50, barrio La Candelaria, Medellín')+'</i></p>'+
       ojwR(
         ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
         ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
@@ -10278,6 +10303,7 @@ function ojCollectDisposicion(){
     wc.oj.encabezado={ministerio:ojV('oj-e-min'),institucion:ojV('oj-e-ins'),
       unidad:ojV('oj-e-uni'),dependencia:ojV('oj-e-dep')};
     wc.oj.custodia={estacion:ojV('oj-c-est'),direccion:ojV('oj-c-dir'),
+      barrio:ojV('oj-c-bar'),ciudad:ojV('oj-c-ciu'),
       telefono:ojV('oj-c-tel'),correo:ojV('oj-c-cor'),web:ojV('oj-c-web')};
     wc.oj.firma={grado:ojV('oj-f-gra'),nombre:ojV('oj-f-nom'),cargo:ojV('oj-f-car'),
       telefono:ojV('oj-f-tel'),correo:ojV('oj-f-cor')};
@@ -10806,6 +10832,28 @@ function ojLugarTexto(g){
   return [g.lugarDireccion,g.lugarBarrio?'barrio '+g.lugarBarrio:'',
           g.lugarMunicipio,g.lugarDepartamento].filter(Boolean).join(', ');
 }
+/* Dirección de la unidad de custodia, tal como la escribe el formato:
+   «Calle 48 # 55–50, barrio La Candelaria, Medellín». Misma redacción que
+   `ojLugarTexto` (el «barrio» en minúscula delante del nombre).
+   ⚠️ ÚNICO punto donde se compone: la usan el bloque de contacto del cierre y
+   la constancia de custodia de la narración, que en el formato son el mismo
+   dato y no pueden discrepar.
+   ⚠️ Cada parte es opcional: sin barrio ni ciudad no quedan comas sueltas.
+   ⚠️ NO SE REPITE LO QUE LA DIRECCIÓN YA DIGA. Hasta ahora había un solo campo y
+   el ejemplo de Ajustes pedía escribirlo todo dentro («Calle 48 # 55–50, barrio
+   La Candelaria, Medellín»); quien ya lo tenía así y ahora diligencie barrio y
+   ciudad obtendría «…, barrio La Candelaria, Medellín, barrio La Candelaria,
+   Medellín». Esto no parte ni reinterpreta el texto viejo —una dirección mal
+   interpretada manda al despacho al sitio equivocado—: solo se abstiene de
+   añadir un dato que ya está escrito. */
+function ojCustodiaDireccion(cu){
+  cu=cu||{};
+  var norm=function(s){ return String(s==null?'':s).toLowerCase().replace(/\s+/g,' ').trim(); };
+  var dir=String(cu.direccion||'').trim(), ya=norm(dir), partes=dir?[dir]:[];
+  if(cu.barrio&&ya.indexOf(norm(cu.barrio))<0) partes.push('barrio '+cu.barrio);
+  if(cu.ciudad&&ya.indexOf(norm(cu.ciudad))<0) partes.push(cu.ciudad);
+  return partes.join(', ');
+}
 // Relato de la materialización: se compone a partir de campos normalizados,
 // nunca de texto libre escrito directamente en el documento.
 function ojRelato(c,cfg){
@@ -11019,10 +11067,11 @@ function ojCustodiaTexto(c,cfg){
     cu.telefono?'abonado telefónico '+cu.telefono:'',
     cu.correo?'correo electrónico '+cu.correo:''
   ].filter(Boolean);
+  var dir=ojCustodiaDireccion(cu);
   return ojFrase([
     'Finalmente, se deja constancia de que el '+t.sust+' quedó bajo custodia en ',
     ojEstacionLabel(cu.estacion,false)||'la unidad policial',
-    cu.direccion?', ubicada en '+cu.direccion:'',
+    dir?', ubicada en '+dir:'',
     contacto.length?', '+(contacto.length===2?contacto[0]+' y '+contacto[1]:contacto[0]):'',
     ', para atender cualquier requerimiento que formule la autoridad judicial competente.'
   ]);
@@ -11199,7 +11248,7 @@ function ojDocCuerpo(c,cfg){
   var cu=c.oj.custodia||{};
   out+=ojxFilete();
   [[ojEstacionLabel(cu.estacion,false),true],
-   [cu.direccion||'',false],
+   [ojCustodiaDireccion(cu),false],
    [[cu.telefono?'Teléfono: '+cu.telefono:'',cu.correo||''].filter(Boolean).join(' · '),false],
    [cu.web||'',false]
   ].forEach(function(l){
@@ -11413,6 +11462,8 @@ function ojRecordarEncabezado(c){
   if(e.dependencia&&cfg.ojDependencia!==e.dependencia){ cfg.ojDependencia=e.dependencia; cambio=true; }
   if(cu.estacion&&!cfg.ojCustEstacion){ cfg.ojCustEstacion=cu.estacion; cambio=true; }
   if(cu.direccion&&!cfg.ojCustDireccion){ cfg.ojCustDireccion=cu.direccion; cambio=true; }
+  if(cu.barrio&&!cfg.ojCustBarrio){ cfg.ojCustBarrio=cu.barrio; cambio=true; }
+  if(cu.ciudad&&!cfg.ojCustCiudad){ cfg.ojCustCiudad=cu.ciudad; cambio=true; }
   if(cu.telefono&&!cfg.ojCustTelefono){ cfg.ojCustTelefono=cu.telefono; cambio=true; }
   if(cu.correo&&!cfg.ojCustCorreo){ cfg.ojCustCorreo=cu.correo; cambio=true; }
   if(cu.web&&!cfg.ojPieWeb){ cfg.ojPieWeb=cu.web; cambio=true; }
