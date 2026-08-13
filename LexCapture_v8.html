@@ -1672,19 +1672,22 @@ body.guest{padding-top:38px}
         </div>
         <div class="aj-sec-body" id="aj-body-estacion-sec" style="padding-top:12px">
           <div class="fg"><label class="fl">Rango del comandante</label><input class="fi" id="aj-rango" placeholder="CORONEL"></div>
-          <div class="fr">
-            <div class="fg"><label class="fl">No. del distrito (en texto)</label><input class="fi" id="aj-distrito" placeholder="TRES"></div>
-            <div class="fg"><label class="fl">Nombre de la estación</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
-          </div>
+          <div class="fg"><label class="fl">No. del distrito (en texto)</label><input class="fi" id="aj-distrito" placeholder="TRES"></div>
+          <!-- ⚠️ UN SOLO campo para el nombre de la unidad. Antes había tres: este,
+               «Nombre para el oficio» (aquí mismo) y «Línea 4 — estación o
+               dependencia» en la sección del oficio. Los tres imprimían el mismo
+               dato en tres documentos, y la herencia solo corría en un sentido.
+               Ver lcUnidadNombre(). -->
+          <div class="fg"><label class="fl">Nombre de la unidad</label><input class="fi" id="aj-estacion" placeholder="Escribe solo el nombre: CANDELARIA" oninput="renderAjDerivados()"></div>
+          <p class="oj-hint">Se usa en <b>los tres documentos</b>: el encabezado del dossier, la <b>línea 4 del membrete</b> del oficio de orden judicial y su bloque de contacto. Escribe solo el nombre —<i>CANDELARIA</i>— y la app completa <i>Estación de Policía CANDELARIA</i>. Si tu unidad no es una estación (<i>SECCIONAL DE INVESTIGACIÓN CRIMINAL</i>, <i>CAI Parque Bolívar</i>, <i>DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</i>…), escríbela completa y se respeta tal cual.</p>
           <div class="st">Dirección y contacto</div>
           <p class="oj-hint">Dónde queda tu unidad. Se piden <b>una sola vez</b> aquí y bajan solos a los documentos: el oficio de orden judicial los imprime dos veces —en la constancia con que cierra la narración y en el bloque de contacto del final—, así: <i>Calle 48 # 55–50, barrio La Candelaria, Medellín</i>. Si un procedimiento termina en otra unidad, se cambian en el último paso del formulario.</p>
-          <div class="fg"><label class="fl">Nombre para el oficio</label><input class="fi" id="aj-cest" placeholder="Escribe solo el nombre: La Candelaria" onblur="ojCompletarEstacion(this,false)"></div>
-          <p class="oj-hint">Encabeza el bloque de contacto. Escribe <i>La Candelaria</i> y el oficio imprime <i>Estación de Policía La Candelaria</i>.</p>
           <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="Ej: Calle 48 # 55–50"></div>
           <div class="fr">
             <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="Ej: La Candelaria"></div>
-            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Ej: Medellín"></div>
+            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Ej: Medellín" oninput="renderAjDerivados()"></div>
           </div>
+          <p class="oj-hint">La ciudad es además la que <b>encabeza la fecha</b> del oficio de orden judicial: no se vuelve a pedir en su sección.</p>
           <div class="fr">
             <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="Ej: 3126543210"></div>
             <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
@@ -1731,8 +1734,11 @@ body.guest{padding-top:38px}
           </div>
           <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento de policía, dirección o especialidad"></div>
           <p class="oj-hint">Ej: METROPOLITANA DEL VALLE DE ABURRÁ · METROPOLITANA DE BOGOTÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE INVESTIGACIÓN CRIMINAL E INTERPOL · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</p>
-          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><input class="fi" id="aj-oj-dep" placeholder="Escribe solo el nombre: CANDELARIA" onblur="ojCompletarEstacion(this,true)"></div>
-          <p class="oj-hint">Ej: ESTACIÓN DE POLICÍA CANDELARIA · ESTACIÓN DE POLICÍA CAÑASGORDAS · SECCIONAL DE INVESTIGACIÓN CRIMINAL</p>
+          <!-- ⚠️ La línea 4 NO se pide aquí: es el nombre de la unidad, que ya se
+               escribe en Ajustes → Estación y lo imprimen también el dossier y el
+               bloque de contacto de este mismo oficio. Ver lcUnidadNombre(). -->
+          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><div class="oj-auto" id="aj-oj-dep-eco">Se toma de <b>Ajustes → Estación → Nombre de la unidad</b></div></div>
+          <p class="oj-hint">Si en un procedimiento concreto el membrete debe decir otra cosa, se cambia en el último paso del formulario de la captura.</p>
           <!-- ⚠️ Plegado: el escudo del formato viene embebido y se pone solo, así que
                esto NO es un paso de configuración — es el reemplazo opcional para una
                unidad que use otro. `renderLogoOJ` lo abre solo si hay uno propio
@@ -1744,7 +1750,10 @@ body.guest{padding-top:38px}
               <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
             </div>
           </details>
-          <div class="fg"><label class="fl">Ciudad del oficio</label><input class="fi" id="aj-oj-ciu" placeholder="Ciudad que encabeza la fecha"></div>
+          <!-- ⚠️ «Ciudad del oficio» tampoco se pide aquí: es la ciudad de la
+               unidad (Ajustes → Estación), que el oficio ya imprime en el bloque
+               de contacto. Ver lcUnidadCiudad(). -->
+          <div class="fg"><label class="fl">Ciudad que encabeza la fecha</label><div class="oj-auto" id="aj-oj-ciu-eco">Se toma de <b>Ajustes → Estación → Ciudad</b></div></div>
           <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
           <div class="st">Lugar de custodia y bloque de contacto</div>
@@ -2115,7 +2124,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 59;
+var _BUILD = 60;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2881,7 +2890,16 @@ var _CFG_MUERTAS=['ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasif
                   'ojUbicacionTRD','ojReviso'];
 function _cfgConDefaults(stored) {
     stored=stored||{};
-    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'CANDELARIA',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null,
+    /* ⚠️ `nombreEstacion` NACE VACÍA a propósito. Venía sembrada con «CANDELARIA»
+       —una estación real de Medellín— así que un equipo recién instalado en
+       cualquier otra ciudad imprimía en el dossier «ESTACIÓN DE POLICÍA
+       CANDELARIA» sin que nadie lo hubiera escrito. Además era EL motivo por el
+       que el nombre de la unidad no se podía compartir con el oficio: al ser un
+       dato fabricado, encadenarlo habría inventado un lugar de custodia y
+       desactivado la validación dura V29 (lección del 2026-07-30). Sin default,
+       el nombre de la unidad es UN dato del usuario y lo pueden leer los tres
+       documentos que lo imprimen — ver lcUnidadNombre(). */
+    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null,
       /* Fiscalía destinataria del oficio de orden judicial. Es propiedad del
          EQUIPO (siempre se remite a la misma URI), así que se pregunta UNA vez
          en Ajustes y el encabezado del destinatario se arma solo — el
@@ -2921,7 +2939,41 @@ function _cfgConDefaults(stored) {
       papel:''};
     var out={}; for(var k in def) out[k]=stored[k]!==undefined?stored[k]:def[k]; for(var k in stored) if(!(k in out)) out[k]=stored[k];
     for(var m=0;m<_CFG_MUERTAS.length;m++) delete out[_CFG_MUERTAS[m]];
+    /* Migración del nombre de la unidad — se hace AL LEER y es idempotente: si
+       `nombreEstacion` está vacía pero el equipo ya tenía el dato en una de las
+       claves del oficio, sube a la clave única. Así, quien configuró el membrete
+       o el lugar de custodia antes de esta consolidación ve su unidad en Ajustes
+       y no la vuelve a teclear. Nada se borra: las claves legadas siguen ahí y
+       siguen mandando en su propio documento. */
+    if(!out.nombreEstacion) out.nombreEstacion=out.ojCustEstacion||out.ojDependencia||out.ojPieDependencia||'';
+    /* Misma idea con la ciudad: «Ciudad del oficio» y la ciudad de la unidad son
+       el mismo dato (el oficio se fecha donde está la unidad que lo suscribe). */
+    if(!out.ojCustCiudad) out.ojCustCiudad=out.ojCiudad||'';
     return out;
+}
+/* ── ÚNICO punto donde se resuelve el nombre de la unidad ──────────────────
+   Lo imprimen TRES salidas distintas: el encabezado del dossier, la línea 4 del
+   membrete del oficio y el bloque de contacto / constancia de custodia. Hasta
+   ahora cada una tenía su propio campo en Ajustes («Nombre de la estación»,
+   «Línea 4 — estación o dependencia» y «Nombre para el oficio»), dos de ellos en
+   la misma pantalla, y la cadena solo corría en un sentido: quien diligenciaba
+   la sección Estación completa seguía bloqueado por V27 porque el membrete no
+   heredaba nada.
+   ⚠️ Las claves legadas se consultan POR DELANTE en cada consumidor (ver
+   ojEncabezadoXml y ojPrellenarDeCfg): un equipo ya configurado imprime
+   exactamente lo mismo que antes; esto solo rellena los huecos.
+   ⚠️ El valor se guarda «en crudo» (CANDELARIA, LAURELES…): el tipo de
+   dependencia lo antepone ojEstacionLabel() en cada salida, que es idempotente y
+   respeta lo que ya venga completo (SECCIONAL…, CAI…, DIRECCIÓN…). */
+function lcUnidadNombre(cfg){
+  cfg=cfg||DB.getConfig();
+  return cfg.nombreEstacion||cfg.ojCustEstacion||cfg.ojDependencia||cfg.ojPieDependencia||'';
+}
+/* Ciudad de la unidad: la que encabeza la fecha del oficio y la que cierra el
+   renglón de dirección del bloque de contacto. Un solo dato, un solo campo. */
+function lcUnidadCiudad(cfg){
+  cfg=cfg||DB.getConfig();
+  return cfg.ojCustCiudad||cfg.ojCiudad||'';
 }
 
 function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -5405,9 +5457,17 @@ function genDossier(caso) {
   }
   var secciones=getDosierSecciones();
   var isCespa=caso.tipo==='CESPA';
+  /* El nombre de la unidad sale del punto único (lcUnidadNombre): es el mismo
+     dato que imprimen la línea 4 del membrete del oficio y su bloque de
+     contacto. Pasa por ojEstacionLabel para que una unidad que NO es estación
+     (SECCIONAL…, CAI…, DIRECCIÓN…) no salga con el rótulo pegado delante —
+     antes el «ESTACIÓN DE POLICÍA» iba escrito a pelo en esta línea.
+     ⚠️ Sin unidad configurada la línea se OMITE: es preferible un encabezado de
+     dos renglones a uno que nombre una estación que no es la del usuario. */
+  var uniDos=mayus(ojEstacionLabel(lcUnidadNombre(cfg),true));
   var enc='*DIOS Y PATRIA MI '+(cfg.rangoComandante||'CORONEL')+' '+dosGreeting()+'*\n'+
-    '*DISTRITO '+(cfg.numDistrito||'TRES')+' DE POLICÍA*\n'+
-    '*ESTACIÓN DE POLICÍA '+(cfg.nombreEstacion||'CANDELARIA')+'*';
+    '*DISTRITO '+(cfg.numDistrito||'TRES')+' DE POLICÍA*'+
+    (uniDos?'\n*'+uniDos+'*':'');
   var sorted=secciones.filter(function(s){return s.activa;}).sort(function(a,b){return a.orden-b.orden;});
   var lines=[];
   sorted.forEach(function(sec){
@@ -7935,22 +7995,25 @@ function savePerfilRegionalForm(id) {
 /* ─── Ajustes ─── */
 function loadAjustesFields() {
   var cfg=DB.getConfig();
-  var map={'aj-rango':cfg.rangoComandante,'aj-distrito':cfg.numDistrito,'aj-estacion':cfg.nombreEstacion,
+  /* El nombre de la unidad se muestra RESUELTO: si el equipo lo tenía escrito en
+     una de las claves del oficio (membrete o custodia) y no en esta, el usuario
+     lo ve aquí y no lo vuelve a teclear. */
+  var map={'aj-rango':cfg.rangoComandante,'aj-distrito':cfg.numDistrito,'aj-estacion':lcUnidadNombre(cfg),
     /* Contacto de la unidad. Se edita AQUÍ y se guarda en las claves `ojCust*`,
        que son las que lee el oficio: antes esta sección escribía en `dosDir`/
        `dosTel` —que no las leía ningún documento— y el oficio pedía lo mismo
        otra vez en su propia sección. Las claves legadas se siguen leyendo para
        que una config guardada antes no pierda lo que el usuario ya escribió. */
-    'aj-cest':cfg.ojCustEstacion,'aj-dir':cfg.ojCustDireccion||cfg.dosDir||'',
-    'aj-bar':cfg.ojCustBarrio,'aj-ciu':cfg.ojCustCiudad,
+    'aj-dir':cfg.ojCustDireccion||cfg.dosDir||'',
+    'aj-bar':cfg.ojCustBarrio,'aj-ciu':lcUnidadCiudad(cfg),
     'aj-tel':cfg.ojCustTelefono||cfg.dosTel||'','aj-cor':cfg.ojCustCorreo,'aj-web':cfg.ojPieWeb,
     'aj-verde3':cfg.dosVerde3,'aj-diamante3':cfg.dosDiamante3,
     'aj-patrulla':cfg.patrullaNum,'aj-unidad':cfg.patrullaUnidad,
     'aj-nuncUri':cfg.nuncUri,'aj-nuncCespa':cfg.nuncCespa,
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
     'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa,
-    'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,'aj-oj-dep':cfg.ojDependencia,
-    'aj-oj-ciu':cfg.ojCiudad,'aj-oj-asunto':cfg.ojAsunto,
+    'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,
+    'aj-oj-asunto':cfg.ojAsunto,
     'aj-oj-fnom':cfg.ojFiscaliaNombre,'aj-oj-fdir':cfg.ojFiscaliaDireccion,
     'aj-oj-fmun':cfg.ojFiscaliaMunicipio,'aj-oj-fdep':cfg.ojFiscaliaDepartamento,
     'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
@@ -7958,7 +8021,35 @@ function loadAjustesFields() {
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
   renderLogoOJ(cfg);
   renderPapelAj(cfg);
+  renderAjDerivados();
   renderConocieronRows(getConocieronList(cfg));
+}
+/* Los dos datos que la sección del oficio dejó de pedir porque ya se escriben en
+   Estación. No son campos: son el ESPEJO de lo que se va a imprimir, para que el
+   usuario vea el valor sin tener que subir a comprobarlo y sepa de dónde sale.
+   Se repintan mientras teclea, así el vínculo entre las dos secciones es visible
+   en el momento en que importa. */
+function renderAjDerivados(){
+  var uni=document.getElementById('aj-estacion'), ciu=document.getElementById('aj-ciu');
+  var cfg=null;
+  function val(el,resuelve){
+    if(el) return el.value.trim();
+    cfg=cfg||DB.getConfig(); return resuelve(cfg);
+  }
+  var eco=document.getElementById('aj-oj-dep-eco');
+  if(eco){
+    var u=val(uni,lcUnidadNombre);
+    eco.innerHTML=u
+      ? escHtml(mayus(ojEstacionLabel(u,true)))+' <small>— de Ajustes → Estación</small>'
+      : 'Se toma de <b>Ajustes → Estación → Nombre de la unidad</b>';
+  }
+  var ecoC=document.getElementById('aj-oj-ciu-eco');
+  if(ecoC){
+    var c=val(ciu,lcUnidadCiudad);
+    ecoC.innerHTML=c
+      ? escHtml(c)+' <small>— de Ajustes → Estación</small>'
+      : 'Se toma de <b>Ajustes → Estación → Ciudad</b>';
+  }
 }
 /* Tamaño del papel. Se aplica al instante y no depende de «Guardar ajustes»,
    igual que el tema: es una preferencia del equipo, no un formulario. */
@@ -8069,12 +8160,34 @@ function delConocieronRow(btn) {
 function saveAjustes() {
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
   var cfg=DB.getConfig();
-  cfg.rangoComandante=v('aj-rango'); cfg.numDistrito=v('aj-distrito'); cfg.nombreEstacion=v('aj-estacion');
+  cfg.rangoComandante=v('aj-rango'); cfg.numDistrito=v('aj-distrito');
+  /* ── Nombre de la unidad: una clave editable, dos legadas en espejo ──
+     `ojCustEstacion` (custodia) y `ojDependencia` (línea 4 del membrete) se
+     consultan POR DELANTE en sus cadenas, así que si el usuario cambia el nombre
+     aquí y ellas conservaran el anterior, ganarían ellas y el cambio no se vería
+     en el oficio. Por eso:
+       · si el nombre CAMBIÓ, se propaga a las dos (es la única pantalla donde se
+         edita: cambiarlo significa cambiar el de la unidad, no el de una sola
+         salida);
+       · si NO cambió, solo se rellenan las que estén vacías — así una unidad que
+         deliberadamente tenga un membrete distinto del lugar de custodia (una
+         seccional que retiene en la estación) no se colapsa por abrir Ajustes y
+         pulsar Guardar. Ese caso se sigue diligenciando por captura, en el
+         último paso del formulario. */
+  var uniNueva=v('aj-estacion').trim(), uniCambio=(uniNueva!==(cfg.nombreEstacion||''));
+  if(uniCambio){ cfg.ojCustEstacion=uniNueva; cfg.ojDependencia=uniNueva; }
+  else { if(!cfg.ojCustEstacion) cfg.ojCustEstacion=uniNueva; if(!cfg.ojDependencia) cfg.ojDependencia=uniNueva; }
+  cfg.nombreEstacion=uniNueva;
   /* Contacto de la unidad → las claves que lee el oficio. `dosDir`/`dosTel` se
      mantienen en espejo para no romper una configuración ya exportada, igual
      que se hace con `conocieronCaso`. */
-  cfg.ojCustEstacion=v('aj-cest'); cfg.ojCustDireccion=v('aj-dir');
-  cfg.ojCustBarrio=v('aj-bar'); cfg.ojCustCiudad=v('aj-ciu');
+  cfg.ojCustDireccion=v('aj-dir');
+  cfg.ojCustBarrio=v('aj-bar');
+  // Misma regla para la ciudad: `ojCiudad` encabeza la fecha del oficio y se lee
+  // primero, así que un cambio aquí tiene que alcanzarla.
+  var ciuNueva=v('aj-ciu').trim();
+  if(ciuNueva!==(cfg.ojCustCiudad||'')||!cfg.ojCiudad) cfg.ojCiudad=ciuNueva;
+  cfg.ojCustCiudad=ciuNueva;
   cfg.ojCustTelefono=v('aj-tel'); cfg.ojCustCorreo=v('aj-cor'); cfg.ojPieWeb=v('aj-web');
   cfg.dosDir=cfg.ojCustDireccion; cfg.dosTel=cfg.ojCustTelefono;
   cfg.dosVerde3=v('aj-verde3'); cfg.dosDiamante3=v('aj-diamante3');
@@ -8091,8 +8204,11 @@ function saveAjustes() {
   // escribe lo que exista, para no borrar configuración ya guardada).
   if(document.getElementById('aj-oj-min')){
     cfg.ojMinisterio=v('aj-oj-min'); cfg.ojInstitucion=v('aj-oj-inst');
-    cfg.ojUnidad=v('aj-oj-uni'); cfg.ojDependencia=v('aj-oj-dep');
-    cfg.ojCiudad=v('aj-oj-ciu');
+    cfg.ojUnidad=v('aj-oj-uni');
+    /* ⚠️ `ojDependencia` y `ojCiudad` NO se escriben aquí: sus campos se
+       retiraron de esta sección (son el nombre y la ciudad de la unidad, que se
+       piden en Ajustes → Estación). Escribirlos con `v()` los habría BORRADO,
+       porque `v()` devuelve '' cuando el elemento no existe. */
     cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
     cfg.ojFiscaliaNombre=v('aj-oj-fnom'); cfg.ojFiscaliaDireccion=v('aj-oj-fdir');
     cfg.ojFiscaliaMunicipio=v('aj-oj-fmun'); cfg.ojFiscaliaDepartamento=v('aj-oj-fdep');
@@ -8456,8 +8572,15 @@ function ojPrellenarDeCfg(c,cfg){
   if(!e.ministerio) e.ministerio=cfg.ojMinisterio||'';
   if(!e.institucion) e.institucion=cfg.ojInstitucion||'';
   if(!e.unidad) e.unidad=cfg.ojUnidad||'';
-  if(!e.dependencia) e.dependencia=cfg.ojDependencia||'';
-  if(!cu.estacion) cu.estacion=cfg.ojCustEstacion||cfg.ojPieDependencia||cfg.ojDependencia||'';
+  /* ⚠️ La línea 4 del membrete y la unidad de custodia son el MISMO dato que el
+     usuario escribe en Ajustes → Estación → «Nombre de la unidad». La clave
+     propia de cada uno se consulta primero (un equipo ya configurado no cambia
+     nada) y `lcUnidadNombre` rellena el hueco. Antes la herencia solo corría
+     hacia la custodia: quien diligenciaba la sección Estación entera seguía
+     bloqueado por V27 con el mensaje «Falta la estación o dependencia del
+     encabezado», después de haber escrito el nombre de su unidad dos veces. */
+  if(!e.dependencia) e.dependencia=cfg.ojDependencia||lcUnidadNombre(cfg);
+  if(!cu.estacion) cu.estacion=cfg.ojCustEstacion||cfg.ojPieDependencia||cfg.ojDependencia||lcUnidadNombre(cfg);
   /* `dosDir`/`dosTel` son las claves legadas de Ajustes → Estación, que hasta
      ahora NINGÚN documento leía: el usuario escribía ahí la dirección de su
      unidad y no salía en ninguna parte. Se leen para que lo ya escrito llegue
@@ -8466,7 +8589,7 @@ function ojPrellenarDeCfg(c,cfg){
      lugar de custodia en un equipo sin configurar y desactivaría la V29. */
   if(!cu.direccion) cu.direccion=cfg.ojCustDireccion||cfg.dosDir||cfg.ojPieDireccion||'';
   if(!cu.barrio) cu.barrio=cfg.ojCustBarrio||'';
-  if(!cu.ciudad) cu.ciudad=cfg.ojCustCiudad||'';
+  if(!cu.ciudad) cu.ciudad=lcUnidadCiudad(cfg);
   if(!cu.telefono) cu.telefono=cfg.ojCustTelefono||cfg.dosTel||cfg.ojPieTelefonos||'';
   if(!cu.correo) cu.correo=cfg.ojCustCorreo||cfg.ojPieCorreo||'';
   if(!cu.web) cu.web=cfg.ojPieWeb||'';
@@ -10748,7 +10871,11 @@ function ojPaqueteBase(cfg){
    mueve nada. Ningún nombre de institución vive en el código: las 4 líneas y el
    logo salen de Ajustes (requisito de publicación en Play Store). */
 function ojEncabezadoXml(cfg){
-  var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,ojEstacionLabel(cfg.ojDependencia,true)];
+  /* Línea 4: la clave propia manda (una configuración anterior imprime igual) y,
+     si está vacía, se toma el nombre de la unidad del punto único — es el mismo
+     dato que el bloque de contacto del pie y que el encabezado del dossier. */
+  var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,
+              ojEstacionLabel(cfg.ojDependencia||lcUnidadNombre(cfg),true)];
   var txt=lineas.map(function(t,i){
     return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_TABLA}),{after:0,keepLines:false});
   }).join('');
@@ -11153,7 +11280,11 @@ function ojDocCuerpo(c,cfg){
      ⚠️ El documento ABRE con esta línea. No va antes ningún consecutivo
      («No. ____ / MEVAL – ESCAN – 1.10»): eso no está en el formato y era una
      adición heredada del módulo anterior. */
-  var ciudad=cfg.ojCiudad||g.lugarMunicipio||d.municipio||'';
+  /* La ciudad que encabeza la fecha es la de la unidad que suscribe el oficio —
+     el mismo dato de Ajustes → Estación → Ciudad. `ojCiudad` (el campo propio
+     que tenía esta sección) se sigue leyendo primero para no cambiarle el
+     documento a quien ya lo tenía configurado. */
+  var ciudad=cfg.ojCiudad||lcUnidadCiudad(cfg)||g.lugarMunicipio||d.municipio||'';
   out+=ojxP(ojxRun([ciudad,ojFechaLarga(g.fecha||c.fechaProc)].filter(Boolean).join(', ')),{after:240});
 
   // ── Destinatario: juzgado o fiscalía, con su dirección (selección 4) ──

@@ -1804,6 +1804,64 @@ la ciudad se recogieran ahí. Al medirlo salió algo peor que una duplicación d
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=59` / `cache-v59`, `_BUILD=59`.
 
+### Auditoría de Ajustes → Estación · Oficio de orden judicial (2026-08-13, 2º pase)
+Auditoría de las dos secciones, campo por campo, rastreando cada clave por todo el archivo antes de
+tocar nada y **reproduciendo cada defecto sobre la app real** con Playwright. `verify_oj.mjs` sube a
+**186 checks** (antes 177) y el `.docx` se abrió en **Word real** (3 páginas, 3 tablas, sin reparar).
+
+- ⚠️ **El nombre de la unidad se pedía TRES veces** y la herencia solo corría en un sentido:
+  «Nombre de la estación» (`nombreEstacion` → dossier), «Nombre para el oficio» (`ojCustEstacion` →
+  bloque de contacto y constancia de custodia) —**los dos en la misma pantalla**— y «Línea 4 —
+  estación o dependencia» (`ojDependencia` → membrete), en la otra. Medido: un usuario que
+  diligencia la sección Estación **entera** seguía bloqueado por **V27** («Falta la estación o
+  dependencia del encabezado») después de haber escrito el nombre de su unidad dos veces.
+  `ojPrellenarDeCfg` ya caía `ojCustEstacion || ojDependencia`, pero nada caía hacia el membrete ni
+  desde `nombreEstacion`.
+- **`lcUnidadNombre(cfg)` / `lcUnidadCiudad(cfg)`** son el punto único de resolución. ⚠️ **Cada
+  consumidor consulta su clave propia POR DELANTE** (`ojEncabezadoXml` → `cfg.ojDependencia||…`,
+  `ojPrellenarDeCfg` → `cfg.ojCustEstacion||…`, la fecha del oficio → `cfg.ojCiudad||…`): un equipo
+  ya configurado imprime **exactamente lo mismo que antes** y la consolidación solo rellena huecos.
+  No hay un orden global único a propósito — lo habría cambiado.
+- ⚠️ **`nombreEstacion` ya NO nace sembrada con «CANDELARIA»** (una estación real de Medellín). Era
+  un dato fabricado que todo equipo recién instalado imprimía en el dossier sin escribirlo, y era
+  **el motivo por el que el nombre no se podía compartir**: encadenar un default habría inventado un
+  lugar de custodia y desactivado V29 (lección del 2026-07-30). Sin default, la V29 sigue
+  protegiendo igual y el dato pasa a ser uno solo. El encabezado del dossier **omite el renglón** si
+  no hay unidad, en vez de nombrar una que no es la del usuario, y pasa por `ojEstacionLabel` como
+  las otras dos salidas (antes llevaba «ESTACIÓN DE POLICÍA» escrito a pelo, así que una seccional o
+  un CAI salían con el rótulo pegado delante).
+- **«Ciudad del oficio» era la ciudad de la unidad.** `ojCiudad` (sección del oficio) y
+  `ojCustCiudad` (sección Estación) son el mismo dato: el oficio se fecha donde está la unidad que
+  lo suscribe. Un solo campo, en Estación.
+- **Migración al leer, idempotente y no destructiva** (`_cfgConDefaults`): si `nombreEstacion` está
+  vacía se sube lo que haya en `ojCustEstacion`/`ojDependencia`/`ojPieDependencia`, e igual con la
+  ciudad. Quien configuró el membrete o la custodia antes ve su unidad en Ajustes y no la reteclea.
+  **Ninguna clave se borra**; las legadas siguen mandando en su documento.
+- ⚠️ **La regla de propagación al guardar es la pieza delicada.** Las claves legadas se leen primero,
+  así que si el usuario cambia el nombre y ellas conservaran el anterior, **ganarían ellas y el
+  cambio no se vería**. `saveAjustes`: si el nombre **cambió**, se propaga a las dos; si **no**
+  cambió, solo se rellenan las vacías — así una unidad con membrete distinto del lugar de custodia
+  (una seccional que retiene en la estación) **no se colapsa** por abrir Ajustes y pulsar Guardar.
+  Hay un check dedicado a ese caso.
+- ⚠️ **`v(id)` devuelve `''` cuando el elemento no existe**: al retirar `aj-cest`, `aj-oj-dep` y
+  `aj-oj-ciu` había que **quitar también sus asignaciones** de `saveAjustes`, o el primer guardado
+  habría borrado la configuración del usuario. Es la misma trampa que ya protege el `if
+  (document.getElementById('aj-oj-min'))` de esa función.
+- **En la sección del oficio, las dos líneas retiradas no desaparecen: se ven resueltas**
+  (`renderAjDerivados`, clase `.oj-auto`) con su valor y su procedencia, y se repintan mientras se
+  teclea en Estación. Un dato que se hereda en silencio es indistinguible de un dato que falta.
+- **Revisado y NO cambiado, con motivo**: `ojFiscaliaNombre` ya cae a `destUri` (fallback existente y
+  documentado; son la denominación formal y la etiqueta corta de la misma fiscalía);
+  `rangoComandante:'CORONEL'` y `numDistrito:'TRES'` **siguen sembrados** — son datos fabricados del
+  mismo tipo, pero no bloqueaban ninguna consolidación y cambiarlos altera la salida del dossier sin
+  que nadie lo haya pedido; `ojPieWeb` conserva su nombre legado (renombrarlo rompería una config ya
+  exportada). Los campos de Fiscalía, jornada hábil, asunto y escudo tienen un solo consumidor cada
+  uno: no sobra ninguno.
+- Regresiones en verde: **OJ 186** · fpj6 122 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · tipografía OJ 36 · envío 39 · invitado 33 · simulador 41 · personas 24 ·
+  multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=60` / `cache-v60`, `_BUILD=60`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

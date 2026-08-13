@@ -790,7 +790,7 @@ const viejaOk = await page.evaluate(async id => {
   closeModal();
   const caso = ojDesdeLegado(DB.getCase(id));
   caso.oj.encabezado = { ministerio: 'MINISTERIO X', institucion: 'INSTITUCIÓN Y', unidad: 'UNIDAD Z', dependencia: 'ESTACIÓN W' };
-  caso.oj.custodia = { estacion: 'Estación W', direccion: 'Calle 48 # 55-50', telefono: '3127324069', correo: 'w@ejemplo.test', web: 'www.ejemplo.test' };
+  caso.oj.custodia = { estacion: 'Estación W', direccion: 'Calle 48 # 55-50', barrio: '', ciudad: 'Ciudad W', telefono: '3127324069', correo: 'w@ejemplo.test', web: 'www.ejemplo.test' };
   caso.oj.actuacion.anexos = ['Informe dejando a disposición', 'Acta de derechos del capturado y constancia de buen trato', 'Copia orden de captura oficio No. {{ORD_NUMERO}}'];
   caso.oj.actuacion.anexosManual = true;   // los fija el test, no el automatismo
   const out = await buildOficioOJBlob(caso, 'CARTA');
@@ -803,8 +803,8 @@ log(viejaOk.bloqueo === 0 && viejaOk.header.join('|') === 'MINISTERIO X|INSTITUC
   'Completado, el caso legado imprime las CUATRO líneas del membrete', viejaOk.header.join(' / '));
 log(viejaOk.cola.includes('Anexos: tres (3)') && viejaOk.cola.includes('– Copia orden de captura oficio No. 735-1999'),
   'Y el bloque de anexos con la cuenta y el No. de la orden resuelto');
-log(viejaOk.cola.slice(-4).join('|') === 'Estación W|Calle 48 # 55-50|Teléfono: 3127324069 · w@ejemplo.test|www.ejemplo.test',
-  'Y las cuatro líneas del bloque de contacto del cierre');
+log(viejaOk.cola.slice(-4).join('|') === 'Estación W|Calle 48 # 55-50, Ciudad W|Teléfono: 3127324069 · w@ejemplo.test|www.ejemplo.test',
+  'Y las cuatro líneas del bloque de contacto del cierre', viejaOk.cola.slice(-4).join(' | '));
 
 await page.evaluate(cfg => { closeModal(); DB.saveConfig(cfg); }, cfgGuardada);
 
@@ -1027,10 +1027,12 @@ const est = await page.evaluate(async () => {
     dir: (document.getElementById('aj-dir') || {}).value,
     tel: (document.getElementById('aj-tel') || {}).value
   };
-  // …y diligencia los campos nuevos, todos en la misma sección.
-  const hay = ['aj-cest','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor','aj-web']
+  // …y diligencia los campos nuevos, todos en la misma sección. El nombre de la
+  // unidad se escribe en `aj-estacion`: es el ÚNICO campo que lo pide (antes lo
+  // pedían también «Nombre para el oficio» aquí y «Línea 4» en la otra sección).
+  const hay = ['aj-estacion','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor','aj-web']
     .every(id => set(id, ''));
-  set('aj-cest', 'La Candelaria'); set('aj-dir', 'Calle 48 # 55–50');
+  set('aj-estacion', 'La Candelaria'); set('aj-dir', 'Calle 48 # 55–50');
   set('aj-bar', 'La Candelaria');  set('aj-ciu', 'Medellín');
   set('aj-tel', '312 732 4069');   set('aj-cor', 'unidad@ejemplo.test');
   set('aj-web', 'www.ejemplo.test');
@@ -1048,18 +1050,27 @@ const est = await page.evaluate(async () => {
     rescate, vistos, hay,
     guardado: { est: cfg.ojCustEstacion, dir: cfg.ojCustDireccion, bar: cfg.ojCustBarrio,
                 ciu: cfg.ojCustCiudad, tel: cfg.ojCustTelefono, cor: cfg.ojCustCorreo, web: cfg.ojPieWeb },
+    // El nombre de la unidad y su ciudad llegan a las TRES claves que los
+    // imprimen: una sola pantalla, sin que ninguna quede rezagada y gane luego.
+    unaSolaVez: { nombre: cfg.nombreEstacion, membrete: cfg.ojDependencia,
+                  custodia: cfg.ojCustEstacion, ciudadOficio: cfg.ojCiudad },
     espejo: { dosDir: cfg.dosDir, dosTel: cfg.dosTel },
     // La sección del oficio ya no vuelve a preguntar lo mismo
-    duplicados: ['aj-oj-cest','aj-oj-cdir','aj-oj-cbar','aj-oj-cciu','aj-oj-ctel','aj-oj-ccor','aj-oj-pweb']
+    duplicados: ['aj-oj-cest','aj-oj-cdir','aj-oj-cbar','aj-oj-cciu','aj-oj-ctel','aj-oj-ccor','aj-oj-pweb',
+                 'aj-cest','aj-oj-dep','aj-oj-ciu']
       .filter(id => document.getElementById(id)),
     cierre: ps.slice(-4),
     narr: ps.find(p => /bajo custodia/.test(p)) || ''
   };
 });
-log(est.hay, 'Ajustes → Estación pide los siete datos del contacto de la unidad');
+log(est.hay, 'Ajustes → Estación pide los siete datos de la unidad (nombre + contacto)');
 log(est.duplicados.length === 0,
-  '⚠️ La sección del oficio ya no los vuelve a pedir: un solo sitio, sin dos campos «Barrio»',
+  '⚠️ Ni esta sección ni la del oficio los vuelven a pedir: sin segundo «Barrio», sin segundo nombre de unidad y sin segunda ciudad',
   est.duplicados.join(', '));
+log(est.unaSolaVez.nombre === 'La Candelaria' && est.unaSolaVez.membrete === 'La Candelaria' &&
+    est.unaSolaVez.custodia === 'La Candelaria' && est.unaSolaVez.ciudadOficio === 'Medellín',
+  '⚠️ Escrito UNA vez, llega a las tres claves que lo imprimen (dossier, membrete y bloque de contacto)',
+  JSON.stringify(est.unaSolaVez));
 log(est.guardado.est === 'La Candelaria' && est.guardado.dir === 'Calle 48 # 55–50' &&
     est.guardado.bar === 'La Candelaria' && est.guardado.ciu === 'Medellín' &&
     est.guardado.tel === '312 732 4069' && est.guardado.cor === 'unidad@ejemplo.test' &&
@@ -1121,10 +1132,91 @@ log(limpio.intacto, 'Sin tocar nada de lo que sí se imprime');
 log(limpio.escudo.plegado && !limpio.escudo.abiertoSinPropio && limpio.escudo.abiertoConPropio,
   '⚠️ El escudo viene embebido: su bloque va plegado y solo se abre si hay uno propio cargado',
   JSON.stringify(limpio.escudo));
-log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep,aj-oj-logo-file,' +
-    'aj-oj-ciu,aj-oj-asunto,aj-oj-fnom,aj-oj-fdir,aj-oj-fmun,aj-oj-fdep,aj-oj-jini,aj-oj-jfin',
-  'La sección del oficio se queda solo con campos que el documento imprime o usa',
+log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-logo-file,' +
+    'aj-oj-asunto,aj-oj-fnom,aj-oj-fdir,aj-oj-fmun,aj-oj-fdep,aj-oj-jini,aj-oj-jfin',
+  'La sección del oficio se queda solo con campos que el documento imprime o usa Y que no se piden en otra parte',
   limpio.campos.join(', '));
+
+/* ─────────── 12. El nombre de la unidad: un solo dato, tres documentos ───────────
+   Se pedía TRES veces —«Nombre de la estación» y «Nombre para el oficio» en la
+   misma pantalla, y «Línea 4 — estación o dependencia» en la del oficio— y la
+   herencia solo corría en un sentido: quien diligenciaba Estación entera seguía
+   bloqueado por V27. Además `nombreEstacion` nacía sembrada con «CANDELARIA»,
+   una estación real de Medellín, así que un equipo recién instalado en cualquier
+   otra ciudad imprimía esa estación en el dossier sin que nadie la escribiera. */
+console.log('\n── 12 · El nombre de la unidad se pide una sola vez ──');
+const uni = await page.evaluate(async () => {
+  const T = x => (x.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) || []).map(s => s.replace(/<[^>]*>/g, ''));
+  const guardar = c => DB.saveConfig(JSON.parse(JSON.stringify(c)));
+  const membrete = async c => {
+    const caso = SIM.genOJ(); caso.isTest = false;
+    caso.oj.encabezado = { ministerio: '', institucion: '', unidad: '', dependencia: '' };
+    caso.oj.custodia = { estacion: '', direccion: '', barrio: '', ciudad: '', telefono: '', correo: '', web: '' };
+    ojPrellenarDeCfg(caso, DB.getConfig());
+    const out = await buildOficioOJBlob(ojCasoParaDocumento(caso), 'CARTA');
+    const files = await _unzipBufAsync(new Uint8Array(await out.blob.arrayBuffer()));
+    return { header: T(new TextDecoder().decode(files['word/header1.xml'])),
+             duras: ojDuras(caso).map(v => v.id) };
+  };
+  const base = JSON.parse(JSON.stringify(DB.getConfig()));
+  const limpia = k => { const c = JSON.parse(JSON.stringify(base));
+    ['nombreEstacion','ojCustEstacion','ojDependencia','ojPieDependencia','ojCiudad','ojCustCiudad'].forEach(x => { c[x] = ''; });
+    Object.keys(k || {}).forEach(x => { c[x] = k[x]; });
+    return c; };
+
+  // (a) Equipo NUEVO: ninguna estación inventada, en ninguna de las tres claves.
+  localStorage.removeItem('lc_cfg');
+  const virgen = DB.getConfig();
+  const nuevo = { nombreEstacion: virgen.nombreEstacion, dossier: genDossier({ tipo: 'URI', capturados: [], conductas: [] }) };
+
+  // (b) El usuario escribe la unidad UNA vez y el membrete deja de bloquear.
+  guardar(limpia({ nombreEstacion: 'LAURELES', ojMinisterio: 'MIN', ojInstitucion: 'INST', ojUnidad: 'METRO' }));
+  const soloEstacion = await membrete();
+  const dossierUna = genDossier({ tipo: 'URI', capturados: [], conductas: [] });
+
+  // (c) ⚠️ NO REGRESIÓN: un equipo que ya tenía la línea 4 configurada imprime
+  //     exactamente lo mismo que antes — su clave propia manda sobre la nueva.
+  guardar(limpia({ nombreEstacion: 'LAURELES', ojDependencia: 'SECCIONAL DE INVESTIGACIÓN CRIMINAL',
+                   ojMinisterio: 'MIN', ojInstitucion: 'INST', ojUnidad: 'METRO' }));
+  const conLegado = await membrete();
+
+  // (d) …y abrir Ajustes y pulsar «Guardar» SIN tocar el nombre no lo colapsa.
+  go('ajustes'); loadAjustesFields();
+  const vistoEnAjustes = document.getElementById('aj-estacion').value;
+  saveAjustes();
+  const trasGuardar = { membrete: DB.getConfig().ojDependencia, nombre: DB.getConfig().nombreEstacion };
+
+  // (e) Migración: quien solo tenía el dato en la clave del oficio lo ve aquí.
+  guardar(limpia({ ojDependencia: 'CAI Parque Bolívar' }));
+  go('ajustes'); loadAjustesFields();
+  const migrado = document.getElementById('aj-estacion').value;
+
+  DB.saveConfig(base);
+  return { nuevo, soloEstacion, dossierUna, conLegado, vistoEnAjustes, trasGuardar, migrado };
+});
+log(uni.nuevo.nombreEstacion === '',
+  '⚠️ Un equipo recién instalado no trae ninguna estación sembrada («CANDELARIA» era una estación real)',
+  JSON.stringify(uni.nuevo.nombreEstacion));
+log(!/ESTACIÓN DE POLICÍA/.test(uni.nuevo.dossier),
+  '⚠️ Y su dossier omite el renglón en vez de nombrar una estación que no es la suya',
+  uni.nuevo.dossier.split('\n').slice(0, 3).join(' / '));
+log(uni.soloEstacion.duras.indexOf('V27') < 0 && uni.soloEstacion.duras.indexOf('V29') < 0,
+  '⚠️ Escrito UNA vez en Estación, el membrete y la custodia dejan de bloquear (V27/V29)',
+  uni.soloEstacion.duras.join(','));
+log(uni.soloEstacion.header.join('|') === 'MIN|INST|METRO|ESTACIÓN DE POLICÍA LAURELES',
+  'La línea 4 del membrete sale del nombre de la unidad, con su rótulo completo',
+  uni.soloEstacion.header.join(' / '));
+log(/ESTACIÓN DE POLICÍA LAURELES/.test(uni.dossierUna),
+  'Y el encabezado del dossier imprime esa misma unidad — un dato, tres salidas');
+log(uni.conLegado.header[3] === 'SECCIONAL DE INVESTIGACIÓN CRIMINAL',
+  '⚠️ NO REGRESIÓN: un equipo con la línea 4 ya configurada imprime lo de siempre',
+  uni.conLegado.header[3]);
+log(uni.trasGuardar.membrete === 'SECCIONAL DE INVESTIGACIÓN CRIMINAL' && uni.vistoEnAjustes === 'LAURELES',
+  '⚠️ Abrir Ajustes y guardar sin tocar el nombre no colapsa un membrete distinto del lugar de custodia',
+  JSON.stringify(uni.trasGuardar));
+log(uni.migrado === 'CAI Parque Bolívar',
+  'Quien solo tenía la unidad en la clave del oficio la ve en Ajustes y no la vuelve a teclear',
+  uni.migrado);
 
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 
