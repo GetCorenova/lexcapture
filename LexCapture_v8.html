@@ -2124,7 +2124,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 64;
+var _BUILD = 65;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -7668,28 +7668,64 @@ async function fwGuardar(id){
   try{ await DB.saveFirma(id,f); }
   catch(e){ toast('No se pudo guardar la firma — inténtalo de nuevo'); return; }
   closeModal(); renderPerfilScreen();
+  // Se puede firmar SIN salir del procedimiento: si el wizard está abierto, su
+  // bloque de firma refleja el trazo nuevo al instante.
+  try{ ojRefrescarFirmaWiz(); }catch(_){}
   toast(_guest?'Firma lista en esta sesión — no queda guardada en este equipo':'Firma guardada ✓');
 }
 async function fwEliminar(id){
   if(!confirm('¿Eliminar la firma guardada de este perfil?')) return;
   try{ await DB.delFirma(id); }
   catch(e){ toast('No se pudo eliminar la firma — inténtalo de nuevo'); return; }
-  closeModal(); renderPerfilScreen(); toast('Firma eliminada');
+  closeModal(); renderPerfilScreen();
+  try{ ojRefrescarFirmaWiz(); }catch(_){}
+  toast('Firma eliminada');
 }
 /* Firma que le corresponde a un oficio concreto.
-   ⚠️ Se busca por el NOMBRE de quien firma el documento, no por el perfil
-   activo: `caso.oj.firma` se puede diligenciar a mano y ser otra persona.
-   Estampar la firma manuscrita de un funcionario en un documento judicial que
-   suscribe otro sería falsificar una firma — ante la duda no se pone ninguna y
-   el espacio queda en blanco para firmar a mano, que es como se hacía. */
+   ⚠️ DECISIÓN EXPLÍCITA DEL USUARIO (2026-08-14): el equipo se configura de forma
+   PERSONAL, así que la firma del perfil es la firma del oficio y no puede costar
+   pasos ni quedar fuera por un detalle de tecleo. Antes se exigía que el nombre
+   de quien suscribe coincidiera con el de un perfil; cuando no coincidía —una
+   tilde de más, el nombre del perfil cambiado después de guardar la captura, un
+   caso traído de otro flujo— el oficio salía SIN firma y sin decírselo a nadie.
+   Ese silencio era el defecto: la firma existía y no se estampaba.
+   La garantía contra firmar por otro se conserva donde de verdad aplica: si el
+   nombre corresponde a OTRO PERFIL REGISTRADO en este equipo, manda ese perfil
+   (su firma, o ninguna si no la tiene). Solo cuando el nombre no es de ningún
+   perfil registrado se entiende que firma el dueño del equipo. */
 function lcFirmaDe(nombre,cfg){
-  var n=lcNormNom(nombre); if(!n) return null;
+  var n=lcNormNom(nombre); if(!n) return null;   // sin nombre impreso, nada que firmar
   cfg=cfg||DB.getConfig();
-  var hit=null;
+  var reg=null,conFirma=null;
   (cfg.perfiles||[]).forEach(function(p){
-    if(!hit&&lcNormNom(p.nombre)===n&&DB.getFirma(p.id)) hit=p;
+    if(lcNormNom(p.nombre)!==n) return;
+    if(!reg) reg=p;
+    if(!conFirma&&DB.getFirma(p.id)) conFirma=p;
   });
-  return hit?DB.getFirma(hit.id):null;
+  if(conFirma) return DB.getFirma(conFirma.id);
+  /* Es otro funcionario registrado y no tiene firma suya: el espacio queda en
+     blanco para firmarlo a mano. Estampar aquí la del dueño la falsificaría. */
+  if(reg) return null;
+  var act=ojPerfilActivo(cfg);
+  return act.id?DB.getFirma(act.id):null;
+}
+/* ¿De quién es la firma que va a salir y por qué? Lo usa el paso de revisión
+   para enseñarlo ANTES de generar: una firma que se pone sola tiene que verse,
+   o es indistinguible de una que no se puso. */
+function lcFirmaResuelta(nombre,cfg){
+  cfg=cfg||DB.getConfig();
+  var f=lcFirmaDe(nombre,cfg), act=ojPerfilActivo(cfg), n=lcNormNom(nombre);
+  var reg=null;
+  if(n) (cfg.perfiles||[]).forEach(function(p){ if(!reg&&lcNormNom(p.nombre)===n) reg=p; });
+  return {
+    firma:f,
+    perfil:act,
+    hayPerfil:!!act.id,
+    // El nombre impreso es el del dueño del equipo (aunque esté tecleado distinto).
+    propia:!!f&&(!reg||reg.id===act.id),
+    // Otro perfil de este equipo: firma la suya o queda en blanco, nunca la del dueño.
+    otroPerfil:!!reg&&reg.id!==act.id?reg:null
+  };
 }
 function lcNormNom(s){
   return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
@@ -10270,11 +10306,14 @@ function ojStep7(){
       '<div class="st">Quién firma el oficio</div>'+
       (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil cargado</b>No hay un perfil de funcionario activo en este '+
         'equipo. Diligencia aquí quién firma: se imprime al pie del oficio y no se guarda en ningún perfil.</div>')+
-      '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar del perfil activo</button>'+
+      '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar datos del perfil activo</button>'+
       ojwR(
         ojwF('Grado',ojwIn('oj-f-gra',fi.grado,'Ej: Subintendente')),
-        ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo'),'',!fi.nombre)
+        /* onblur: si cambia el nombre impreso, cambia la firma que le corresponde
+           — y se ve al instante, sin esperar a abrir el .docx. */
+        ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo',{extra:' onblur="ojRefrescarFirmaWiz()"'}),'',!fi.nombre)
       )+
+      '<div id="oj-firma-wiz">'+ojFirmaWizHtml(fi.nombre)+'</div>'+
       ojwF('Cargo',ojwIn('oj-f-car',fi.cargo,'Ej: Integrante patrulla de vigilancia'))+
       ojwR(
         ojwF('Celular',ojwIn('oj-f-tel',fi.telefono,'Ej: 310 449 8111',{mono:true})),
@@ -10472,7 +10511,46 @@ function ojCargarFirmaPerfil(){
   if(!p.nombre){ toast('No hay un perfil activo — diligencia la firma a mano o crea uno en Perfil'); return; }
   ojCollect();
   wc.oj.firma={grado:p.grado||'',nombre:p.nombre||'',cargo:p.cargo||'',telefono:p.telefono||'',correo:p.correo||''};
-  renderWiz(); toast('Firma cargada del perfil ✓');
+  // «Datos» y no «firma» a secas: la firma manuscrita es otra cosa y se ve justo
+  // debajo — decir «Firma cargada ✓» hacía creer que ya se había traído el trazo.
+  renderWiz(); toast('Datos del firmante cargados del perfil ✓');
+}
+/* Qué firma manuscrita va a salir en ESTE oficio, dicho en el propio paso de
+   revisión y con la miniatura a la vista.
+   ⚠️ Una firma que se pone sola TIENE que verse antes de generar: si no, es
+   indistinguible de una que no se puso, que es justo el silencio que se corrigió
+   al dejar de exigir que el nombre coincidiera con el del perfil.
+   ⚠️ Y se firma DESDE AQUÍ: mandar al funcionario a la pantalla de Perfil a
+   firmar equivale a no pedírselo (misma regla del escudo del membrete). */
+function ojFirmaWizHtml(nombre){
+  var r=lcFirmaResuelta(nombre!==undefined?nombre:((wc&&wc.oj&&wc.oj.firma&&wc.oj.firma.nombre)||''));
+  var mini=r.firma?'<div class="fw-prev" style="margin:8px 0"><img src="data:image/png;base64,'+
+    escAttr(r.firma.b64)+'" alt="Firma que se va a imprimir"></div>':'';
+  if(r.firma&&r.propia)
+    return ojNotaDerivada('Tu firma guardada se imprime sola sobre tu nombre, al final del oficio.')+mini+
+      '<button class="btn bs bbl bsm" onclick="ojFirmarDesdeWizard()">Cambiar mi firma</button>';
+  if(r.firma&&r.otroPerfil)
+    return ojNotaDerivada('El oficio lo suscribe '+r.otroPerfil.nombre+', así que se imprime la firma guardada de ese perfil.')+mini;
+  if(r.otroPerfil)
+    return '<div class="oj-alert blanda"><b>'+escHtml(r.otroPerfil.nombre)+' no tiene firma guardada</b>'+
+      'El oficio dejará el espacio en blanco para firmarlo a mano, como siempre.</div>';
+  if(r.hayPerfil)
+    return '<div class="oj-alert blanda"><b>Todavía no has guardado tu firma</b>'+
+      'Fírmala una vez con el dedo y se imprimirá sola en todos tus oficios. Sin ella, el espacio queda en blanco.</div>'+
+      '<button class="btn bs bbl bsm" onclick="ojFirmarDesdeWizard()">Firmar ahora</button>';
+  return '';
+}
+/* ⚠️ Repinta SOLO su bloque. Volver a renderizar el paso entero borraría lo que
+   el usuario esté escribiendo en los demás campos (lección del logo). */
+function ojRefrescarFirmaWiz(){
+  var d=document.getElementById('oj-firma-wiz'); if(!d) return;
+  var i=document.getElementById('oj-f-nom');
+  d.innerHTML=ojFirmaWizHtml(i?i.value:undefined);
+}
+function ojFirmarDesdeWizard(){
+  var p=ojPerfilActivo(DB.getConfig());
+  if(!p.id){ toast('Crea primero un perfil de funcionario en Perfil'); return; }
+  openFirmaModal(p.id);
 }
 /* ─────────────────────────────────────────────────────────────────────────
    I.9 · RECOLECCIÓN DEL PASO ACTIVO

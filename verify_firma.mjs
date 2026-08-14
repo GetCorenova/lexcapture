@@ -357,7 +357,7 @@ log(sinFirma.png === false, 'Tampoco se declara la extensión png si no hay imag
 log(sinFirma.vacios >= 3, 'El espacio para firmar a mano se conserva intacto (3 renglones en blanco)',
   sinFirma.vacios + ' párrafos vacíos');
 
-// (b) Nadie firma por otro: la firma se busca por el NOMBRE de quien suscribe.
+// (b) Nadie firma por otro: un perfil REGISTRADO manda sobre el dueño del equipo.
 const cruzada = await page.evaluate(() => {
   const f1 = lcFirmaDe('NELSON DAVID DAVID');
   const f2 = lcFirmaDe('OTRO FUNCIONARIO');
@@ -370,6 +370,97 @@ log(cruzada.ajeno === false,
   'Un firmante SIN firma propia no recibe la de otro (estampar una firma ajena sería falsificarla)');
 log(cruzada.laxo === true, 'El nombre se compara sin acentos ni dobles espacios', 'nelson dávid → coincide');
 log(cruzada.vacio === false, 'Sin nombre de firmante no se pone ninguna firma');
+
+/* ═══════════ 6bis · EL EQUIPO ES PERSONAL: LA FIRMA DEL PERFIL SE ESTAMPA ═══
+   Decisión del usuario (2026-08-14). Antes, cualquier nombre que no coincidiera
+   EXACTAMENTE con el del perfil dejaba el oficio sin firma y sin avisar: la
+   firma existía y no salía. Ahora, un nombre que no es de ningún perfil
+   registrado se entiende que es el del dueño del equipo. */
+const personal = await page.evaluate(async () => {
+  const cfg = DB.getConfig();
+  const mia = DB.getFirma('p1').b64;
+  // (1) Variación de tecleo del propio nombre (segundo apellido, tilde, punto).
+  const variantes = ['NELSON DAVID DAVID GOMEZ', 'Nelson D. David', 'NELSON  DAVID'].map(
+    n => (lcFirmaDe(n) || {}).b64 === mia);
+  // (2) El nombre del perfil cambia DESPUÉS de guardar la captura.
+  const antes = cfg.perfiles[0].nombre;
+  cfg.perfiles[0].nombre = 'NELSON DAVID DAVID SUAREZ';
+  DB.saveConfig(cfg);
+  const trasRenombrar = (lcFirmaDe(antes) || {}).b64 === mia;
+  cfg.perfiles[0].nombre = antes; DB.saveConfig(cfg);
+  // (3) Otro perfil registrado CON firma propia: recibe la suya, no la del dueño.
+  const suya = { b64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', w: 100, h: 40 };
+  await DB.saveFirma('p2', suya);
+  const otroConFirma = (lcFirmaDe('OTRO FUNCIONARIO') || {}).b64;
+  await DB.delFirma('p2');
+  return {
+    variantes, trasRenombrar,
+    otroPropia: otroConFirma === suya.b64, otroAjena: otroConFirma === mia
+  };
+});
+log(personal.variantes.every(Boolean),
+  'Una variación de tecleo del propio nombre ya no deja el oficio sin firma',
+  '3 de 3 variantes reciben la firma del perfil');
+log(personal.trasRenombrar === true,
+  'Cambiar el nombre del perfil después de guardar la captura no la deja sin firmar');
+log(personal.otroPropia === true && personal.otroAjena === false,
+  'Otro perfil registrado firma con LA SUYA, nunca con la del dueño del equipo');
+
+// End-to-end: el .docx de ese caso lleva la firma embebida de verdad.
+const docVar = await page.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(window.__caso));
+  c.oj.firma.nombre = 'NELSON DAVID DAVID GOMEZ';   // no es el nombre exacto del perfil
+  const out = await buildOficioOJBlob(c, 'CARTA');
+  const xml = new TextDecoder().decode(out.files['word/document.xml']);
+  const i = xml.indexOf('Atentamente,');
+  return { media: !!out.files['word/media/firma.png'], rid6: xml.slice(i).indexOf('rId6') >= 0 };
+});
+log(docVar.media === true && docVar.rid6 === true,
+  'El .docx de ese caso sale FIRMADO, no con el espacio en blanco');
+
+/* ═══════════ 6ter · SE VE ANTES DE GENERAR, Y SE FIRMA SIN SALIR ═══════════
+   Una firma que se pone sola tiene que verse en el paso de revisión: si no, es
+   indistinguible de una que no se puso. */
+await page.evaluate(() => {
+  wc = JSON.parse(JSON.stringify(window.__caso)); ws = 3; go('wizard'); renderWiz();
+});
+await page.waitForTimeout(350);
+const bloque = await page.evaluate(() => {
+  const d = document.getElementById('oj-firma-wiz');
+  return { hay: !!d, img: d ? d.querySelectorAll('img[src^="data:image/png"]').length : 0,
+    txt: d ? d.textContent : '' };
+});
+log(bloque.hay && bloque.img === 1,
+  'El paso de revisión enseña la miniatura de la firma que se va a imprimir');
+log(/se imprime sola/i.test(bloque.txt),
+  'Y dice que sale sola, sin que haya que hacer nada más');
+
+// Sin firma guardada: se ofrece firmar DESDE el procedimiento, no en otra pantalla.
+await page.evaluate(async () => { await DB.delFirma('p1'); ojRefrescarFirmaWiz(); });
+await page.waitForTimeout(150);
+const sinFw = await page.evaluate(() => {
+  const d = document.getElementById('oj-firma-wiz');
+  return { txt: d.textContent, btn: d.querySelectorAll('button').length };
+});
+log(/no has guardado tu firma/i.test(sinFw.txt) && sinFw.btn === 1,
+  'Sin firma guardada lo dice y ofrece firmar ahí mismo', sinFw.btn + ' botón «Firmar ahora»');
+
+// Firmar desde el wizard: el bloque se actualiza y NO se pierde lo ya tecleado.
+await page.evaluate(() => { document.getElementById('oj-f-car').value = 'CARGO TECLEADO A MANO'; });
+await page.evaluate(() => ojFirmarDesdeWizard());
+await page.waitForTimeout(400);
+await firmar(page);
+await page.evaluate(async () => { await fwGuardar('p1'); });
+await page.waitForTimeout(350);
+const trasFirmar = await page.evaluate(() => ({
+  img: document.querySelectorAll('#oj-firma-wiz img[src^="data:image/png"]').length,
+  cargo: document.getElementById('oj-f-car').value,
+  enWizard: location.hash.indexOf('wizard') >= 0
+}));
+log(trasFirmar.img === 1 && trasFirmar.enWizard,
+  'Se firma sin salir del procedimiento y el bloque lo refleja al instante');
+log(trasFirmar.cargo === 'CARGO TECLEADO A MANO',
+  'Repintar solo ese bloque no borra lo que el funcionario estaba escribiendo');
 
 /* ═══════════ 7 · VISTA DE IMPRESIÓN (PDF) Y CONSOLA ═══════════ */
 const impr = await page.evaluate(async () => {

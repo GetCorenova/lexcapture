@@ -2114,6 +2114,52 @@ que informa el tamaño palabra por palabra.
   simulador 41 · personas 24 · invitado 33 · envío 39.
   Anti-caché `?v=64` / `cache-v64`, `_BUILD=64`.
 
+## La firma del perfil se estampa sola (2026-08-14) — DECISIÓN EXPLÍCITA DEL USUARIO
+Revisión pedida en campo: «revisa que la aplicación sí esté plasmando donde corresponde la firma
+guardada en el perfil». La **colocación estaba bien** —medida en Word real: encima del nombre, misma
+página, centrada con 0,6 pt de desfase, sin solaparse— pero la revisión destapó un punto ciego en
+**quién** recibe la firma. El usuario zanjó el criterio: *«por lo general cada usuario tiene su
+aplicación configurada personalmente, en consecuencia debe estampar la firma del perfil; además la
+aplicación está diseñada para hacer procedimientos sin tanto trámite y repetidera»*. Verificado con
+`verify_firma.mjs` (**62 checks**, antes 53) y abriendo los `.docx` en **Word real** (COM).
+
+- ⚠️ **Esto revisa la regla documentada en «Firma digital del funcionario» (2026-08-04)**, que exigía
+  que el nombre de quien suscribe coincidiera con el de un perfil. La motivación era correcta
+  —estampar la firma de un funcionario en un documento que suscribe otro es falsificarla—, pero el
+  criterio era **demasiado estrecho para un equipo personal**: una tilde de más, un segundo apellido,
+  el nombre del perfil cambiado después de guardar la captura o un caso traído de otro flujo dejaban
+  el oficio **sin firma y sin decírselo a nadie**. El defecto no era la ausencia de firma: era el
+  **silencio**. La firma estaba guardada y no salía.
+- **`lcFirmaDe` resuelve ahora en tres pasos**: (1) si el nombre corresponde a un perfil registrado
+  **con** firma, esa; (2) si corresponde a un perfil registrado **sin** firma, **ninguna** —el
+  espacio queda en blanco, nunca se le pone la del dueño—; (3) si no es de ningún perfil registrado,
+  la del **perfil activo**, que en un equipo personal es quien firma. Sin nombre impreso no hay firma.
+- ⚠️ **La garantía anti-falsificación se conserva donde de verdad aplica**: entre los perfiles de
+  ESTE equipo. El caso residual —teclear a mano el nombre de un tercero que no es perfil— se cubre
+  **mostrándolo**, no bloqueando: ver abajo.
+- **Se ve antes de generar, y se firma sin salir del procedimiento** (`ojFirmaWizHtml` /
+  `ojRefrescarFirmaWiz` / `ojFirmarDesdeWizard`, bloque `#oj-firma-wiz` del paso de revisión): la
+  **miniatura** de la firma que va a salir, de quién es y por qué. Sin firma guardada, lo dice y trae
+  el botón **«Firmar ahora»**, que abre el mismo modal del perfil. ⚠️ **Regla ya pagada dos veces
+  (escudo del membrete, 2026-07-30): si un dato hace falta en el procedimiento, se pide en el
+  procedimiento** — mandar al usuario a la pantalla de Perfil equivale a no pedírselo.
+- ⚠️ **Una firma que se pone sola TIENE que verse**: si no, es indistinguible de una que no se puso,
+  que es exactamente el silencio que se estaba corrigiendo. Por eso la miniatura no es decorativa.
+- ⚠️ **El bloque se repinta SOLO a sí mismo** (`ojRefrescarFirmaWiz`, disparado por el `onblur` del
+  nombre y por `fwGuardar`/`fwEliminar`): volver a renderizar el paso entero borraría lo que el
+  funcionario esté escribiendo en los demás campos. Hay un check que teclea un cargo, firma desde el
+  wizard y comprueba que sigue ahí.
+- El toast de «Cargar del perfil activo» decía **«Firma cargada del perfil ✓»** cuando solo trae el
+  grado, el nombre, el cargo y el contacto: se leía como que ya había traído el trazo. Ahora dice
+  **«Datos del firmante cargados»**, y la firma manuscrita se ve justo debajo.
+- **Medido en Word real**, con el nombre tecleado distinto del perfil (`…DAVID GOMEZ`): el oficio
+  sale **firmado**, la imagen queda encima del nombre en la misma página, centrada (desfase 0,75 pt)
+  y sin solaparse (3,1 pt de aire); proporción conservada con el alto en su tope (127,5 × 42,5 pt);
+  **3 tablas** y el resto del formato intactos.
+- Regresiones en verde: **firma 62** · OJ 187 · tipografía OJ 42 · fpj6 140 · export 74 · editable 28 ·
+  mejora2 38 · mejora3 51 · simulador 41 · invitado 33 · personas 24 · ola1 38 · ola2 34 · ola3 33 ·
+  ola4 22. Anti-caché `?v=65` / `cache-v65`, `_BUILD=65`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
