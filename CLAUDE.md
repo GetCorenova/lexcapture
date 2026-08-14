@@ -2051,6 +2051,69 @@ sustituyendo solo los datos estáticos por los dinámicos. Verificado con `verif
   personas 24 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=63` / `cache-v63`, `_BUILD=63`.
 
+## El FPJ-5, en un solo cuerpo de letra (2026-08-14) — 11 pt en todo dato diligenciado
+Reportado en campo: en el FPJ-5 los datos que rellena la app salían a **10, 11 o 12 pt** mezclados.
+Es el mismo defecto que ya se corrigió en el acta FPJ-6 («El acta, en un solo cuerpo de letra»,
+2026-08-13), ahora en el informe de captura y en **las dos** variantes. Verificado con
+`verify_fpj5_tipografia.mjs` (**69 checks**, nuevo) y abriendo los `.docx` en **Word real** (COM),
+que informa el tamaño palabra por palabra.
+
+- ⚠️ **La causa no era un valor mal escrito en ninguna parte: era la AUSENCIA de `w:sz`.**
+  `setTc` escribe el texto en el `w:t` que ya existe y **no toca su `rPr`**, así que cada dato heredaba
+  el tamaño de la casilla que le tocara. Un run sin `w:sz` propio no sale al tamaño del formato que lo
+  rodea: sale al del **estilo por defecto del documento**, y `docDefaults` declara **sz 24 = 12 pt** en
+  `TPL_URI` **y** en `TPL_CESPA` — mientras las etiquetas del formato traen su `sz 22` = 11 pt escrito
+  en el run. Medido sobre el documento generado: **24 runs de datos a 12 pt en URI y 90 en CESPA**.
+  Mirar el atributo `w:sz` no habría detectado nada, porque el defecto **era** que no existía.
+- **Por qué CESPA salía mucho peor que URI** (90 vs 24): son la misma estructura de 308 celdas pero no
+  el mismo XML. Donde URI trae el run de la captura de muestra con su `sz`, CESPA lo trae vacío y sin
+  declararlo. No es un mapeo distinto — es la plantilla.
+- **El arreglo NO es una lista de índices.** En el acta bastó `F6_RELLENA` (celdas fijas); aquí no
+  sirve: los apartados **4/5/6 se reproducen** por persona, las **filas de vehículo** a partir del
+  tercero y los **renglones de EMP** a partir del cuarto, y el defecto aparecía justamente en esas
+  copias, que no tienen índice fijo. El registro lo lleva **la propia escritura**: `_fpjAnota` anota el
+  nodo que cada primitiva (`setTc`, `_setParNode`, `_setParForce`, `_fpjSenas`) acaba de escribir, y
+  `buildFPJBlob` hace **una pasada final** `_fpjNormalizarDatos()` → `_docSzTexto(nodo, 22)`. Así una
+  casilla nueva se normaliza sola y las copias quedan cubiertas por construcción.
+- ⚠️ **`_fpjRec` vale `null` fuera de `buildFPJBlob`** (`finally`, que cubre también el early-return
+  del NUNC inválido). El **acta FPJ-6 usa estas mismas primitivas** y tiene su propia regla de
+  tamaños, con excepciones medidas («AFROCOLOMBIANO» a 10 pt para que la fila no se estire): no puede
+  verse arrastrada. `verify_fpj6` sigue en 140 sin tocar sus expectativas.
+- ⚠️ **Solo se anota cuando hay TEXTO.** Una casilla que se limpia queda byte a byte como en la
+  plantilla, y `setPar` se usa también para **borrar** la narración de muestra.
+- ⚠️ **La barra de título de la copia queda FUERA a propósito.** `_fpjRepetir` escribe «4.1 …» con
+  `_setParNode`, pero eso no es un dato: es la barra gris del apartado. Medido sobre las dos
+  plantillas, **los diez títulos del formato van a 10 pt**, y el clon hereda ese run, así que «4.1»
+  sale ya idéntico a «4». Se apaga el registro en esa única línea. Normalizarlo habría hecho que las
+  copias se vieran distintas del original — un cambio del formato, que es justo lo prohibido.
+- **Lo que NO se tocó, tras medirlo**: los runs donde la app escribe una etiqueta del formato dentro
+  del propio dato («Zona: », «Correo electrónico y redes sociales: », «Relación con el indiciado: »,
+  «Señales particulares visibles: ») **ya estaban a 11 pt** en ambas plantillas → la pasada es un
+  no-op sobre ellos. Y siguen a 12 pt, como vienen, las **dos etiquetas impresas del formato** que lo
+  están («Número Único de Noticia Criminal» y «/INFORME DE CAPTURA EN FLAGRANCIA – FPJ – 5»): no son
+  datos.
+- **Medido en Word real, palabra por palabra, contra el build anterior**: **cero palabras con texto
+  distinto**; **todos** los cambios de tamaño terminan en 11 pt (URI 29 palabras, CESPA 349); y los
+  histogramas de 6 · 7 · 8 · 9 · 9,5 · 10 pt son **idénticos** antes y después — el formato estático
+  no se movió ni un punto. Word abre los ocho documentos sin pedir reparar, con **35 tablas** (69 con
+  varias personas) igual que antes.
+- ⚠️ **Un CESPA multipersona pasa de 6 a 5 páginas.** No es una alteración del formato: es la
+  consecuencia aritmética de que 349 palabras dejen de imprimirse sobredimensionadas. Los demás casos
+  conservan su número de páginas.
+- ⚠️ **La regresión no mira el `w:sz` del run — resuelve el tamaño EFECTIVO como Word** (`rPr/sz` →
+  `rStyle` → estilo del párrafo con su cadena `basedOn` → `docDefaults`), y **«dato dinámico» no es
+  una lista escrita a mano**: instrumenta las primitivas y marca en el XML cada run que la app toca.
+  Lo estático se comprueba **por diferencia** contra el build anterior: todo run no escrito por la app
+  idéntico byte a byte, y en los escritos lo único que cambia es `w:sz`/`w:szCs`. Los títulos de
+  apartado se **derivan de la plantilla**, no se enumeran: si el formato cambia, la prueba lo dice.
+- ⚠️ **Al comparar títulos hay que desambiguar**: el numeral 2 imprime las conductas numeradas, así
+  que «4. FABRICACIÓN Y TRÁFICO…» también empieza por «4.» — y ese **sí** es un dato, a 11 pt. Y en
+  URI el título del apartado 5 viene **partido en varios runs**, mientras la copia renumerada deja
+  todo el texto en el primero: comparar run a run daba un falso positivo justo ahí.
+- Regresiones en verde: **fpj5 tipografía 69** · fpj6 140 · mejora1 129 · multipersona · export 74 ·
+  simulador 41 · personas 24 · invitado 33 · envío 39.
+  Anti-caché `?v=64` / `cache-v64`, `_BUILD=64`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
