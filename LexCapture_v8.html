@@ -688,6 +688,29 @@ body.guest{padding-top:38px}
 .fc:hover{background:var(--hover)}
 .fc.on{border-color:transparent;color:var(--acc);background:var(--accG);font-weight:600}
 
+/* ═══ ORDEN DE LA LISTA (Capturas y Personas) ═══
+   Interruptor de dos estados: la etiqueta dice SIEMPRE cómo está ordenada la
+   lista en este momento y tocarlo la invierte. Se eligió un interruptor y no un
+   menú porque la opción es binaria y esto es un equipo de campo: un toque.
+   ⚠️ NO lleva la clase .fc aunque se le parezca — filterCasos() apaga TODOS los
+   `.fc` de la pantalla de Capturas y le borraría el estado en cada filtro.
+   ⚠️ Las reglas [hidden] son obligatorias: `display` de autor gana sobre el
+   `display:none` que el navegador aplica a [hidden] (misma lección que los
+   <details> plegables de la Ola 3). */
+.ord{display:flex;justify-content:flex-end;margin-bottom:14px}
+.ord[hidden]{display:none}
+.flt .ord-btn{margin-left:auto}
+.ord-btn{
+  padding:7px 12px;border-radius:999px;min-height:36px;
+  font:inherit;font-size:13px;font-weight:500;white-space:nowrap;
+  background:transparent;border:1px solid var(--border);color:var(--text-2);
+  cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:all var(--d1) var(--ease);
+}
+.ord-btn[hidden]{display:none}
+.ord-btn:hover{background:var(--hover);border-color:var(--border-strong)}
+.ord-btn svg{width:16px;height:16px;flex:0 0 auto;color:var(--acc)}
+
 /* ═══ WIZARD ═══ */
 .wp{padding:4px 0 6px;margin-bottom:4px}
 .wz-mob{display:block;margin-bottom:4px}
@@ -1479,6 +1502,10 @@ body.guest{padding-top:38px}
         <button class="fc on" onclick="filterCasos('all',this)">Todas</button>
         <button class="fc" onclick="filterCasos('FLAG',this)">Flagrancia</button>
         <button class="fc" onclick="filterCasos('OJ',this)">Ord. Judicial</button>
+        <!-- Orden de la lista. La etiqueta y el icono los pinta renderOrdenBtn()
+             según lo que el usuario haya elegido; nace oculto para no anunciar
+             un orden mientras no haya nada que ordenar. -->
+        <button class="ord-btn" id="ord-capturas" onclick="lcCambiarOrden('capturas')" hidden></button>
       </div>
       <div id="cl"></div>
     </div>
@@ -1864,6 +1891,7 @@ body.guest{padding-top:38px}
     </header>
     <div class="pane">
       <input class="desp-search" id="p-search" type="search" placeholder="Buscar por nombre o cédula…" oninput="renderPersonas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-p-search-nofill" data-form-type="other" data-lpignore="true">
+      <div class="ord" hidden><button class="ord-btn" id="ord-personas" onclick="lcCambiarOrden('personas')"></button></div>
       <div id="pl"></div>
     </div>
   </section>
@@ -2124,7 +2152,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 65;
+var _BUILD = 67;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2853,7 +2881,19 @@ var DB = {
   getPersons: function() { return _personsCache !== null ? _personsCache : []; },
   savePersons: function(p) { _personsCache = p; return _lcEncSave('persons', p); },
   getPerson: function(id) { var a=this.getPersons(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
-  savePerson: function(p) { var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
+  /* ⚠️ `created` = marca de alta, y es lo que ordena la lista de Personas. Se
+     pone UNA vez, al registrarla, y se conserva al editar: este método SUSTITUYE
+     la persona por la que llega (los llamadores ya fusionan lo que quieren
+     conservar), y el objeto entrante viene de un formulario que no la trae — sin
+     esta guarda, editar a alguien lo convertiría en el registro más reciente.
+     Las personas anteriores a este campo NO se migran: su posición en el arreglo
+     ya es su orden de alta y lcOrdenar() desempata por ahí. */
+  savePerson: function(p) {
+    var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;});
+    if(!p.created) p.created=(i>=0&&a[i].created)||Date.now();
+    if(i>=0) a[i]=p; else a.push(p);
+    return this.savePersons(a);
+  },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
     // Modo invitado: configuración propia en memoria. Ni se lee ni se escribe la
@@ -2991,9 +3031,73 @@ function filterCasos(f, el) {
   renderCases();
 }
 
+/* ═══ ORDEN DE LAS LISTAS — Capturas y Personas ═══════════════════════════════
+   Cada pantalla guarda el suyo por separado: no son la misma consulta (una se
+   revisa por el procedimiento del día, la otra es un registro que se busca por
+   nombre), así que forzar un solo ajuste para las dos obligaría a ceder en una.
+   ⚠️ El valor por defecto de cada una es EL COMPORTAMIENTO QUE YA TENÍAN —
+   Capturas ordenaba por `created` descendente y Personas mostraba el arreglo tal
+   cual, es decir por orden de alta. Nadie se encuentra la lista dada vuelta al
+   actualizar; quien quiera lo otro lo cambia con un toque y queda recordado.
+   ⚠️ Vive en `cfg` (y no en una clave suelta de localStorage como el tema)
+   porque DB.saveConfig ya tiene rama de invitado: en un teléfono prestado la
+   preferencia es de la sesión y NO se escribe un byte en el equipo. */
+var LC_ORD = {
+  capturas:{ key:'ordenCapturas', def:'rec', titulo:'Capturas' },
+  personas:{ key:'ordenPersonas', def:'ant', titulo:'Personas' }
+};
+var LC_ORD_LBL = { rec:'Recientes primero', ant:'Antiguas primero' };
+// El toast dice el EFECTO, no el nombre del ajuste: es lo que el usuario ve.
+var LC_ORD_MSG = { rec:'las más recientes arriba', ant:'las más antiguas arriba' };
+var LC_ORD_IC = {
+  rec:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v14"/><path d="m3 15 3 3 3-3"/><path d="M13 6h8M13 11h6M13 16h4"/></svg>',
+  ant:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V6"/><path d="m3 9 3-3 3 3"/><path d="M13 6h4M13 11h6M13 16h8"/></svg>'
+};
+function lcOrden(lista) {
+  var d = LC_ORD[lista]; if (!d) return 'rec';
+  try { var v = DB.getConfig()[d.key]; return (v==='rec'||v==='ant') ? v : d.def; } catch(e) { return d.def; }
+}
+function lcGuardarOrden(lista, val) {
+  var d = LC_ORD[lista];
+  if (!d || (val!=='rec' && val!=='ant')) return false;
+  try { var cfg = DB.getConfig(); cfg[d.key] = val; DB.saveConfig(cfg); return true; } catch(e) { return false; }
+}
+/* Ordena SIN tocar el arreglo del almacén (renderCases lo ordenaba en sitio, así
+   que con el filtro «Todas» reordenaba de verdad la caché de capturas).
+   ⚠️ El desempate por posición NO es cosmético: las personas registradas antes
+   de que existiera `created` no tienen marca de alta, y la posición en el
+   arreglo ES su orden de alta (savePerson solo añade al final). Al invertir, se
+   invierte también el desempate, así que esas personas salen en el orden
+   correcto en los dos sentidos sin migrar un solo registro. */
+function lcOrdenar(arr, lista, marca) {
+  var dir = lcOrden(lista)==='rec' ? -1 : 1;
+  return arr.map(function(x,i){ return {x:x,i:i}; })
+    .sort(function(a,b){ var d=(marca(a.x)||0)-(marca(b.x)||0); return dir*(d||(a.i-b.i)); })
+    .map(function(p){ return p.x; });
+}
+// `n` = cuántos registros hay en total: sin nada que ordenar, el control sobra.
+function renderOrdenBtn(lista, n) {
+  var b = document.getElementById('ord-'+lista); if (!b) return;
+  var v = lcOrden(lista);
+  b.innerHTML = LC_ORD_IC[v] + '<span>' + LC_ORD_LBL[v] + '</span>';
+  b.title = 'Orden: ' + LC_ORD_MSG[v] + ' — toca para invertirlo';
+  b.setAttribute('aria-label', b.title);
+  b.hidden = !n;
+  var w = b.parentNode;
+  if (w && w.classList && w.classList.contains('ord')) w.hidden = !n;
+}
+function lcCambiarOrden(lista) {
+  var d = LC_ORD[lista]; if (!d) return;
+  var v = lcOrden(lista)==='rec' ? 'ant' : 'rec';
+  if (!lcGuardarOrden(lista, v)) { toast('No se pudo guardar el orden'); return; }
+  if (lista==='capturas') renderCases(); else renderPersonas();
+  toast(d.titulo + ': ' + LC_ORD_MSG[v]);
+}
+
 function renderCases() {
   var el = document.getElementById('cl');
   if (!_guest && !_sessionKey && localStorage.getItem('lc_key_salt')) {
+    renderOrdenBtn('capturas', 0);   // con la lista bajo PIN no hay nada que ordenar
     if (el) el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Datos protegidos</h3><p>Ingresa tu PIN para acceder a las capturas.</p><button class="cta" onclick="showPinEntry()">Ingresar PIN</button></div>';
     var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = 'Datos protegidos';
     return;
@@ -3002,6 +3106,9 @@ function renderCases() {
   var all = DB.getCases();
   var sub = document.getElementById('cap-sub');
   if (sub) sub.textContent = all.length + ' captura' + (all.length===1?'':'s');
+  // Antes del early-return de «sin capturas»: si el filtro es el que vacía la
+  // lista, el control tiene que seguir a la vista.
+  renderOrdenBtn('capturas', all.length);
   var cases = all;
   if (_caseFilter === 'FLAG') cases = all.filter(function(c){ return c.tipo==='URI'||c.tipo==='CESPA'; });
   else if (_caseFilter === 'OJ') cases = all.filter(function(c){ return c.tipo==='OJ'; });
@@ -3010,7 +3117,7 @@ function renderCases() {
     el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"></path></svg></div><h3>Sin capturas aún</h3><p>Registra tu primera captura tocando el botón + abajo</p><button class="cta" onclick="go(\'nueva\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nueva Captura</button></div>';
     return;
   }
-  cases.sort(function(a,b){ return (b.created||0)-(a.created||0); });
+  cases = lcOrdenar(cases, 'capturas', function(c){ return c.created||0; });
   var now = Date.now();
   el.innerHTML = cases.map(function(c) {
     var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : 'Sin capturado';
@@ -4216,6 +4323,10 @@ function renderPersonas() {
   var all = DB.getPersons();
   var pp = all;
   if (q) { var ql = q.toLowerCase(); pp = all.filter(function(p) { return ((p.priNom||'')+' '+(p.segNom||'')+' '+(p.priApe||'')+' '+(p.segApe||'')+' '+(p.numDoc||'')).toLowerCase().indexOf(ql) >= 0; }); }
+  // Antes del early-return de la lista vacía: con el buscador filtrando, el
+  // control sigue haciendo falta.
+  renderOrdenBtn('personas', all.length);
+  pp = lcOrdenar(pp, 'personas', function(p){ return p.created||0; });
   var el = document.getElementById('pl');
   if (!el) return;
   if (!pp.length) {
@@ -5896,6 +6007,37 @@ function _fpjSenas(nodes,p){
   }
   return false;
 }
+/* La barra del apartado 4 del formato lleva la «s» minúscula dentro del paréntesis, que es lo
+   que indica que las casillas se reproducen por cada persona. La plantilla URI la trae
+   —«4. INFORMACIÓN DEL CAPTURADO (s):»— pero la de CESPA salió con el paréntesis vacío
+   —«4. INFORMACIÓN DEL APREHENDIDO ():»—, así que el informe de un menor se generaba sin ella.
+   Es la ÚNICA de las diez barras de apartado en que las dos plantillas difieren (medido título
+   por título); las otras nueve son idénticas.
+   ⚠️ Se repara sobre el DOCUMENTO, no sobre la constante base64: el motor ya es leer → modificar
+   → rezip, así entra por el mismo camino que todo lo demás, sin reescribir 1,5 MB de plantilla ni
+   arriesgar que Word pida reparar el paquete (lección del FPJ-5 v2.1).
+   ⚠️ Se escribe directo en el `w:t` y NO por `setPar`: el título es un elemento del formato a
+   10 pt y pasar por las primitivas lo anotaría en `_fpjRec`, con lo que la pasada final lo subiría
+   a 11 pt — la misma razón por la que `_fpjRepetir` apaga el registro al renumerar las copias.
+   ⚠️ Va ANTES de `_fpjRepetir`, que deriva el título de las copias del texto del original: así
+   4.1, 4.2 … heredan la «s» sin tocar nada más. No toca la plantilla URI, cuyo título no lleva
+   «APREHENDIDO» ni el paréntesis vacío. */
+function _fpjTituloApartado4(pars){
+  for(var i=0;i<pars.length;i++){
+    var txt=_getElText(pars[i],FPJ_W);
+    if(!/^\s*4\.\s/.test(txt)||!/APREHENDIDO\s*\(\s*\)/i.test(txt))continue;
+    var ts=pars[i].getElementsByTagNameNS(FPJ_W,"t");
+    for(var j=0;j<ts.length;j++){
+      var s=ts[j].textContent||"";
+      if(!/\(\s*\)/.test(s))continue;
+      ts[j].textContent=s.replace(/\(\s*\)/,"(s)");
+      ts[j].setAttribute("xml:space","preserve");
+      return true;
+    }
+    return false;
+  }
+  return false;
+}
 // Una copia no puede repetir los identificadores únicos del original: los marcadores
 // (_heading=…, residuo del exportador de Google Docs) y los paraId/textId de párrafo, que Word
 // espera únicos en todo el documento. Se quitan del clon; no aportan nada al formulario.
@@ -6103,6 +6245,9 @@ function buildFPJBlob(c,papel){
     var body=doc.getElementsByTagNameNS(W,"body")[0];
     var tcs=Array.from(body.getElementsByTagNameNS(W,"tc"));
     var pars=Array.from(body.getElementsByTagNameNS(W,"p"));
+    // La «s» del apartado 4, que la plantilla de menores no trae (ver `_fpjTituloApartado4`).
+    // Va aquí, antes de escribir nada, para que las copias 4.1/4.2 la hereden.
+    _fpjTituloApartado4(pars);
     var allCaps=c.capturados||[c.capturado].filter(Boolean);
     var allVics=c.sinVictima?[]:(c.victimas||[c.victima].filter(Boolean));
     var allTests=c.sinTestigo?[]:(c.testigos||[c.testigo].filter(Boolean));

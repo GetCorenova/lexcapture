@@ -2160,6 +2160,40 @@ aplicación está diseñada para hacer procedimientos sin tanto trámite y repet
   mejora2 38 · mejora3 51 · simulador 41 · invitado 33 · personas 24 · ola1 38 · ola2 34 · ola3 33 ·
   ola4 22. Anti-caché `?v=65` / `cache-v65`, `_BUILD=65`.
 
+## La «s» del apartado 4 en el FPJ-5 de menores (2026-08-14)
+Reportado en campo con el informe a la vista: el apartado 4 del FPJ-5 de CESPA salía como
+**«4. INFORMACIÓN DEL APREHENDIDO ( ):»**, con el paréntesis vacío. Esa «s» minúscula es del
+formato y no es decorativa: es lo que indica que las casillas del apartado **se reproducen por cada
+persona** —justo la función que la app implementa desde FPJ-5 v3—. El de mayores estaba bien.
+Verificado con `verify_multipersona.mjs` (**+5 checks**) y abriendo los `.docx` de URI y CESPA en
+**Word real** (COM).
+
+- ⚠️ **No era el código: era la plantilla embebida.** Comparadas **título por título** las diez
+  barras de apartado de `TPL_URI` y `TPL_CESPA`, **la del apartado 4 es la única en que difieren**:
+  URI trae `4. INFORMACIÓN DEL CAPTURADO (s): ` y CESPA `4. INFORMACIÓN DEL APREHENDIDO (): `. Las
+  otras nueve son idénticas. Ninguna función borraba la «s» — nunca estuvo en esa plantilla.
+- **Se repara sobre el DOCUMENTO, no sobre la constante base64** (`_fpjTituloApartado4`). El motor
+  ya es leer → modificar el DOM → rezip, así que la corrección entra por el mismo camino que todo lo
+  demás, sin reescribir 1,5 MB de plantilla en el repositorio ni arriesgar que Word pida reparar el
+  paquete (lección del FPJ-5 v2.1, `fontTable`).
+- ⚠️ **Se escribe directo en el `w:t`, NO por `setPar`.** El título es un elemento del formato a
+  **10 pt**; pasar por las primitivas lo anotaría en `_fpjRec` y la pasada final lo subiría a 11 pt
+  —la misma razón por la que `_fpjRepetir` apaga el registro al renumerar las copias—. Medido en
+  Word: la barra sigue a 10 pt, igual que las otras nueve.
+- ⚠️ **Va ANTES de `_fpjRepetir`**, que deriva el título de las copias del texto del original: así
+  **4.1, 4.2 … heredan la «s»** sin una línea más. Comprobado en Word con dos aprehendidos.
+- **No toca el informe de mayores**: la condición exige «APREHENDIDO» **y** el paréntesis vacío, que
+  en URI no se dan nunca. La regresión lo mide por diferencia — las 10 barras de URI salen idénticas
+  a su plantilla y en CESPA cambia **exactamente una**.
+- ⚠️ **La suite de tipografía necesitó un ajuste, y no es cosmético.** `verify_fpj5_tipografia`
+  **deriva de la plantilla** qué párrafo es «barra de apartado» (para dejarla fuera de la
+  normalización a 11 pt). Con el título ya reparado dejaba de reconocerlo y contaba **4.1 y 4.2 como
+  datos diligenciados a 10 pt**: 4 fallos que eran del criterio de la prueba, no del documento.
+  `sinOrdinal` normaliza ahora también ese paréntesis.
+- Regresiones en verde: multipersona · fpj5 tipografía 48 · mejora1 129 · fpj6 140 · export 74 ·
+  simulador 41 · personas 24 · envío 39 · invitado 33.
+  Anti-caché `?v=66` / `cache-v66`, `_BUILD=66`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

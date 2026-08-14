@@ -199,6 +199,14 @@ else {
   chkSeccion(cespa.secs, '6.1', persona(2, 'TES'), CAMPOS_VT, '[CESPA]');
   const s41 = cespa.secs.find(s => s.head.startsWith('4.1'));
   log(!!s41 && /APREHENDIDO/i.test(s41.head), '[CESPA] 4.1 mantiene la terminología de menores (aprehendido)', s41 && s41.head);
+  /* La barra del apartado 4 lleva la «s» minúscula DENTRO del paréntesis: es lo que el formato
+     usa para indicar que las casillas se reproducen por cada persona. La plantilla URI la trae
+     («4. INFORMACIÓN DEL CAPTURADO (s):») y la de CESPA salió con el paréntesis vacío, así que
+     el informe de un menor se generaba sin ella; la app la repara sobre el documento. */
+  const s4c = cespa.secs.find(s => /^4\.\s/.test(s.head));
+  log(!!s4c && /APREHENDIDO\s*\(s\)/.test(s4c.head), '[CESPA] la barra del apartado 4 lleva la «s» del formato', s4c && s4c.head);
+  log(!!s41 && /APREHENDIDO\s*\(s\)/.test(s41.head), '[CESPA] la copia 4.1 hereda la «s» del título', s41 && s41.head);
+  log(!/APREHENDIDO\s*\(\s*\)/.test(cespa.full), '[CESPA] no queda ningún «APREHENDIDO ()» con el paréntesis vacío');
   const s5 = cespa.secs.find(s => s.head.startsWith('5.'));
   log(!!s5 && !/NOMVIC|NOMMEN/.test(s5.text), '[CESPA] sin víctima: el apartado 5 queda vacío, no repetido');
   log(!cespa.secs.some(s => /^5\.\d/.test(s.head)), '[CESPA] sin víctima no se generan apartados 5.1');
@@ -239,6 +247,49 @@ else {
   log(nums.length === 6, '[6 capturados] se generan 6 apartados sin tope', nums.join(' '));
   log(/^4\.$|^4$/.test(nums[0]) && nums[1] === '4.1' && nums[5] === '4.5', '[6 capturados] numeración correlativa 4, 4.1 … 4.5', nums.join(' '));
   chkSeccion(many.secs, '4.5', persona(6, 'CAP'), CAMPOS_CAP, '[6 capturados]');
+}
+
+/* ==== 6) La «s» del apartado 4 es la ÚNICA barra que la app toca ====
+   La reparación se hace sobre el documento, no sobre la plantilla embebida, así que la garantía
+   de que no se movió nada más se mide COMPARANDO las diez barras de apartado del documento
+   generado con las de la plantilla, en vez de escribirlas a mano: si el formato cambiara, esta
+   prueba se entera sola. En CESPA debe cambiar exactamente una —«()» → «(s)»— y en URI ninguna. */
+const barras = await page.evaluate(async () => {
+  const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const titulos = xml => {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    const ps = doc.getElementsByTagNameNS(W, 'p'), out = [];
+    for (let i = 0; i < ps.length; i++) {
+      const shd = ps[i].getElementsByTagNameNS(W, 'shd')[0];
+      if (!shd || !/^d9d9d9$/i.test(shd.getAttribute('w:fill') || '')) continue;
+      const ts = ps[i].getElementsByTagNameNS(W, 't');
+      let t = ''; for (let j = 0; j < ts.length; j++) t += (ts[j].textContent || '');
+      // Solo las barras del formato, no las copias renumeradas (4.1, 5.1 …)
+      if (t.trim() && /^\s*\d+\.\s/.test(t)) out.push(t);
+    }
+    return out;
+  };
+  const res = {};
+  for (const tipo of ['URI', 'CESPA']) {
+    const c = SIM.genFlagrancia(tipo === 'CESPA' ? 'flagrancia-cespa' : 'flagrancia-uri');
+    c.nunc = '0500160002062026';
+    const out = buildFPJBlob(c, 'CARTA');
+    const dec = new TextDecoder();
+    res[tipo] = {
+      doc: titulos(dec.decode(out.files['word/document.xml'])),
+      tpl: titulos(dec.decode(unzipDocx(tipo === 'CESPA' ? TPL_CESPA : TPL_URI)['word/document.xml']))
+    };
+  }
+  return res;
+});
+for (const tipo of ['URI', 'CESPA']) {
+  const { doc, tpl } = barras[tipo];
+  const dif = doc.map((t, i) => (t === tpl[i] ? null : { i, tpl: tpl[i], doc: t })).filter(Boolean);
+  log(doc.length === 10 && tpl.length === 10, `[${tipo}] el documento conserva las 10 barras de apartado del formato`, doc.length + ' / ' + tpl.length);
+  if (tipo === 'URI') log(dif.length === 0, '[URI] la app no toca ninguna barra de apartado', dif.map(d => d.doc).join(' | ') || 'las 10 idénticas');
+  else log(dif.length === 1 && /\(\s*\)/.test(dif[0].tpl) && dif[0].doc === dif[0].tpl.replace(/\(\s*\)/, '(s)'),
+    '[CESPA] la única barra que la app repara es el apartado 4: «()» → «(s)»',
+    dif.map(d => JSON.stringify(d.tpl) + ' → ' + JSON.stringify(d.doc)).join(' | ') || 'ninguna diferencia');
 }
 
 log(consoleErrors.length === 0, 'Sin errores de consola', consoleErrors.slice(0, 3).join(' | ') || 'limpio');

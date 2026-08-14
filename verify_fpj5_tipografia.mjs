@@ -201,8 +201,13 @@ function runs(xml, S) {
    ⚠️ Se compara por PÁRRAFO, no por run: en la plantilla URI el título del
    apartado 5 viene partido en varios runs, mientras que al renumerar la copia
    («5.1 …») todo el texto queda en el primero. Comparar run a run daría un falso
-   positivo justo ahí. */
-const sinOrdinal = t => t.replace(/^\s*\d+(\.\d+)*\.?\s*/, '').trim();
+   positivo justo ahí.
+   ⚠️ Se normaliza también el paréntesis de reproducción del apartado 4: el formato
+   lleva dentro una «s» minúscula —«4. INFORMACIÓN DEL CAPTURADO (s):»— que la
+   plantilla de CESPA no trae, y la app le repone (`_fpjTituloApartado4`). Sin esta
+   normalización el título reparado dejaría de reconocerse como barra de apartado y
+   las copias 4.1/4.2 se contarían como datos diligenciados que salen a 10 pt. */
+const sinOrdinal = t => t.replace(/^\s*\d+(\.\d+)*\.?\s*/, '').replace(/\(\s*s?\s*\)/i, '(s)').trim();
 function titulosDe(tplXml, S) {
   return new Set(runs(tplXml, S).filter(r => /^\s*\d+\.\s/.test(r.pTxt)).map(r => sinOrdinal(r.pTxt)));
 }
