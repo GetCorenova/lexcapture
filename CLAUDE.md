@@ -2194,6 +2194,51 @@ Verificado con `verify_multipersona.mjs` (**+5 checks**) y abriendo los `.docx` 
   simulador 41 · personas 24 · envío 39 · invitado 33.
   Anti-caché `?v=66` / `cache-v66`, `_BUILD=66`.
 
+## El usuario elige cómo ver las listas (2026-08-14)
+Pedido en campo para **Capturas y Personas**: poder escoger el orden de la lista —alfabético
+**A–Z / Z–A** y por fecha de registro—. Verificado con `verify_orden.mjs` (**33 checks**, nuevo).
+
+- ⚠️ **Esto es SOLO presentación.** No se tocó ni un formulario, ni el modelo, ni el almacén: la
+  misma información, ordenada como el usuario quiera verla. Hay un check que compara las claves de
+  una persona guardada antes y después de reordenar, y otro que comprueba que ordenar la vista **no
+  reordena la caché de capturas** — `renderCases` ordenaba **en sitio**, así que con el filtro
+  «Todas» le daba la vuelta de verdad al arreglo del almacén.
+- **Un botón por pantalla que dice cómo está ordenada la lista ahora mismo** (`.ord-btn`,
+  `renderOrdenBtn`) y abre un **selector con las cuatro formas de verla** (`lcAbrirOrden`), con la
+  actual marcada con ✓. Reutiliza el sheet de acciones de la app en vez de estrenar un componente.
+  Con cuatro opciones un interruptor ya no sirve: hay que **ver** cuál está puesta.
+- ⚠️ **El valor por defecto de cada pantalla es EL COMPORTAMIENTO QUE YA TENÍA** — Capturas ordenaba
+  por `created` descendente y Personas mostraba el arreglo tal cual, o sea por orden de registro. Por
+  eso los defectos son distintos (`rec` / `ant`) y **son ajustes independientes**: nadie se encuentra
+  su lista dada vuelta al actualizar, y quien quiera otra cosa la elige una vez y queda recordada.
+- ⚠️ **A–Z alfabetiza en español** (`lcCmpTxt` → `localeCompare('es',{sensitivity:'base'})`): «Álvaro»
+  va **con la A** y «Ñoño» **entre la N y la O**. Comparando códigos, todo lo acentuado se iría al
+  final de la lista — en un país donde media agenda lleva tilde o eñe. Z–A es su **reverso exacto**
+  (hay un check que lo compara contra `.reverse()`), y lo que no tiene nombre queda al final en A–Z
+  sin inventarle un sitio.
+- **Se ordena por lo que se ve**: en Capturas, el nombre del capturado que muestra la tarjeta.
+- **Vive en `cfg`** (`ordenCapturas` / `ordenPersonas`, con `lcOrden`/`lcGuardarOrden` como único
+  punto de resolución, igual que `lcPapelCfg`) y **no en una clave suelta de localStorage** como el
+  tema: `DB.saveConfig` ya tiene rama de invitado, así que en un teléfono prestado la preferencia
+  vale para la sesión y **no escribe un byte** (comprobado con la huella completa del almacenamiento).
+- ⚠️ **Las personas NO llevan marca de alta y no se les añadió ninguna.** Su posición en el arreglo ya
+  es su orden de registro (`savePerson` solo añade al final), así que «recientes/antiguas» sale del
+  **desempate por posición** de `lcOrdenar`, que se invierte con el orden. Estampar un `created` al
+  guardar habría hecho que **editar a una persona la mandara a la cabeza de la lista**.
+- ⚠️ **El control NO lleva la clase `.fc`** aunque se le parezca: `filterCasos()` apaga **todos** los
+  `.fc` de la pantalla de Capturas y le habría borrado el estado en cada filtro. Y sus reglas
+  `[hidden]` son obligatorias — un `display` de autor gana sobre el `display:none` del navegador
+  (misma lección que los `<details>` plegables de la Ola 3).
+- El control **se oculta cuando no hay nada que ordenar** (lista vacía, o capturas todavía bajo PIN),
+  y **sigue a la vista cuando quien vacía la lista es el filtro o el buscador**.
+- Anti-caché `?v=67` / `cache-v67`, `_BUILD=67`.
+- ⚠️ **Aviso de trazabilidad**: el commit `4ab450e` («fix(fpj5): el informe de menores recupera la
+  «s» del apartado 4») **arrastró un primer intento de esta función**, a medio hacer y sin probar,
+  junto con `verify_orden.mjs` y el salto de anti-caché a 67. Su mensaje no la menciona. Buscar el
+  origen de este cambio por el historial lleva a un commit que habla de otra cosa.
+- Regresiones en verde: **orden 33** · OJ 187 · mejora1 129 · mejora3 51 · fpj6 140 · simulador 41 ·
+  personas 24 · invitado 33 · ola1 38 · ola2 34 · DS 10.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

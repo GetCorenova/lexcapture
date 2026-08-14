@@ -1,14 +1,15 @@
 /* Regresión del ORDEN DE LAS LISTAS (Capturas y Personas).
-   El usuario pidió poder elegir, en las dos pantallas, si lo más reciente sale
-   arriba o abajo. Lo que hay que comprobar de punta a punta:
+   El usuario pidió poder elegir, en las dos pantallas, cómo quiere ver la
+   información: alfabéticamente (A–Z / Z–A) o por fecha de registro. Lo que hay
+   que comprobar de punta a punta:
    1. Que el control exista en las DOS pantallas, diga cómo está ordenada la
-      lista ahora mismo y la invierta al tocarlo.
-   2. Que la elección se recuerde entre sesiones y que las dos pantallas sean
+      lista ahora mismo y ofrezca las cuatro formas de verla.
+   2. Que A–Z alfabetice en español (Á con la A, Ñ después de la N) y que Z–A sea
+      su reverso EXACTO.
+   3. Que la elección se recuerde entre sesiones y que las dos pantallas sean
       independientes.
-   3. Que el valor por defecto de cada pantalla sea EL COMPORTAMIENTO QUE YA
-      TENÍA: nadie se encuentra la lista dada vuelta al actualizar.
-   4. Que las personas registradas ANTES de que existiera la marca de alta
-      (`created`) se ordenen bien en los dos sentidos, sin migrar nada.
+   4. Que ordenar sea SOLO ordenar: ni el formulario, ni el modelo, ni el
+      almacén cambian por mirar la lista de otra manera.
    5. Que en modo invitado la preferencia no escriba un byte en el equipo. */
 import { chromium } from 'playwright';
 import http from 'http';
@@ -44,10 +45,18 @@ const consoleErrors = [];
 page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
 page.on('pageerror', e => consoleErrors.push('pageerror: ' + e.message));
 
-const nombresCap = () => page.$$eval('#cl .cc-name', els => els.map(e => e.textContent.trim().split(' ').slice(0, 2).join(' ')));
+const nombresCap = () => page.$$eval('#cl .cc-name', els => els.map(e => e.childNodes[0].textContent.trim()));
 const nombresPer = () => page.$$eval('#pl .prow-name', els => els.map(e => e.textContent.trim()));
-const btnCap = () => page.$eval('#ord-capturas', b => ({ txt: b.textContent.trim(), oculto: b.hidden, svg: b.querySelectorAll('svg').length, title: b.title }));
-const btnPer = () => page.$eval('#ord-personas', b => ({ txt: b.textContent.trim(), oculto: b.hidden || b.parentNode.hidden, svg: b.querySelectorAll('svg').length, title: b.title }));
+const btnCap = () => page.$eval('#ord-capturas', b => ({ txt: b.textContent.trim(), oculto: b.hidden, title: b.title }));
+const btnPer = () => page.$eval('#ord-personas', b => ({ txt: b.textContent.trim(), oculto: b.hidden || b.parentNode.hidden, title: b.title }));
+// El orden del selector es el de LC_ORD_OPC: recientes · antiguas · A–Z · Z–A.
+const ORD_IDX = { rec: 1, ant: 2, az: 3, za: 4 };
+async function elegirOrden(lista, id) {
+  await page.click('#ord-' + lista);
+  await page.waitForTimeout(400);
+  await page.click(`#act-items .sheet-item:nth-child(${ORD_IDX[id]})`);
+  await page.waitForTimeout(500);
+}
 
 await page.goto(BASE, { waitUntil: 'load' });
 await page.evaluate(() => localStorage.clear());
@@ -56,8 +65,8 @@ await page.waitForTimeout(400);
 
 /* ═══ Parte A · El control aparece solo cuando hay algo que ordenar ═══ */
 log(await page.isVisible('#pin-a'), 'Arranca pidiendo crear el PIN');
-await page.fill('#pin-a', '246810');
-await page.fill('#pin-b', '246810');
+await page.fill('#pin-a', '2468');
+await page.fill('#pin-b', '2468');
 await page.click('button[onclick="doSetPin()"]');
 await page.waitForTimeout(600);
 
@@ -68,41 +77,66 @@ await page.evaluate(() => go('personas'));
 await page.waitForTimeout(300);
 log((await btnPer()).oculto === true, 'Sin personas, el control de orden está oculto');
 
-/* ═══ Parte B · CAPTURAS ═══ */
+/* ═══ Parte B · CAPTURAS ═══
+   Los nombres ejercitan la ordenación en español: «Álvaro» tiene que ir con la
+   A (no al final, que es donde lo manda una comparación de códigos) y «Ñoño»
+   entre la N y la O. Se siembran en un orden que no es ninguno de los cuatro. */
 const H = 3600000;
 await page.evaluate(async (H) => {
   const t = Date.now();
-  const mk = (i, tipo, horas) => ({
-    id: 'c' + i, tipo, created: t - horas * H, fechaProc: '2026-08-0' + i,
-    conductas: ['Hurto ' + i], capturados: [{ priNom: 'Caso', priApe: String(i) }]
+  const mk = (id, nom, tipo, horas) => ({
+    id, tipo, created: t - horas * H, fechaProc: '2026-08-01',
+    conductas: ['Hurto'], capturados: [{ priNom: nom, priApe: 'Pérez' }]
   });
-  // Se guardan de la MÁS ANTIGUA a la más reciente: así el arreglo del almacén
-  // no coincide con ninguno de los dos órdenes por casualidad.
-  await DB.saveCases([mk(1, 'URI', 30), mk(2, 'CESPA', 20), mk(3, 'OJ', 2)]);
+  await DB.saveCases([
+    mk('c1', 'Zulema', 'URI', 30),
+    mk('c2', 'Álvaro', 'CESPA', 20),
+    mk('c3', 'Ñoño', 'OJ', 10),
+    mk('c4', 'Beatriz', 'URI', 2)
+  ]);
   go('capturas');
 }, H);
 await page.waitForTimeout(500);
 
 const b1 = await btnCap();
-log(b1.oculto === false && /Recientes primero/.test(b1.txt) && b1.svg === 1,
-  'Capturas: el control aparece, con icono y etiqueta del orden actual', JSON.stringify(b1.txt));
-log(/toca para invertirlo/.test(b1.title), 'Y el título dice que se puede invertir', b1.title);
+log(b1.oculto === false && /Recientes/.test(b1.txt),
+  'Capturas: el control aparece y dice cómo está ordenada la lista', JSON.stringify(b1.txt));
+log(/toca para cambiarlo/.test(b1.title), 'Y anuncia que abre un selector', b1.title);
 const cap1 = await nombresCap();
-log(JSON.stringify(cap1) === JSON.stringify(['Caso 3', 'Caso 2', 'Caso 1']),
-  'Por defecto, la captura más reciente arriba (comportamiento previo intacto)', JSON.stringify(cap1));
+log(JSON.stringify(cap1) === JSON.stringify(['Beatriz Pérez', 'Ñoño Pérez', 'Álvaro Pérez', 'Zulema Pérez']),
+  'Por defecto sigue como siempre: la captura más reciente arriba', JSON.stringify(cap1));
 await page.screenshot({ path: join(SHOTS, 'orden_01_capturas_rec.png') });
 
+// El selector: cuatro formas de ver la lista, con la actual marcada.
 await page.click('#ord-capturas');
 await page.waitForTimeout(450);
-const b2 = await btnCap();
-const cap2 = await nombresCap();
-log(/Antiguas primero/.test(b2.txt), 'Un toque invierte el orden y la etiqueta lo dice', b2.txt);
-log(JSON.stringify(cap2) === JSON.stringify(['Caso 1', 'Caso 2', 'Caso 3']),
-  'La lista queda de la más antigua a la más reciente', JSON.stringify(cap2));
-await page.screenshot({ path: join(SHOTS, 'orden_02_capturas_ant.png') });
+const opciones = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent.trim()));
+log(JSON.stringify(opciones) === JSON.stringify(['Más recientes primero', 'Más antiguas primero', 'A – Z', 'Z – A']),
+  'El selector ofrece las cuatro formas de ver la lista', JSON.stringify(opciones));
+const marcada = await page.$$eval('#act-items .sheet-item', els => els.map(e => e.querySelector('.de').textContent.trim()).filter(t => /orden actual/.test(t)).length);
+log(marcada === 1, 'Y marca exactamente la que está puesta', marcada);
+await page.screenshot({ path: join(SHOTS, 'orden_02_selector.png') });
+await page.click('#act-items .sheet-item:nth-child(3)');   // A – Z
+await page.waitForTimeout(500);
+
+const capAZ = await nombresCap();
+log(JSON.stringify(capAZ) === JSON.stringify(['Álvaro Pérez', 'Beatriz Pérez', 'Ñoño Pérez', 'Zulema Pérez']),
+  'A – Z alfabetiza en español: Á con la A y Ñ entre la N y la O', JSON.stringify(capAZ));
+log(/A – Z/.test((await btnCap()).txt), 'Y el botón lo dice');
+await page.screenshot({ path: join(SHOTS, 'orden_03_capturas_az.png') });
+
+await elegirOrden('capturas', 'za');
+const capZA = await nombresCap();
+log(JSON.stringify(capZA) === JSON.stringify(capAZ.slice().reverse()),
+  'Z – A es el reverso exacto de A – Z', JSON.stringify(capZA));
+
+await elegirOrden('capturas', 'ant');
+const capAnt = await nombresCap();
+log(JSON.stringify(capAnt) === JSON.stringify(['Zulema Pérez', 'Álvaro Pérez', 'Ñoño Pérez', 'Beatriz Pérez']),
+  'Y «más antiguas primero» es el reverso de la fecha, no del alfabeto', JSON.stringify(capAnt));
 
 const cacheOrden = await page.evaluate(() => DB.getCases().map(c => c.id).join(','));
-log(cacheOrden === 'c1,c2,c3', 'Ordenar la vista NO reordena el almacén de capturas', cacheOrden);
+log(cacheOrden === 'c1,c2,c3,c4', 'Ordenar la vista NO reordena el almacén de capturas', cacheOrden);
 
 // El botón de orden NO es un chip de filtro: filterCasos() apaga todos los .fc
 // de la pantalla y le habría borrado el estado.
@@ -110,9 +144,11 @@ await page.click('.flt .fc:nth-child(2)');
 await page.waitForTimeout(400);
 const b3 = await btnCap();
 const capFlag = await nombresCap();
-log(b3.oculto === false && /Antiguas primero/.test(b3.txt),
+log(b3.oculto === false && /Antiguas/.test(b3.txt),
   'Filtrar por Flagrancia no apaga ni descoloca el control de orden', b3.txt);
-log(JSON.stringify(capFlag) === JSON.stringify(['Caso 1', 'Caso 2']),
+// Flagrancia = URI + CESPA (queda fuera la de orden judicial), y en el orden
+// elegido: de la más antigua a la más reciente.
+log(JSON.stringify(capFlag) === JSON.stringify(['Zulema Pérez', 'Álvaro Pérez', 'Beatriz Pérez']),
   'Y el filtro respeta el orden elegido', JSON.stringify(capFlag));
 log(await page.$eval('#ord-capturas', b => !b.classList.contains('fc')), 'El control no lleva la clase .fc');
 await page.click('.flt .fc:nth-child(1)');
@@ -120,64 +156,52 @@ await page.waitForTimeout(300);
 
 /* ═══ Parte C · PERSONAS ═══ */
 await page.evaluate(async () => {
-  // Sembradas por savePersons: NINGUNA lleva marca de alta. Es el caso de un
-  // equipo que venía usando la app antes de que el campo existiera.
   await DB.savePersons([
-    { id: 'p1', priNom: 'Ana', priApe: 'Uno', tipoDoc: 'CC', numDoc: '111', rol: 'Capturado' },
-    { id: 'p2', priNom: 'Bruno', priApe: 'Dos', tipoDoc: 'CC', numDoc: '222', rol: 'Víctima' },
-    { id: 'p3', priNom: 'Clara', priApe: 'Tres', tipoDoc: 'CC', numDoc: '333', rol: 'Testigo' }
+    { id: 'p1', priNom: 'Zulema', priApe: 'Ruiz', tipoDoc: 'CC', numDoc: '111', rol: 'Capturado' },
+    { id: 'p2', priNom: 'Álvaro', priApe: 'Ruiz', tipoDoc: 'CC', numDoc: '222', rol: 'Víctima' },
+    { id: 'p3', priNom: 'Ñoño', priApe: 'Ruiz', tipoDoc: 'CC', numDoc: '333', rol: 'Testigo' },
+    { id: 'p4', priNom: 'Beatriz', priApe: 'Ruiz', tipoDoc: 'CC', numDoc: '444', rol: 'Capturado' }
   ]);
   go('personas');
 });
 await page.waitForTimeout(500);
 
 const q1 = await btnPer();
-log(q1.oculto === false && /Antiguas primero/.test(q1.txt) && q1.svg === 1,
-  'Personas: el control aparece con el orden por defecto (el de siempre: orden de alta)', q1.txt);
+log(q1.oculto === false && /Antiguas/.test(q1.txt),
+  'Personas: el control aparece con el orden de siempre (el de registro)', q1.txt);
 const per1 = await nombresPer();
-log(JSON.stringify(per1) === JSON.stringify(['Ana Uno', 'Bruno Dos', 'Clara Tres']),
-  'Personas sin marca de alta salen en su orden de registro', JSON.stringify(per1));
-await page.screenshot({ path: join(SHOTS, 'orden_03_personas_ant.png') });
+log(JSON.stringify(per1) === JSON.stringify(['Zulema Ruiz', 'Álvaro Ruiz', 'Ñoño Ruiz', 'Beatriz Ruiz']),
+  'Por defecto salen en el orden en que se registraron', JSON.stringify(per1));
+await page.screenshot({ path: join(SHOTS, 'orden_04_personas_alta.png') });
 
-await page.click('#ord-personas');
-await page.waitForTimeout(450);
-const per2 = await nombresPer();
-log(/Recientes primero/.test((await btnPer()).txt), 'Un toque invierte el orden de Personas');
-log(JSON.stringify(per2) === JSON.stringify(['Clara Tres', 'Bruno Dos', 'Ana Uno']),
-  'Las personas sin `created` se invierten por su posición, sin migrar nada', JSON.stringify(per2));
-await page.screenshot({ path: join(SHOTS, 'orden_04_personas_rec.png') });
+await elegirOrden('personas', 'az');
+const perAZ = await nombresPer();
+log(JSON.stringify(perAZ) === JSON.stringify(['Álvaro Ruiz', 'Beatriz Ruiz', 'Ñoño Ruiz', 'Zulema Ruiz']),
+  'Personas A – Z', JSON.stringify(perAZ));
+await page.screenshot({ path: join(SHOTS, 'orden_05_personas_az.png') });
 
-// Una persona nueva SÍ recibe marca de alta y encabeza la lista.
-await page.evaluate(async () => {
-  await DB.savePerson({ id: 'p4', priNom: 'Diana', priApe: 'Cuatro', tipoDoc: 'CC', numDoc: '444', rol: 'Capturado' });
-  renderPersonas();
+await elegirOrden('personas', 'za');
+log(JSON.stringify(await nombresPer()) === JSON.stringify(perAZ.slice().reverse()), 'Personas Z – A');
+
+await elegirOrden('personas', 'rec');
+const perRec = await nombresPer();
+log(JSON.stringify(perRec) === JSON.stringify(per1.slice().reverse()),
+  'Y «más recientes primero» invierte el orden de registro', JSON.stringify(perRec));
+
+/* ⚠️ Ordenar es SOLO ordenar: el modelo de la persona no gana campos ni pierde
+   ninguno por mirar la lista de otra manera. */
+const modelo = await page.evaluate(() => {
+  const p = DB.getPersons();
+  return { claves: Object.keys(p[0]).sort().join(','), conMarca: p.filter(x => x.created).length };
 });
-await page.waitForTimeout(400);
-const per3 = await nombresPer();
-log(per3[0] === 'Diana Cuatro', 'Una persona registrada ahora encabeza «Recientes primero»', JSON.stringify(per3));
-log(await page.evaluate(() => !!DB.getPerson('p4').created), 'Y queda con su marca de alta');
-
-// Editarla no la convierte en «la más reciente» de nuevo (la marca se conserva).
-const marcaAntes = await page.evaluate(() => DB.getPerson('p4').created);
-await page.evaluate(async () => {
-  await DB.savePerson({ id: 'p1', priNom: 'Ana', segNom: 'María', priApe: 'Uno', tipoDoc: 'CC', numDoc: '111', rol: 'Capturado' });
-  await DB.savePerson({ id: 'p4', priNom: 'Diana', priApe: 'Cuatro', tipoDoc: 'CC', numDoc: '4444', rol: 'Capturado' });
-  renderPersonas();
-});
-await page.waitForTimeout(400);
-const marcaDespues = await page.evaluate(() => DB.getPerson('p4').created);
-log(marcaDespues === marcaAntes, 'Editar a una persona NO le cambia la marca de alta', marcaAntes + ' → ' + marcaDespues);
-const per4 = await nombresPer();
-log(per4[0] === 'Diana Cuatro' && per4[per4.length - 1] === 'Ana María Uno',
-  'Editar tampoco la mueve de sitio en la lista', JSON.stringify(per4));
+log(modelo.claves === 'id,numDoc,priApe,priNom,rol,tipoDoc' && modelo.conMarca === 0,
+  'El registro de Personas no cambia: ni un campo nuevo, ni marcas inventadas', JSON.stringify(modelo));
 
 // Con el buscador filtrando, el control sigue a la vista y manda el orden.
-await page.fill('#p-search', 'o');
+await page.fill('#p-search', 'ruiz');
 await page.waitForTimeout(400);
-const q2 = await btnPer();
-log(q2.oculto === false, 'Con el buscador filtrando, el control de orden sigue visible');
-const perF = await nombresPer();
-log(perF.length > 1 && perF.join(',') === perF.slice().join(','), 'El resultado del buscador sale en el orden elegido', JSON.stringify(perF));
+log((await btnPer()).oculto === false, 'Con el buscador filtrando, el control de orden sigue visible');
+log(JSON.stringify(await nombresPer()) === JSON.stringify(perRec), 'Y el resultado del buscador sale en el orden elegido');
 await page.fill('#p-search', '');
 await page.waitForTimeout(300);
 
@@ -187,29 +211,23 @@ log(cfgOrden === 'ant/rec', 'Cada pantalla guarda su propio orden', cfgOrden);
 
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(500);
-await page.fill('#pin-e', '246810');
-await page.click('button[onclick="doUnlock()"]');
+await page.fill('#pin-e', '2468');
+await page.click('button[onclick="doUnlockPin()"]');
 await page.waitForTimeout(900);
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(500);
-const capR = await nombresCap();
-log(/Antiguas primero/.test((await btnCap()).txt) && JSON.stringify(capR) === JSON.stringify(['Caso 1', 'Caso 2', 'Caso 3']),
-  'Tras cerrar y volver a abrir la app, Capturas conserva el orden elegido', JSON.stringify(capR));
+log(/Antiguas/.test((await btnCap()).txt) && JSON.stringify(await nombresCap()) === JSON.stringify(capAnt),
+  'Tras cerrar y volver a abrir la app, Capturas conserva el orden elegido');
 await page.evaluate(() => go('personas'));
 await page.waitForTimeout(500);
-const perR = await nombresPer();
-log(/Recientes primero/.test((await btnPer()).txt) && perR[0] === 'Diana Cuatro',
-  'Y Personas conserva el suyo, que es el contrario', JSON.stringify(perR));
+log(/Recientes/.test((await btnPer()).txt), 'Y Personas conserva el suyo, que es otro');
 
 // Tema claro: el control usa tokens, no colores fijos.
 await page.evaluate(() => setTheme('light'));
 await page.waitForTimeout(400);
-await page.screenshot({ path: join(SHOTS, 'orden_05_personas_claro.png') });
-const colores = await page.$eval('#ord-personas', b => {
-  const cs = getComputedStyle(b);
-  return { bg: cs.backgroundColor, color: cs.color, borde: cs.borderTopColor };
-});
-log(colores.bg === 'rgba(0, 0, 0, 0)', 'En tema claro el control sigue siendo transparente sobre la superficie', JSON.stringify(colores));
+await page.screenshot({ path: join(SHOTS, 'orden_06_personas_claro.png') });
+const colores = await page.$eval('#ord-personas', b => getComputedStyle(b).backgroundColor);
+log(colores === 'rgba(0, 0, 0, 0)', 'En tema claro el control sigue siendo transparente sobre la superficie', colores);
 await page.evaluate(() => setTheme('dark'));
 await page.waitForTimeout(300);
 
@@ -231,11 +249,13 @@ await page.click('div.pin-forget:has-text("Usar como invitado")');
 await page.waitForTimeout(500);
 const invitado = await page.evaluate(() => {
   const antes = lcOrden('personas');
-  lcCambiarOrden('personas'); lcCambiarOrden('capturas');
-  return { antes, despues: lcOrden('personas'), cap: lcOrden('capturas') };
+  lcAplicarOrden('personas:az'); lcAplicarOrden('capturas:za');
+  return { antes, per: lcOrden('personas'), cap: lcOrden('capturas') };
 });
-log(invitado.despues !== invitado.antes && invitado.cap === 'rec',
-  'El invitado puede cambiar el orden en su sesión', JSON.stringify(invitado));
+// El dueño dejó Personas en 'rec' y Capturas en 'ant': el invitado arranca en
+// los valores por defecto, o sea que ni siquiera LEE los del dueño.
+log(invitado.antes === 'ant' && invitado.per === 'az' && invitado.cap === 'za',
+  'El invitado arranca en los valores por defecto (no en los del dueño) y puede cambiarlos', JSON.stringify(invitado));
 const huellaDespues = await page.evaluate(() => {
   const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
   return JSON.stringify(o);

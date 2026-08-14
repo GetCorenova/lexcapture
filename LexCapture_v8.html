@@ -689,9 +689,8 @@ body.guest{padding-top:38px}
 .fc.on{border-color:transparent;color:var(--acc);background:var(--accG);font-weight:600}
 
 /* ═══ ORDEN DE LA LISTA (Capturas y Personas) ═══
-   Interruptor de dos estados: la etiqueta dice SIEMPRE cómo está ordenada la
-   lista en este momento y tocarlo la invierte. Se eligió un interruptor y no un
-   menú porque la opción es binaria y esto es un equipo de campo: un toque.
+   La etiqueta dice SIEMPRE cómo está ordenada la lista en este momento y el
+   botón abre el selector con las cuatro formas de verla.
    ⚠️ NO lleva la clase .fc aunque se le parezca — filterCasos() apaga TODOS los
    `.fc` de la pantalla de Capturas y le borraría el estado en cada filtro.
    ⚠️ Las reglas [hidden] son obligatorias: `display` de autor gana sobre el
@@ -710,6 +709,8 @@ body.guest{padding-top:38px}
 .ord-btn[hidden]{display:none}
 .ord-btn:hover{background:var(--hover);border-color:var(--border-strong)}
 .ord-btn svg{width:16px;height:16px;flex:0 0 auto;color:var(--acc)}
+/* El caret dice que el botón abre un selector, no que alterna dos estados. */
+.ord-btn .ord-car{width:14px;height:14px;color:var(--text-3);margin-left:-2px}
 
 /* ═══ WIZARD ═══ */
 .wp{padding:4px 0 6px;margin-bottom:4px}
@@ -1505,7 +1506,7 @@ body.guest{padding-top:38px}
         <!-- Orden de la lista. La etiqueta y el icono los pinta renderOrdenBtn()
              según lo que el usuario haya elegido; nace oculto para no anunciar
              un orden mientras no haya nada que ordenar. -->
-        <button class="ord-btn" id="ord-capturas" onclick="lcCambiarOrden('capturas')" hidden></button>
+        <button class="ord-btn" id="ord-capturas" onclick="lcAbrirOrden('capturas')" hidden></button>
       </div>
       <div id="cl"></div>
     </div>
@@ -1891,7 +1892,7 @@ body.guest{padding-top:38px}
     </header>
     <div class="pane">
       <input class="desp-search" id="p-search" type="search" placeholder="Buscar por nombre o cédula…" oninput="renderPersonas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-p-search-nofill" data-form-type="other" data-lpignore="true">
-      <div class="ord" hidden><button class="ord-btn" id="ord-personas" onclick="lcCambiarOrden('personas')"></button></div>
+      <div class="ord" hidden><button class="ord-btn" id="ord-personas" onclick="lcAbrirOrden('personas')"></button></div>
       <div id="pl"></div>
     </div>
   </section>
@@ -2881,19 +2882,7 @@ var DB = {
   getPersons: function() { return _personsCache !== null ? _personsCache : []; },
   savePersons: function(p) { _personsCache = p; return _lcEncSave('persons', p); },
   getPerson: function(id) { var a=this.getPersons(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
-  /* ⚠️ `created` = marca de alta, y es lo que ordena la lista de Personas. Se
-     pone UNA vez, al registrarla, y se conserva al editar: este método SUSTITUYE
-     la persona por la que llega (los llamadores ya fusionan lo que quieren
-     conservar), y el objeto entrante viene de un formulario que no la trae — sin
-     esta guarda, editar a alguien lo convertiría en el registro más reciente.
-     Las personas anteriores a este campo NO se migran: su posición en el arreglo
-     ya es su orden de alta y lcOrdenar() desempata por ahí. */
-  savePerson: function(p) {
-    var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;});
-    if(!p.created) p.created=(i>=0&&a[i].created)||Date.now();
-    if(i>=0) a[i]=p; else a.push(p);
-    return this.savePersons(a);
-  },
+  savePerson: function(p) { var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
     // Modo invitado: configuración propia en memoria. Ni se lee ni se escribe la
@@ -3046,52 +3035,99 @@ var LC_ORD = {
   capturas:{ key:'ordenCapturas', def:'rec', titulo:'Capturas' },
   personas:{ key:'ordenPersonas', def:'ant', titulo:'Personas' }
 };
-var LC_ORD_LBL = { rec:'Recientes primero', ant:'Antiguas primero' };
-// El toast dice el EFECTO, no el nombre del ajuste: es lo que el usuario ve.
-var LC_ORD_MSG = { rec:'las más recientes arriba', ant:'las más antiguas arriba' };
+/* Las cuatro formas de ver la lista. `corto` es lo que cabe en el botón; `lbl` y
+   `de` son lo que se lee en el selector. */
+var LC_ORD_OPC = [
+  { id:'rec', corto:'Recientes', lbl:'Más recientes primero', de:'Lo último que registraste, arriba' },
+  { id:'ant', corto:'Antiguas',  lbl:'Más antiguas primero',  de:'Lo primero que registraste, arriba' },
+  { id:'az',  corto:'A – Z',     lbl:'A – Z',                 de:'Por nombre, de la A a la Z' },
+  { id:'za',  corto:'Z – A',     lbl:'Z – A',                 de:'Por nombre, de la Z a la A' }
+];
 var LC_ORD_IC = {
   rec:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v14"/><path d="m3 15 3 3 3-3"/><path d="M13 6h8M13 11h6M13 16h4"/></svg>',
-  ant:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V6"/><path d="m3 9 3-3 3 3"/><path d="M13 6h4M13 11h6M13 16h8"/></svg>'
+  ant:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V6"/><path d="m3 9 3-3 3 3"/><path d="M13 6h4M13 11h6M13 16h8"/></svg>',
+  az: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v14"/><path d="m3 15 3 3 3-3"/><path d="M13 7h5l-5 5h5"/><path d="M13 15h5M13 20h5M14.5 15l-1.5 5M16.5 15l1.5 5"/></svg>',
+  za: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v14"/><path d="m3 15 3 3 3-3"/><path d="M13 4h5M13 9h5M14.5 4 13 9M16.5 4 18 9"/><path d="M13 15h5l-5 5h5"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
 };
+function lcOrdenOpc(id) {
+  for (var i=0;i<LC_ORD_OPC.length;i++) if (LC_ORD_OPC[i].id===id) return LC_ORD_OPC[i];
+  return null;
+}
 function lcOrden(lista) {
   var d = LC_ORD[lista]; if (!d) return 'rec';
-  try { var v = DB.getConfig()[d.key]; return (v==='rec'||v==='ant') ? v : d.def; } catch(e) { return d.def; }
+  try { var v = DB.getConfig()[d.key]; return lcOrdenOpc(v) ? v : d.def; } catch(e) { return d.def; }
 }
 function lcGuardarOrden(lista, val) {
   var d = LC_ORD[lista];
-  if (!d || (val!=='rec' && val!=='ant')) return false;
+  if (!d || !lcOrdenOpc(val)) return false;
   try { var cfg = DB.getConfig(); cfg[d.key] = val; DB.saveConfig(cfg); return true; } catch(e) { return false; }
 }
-/* Ordena SIN tocar el arreglo del almacén (renderCases lo ordenaba en sitio, así
+/* Comparación de nombres en español: «Álvarez» va con «Alvarez» y la Ñ después
+   de la N — con una comparación de códigos, todo lo acentuado se iría al final.
+   Lo que no tiene nombre queda al final en A–Z (y al principio en Z–A, que es su
+   reverso exacto): no se inventa un sitio para lo que no se puede alfabetizar. */
+function lcCmpTxt(a, b) {
+  a=String(a||'').trim(); b=String(b||'').trim();
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  return a.localeCompare(b, 'es', { sensitivity:'base', numeric:true });
+}
+/* Ordena SIN tocar el arreglo del almacén (renderCases lo ordenaba EN SITIO, así
    que con el filtro «Todas» reordenaba de verdad la caché de capturas).
-   ⚠️ El desempate por posición NO es cosmético: las personas registradas antes
-   de que existiera `created` no tienen marca de alta, y la posición en el
-   arreglo ES su orden de alta (savePerson solo añade al final). Al invertir, se
-   invierte también el desempate, así que esas personas salen en el orden
-   correcto en los dos sentidos sin migrar un solo registro. */
-function lcOrdenar(arr, lista, marca) {
-  var dir = lcOrden(lista)==='rec' ? -1 : 1;
+   `campos.fecha` puede faltar: las personas no llevan marca de alta y no se les
+   añade ninguna — su posición en el arreglo YA es su orden de registro, porque
+   savePerson solo añade al final. El desempate por posición hace el resto, y al
+   invertir se invierte con él, así que «recientes/antiguas» sale bien en los dos
+   sentidos sin tocar un solo registro guardado. */
+function lcOrdenar(arr, lista, campos) {
+  var v = lcOrden(lista), dir, cmp;
+  if (v==='az' || v==='za') {
+    dir = v==='az' ? 1 : -1;
+    cmp = function(a,b){ return lcCmpTxt(campos.nombre(a.x), campos.nombre(b.x)); };
+  } else {
+    dir = v==='rec' ? -1 : 1;
+    cmp = campos.fecha ? function(a,b){ return (campos.fecha(a.x)||0)-(campos.fecha(b.x)||0); }
+                       : function(){ return 0; };
+  }
   return arr.map(function(x,i){ return {x:x,i:i}; })
-    .sort(function(a,b){ var d=(marca(a.x)||0)-(marca(b.x)||0); return dir*(d||(a.i-b.i)); })
+    .sort(function(a,b){ return dir*(cmp(a,b) || (a.i-b.i)); })
     .map(function(p){ return p.x; });
 }
 // `n` = cuántos registros hay en total: sin nada que ordenar, el control sobra.
 function renderOrdenBtn(lista, n) {
   var b = document.getElementById('ord-'+lista); if (!b) return;
-  var v = lcOrden(lista);
-  b.innerHTML = LC_ORD_IC[v] + '<span>' + LC_ORD_LBL[v] + '</span>';
-  b.title = 'Orden: ' + LC_ORD_MSG[v] + ' — toca para invertirlo';
+  var o = lcOrdenOpc(lcOrden(lista)) || LC_ORD_OPC[0];
+  b.innerHTML = LC_ORD_IC[o.id] + '<span>' + o.corto + '</span>' +
+    '<svg class="ord-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  b.title = 'Orden de la lista: ' + o.lbl + ' — toca para cambiarlo';
   b.setAttribute('aria-label', b.title);
   b.hidden = !n;
   var w = b.parentNode;
   if (w && w.classList && w.classList.contains('ord')) w.hidden = !n;
 }
-function lcCambiarOrden(lista) {
+/* Selector: reutiliza el sheet de acciones de la app en vez de estrenar un
+   componente. La opción activa se marca con un ✓ y el acento — con cuatro
+   opciones ya no sirve un interruptor: hay que ver cuál está puesta. */
+function lcAbrirOrden(lista) {
   var d = LC_ORD[lista]; if (!d) return;
-  var v = lcOrden(lista)==='rec' ? 'ant' : 'rec';
-  if (!lcGuardarOrden(lista, v)) { toast('No se pudo guardar el orden'); return; }
+  var act = lcOrden(lista);
+  var head = '<div class="prow-body"><div class="prow-name">Ordenar ' + d.titulo.toLowerCase() + '</div>' +
+    '<div class="prow-meta"><span class="prow-doc">Cómo quieres ver la lista</span></div></div>';
+  openActionSheet(head, LC_ORD_OPC.map(function(o){
+    var on = o.id===act;
+    return actItem('lcAplicarOrden', lista+':'+o.id, on?LC_ORD_IC.ok:LC_ORD_IC[o.id],
+      o.lbl, on ? 'Es el orden actual' : o.de, '', on?ACT_ACC:'');
+  }).join(''));
+}
+function lcAplicarOrden(arg) {
+  var p = String(arg).split(':'), lista = p[0], val = p[1];
+  var d = LC_ORD[lista], o = lcOrdenOpc(val);
+  if (!d || !o) return;
+  if (!lcGuardarOrden(lista, val)) { toast('No se pudo guardar el orden'); return; }
   if (lista==='capturas') renderCases(); else renderPersonas();
-  toast(d.titulo + ': ' + LC_ORD_MSG[v]);
+  toast(d.titulo + ': ' + o.lbl.toLowerCase());
 }
 
 function renderCases() {
@@ -3117,7 +3153,12 @@ function renderCases() {
     el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"></path></svg></div><h3>Sin capturas aún</h3><p>Registra tu primera captura tocando el botón + abajo</p><button class="cta" onclick="go(\'nueva\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nueva Captura</button></div>';
     return;
   }
-  cases = lcOrdenar(cases, 'capturas', function(c){ return c.created||0; });
+  /* Se ordena por lo MISMO que se ve en la tarjeta: el nombre del capturado.
+     Un caso sin capturado no tiene nombre que alfabetizar y se va al final. */
+  cases = lcOrdenar(cases, 'capturas', {
+    fecha:  function(c){ return c.created||0; },
+    nombre: function(c){ return (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : ''; }
+  });
   var now = Date.now();
   el.innerHTML = cases.map(function(c) {
     var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : 'Sin capturado';
@@ -4326,7 +4367,9 @@ function renderPersonas() {
   // Antes del early-return de la lista vacía: con el buscador filtrando, el
   // control sigue haciendo falta.
   renderOrdenBtn('personas', all.length);
-  pp = lcOrdenar(pp, 'personas', function(p){ return p.created||0; });
+  // Sin `fecha`: las personas no llevan marca de alta y no se les añade ninguna
+  // — su posición en el arreglo ya es el orden en que se registraron.
+  pp = lcOrdenar(pp, 'personas', { nombre: fullName });
   var el = document.getElementById('pl');
   if (!el) return;
   if (!pp.length) {
