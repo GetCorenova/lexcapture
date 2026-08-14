@@ -1,5 +1,5 @@
 /* Regresión de «Mejora 2» — el módulo de orden judicial, rediligenciado contra
-   «Documentos/Otro/Propuesta Plantilla OJ.docx».
+   «Documentos/Otro/Propuesta_Plantilla_OJ.docx».
    Una sección por observación del documento de campo:
      1. Destinatario del informe: Juzgado o Fiscalía.
      2. El formulario sigue el orden del formato.
@@ -52,7 +52,7 @@ function leerDocx(buf, nombre) {
   }
   return null;
 }
-const tplBuf = await readFile(join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ.docx'));
+const tplBuf = await readFile(join(ROOT, 'Documentos/Otro/Propuesta_Plantilla_OJ.docx'));
 const tplXml = leerDocx(tplBuf, 'word/document.xml').toString('utf8');
 // Etiquetas = primera celda de cada fila de las tres tablas del formato.
 function filasDeTablas(xml) {

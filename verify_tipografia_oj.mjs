@@ -26,9 +26,14 @@ import { join, extname } from 'path';
 import { inflateRawSync } from 'zlib';
 
 const ROOT = 'd:/UsurarioDocumentos/Escritorio/Proyectos 2026/APP Capturas/Crear App';
-const REF = join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ - copia.docx');
-// Estándar del MEMBRETE: el formato con el encabezado reajustado por el usuario.
-const REF_HDR = join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ.docx');
+/* ⚠️ DOCUMENTO MAESTRO — fuente única de verdad del formato de este oficio, y
+   por tanto de esta suite. Antes había dos referencias (la copia pristina para
+   el cuerpo y el archivo reajustado para el membrete); desde que el usuario
+   adoptó su propio ajuste como patrón maestro son el mismo archivo, y las
+   expectativas se DERIVAN de él en vez de estar escritas a mano: si el maestro
+   cambia de fuente o de cuerpo, esta suite lo dice sin tocar una línea. */
+const REF = join(ROOT, 'Documentos/Otro/Propuesta_Plantilla_OJ.docx');
+const REF_HDR = REF;
 const PORT = 8190;
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.json':'application/json', '.png':'image/png', '.svg':'image/svg+xml' };
 const server = http.createServer(async (req, res) => {
@@ -178,9 +183,16 @@ const genFtr = await perfilar(G.files[kFtr[0]], gStyles);
 console.log('\n── A · Estándar tipográfico declarado ──');
 const todos = [].concat(gen.parr, genHdr.parr, genFtr.parr);
 const runsTip = todos.flatMap(p => p.runs).filter(r => r.tipografico);
-const familias = [...new Set(runsTip.map(r => r.font))];
-log(familias.length === 1 && familias[0] === 'Arial',
-  'Una sola familia tipográfica en todo el documento', familias.join(', '));
+const familias = [...new Set(runsTip.map(r => r.font))].sort();
+/* ⚠️ El maestro NO usa una sola familia: el cuerpo va en su fuente y el
+   membrete, los anexos y el bloque institucional se quedan en la fuente por
+   defecto del documento. Esa excepción es del formato, así que la expectativa
+   se lee del maestro en vez de fijar un nombre. */
+const famRef = [...new Set([].concat(ref.parr, refHdr.parr, refFtr.parr)
+  .flatMap(p => p.runs).filter(r => r.tipografico).map(r => r.font))].sort();
+log(familias.join() === famRef.join(),
+  'Las familias tipográficas son exactamente las del documento maestro',
+  `maestro ${famRef.join(' + ')} · generado ${familias.join(' + ')}`);
 log(gen.F0 === ref.F0 && gen.SZ0 === ref.SZ0,
   'docDefaults igual al del formato de referencia',
   `generado ${gen.F0} ${gen.SZ0 / 2}pt · referencia ${ref.F0} ${ref.SZ0 / 2}pt`);
@@ -192,8 +204,11 @@ log(cm(M.top) >= 3 && cm(M.top) <= 4 && cm(M.bottom) >= 2 && cm(M.bottom) <= 3 &
     cm(M.left) >= 3 && cm(M.left) <= 4 && cm(M.right) >= 2 && cm(M.right) <= 3,
   'Y dentro de los rangos de la GTC 185 (sup 3-4, inf 2-3, izq 3-4, der 2-3 cm)');
 const nivelesGen = [...new Set(runsTip.map(r => r.sz))].sort((a, b) => b - a);
-log(nivelesGen.join() === '22,20,18',
-  'Jerarquía de exactamente tres niveles: 11 / 10 / 9 pt', nivelesGen.map(s => s / 2 + 'pt').join(' · '));
+const nivelesRef = [...new Set([].concat(ref.parr, refHdr.parr, refFtr.parr)
+  .flatMap(p => p.runs).filter(r => r.tipografico).map(r => r.sz))].sort((a, b) => b - a);
+log(nivelesGen.join() === nivelesRef.join(),
+  'Los mismos niveles de cuerpo que el maestro, sin añadir ni perder ninguno',
+  `maestro ${nivelesRef.map(s => s / 2).join('/')}pt · generado ${nivelesGen.map(s => s / 2).join('/')}pt`);
 
 /* ══ B · GARANTÍA ESTRUCTURAL ═══════════════════════════════════════════════ */
 console.log('\n── B · Ningún run se queda sin declarar fuente y tamaño ──');
@@ -210,13 +225,20 @@ console.log('\n── C · Cada clase de elemento, contra el formato de referenc
 const buscar = (perfil, re, enTabla) => perfil.parr.find(p =>
   re.test((p.txt || '').trim()) && (enTabla === undefined || p.tabla === enTabla));
 const szDe = p => p ? [...new Set(p.runs.filter(r => r.txt).map(r => r.sz))] : null;
+const fuDe = p => p ? [...new Set(p.runs.filter(r => r.txt).map(r => r.font))] : null;
 const negDe = p => p ? p.runs.filter(r => r.txt).some(r => r.b) : null;
 
+/* ⚠️ «Valor de tabla» busca un VALOR (`CC 1234…`), no una etiqueta. Antes las
+   dos entradas apuntaban a celdas de etiqueta y la columna de valores no se
+   comprobaba nunca — justo la que cambia con los datos. */
 const clases = [
   ['Párrafo de presentación', /^De manera atenta/, false],
   ['Título de numeral',       /IDENTIFICACIÓN DEL (CAPTURADO|APREHENDIDO)/, false],
   ['Etiqueta de tabla',       /^Nombres y apellidos$/, true],
-  ['Valor de tabla',          /^Documento de identidad$/, true],
+  /* ⚠️ Todos los tipos de documento que puede sacar el simulador, no solo CC:
+     en un 15 % de las muestras sale PPT o PA y la comparación se quedaba en
+     «no comparable» una corrida de cada siete. */
+  ['Valor de tabla',          /^(CC|TI|CE|PPT|PA|RC|NIT) \d/, true],
   ['Bloque de contacto',      /^www\./, false],
   ['Anexos',                  /^Anexos:/, false],
   ['Cargo del firmante',      /^Integrante/, false]
@@ -224,10 +246,11 @@ const clases = [
 clases.forEach(([nombre, re, tabla]) => {
   const a = buscar(ref, re, tabla), b = buscar(gen, re, tabla);
   if (!a || !b) { log(undefined, nombre + ' — no comparable en esta muestra'); return; }
-  const sa = szDe(a), sb = szDe(b);
-  log(sa.join() === sb.join() && negDe(a) === negDe(b),
-    nombre + ': mismo cuerpo y misma negrita que el formato',
-    `referencia ${sa.map(s => s / 2).join('/')}pt${negDe(a) ? ' negrita' : ''} · generado ${sb.map(s => s / 2).join('/')}pt${negDe(b) ? ' negrita' : ''}`);
+  const sa = szDe(a), sb = szDe(b), fa = fuDe(a), fb = fuDe(b);
+  log(sa.join() === sb.join() && fa.join() === fb.join() && negDe(a) === negDe(b),
+    nombre + ': misma FUENTE, mismo cuerpo y misma negrita que el maestro',
+    `maestro ${fa.join('/')} ${sa.map(s => s / 2).join('/')}pt${negDe(a) ? ' negrita' : ''} · ` +
+    `generado ${fb.join('/')} ${sb.map(s => s / 2).join('/')}pt${negDe(b) ? ' negrita' : ''}`);
 });
 const cuerpoRef = buscar(ref, /^De manera atenta/, false), cuerpoGen = buscar(gen, /^De manera atenta/, false);
 log(cuerpoRef.jc === cuerpoGen.jc && cuerpoGen.jc === 'both',
@@ -247,13 +270,18 @@ const hGen = [...new Set(genHdr.parr.flatMap(p => p.runs).filter(r => r.txt).map
 log(hRef.join() === hGen.join(),
   'Membrete: mismo cuerpo que el formato con el encabezado reajustado (Arial 11)',
   `referencia ${hRef.map(s => s / 2).join('/')}pt · generado ${hGen.map(s => s / 2).join('/')}pt`);
-log(hGen.length === 1 && hGen[0] === 22,
-  '⚠️ Y NO arrastró a las tablas: el membrete tiene constante propia',
-  'membrete ' + hGen.map(s => s / 2).join('/') + 'pt');
-const szTablas = [...new Set(gen.parr.filter(p => p.tabla).flatMap(p => p.runs)
-  .filter(r => r.txt).map(r => r.sz))];
-log(szTablas.length === 1 && szTablas[0] === 20,
-  'Las 3 tablas del oficio siguen en 10 pt, sin tocar', szTablas.map(s => s / 2).join('/') + 'pt');
+const hFuRef = [...new Set(refHdr.parr.flatMap(p => p.runs).filter(r => r.txt).map(r => r.font))];
+const hFuGen = [...new Set(genHdr.parr.flatMap(p => p.runs).filter(r => r.txt).map(r => r.font))];
+log(hFuRef.join() === hFuGen.join(),
+  '⚠️ Y en la MISMA FUENTE que el maestro: el membrete no sigue a la del cuerpo',
+  `maestro ${hFuRef.join('/')} · generado ${hFuGen.join('/')}`);
+/* Las 3 tablas, contra las 3 del maestro: fuente y cuerpo. La cifra no se
+   escribe aquí — se lee del maestro, que es quien la fija. */
+const tblDe = p => [...new Set(p.parr.filter(x => x.tabla).flatMap(x => x.runs)
+  .filter(r => r.txt).map(r => r.font + ' ' + r.sz))].sort();
+log(tblDe(gen).join() === tblDe(ref).join(),
+  'Las 3 tablas del oficio, en la fuente y el cuerpo del maestro',
+  `maestro ${tblDe(ref).join(' + ')} · generado ${tblDe(gen).join(' + ')}`);
 /* El escudo: medida y anclaje que dejó el usuario en el formato. Flotante para
    que su alto NO arrastre el de la fila del membrete. */
 const dib = (t) => {
@@ -281,10 +309,28 @@ log(szRef.join() === szGen.join(), 'Y es el mismo del formato de referencia',
 const colGen = [...new Set(gf.map(r => r.color))];
 log(colGen.length === 1 && colGen[0] === '404040',
   'Un solo color en el pie, el del formato', colGen.join('/'));
+const fuPie = [...new Set(gf.map(r => r.font))];
+log(fuPie.join() === [...new Set(rf.map(r => r.font))].join(),
+  'Y en la fuente del pie del maestro', fuPie.join('/'));
 const campos = gf.filter(r => r.instr || r.fld);
-log(campos.length > 0 && campos.every(r => r.szPropio === 18 && r.fontPropia === 'Arial'),
+log(campos.length > 0 && campos.every(r => r.szPropio === 18 && r.fontPropia === fuPie[0]),
   '⚠️ Los CINCO runs de cada campo llevan el formato: al repaginar, Word conserva el tamaño',
   campos.length + ' runs de campo');
+/* ⚠️ La tabla de fuentes del paquete. El `w:altName` es la sustitución que el
+   propio maestro dejó registrada: en un equipo donde la fuente del cuerpo no
+   esté instalada, el oficio cae en la fuente base y no en la que el sistema
+   escoja. Sin esta parte el nombre de la fuente igual viaja, pero se pierde el
+   control de qué pasa cuando falta. */
+const ftG = G.files['word/fontTable.xml'] || '';
+const refFonts = refPkg['word/fontTable.xml'].toString('utf8');
+const altDe = (x, f) => (x.match(new RegExp('<w:font w:name="' + f + '">\\s*<w:altName w:val="([^"]+)"')) || [])[1] || '';
+const cuerpoFont = famRef.find(f => f !== gen.F0) || gen.F0;
+log(!!ftG && new RegExp('w:name="' + cuerpoFont + '"').test(ftG) && new RegExp('w:name="' + gen.F0 + '"').test(ftG),
+  'El paquete declara su tabla de fuentes, con las dos familias del maestro',
+  ftG ? 'fontTable.xml presente' : 'FALTA fontTable.xml');
+log(altDe(ftG, cuerpoFont) === altDe(refFonts, cuerpoFont) && !!altDe(ftG, cuerpoFont),
+  `⚠️ Con el mismo respaldo que registra el maestro para «${cuerpoFont}»`,
+  `maestro → ${altDe(refFonts, cuerpoFont) || '(ninguno)'} · generado → ${altDe(ftG, cuerpoFont) || '(ninguno)'}`);
 
 /* ══ E · WORD ↔ PDF ═════════════════════════════════════════════════════════ */
 console.log('\n── E · La vista de impresión (PDF) da la misma jerarquía ──');
@@ -318,12 +364,30 @@ const V = await page.evaluate(async () => {
   cont.remove();
   return r;
 });
-const esperado = { cuerpo:11, titulo:11, etiqueta:10, hechos:11, anexos:10, contacto:9, membrete:11, piePalabra:9, pieNumero:9 };
-Object.entries(esperado).forEach(([k, pt]) => {
-  const v = V[k];
-  log(!!v && v.pt === pt && v.fam === 'Arial',
-    `PDF · ${k}: ${pt} pt en Arial, igual que en el .docx`, v ? `${v.pt}pt ${v.fam}` : '(no encontrado)');
+/* La expectativa del PDF NO se escribe a mano: se lee del MAESTRO, clase por
+   clase, igual que la del .docx. Así los dos motores —Word y el navegador— se
+   miden contra la misma vara y no pueden divergir en silencio. */
+const claseRef = {
+  cuerpo:     [ref,    /^De manera atenta/, false],
+  titulo:     [ref,    /IDENTIFICACIÓN DEL (CAPTURADO|APREHENDIDO)/, false],
+  etiqueta:   [ref,    /^Nombres y apellidos$/, true],
+  hechos:     [ref,    /^HECHOS$/, false],
+  anexos:     [ref,    /^Anexos:/, false],
+  contacto:   [ref,    /^www\./, false],
+  membrete:   [refHdr, /^MINISTERIO/, undefined],
+  piePalabra: [refFtr, /^Página/, undefined]
+};
+Object.entries(claseRef).forEach(([k, [perfil, re, tabla]]) => {
+  const p = buscar(perfil, re, tabla), v = V[k];
+  if (!p) { log(undefined, `PDF · ${k} — no está en el maestro`); return; }
+  const pt = szDe(p)[0] / 2, fam = fuDe(p)[0];
+  log(!!v && v.pt === pt && v.fam === fam,
+    `PDF · ${k}: ${pt} pt en ${fam}, igual que en el maestro y en el .docx`,
+    v ? `${v.pt}pt ${v.fam}` : '(no encontrado)');
 });
+log(!!V.pieNumero && !!V.piePalabra && V.pieNumero.fam === V.piePalabra.fam,
+  'PDF · el número de página va en la misma fuente que la palabra «Página»',
+  V.pieNumero ? `${V.piePalabra.fam} vs ${V.pieNumero.fam}` : '(sin campo)');
 log(V.pieNumero && V.piePalabra && V.pieNumero.pt === V.piePalabra.pt,
   '⚠️ En el PDF el número de página mide lo mismo que la palabra «Página»',
   V.pieNumero ? `${V.piePalabra.pt}pt vs ${V.pieNumero.pt}pt` : '(sin campo)');
@@ -360,8 +424,9 @@ const F = await page.evaluate(async () => {
 log(F.corto.sizes === F.largo.sizes,
   'Un oficio breve y uno extenso usan exactamente los mismos cuerpos de letra',
   `breve ${F.corto.sizes.split('/').map(s => s / 2).join('/')}pt · extenso ${F.largo.sizes.split('/').map(s => s / 2).join('/')}pt`);
-log(F.corto.fuentes === 'Arial' && F.largo.fuentes === 'Arial',
-  'Y la misma familia, con cualquier volumen de datos');
+log(F.corto.fuentes === F.largo.fuentes && F.largo.fuentes.split('/').sort().join() === famRef.join(),
+  'Y las mismas familias del maestro, con cualquier volumen de datos',
+  `breve ${F.corto.fuentes} · extenso ${F.largo.fuentes}`);
 log(F.corto.sinSz === 0 && F.largo.sinSz === 0,
   'En ningún caso aparece un run sin tamaño declarado',
   `breve ${F.corto.sinSz} · extenso ${F.largo.sinSz}`);

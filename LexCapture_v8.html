@@ -2124,7 +2124,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 62;
+var _BUILD = 63;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -10602,14 +10602,35 @@ function ojSectPr(){
       '" w:left="'+OJX_MAR.left+'" w:header="'+OJX_MAR.header+'" w:footer="'+OJX_MAR.footer+'" w:gutter="0"/>'+
     '<w:cols w:space="720"/><w:titlePg/><w:docGrid w:linePitch="360"/></w:sectPr>';
 }
-var OJX_FUENTE='Arial';
-var OJX_SZ=22;                  // 11 pt — texto corrido del oficio
-var OJX_SZ_TABLA=20;            // 10 pt — celdas de las tablas y bloque de firma
-var OJX_SZ_PIE=18;              // 9 pt  — bloque de contacto al pie
-/* 11 pt — las cuatro líneas del membrete. ⚠️ Constante PROPIA y no OJX_SZ_TABLA
-   (que es con la que se imprimían): el usuario agrandó el encabezado del formato
-   y solo el encabezado. Compartir la constante con las tablas, los anexos y el
-   bloque de firma habría arrastrado a 11 pt medio documento. */
+/* ── Tipografía del formato maestro ──────────────────────────────────────────
+   Los valores salen de MEDIR «Documentos/Otro/Propuesta_Plantilla_OJ.docx» —el
+   documento maestro de este oficio— con Word (Font.Name / Font.Size sobre cada
+   párrafo), no de estimarlos leyendo el XML: en ese archivo casi ningún run
+   declara `w:sz`, así que el tamaño real lo resuelve la cadena de herencia y
+   mirar el atributo habría dado una respuesta equivocada.
+   Lo medido:
+     · cuerpo, destinatario, asunto, títulos de numeral, LAS TRES TABLAS,
+       narración y bloque de firma ....................... Tamayo 11 pt
+     · bloque de anexos ................................... Arial  10 pt
+     · membrete (4 líneas) ................................ Arial  11 pt
+     · bloque institucional del pie de cuerpo ............. Arial   9 pt
+     · «Página N de M» del pie de página .................. Arial   9 pt gris
+   ⚠️ La regla NO es «todo a Tamayo 11 pt»: el maestro deja deliberadamente el
+   membrete, los anexos y el bloque institucional en la fuente por defecto del
+   documento, y a su propio tamaño. Normalizarlos destruiría esas excepciones. */
+var OJX_FUENTE='Tamayo';        // cuerpo del oficio — la fuente del maestro
+/* Fuente por defecto del documento (la de `docDefaults` en styles.xml). El
+   maestro no la sobreescribe en el membrete, los anexos, el bloque
+   institucional ni el pie: esos bloques la heredan. Aquí se declara explícita
+   en el run —mismo resultado impreso— para que se sostenga la garantía
+   estructural de que ningún run con texto se queda sin fuente ni tamaño. */
+var OJX_FUENTE_BASE='Arial';
+var OJX_SZ=22;                  // 11 pt — cuerpo, tablas, títulos y firma
+var OJX_SZ_ANEXOS=20;           // 10 pt — bloque de anexos (excepción del maestro)
+var OJX_SZ_PIE=18;              // 9 pt  — bloque institucional y pie de página
+/* 11 pt — las cuatro líneas del membrete. ⚠️ Constante PROPIA: comparte cifra
+   con OJX_SZ pero no concepto (el membrete va en la fuente base, no en la del
+   cuerpo), y el usuario lo reajusta por separado del resto del documento. */
 var OJX_SZ_MEMBRETE=22;
 /* Escudo del membrete, en EMU (914400 EMU = 1 pulgada), medido sobre el
    header3.xml del formato tras el reajuste del usuario: 2,22 cm de lado, con un
@@ -10622,6 +10643,12 @@ var OJX_SZ_MEMBRETE=22;
 var OJX_LOGO=800100, OJX_LOGO_X=43815, OJX_LOGO_Y=-96520;
 var OJX_ET=OJX_ET_BASE;         // columna de etiquetas de las 3 tablas (según papel)
 function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
+/* Declaración de fuente, con la misma forma que el maestro (las cuatro
+   variantes). Único sitio donde se escribe un `w:rFonts` de este oficio: lo
+   usan tanto el formato de un run como la MARCA DE PÁRRAFO. */
+function ojxFonts(f){
+  return '<w:rFonts w:ascii="'+f+'" w:eastAsia="'+f+'" w:hAnsi="'+f+'" w:cs="'+f+'"/>';
+}
 /* Propiedades de un run. ⚠️ ÚNICO sitio donde se decide la tipografía de este
    oficio: fuente y tamaño se declaran SIEMPRE y de forma explícita, nunca se
    dejan heredar. Un run sin `w:sz` no sale con el tamaño del formato que lo
@@ -10632,9 +10659,14 @@ function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
 function ojxRPr(o){
   o=o||{};
   var sz=o.sz||OJX_SZ;
+  /* o.font = fuente de ESTE run. Sin ella manda la del cuerpo; los bloques que
+     el maestro deja en la fuente base (membrete, anexos, institucional, pie) la
+     piden explícitamente. Se declaran las cuatro variantes —ascii, eastAsia,
+     hAnsi y cs— exactamente como el maestro. */
+  var fu=o.font||OJX_FUENTE;
   // Mismo criterio que en w:pPr: el esquema exige rFonts → b → i → caps →
   // color → sz → u. Un orden distinto abre el documento "dañado" en Word.
-  return '<w:rPr><w:rFonts w:ascii="'+OJX_FUENTE+'" w:hAnsi="'+OJX_FUENTE+'" w:cs="'+OJX_FUENTE+'"/>'+
+  return '<w:rPr>'+ojxFonts(fu)+
     (o.b?'<w:b/><w:bCs/>':'')+(o.i?'<w:i/><w:iCs/>':'')+
     (o.caps?'<w:caps/>':'')+(o.color?'<w:color w:val="'+o.color+'"/>':'')+
     '<w:sz w:val="'+sz+'"/><w:szCs w:val="'+sz+'"/>'+
@@ -10657,6 +10689,12 @@ function ojxP(runs,o){
   // ⚠️ o.markSz = tamaño (en medios puntos) de la MARCA DE PÁRRAFO. Es lo que
   // fija el alto de un párrafo vacío sin recurrir a w:lineRule="exact" — ver la
   // nota de ojxAire(). Nunca se usa en párrafos con texto.
+  /* La marca de párrafo lleva SIEMPRE la fuente del bloque, como en el maestro.
+     No es decoración: es el formato que hereda el funcionario cuando abre el
+     .docx y pulsa Enter al final de un párrafo. Sin ella, el renglón que
+     escriba sale en la fuente por defecto y no en la del documento. */
+  var mark='<w:rPr>'+ojxFonts(o.font||OJX_FUENTE)+(o.markB?'<w:b/><w:bCs/>':'')+
+    (o.markSz?'<w:sz w:val="'+o.markSz+'"/><w:szCs w:val="'+o.markSz+'"/>':'')+'</w:rPr>';
   var ppr='<w:pPr>'+
     (o.pStyle?'<w:pStyle w:val="'+o.pStyle+'"/>':'')+
     (o.keepNext?'<w:keepNext/>':'')+
@@ -10668,7 +10706,7 @@ function ojxP(runs,o){
     ((o.indL||o.indR||o.hang)?'<w:ind w:left="'+(o.indL||0)+'" w:right="'+(o.indR||0)+'"'+
       (o.hang?' w:hanging="'+o.hang+'"':'')+'/>':'')+
     (o.jc?'<w:jc w:val="'+o.jc+'"/>':'')+
-    (o.markSz?'<w:rPr><w:sz w:val="'+o.markSz+'"/><w:szCs w:val="'+o.markSz+'"/></w:rPr>':'')+
+    mark+
     '</w:pPr>';
   return '<w:p>'+ppr+(Array.isArray(runs)?runs.join(''):(runs||''))+'</w:p>';
 }
@@ -10690,12 +10728,18 @@ var OJX_FIRMA_MINW=1700;   // twips (≈3 cm)  — un nombre corto no la deja di
 var _lcMedCtx=null;
 /* Ancho de un texto en twips. Se mide de verdad con canvas (offline, sin
    librerías); el respaldo aproximado solo entra si no hubiera canvas. */
-function lcAnchoTexto(txt,pt,bold){
+/* ⚠️ `fuente` es opcional y por defecto Arial: los llamadores del FPJ-6
+   (`_doc*`) miden sobre las plantillas de la Fiscalía, que son Arial, y no
+   pueden cambiar de referencia. Solo el oficio OJ pasa la suya, que desde la
+   adopción del maestro ya no es Arial. Se declara con respaldo —igual que hace
+   Word cuando la fuente no está instalada— para que la medida siga siendo
+   razonable en un equipo que no la tenga. */
+function lcAnchoTexto(txt,pt,bold,fuente){
   txt=String(txt||''); if(!txt) return 0;
   var px=0;
   try{
     if(!_lcMedCtx) _lcMedCtx=document.createElement('canvas').getContext('2d');
-    _lcMedCtx.font=(bold?'bold ':'')+pt+'pt Arial';
+    _lcMedCtx.font=(bold?'bold ':'')+pt+'pt '+(fuente?'"'+fuente+'", ':'')+'Arial';
     px=_lcMedCtx.measureText(txt).width;
   }catch(_){}
   if(!px) px=txt.length*pt*(96/72)*0.58;
@@ -10706,7 +10750,7 @@ function ojxFirmaImg(f,nombre){
      en blanco para firmar a mano. No es un error ni un hueco a rellenar — es el
      comportamiento de siempre, y el documento no puede fallar por esto. */
   if(!f||!f.b64||!f.w||!f.h) return ojxVacio(3);
-  var caja=Math.max(OJX_FIRMA_MINW,Math.min(lcAnchoTexto(nombre,11,true),OJX_W));
+  var caja=Math.max(OJX_FIRMA_MINW,Math.min(lcAnchoTexto(nombre,11,true,OJX_FUENTE),OJX_W));
   var w=caja, h=Math.round(w*f.h/f.w);
   if(h>OJX_FIRMA_MAXH){ h=OJX_FIRMA_MAXH; w=Math.round(h*f.w/f.h); }
   var ind=Math.max(0,Math.round((caja-w)/2));   // centrado respecto al nombre
@@ -10740,12 +10784,15 @@ function ojxCierre(){
    punto, como el original. keepNext para que no quede huérfano al pie. */
 function ojxSeccion(txt){
   return ojxP(ojxRun(txt,{b:true,sz:OJX_SZ}),
-    {pStyle:'Ttulo1',keepNext:true,before:180,after:100,
+    {pStyle:'Ttulo1',keepNext:true,before:110,after:60,
      bdr:'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="404040"/></w:pBdr>'});
 }
 /* Línea horizontal fina que separa el cuerpo del bloque de contacto final. */
 function ojxFilete(){
+  // Pertenece ya al bloque institucional: su marca de párrafo va en la fuente
+  // base, como en el maestro.
   return ojxP('',{keepLines:false,before:560,after:150,line:120,lineRule:'atLeast',markSz:10,
+    font:OJX_FUENTE_BASE,
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
 }
 /* Espaciador de 6 pt entre la última tabla y la narración (formato original).
@@ -10777,8 +10824,8 @@ function ojxTablaDatos(pares){
       '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'+
       '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'+
     '</w:tblBorders>'+
-    '<w:tblCellMar><w:top w:w="26" w:type="dxa"/><w:left w:w="113" w:type="dxa"/>'+
-    '<w:bottom w:w="26" w:type="dxa"/><w:right w:w="113" w:type="dxa"/></w:tblCellMar>'+
+    '<w:tblCellMar><w:top w:w="12" w:type="dxa"/><w:left w:w="113" w:type="dxa"/>'+
+    '<w:bottom w:w="12" w:type="dxa"/><w:right w:w="113" w:type="dxa"/></w:tblCellMar>'+
     '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
   var grid='<w:tblGrid><w:gridCol w:w="'+OJX_ET+'"/><w:gridCol w:w="'+val+'"/></w:tblGrid>';
   var trs=pares.map(function(p,i){
@@ -10787,11 +10834,14 @@ function ojxTablaDatos(pares){
       return '<w:tc><w:tcPr><w:tcW w:w="'+w+'" w:type="dxa"/>'+
         (shd?'<w:shd w:val="clear" w:color="auto" w:fill="'+shd+'"/>':'')+
         '<w:vAlign w:val="center"/></w:tcPr>'+
-        ojxP(run,{keepNext:!ultima,keepLines:false,after:0})+'</w:tc>';
+        /* keepLines: el maestro lo lleva en los párrafos de celda. Con cantSplit
+           la fila ya viaja entera, pero el valor puede ocupar varias líneas y
+           esto impide que se parta entre dos hojas dentro de la propia celda. */
+        ojxP(run,{keepNext:!ultima,after:0})+'</w:tc>';
     }
     return '<w:tr><w:trPr><w:cantSplit/></w:trPr>'+
-      tc(OJX_ET,'EFEFEF',ojxRun(p[0],{b:true,sz:OJX_SZ_TABLA}))+
-      tc(val,'',ojxRun(p[1]==null?'':String(p[1]),{b:!!p[2],sz:OJX_SZ_TABLA}))+
+      tc(OJX_ET,'EFEFEF',ojxRun(p[0],{b:true}))+
+      tc(val,'',ojxRun(p[1]==null?'':String(p[1]),{b:!!p[2]}))+
       '</w:tr>';
   }).join('');
   return '<w:tbl>'+pr+grid+trs+'</w:tbl>';
@@ -10904,6 +10954,7 @@ function ojPaqueteBase(cfg){
     '<Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
     '<Override PartName="/word/header2.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'+
     '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'+
+    '<Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>'+
     '</Types>');
   f['_rels/.rels']=ojBytes(OJ_XMLDECL+
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
@@ -10919,7 +10970,23 @@ function ojPaqueteBase(cfg){
     /* ⚠️ La firma va en el CUERPO, así que su relación vive en document.xml.rels
        (la del logo vive en header1.xml.rels). rId6 es el primer id libre. */
     (firma?'<Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/firma.png"/>':'')+
+    '<Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>'+
     '</Relationships>');
+  /* Tabla de fuentes, copiada del maestro. No es decorativa: el `w:altName` de
+     Tamayo es la sustitución que el propio Word dejó registrada allí, así que
+     en un equipo que no tenga la fuente instalada el oficio cae en Arial —el
+     aspecto anterior— en vez de en la que el sistema decida por su cuenta.
+     ⚠️ Sin esta parte, el nombre de la fuente igual viaja en el documento; lo
+     que se pierde es el control de qué pasa cuando falta. */
+  f['word/fontTable.xml']=ojBytes(OJ_XMLDECL+
+    '<w:fonts '+OJ_NS_W+'>'+
+    '<w:font w:name="'+OJX_FUENTE_BASE+'"><w:panose1 w:val="020B0604020202020204"/><w:charset w:val="00"/>'+
+    '<w:family w:val="swiss"/><w:pitch w:val="variable"/>'+
+    '<w:sig w:usb0="E0002EFF" w:usb1="C000785B" w:usb2="00000009" w:usb3="00000000" w:csb0="000001FF" w:csb1="00000000"/></w:font>'+
+    (OJX_FUENTE===OJX_FUENTE_BASE?'':
+      '<w:font w:name="'+OJX_FUENTE+'"><w:altName w:val="'+OJX_FUENTE_BASE+'"/><w:charset w:val="00"/>'+
+      '<w:family w:val="swiss"/><w:pitch w:val="variable"/></w:font>')+
+    '</w:fonts>');
   /* docDefaults y estilo Ttulo1 copiados del formato: Arial 11 pt, color negro,
      interlineado 240 «atLeast», spacing after 120. */
   f['word/styles.xml']=ojBytes(OJ_XMLDECL+
@@ -10945,7 +11012,8 @@ function ojPaqueteBase(cfg){
     '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>'+
     '</w:settings>');
   f['word/header1.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+ojEncabezadoXml(cfg)+'</w:hdr>');
-  f['word/header2.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+ojxP('',{after:0,keepLines:false})+'</w:hdr>');
+  f['word/header2.xml']=ojBytes(OJ_XMLDECL+'<w:hdr '+OJ_NS_W+'>'+
+    ojxP('',{after:0,keepLines:false,font:OJX_FUENTE_BASE})+'</w:hdr>');
   f['word/footer1.xml']=ojBytes(OJ_XMLDECL+'<w:ftr '+OJ_NS_W+'>'+ojPieXml(cfg)+'</w:ftr>');
   if(logo){
     f['word/media/logo.'+logo]=ojB64Bytes(cfg.ojLogoB64);
@@ -10979,8 +11047,12 @@ function ojEncabezadoXml(cfg){
      dato que el bloque de contacto del pie y que el encabezado del dossier. */
   var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,
               ojEstacionLabel(cfg.ojDependencia||lcUnidadNombre(cfg),true)];
+  /* ⚠️ El membrete va en la FUENTE BASE (Arial), no en la del cuerpo: así está
+     medido en el maestro, donde estas cuatro líneas son las únicas del
+     encabezado y no llevan sobreescritura de fuente. */
   var txt=lineas.map(function(t,i){
-    return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_MEMBRETE}),{after:0,keepLines:false});
+    return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,font:OJX_FUENTE_BASE,sz:OJX_SZ_MEMBRETE}),
+      {after:0,keepLines:false,font:OJX_FUENTE_BASE});
   }).join('');
   // La celda del logo mantiene su medida absoluta (1560 tw); la del texto absorbe
   // el cambio de ancho, así el membrete se ve igual en cualquier tamaño de hoja.
@@ -11030,6 +11102,7 @@ function ojEncabezadoXml(cfg){
    la unidad los tiene configurados (muchas no los usan). */
 function ojPieXml(cfg){
   var out=ojxP('',{keepLines:false,after:80,line:60,lineRule:'atLeast',markSz:4,jc:'center',
+    font:OJX_FUENTE_BASE,
     bdr:'<w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="BFBFBF"/></w:pBdr>'});
   /* ⚠️ El pie del formato lleva EXCLUSIVAMENTE «Página N de M» centrado, en 9 pt
      gris, bajo un filete fino. Nada más. Antes se imprimía además una línea con
@@ -11038,10 +11111,10 @@ function ojPieXml(cfg){
      anterior. No volver a agregar nada aquí. */
   /* Un solo juego de propiedades para TODO el renglón —palabras y números—:
      el pie es un elemento único y no puede salir a dos tamaños. */
-  var pie={sz:OJX_SZ_PIE,color:'404040'};
+  var pie={font:OJX_FUENTE_BASE,sz:OJX_SZ_PIE,color:'404040'};
   out+=ojxP(ojxRun('Página ',pie)+ojxCampoNum(pie)+
             ojxRun(' de ',pie)+ojxCampoTot(pie),
-            {keepLines:false,after:30,line:220,jc:'center'});
+            {keepLines:false,after:30,line:220,jc:'center',font:OJX_FUENTE_BASE});
   return out;
 }
 // Un solo paquete posible: el del formato. Sin ramas de plantilla externa.
@@ -11394,7 +11467,7 @@ function ojDocCuerpo(c,cfg){
      que tenía esta sección) se sigue leyendo primero para no cambiarle el
      documento a quien ya lo tenía configurado. */
   var ciudad=cfg.ojCiudad||lcUnidadCiudad(cfg)||g.lugarMunicipio||d.municipio||'';
-  out+=ojxP(ojxRun([ciudad,ojFechaLarga(g.fecha||c.fechaProc)].filter(Boolean).join(', ')),{after:240});
+  out+=ojxP(ojxRun([ciudad,ojFechaLarga(g.fecha||c.fechaProc)].filter(Boolean).join(', ')),{after:140});
 
   // ── Destinatario: juzgado o fiscalía, con su dirección (selección 4) ──
   // El nombre de un juzgado puede ser larguísimo; va en su propio párrafo, así
@@ -11402,12 +11475,12 @@ function ojDocCuerpo(c,cfg){
   out+=ojxP(ojxRun('Señor(a)'),{after:0});
   out+=ojxP(ojxRun((x.nombre||'').toUpperCase(),{b:true}),{after:0});
   out+=ojxP(ojxRun(x.direccion||''),{after:0});
-  out+=ojxP(ojxRun([x.municipio,x.departamento].filter(Boolean).join(', ')),{after:300});
+  out+=ojxP(ojxRun([x.municipio,x.departamento].filter(Boolean).join(', ')),{after:190});
 
   // ── Asunto y presentación (selección 5: texto fijo del formato) ──
-  out+=ojxP(ojxRun('Asunto: '+ojAsuntoTexto(c,cfg),{b:true}),{after:220});
+  out+=ojxP(ojxRun('Asunto: '+ojAsuntoTexto(c,cfg),{b:true}),{after:150});
   out+=ojxP(ojxRun('De manera atenta y respetuosa me permito dejar a disposición de ese despacho a la persona '+
-    (t.sust==='aprehendido'?'aprehendida':'capturada')+' que se identifica a continuación:'),{after:100,jc:'both'});
+    (t.sust==='aprehendido'?'aprehendida':'capturada')+' que se identifica a continuación:'),{after:70,jc:'both'});
 
   // ── 1. Identificación (selección 6) ──
   var nacimiento=[ojFechaCorta(r.fechaNac),[r.nacMunicipio,r.nacDepartamento,r.nacPais].filter(Boolean).join(', ')].filter(Boolean).join(' — ');
@@ -11491,23 +11564,34 @@ function ojDocCuerpo(c,cfg){
   // ── Firma (selección 8) ──
   var fi=c.oj.firma||{};
   var nombreFirma=[fi.grado,(fi.nombre||'').toUpperCase()].filter(Boolean).join(' ');
-  out+=ojxP(ojxRun('Atentamente,'),{after:0});
+  // keepNext, como en el maestro: «Atentamente,» no puede quedarse solo al pie
+  // de una hoja con la firma y el nombre en la siguiente.
+  out+=ojxP(ojxRun('Atentamente,'),{after:0,keepNext:true});
   // La firma manuscrita ocupa el espacio que antes quedaba en blanco. Sin firma
   // guardada devuelve esos mismos tres renglones vacíos: el bloque no cambia.
   out+=ojxFirmaImg(cfg._firma,nombreFirma);
   out+=ojxP(ojxRun(nombreFirma,{b:true}),{after:0});
-  out+=ojxP(ojxRun(fi.cargo||'',{sz:OJX_SZ_TABLA}),{after:0});
-  out+=ojxP(ojxRun([fi.telefono?'Celular: '+fi.telefono:'',fi.correo||''].filter(Boolean).join(' · '),{sz:OJX_SZ_TABLA}),{after:320});
+  /* ⚠️ El cargo y el contacto de quien suscribe van en el cuerpo de letra del
+     documento, no reducidos: medido sobre el maestro, los tres renglones del
+     bloque de firma son Tamayo 11 pt. La reducción a 10 pt era una decisión
+     propia de la app que el formato no respalda. */
+  out+=ojxP(ojxRun(fi.cargo||''),{after:0});
+  out+=ojxP(ojxRun([fi.telefono?'Celular: '+fi.telefono:'',fi.correo||''].filter(Boolean).join(' · ')),{after:320});
 
   /* ── Anexos: la app cuenta, el usuario solo marca o escribe (selección 9) ──
      ⚠️ El bloque SIEMPRE se imprime, aunque no se haya marcado ninguno: es parte
      de la estructura del formato, no un extra. Antes desaparecía entero cuando
      la lista venía vacía, que es excluir información del documento. */
+  /* ⚠️ EXCEPCIÓN TIPOGRÁFICA DEL MAESTRO, medida en Word: este bloque NO va en
+     la fuente ni en el tamaño del cuerpo — es Arial 10 pt, la «línea especial»
+     de la GTC 185 («misma fuente, tamaño menor»). Normalizarlo con el resto del
+     documento sería exactamente lo que el formato evita. */
+  var ANEX={font:OJX_FUENTE_BASE,sz:OJX_SZ_ANEXOS};
   var anexos=(a.anexos||[]).map(function(s){ return ojAnexoTexto(s,c); }).filter(Boolean);
   out+=ojxP(ojxRun('Anexos:'+(anexos.length?' '+ojNumPalabra(anexos.length)+' ('+anexos.length+')':''),
-    {b:true,sz:OJX_SZ_TABLA}),{keepNext:true,after:60});
+    {b:true,font:ANEX.font,sz:ANEX.sz}),{keepNext:true,after:60,font:ANEX.font});
   anexos.forEach(function(an,i){
-    out+=ojxP(ojxRun('– '+an,{sz:OJX_SZ_TABLA}),{after:(i===anexos.length-1)?0:40,indL:284,hang:284});
+    out+=ojxP(ojxRun('– '+an,ANEX),{after:(i===anexos.length-1)?0:40,indL:284,hang:284,font:ANEX.font});
   });
 
   /* ── Bloque de contacto al pie del cuerpo (selección 10) ──
@@ -11523,7 +11607,10 @@ function ojDocCuerpo(c,cfg){
    [[cu.telefono?'Teléfono: '+cu.telefono:'',cu.correo||''].filter(Boolean).join(' · '),false],
    [cu.web||'',false]
   ].forEach(function(l){
-    out+=ojxP(ojxRun(l[0],{b:l[1],sz:OJX_SZ_PIE}),{after:0,jc:'center'});
+    /* ⚠️ Segunda excepción tipográfica del maestro: Arial 9 pt, no la fuente ni
+       el tamaño del cuerpo. Es el bloque institucional del formato. */
+    out+=ojxP(ojxRun(l[0],{b:l[1],font:OJX_FUENTE_BASE,sz:OJX_SZ_PIE}),
+      {after:0,jc:'center',font:OJX_FUENTE_BASE});
   });
   return out+ojxCierre();
 }
@@ -12039,6 +12126,11 @@ function lcParHtml(p,files,rels,opts){
        la de Word. */
     var mrPr=lcHijo(pPr,'rPr'), msz=mrPr?lcHijo(mrPr,'sz'):null, mv=msz?lcAttr(msz,'val'):'';
     if(mv) css.push('font-size:'+lcPt(mv)+'pt');
+    /* Fuente de la marca de párrafo. Los runs declaran la suya y la pisan; esto
+       solo manda en un párrafo VACÍO, donde la marca es lo único que hay — así
+       su alto en la vista se mide con la misma fuente que en Word. */
+    var mf=mrPr?lcHijo(mrPr,'rFonts'):null, mfv=mf?(lcAttr(mf,'ascii')||''):'';
+    if(mfv) css.push('font-family:'+mfv+',Arial,sans-serif');
   }
   if(esVacio&&!runs) runs='&#8203;';                 // párrafo vacío conserva su alto
   return '<p class="'+cls.join(' ')+'" style="'+css.join(';')+'">'+runs+'</p>';

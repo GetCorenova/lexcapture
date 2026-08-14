@@ -95,16 +95,20 @@ log(exactPorParte.every(([, c]) => c === 0),
 
 const docXml = docx['word/document.xml'].toString('utf8');
 
-/* Los espaciadores conservan su alto declarado — el formato no se movió. */
+/* Los espaciadores conservan su alto declarado — el formato no se movió.
+   ⚠️ La marca de párrafo declara además la FUENTE desde que el oficio adopta la
+   del documento maestro (es el formato que hereda quien pulsa Enter en el
+   .docx), así que el `w:rFonts` puede ir delante del `w:sz`. */
+const MARCA_SZ = /<w:rPr>(?:<w:rFonts[^>]*\/>)?<w:sz w:val="(\d+)"\//;
 function espaciadores(xml) {
   return (xml.match(/<w:p>(?:(?!<\/w:p>)[\s\S])*?<\/w:p>/g) || [])
-    .filter(p => /<w:rPr><w:sz w:val="\d+"\/>/.test(p.split('</w:pPr>')[0] || ''))
+    .filter(p => MARCA_SZ.test(p.split('</w:pPr>')[0] || ''))
     .map(p => {
       const sp = p.match(/<w:spacing[^>]*>/)[0];
       return {
         line: Number((sp.match(/w:line="(\d+)"/) || [])[1] || 0),
         rule: (sp.match(/w:lineRule="(\w+)"/) || [])[1] || '',
-        marca: Number((p.match(/<w:rPr><w:sz w:val="(\d+)"\//) || [])[1] || 0),
+        marca: Number((p.match(MARCA_SZ) || [])[1] || 0),
         texto: /<w:t[ >]/.test(p)
       };
     });
@@ -186,7 +190,7 @@ const edicion = await page.evaluate(async () => {
   const out = await buildOficioOJBlob(c, 'CARTA');
   let xml = new TextDecoder().decode(out.files['word/document.xml']);
   const marcados = [];
-  xml = xml.replace(/<w:rPr><w:sz w:val="(\d+)"\/><w:szCs w:val="\d+"\/><\/w:rPr><\/w:pPr>/g, (m) => {
+  xml = xml.replace(/<w:rPr>(?:<w:rFonts[^>]*\/>)?<w:sz w:val="(\d+)"\/><w:szCs w:val="\d+"\/><\/w:rPr><\/w:pPr>/g, (m) => {
     marcados.push(1);
     return m + '<w:r><w:rPr><w:sz w:val="22"/></w:rPr><w:t>TEXTO ESCRITO POR EL FUNCIONARIO</w:t></w:r>';
   });
@@ -264,7 +268,7 @@ log(normal.vacios.length > 0 && normal.vacios.every(h => h <= 14),
   normal.vacios.map(h => h + 'px').join(' · '));
 
 /* ═══════════ 4 · El documento de referencia que reportó el usuario ═══════════ */
-const ref = unzip(await readFile(join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ.docx')));
+const ref = unzip(await readFile(join(ROOT, 'Documentos/Otro/Propuesta_Plantilla_OJ.docx')));
 const refPartes = Object.keys(ref).filter(k => /^word\/(document|header\d*|footer\d*)\.xml$/.test(k));
 const refExact = refPartes.reduce((a, k) => a + (ref[k].toString('utf8').match(/w:lineRule="exact"/g) || []).length, 0);
 log(refExact === 0, '«Propuesta Plantilla OJ.docx» tampoco conserva ningún alto de línea fijo', refExact);

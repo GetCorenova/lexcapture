@@ -1966,6 +1966,91 @@ seguía diciendo «capturado» para un menor**. Verificado con `verify_fpj6.mjs`
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=62` / `cache-v62`, `_BUILD=62`.
 
+## El oficio OJ adopta «Propuesta Plantilla OJ» como patrón maestro (2026-08-14)
+El usuario reajustó a mano el documento de referencia —ahora
+`Documentos/Otro/Propuesta_Plantilla_OJ.docx`, renombrado por él— y pidió que el generador ya
+existente **adopte su formato íntegro**, sin crear módulos, sin tocar la lógica de captura y
+sustituyendo solo los datos estáticos por los dinámicos. Verificado con `verify_tipografia_oj.mjs`
+(**42 checks**, antes 36), `verify_oj.mjs` (**187**, antes 186) y abriendo los `.docx` en **Word real**
+(COM → PDF → render con Edge).
+
+- ⚠️ **El maestro se MIDIÓ con Word, no se leyó del XML — y ahí estaba todo el hallazgo.** En ese
+  archivo casi ningún run declara `w:sz`: el usuario cambió la fuente y los tamaños quedaron
+  resolviéndose por herencia. Mirar el atributo habría dicho «no hay tamaño»; `Font.Name`/`Font.Size`
+  párrafo por párrafo dice lo que de verdad se imprime. Es la misma trampa de «El acta, en un solo
+  cuerpo de letra»: **el defecto —y aquí el dato— era la AUSENCIA de la declaración.**
+- **Lo medido, que es ahora el estándar de este oficio:**
+
+| Bloque | Maestro | Antes emitía la app |
+|---|---|---|
+| Cuerpo, destinatario, asunto, títulos de numeral, **las 3 tablas**, narración y **bloque de firma** | **Tamayo 11 pt** | Arial 11 pt / tablas y firma **10 pt** |
+| Membrete (4 líneas) | Arial 11 pt | igual ✓ |
+| **Anexos** | **Arial 10 pt** | igual ✓ |
+| **Bloque institucional** | **Arial 9 pt** | igual ✓ |
+| «Página N de M» | Arial 9 pt gris | igual ✓ |
+
+- ⚠️ **La regla NO es «todo a Tamayo 11 pt».** El maestro deja deliberadamente el membrete, los
+  anexos y el bloque institucional en la **fuente por defecto del documento**, y a su propio cuerpo.
+  Normalizar habría destruido esas excepciones —que son justamente las «líneas especiales» de la
+  GTC 185—. `OJX_FUENTE` (cuerpo) y `OJX_FUENTE_BASE` (excepciones) son constantes distintas por eso.
+- ⚠️ **Los bloques de excepción declaran `Arial` EXPLÍCITO aunque el maestro lo herede.** El
+  resultado impreso es el mismo y así se sostiene la garantía estructural de
+  `verify_tipografia_oj` [B]: ni un run con texto sin fuente ni tamaño propios.
+- **`w:sz` = 20 dejó de significar «tabla».** `OJX_SZ_TABLA` desapareció: era una constante que
+  compartían las tablas, la firma y los anexos, y el maestro les da cuerpos distintos. Ahora hay
+  `OJX_SZ` (11 pt), `OJX_SZ_ANEXOS` (10 pt) y `OJX_SZ_PIE` (9 pt).
+- **Espaciados del maestro, al twip**: fecha `after 140` (era 240) · última línea del destinatario
+  `190` (300) · asunto `150` (220) · presentación `70` (100) · títulos de numeral `before 110 /
+  after 60` (180/100). Y `tblCellMar` superior e inferior **12** (era 26).
+- **`keepLines` en los párrafos de celda** y **`keepNext` en «Atentamente,»**, como el maestro: ese
+  renglón no puede quedarse solo al pie con la firma en la hoja siguiente.
+- ⚠️ **La MARCA DE PÁRRAFO lleva ahora la fuente del bloque.** No es decoración: es el formato que
+  hereda el funcionario cuando abre el `.docx` y pulsa Enter al final de un párrafo. Sin ella el
+  renglón que escriba sale en la fuente por defecto y no en la del documento — misma familia de
+  problema que «El documento tiene que poder editarse». ⚠️ Esto rompió los `regex` de
+  `verify_editable.mjs`, que buscaban espaciadores por `<w:rPr><w:sz…`: ahora toleran el `rFonts`
+  delante (`MARCA_SZ`).
+- ⚠️ **La fuente del maestro NO está instalada en esta máquina, y eso importa.** El paquete emite
+  ahora `word/fontTable.xml` con el **`w:altName`** que el propio maestro registra: en un equipo sin
+  la fuente, el oficio cae en **Arial** —el aspecto anterior— y no en la que decida el sistema. Sin
+  esa parte el nombre viaja igual, pero se pierde el control de qué pasa cuando falta. La vista de
+  impresión hace lo mismo por su cuenta (`lcRunHtml` ya emitía `font-family:<fuente>,Arial,sans-serif`).
+- **Lo que NO se tocó**, por instrucción explícita: la lógica de captura (ni un campo, ni un paso, ni
+  una validación), los textos que compone la app (relato, catálogos, anexos), la estructura del
+  oficio (3 tablas, 22 filas fijas, regla «condicional = excluido») y la geometría de página.
+
+### Verificación
+- **PRUEBA 1 — mismo caso del maestro**: 2 páginas y 3 tablas, igual que él. Medido sobre el render
+  píxel a píxel (mismo método de «zanjar un esta línea se ve más gruesa»): **las 11 líneas
+  horizontales de la página 1 y las 5 de la página 2 caen en el MISMO `y`, con el mismo grosor y los
+  mismos `x` de inicio y fin. Desfase vertical máximo: 0 px.** Lo único que difiere es el texto que
+  produce la lógica de la app, que es lo que debía seguir mandando.
+- Comparación estructural XML→XML contra el maestro, normalizando a valor resuelto: **343 → 103
+  líneas de diferencia**, y lo que queda es contenido distinto (otro número de párrafos de narración
+  y de anexos) más declaraciones explícitas de lo que el maestro hereda.
+- **PRUEBA 2 — datos largos** (nombre, dirección, tres delitos extensos, observaciones de 6
+  párrafos): 4 páginas, 3 tablas, **sin recortes, sin reducción de fuente y sin pérdida de una sola
+  palabra**; las filas crecen y no se parten (`cantSplit`).
+- **PRUEBA 3 — PDF**: la vista pagina **igual que Word (2 páginas)**, **0 desbordes** y **0 de 532
+  palabras perdidas**; cada clase resuelve a la misma fuente y cuerpo que el `.docx` y que el maestro.
+- ⚠️ **Las suites ahora DERIVAN la expectativa del maestro en vez de escribirla a mano** (requisito
+  del encargo: que un ajuste posterior de la plantilla se incorpore sin reconstruir el módulo). Si el
+  maestro cambia de fuente, de cuerpo o de jerarquía, `verify_tipografia_oj` lo dice sola.
+- ⚠️ **Fallos PREEXISTENTES corregidos de paso** (estaban en rojo antes de tocar nada): las tres
+  suites que leían los `.docx` de referencia morían con `ENOENT` desde que el usuario los renombró
+  (`verify_tipografia_oj`, `verify_editable`, `verify_mejora2`) — ahora apuntan al maestro, que es
+  además **una sola referencia** donde antes había dos. Y en `verify_tipografia_oj` la clase «Valor
+  de tabla» buscaba en realidad una **etiqueta** (la columna de valores no se comprobaba nunca) y su
+  regex fallaba una corrida de cada siete, cuando el simulador saca `PPT`/`PA`.
+- ⚠️ **Revisado y descartado**: el escudo del membrete se dibuja en la vista de impresión rozando el
+  filete, algo distinto de como lo pone Word. **No es de este trabajo** — medido en el build
+  anterior y en este da idéntico (escudo `top` 47,1 pt, alto 63 pt; cuerpo a 99,9 pt frente a los
+  99,0 de Word), y viene del anclaje flotante que se adoptó en el build 61.
+- Regresiones en verde: **OJ 187** · **tipografía OJ 42** · fpj6 140 · mejora1 129 · mejora2 38 ·
+  mejora3 51 · firma 53 · editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 ·
+  personas 24 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=63` / `cache-v63`, `_BUILD=63`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

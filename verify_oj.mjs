@@ -413,7 +413,12 @@ const doc = await page.evaluate(async () => {
     tramaEtiqueta: (xml.match(/EFEFEF/g) || []).length,
     fileteSeccion: (xml.match(/<w:bottom w:val="single" w:sz="8" w:space="4" w:color="404040"\/>/g) || []).length,
     sectPr: (xml.match(/<w:sectPr>[\s\S]*?<\/w:sectPr>/) || [''])[0],
-    fuenteNoArial: /w:ascii="(?!Arial)/.test(xml)
+    /* Familias declaradas en el cuerpo, el membrete y el pie, y la tabla de
+       fuentes del paquete: desde que el oficio adopta el documento maestro son
+       DOS (la del cuerpo y la base), no una. */
+    fuentes: [...new Set([xml, dec('word/header1.xml'), dec('word/footer1.xml')]
+      .flatMap(t => [...t.matchAll(/w:ascii="([^"]+)"/g)].map(m => m[1])))].sort(),
+    fontTable: files['word/fontTable.xml'] ? dec('word/fontTable.xml') : ''
   };
 });
 log(!doc.error, 'El oficio se genera', doc.error || doc.fname);
@@ -422,7 +427,19 @@ log(doc.origen === 'formato oficial del módulo', 'El oficio sale siempre del fo
 log(['[Content_Types].xml', '_rels/.rels', 'word/_rels/document.xml.rels', 'word/document.xml',
   'word/footer1.xml', 'word/header1.xml', 'word/header2.xml', 'word/settings.xml', 'word/styles.xml'].every(p => doc.partes.includes(p)),
   'El paquete .docx trae todas las partes obligatorias', doc.partes.length + ' partes');
-log(doc.fuenteNoArial === false, 'Tipografía única de amplia compatibilidad (Arial) en todo el documento');
+/* ⚠️ Antes esta comprobación exigía UNA sola familia (Arial). El documento
+   maestro no es así: el cuerpo va en su fuente y el membrete, los anexos y el
+   bloque institucional se quedan en la base. Lo que sigue siendo obligatorio es
+   la COMPATIBILIDAD: toda familia que no sea la base tiene que traer su
+   respaldo declarado en la tabla de fuentes, para que un equipo donde no esté
+   instalada caiga en la base y no en la que decida el sistema. */
+const fuenteBase = 'Arial';
+const noBase = doc.fuentes.filter(f => f !== fuenteBase);
+log(doc.fuentes.length === 2 && doc.fuentes.includes(fuenteBase),
+  'Dos familias tipográficas, las del documento maestro', doc.fuentes.join(' + '));
+log(noBase.every(f => new RegExp('<w:font w:name="' + f + '">\\s*<w:altName w:val="' + fuenteBase + '"').test(doc.fontTable)),
+  '⚠️ La fuente del cuerpo trae respaldo declarado: sin ella instalada, el oficio cae en ' + fuenteBase,
+  noBase.join(', ') + (doc.fontTable ? ' · fontTable presente' : ' · SIN fontTable'));
 
 /* ── Geometría del formato «Propuesta Plantilla OJ»: si uno de estos valores
       cambia, el documento dejó de ser el formato oficial. ── */
