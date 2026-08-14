@@ -2124,7 +2124,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 60;
+var _BUILD = 61;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -10525,6 +10525,20 @@ var OJX_FUENTE='Arial';
 var OJX_SZ=22;                  // 11 pt — texto corrido del oficio
 var OJX_SZ_TABLA=20;            // 10 pt — celdas de las tablas y bloque de firma
 var OJX_SZ_PIE=18;              // 9 pt  — bloque de contacto al pie
+/* 11 pt — las cuatro líneas del membrete. ⚠️ Constante PROPIA y no OJX_SZ_TABLA
+   (que es con la que se imprimían): el usuario agrandó el encabezado del formato
+   y solo el encabezado. Compartir la constante con las tablas, los anexos y el
+   bloque de firma habría arrastrado a 11 pt medio documento. */
+var OJX_SZ_MEMBRETE=22;
+/* Escudo del membrete, en EMU (914400 EMU = 1 pulgada), medido sobre el
+   header3.xml del formato tras el reajuste del usuario: 2,22 cm de lado, con un
+   desplazamiento de 0,12 cm a la derecha y 0,27 cm hacia arriba respecto al
+   párrafo que lo contiene.
+   ⚠️ NO se copian del formato los adornos de ida y vuelta de Word que trae ese
+   mismo dibujo (wp14:anchorId/editId, wp14:sizeRelH/V al 0 % y a14:useLocalDpi):
+   no afectan al render y exigirían declarar los prefijos wp14/a14 en OJ_NS_W y
+   en su mc:Ignorable — que solo puede nombrar prefijos declarados. */
+var OJX_LOGO=800100, OJX_LOGO_X=43815, OJX_LOGO_Y=-96520;
 var OJX_ET=OJX_ET_BASE;         // columna de etiquetas de las 3 tablas (según papel)
 function ojxTxt(s){ return escapeXml(s==null?'':String(s)); }
 /* Propiedades de un run. ⚠️ ÚNICO sitio donde se decide la tipografía de este
@@ -10779,8 +10793,8 @@ function ojLogoExt(cfg){
 }
 /* Logo del membrete — VIENE EMBEBIDO: la app no le pide el escudo a nadie.
    Es el mismo de «Propuesta Plantilla OJ», resampleado a 400 px: el membrete lo
-   imprime a 723900 EMU (≈2 cm), o sea ~500 dpi, así que se ve idéntico al del
-   formato sin cargar 1,8 MB de base64 en cada arranque de la app.
+   imprime a OJX_LOGO EMU (2,22 cm), o sea ~460 dpi, así que se ve idéntico al
+   del formato sin cargar 1,8 MB de base64 en cada arranque de la app.
    ⚠️ cfg.ojLogoB64 lo sustituye si la unidad usa otro — se cambia en Ajustes,
    pero nunca se pregunta: sin tocar nada, el oficio ya sale con su escudo. */
 var OJ_LOGO_MIME='image/jpeg';
@@ -10862,10 +10876,18 @@ function ojPaqueteBase(cfg){
   if(firma) f['word/media/firma.png']=ojB64Bytes(cfg._firma.b64);
   return f;
 }
-/* Membrete: tabla sin bordes de 1560 + 7845 twips — logo cuadrado de 1,91 cm
-   (723900 EMU) a la izquierda y las cuatro líneas jerárquicas a la derecha,
-   alineadas a la izquierda y en 10 pt, con la primera en negrita. Debajo, el
+/* Membrete: tabla sin bordes de 1560 + 7845 twips — escudo cuadrado de 2,22 cm
+   (800100 EMU) a la izquierda y las cuatro líneas jerárquicas a la derecha,
+   alineadas a la izquierda y en 11 pt, con la primera en negrita. Debajo, el
    filete gris que separa del cuerpo.
+   ⚠️ Las medidas salen de MEDIR el formato, no de estimarlas: el usuario
+   reajustó a mano el encabezado de «Propuesta Plantilla OJ.docx» (2026-08-13) y
+   el oficio replica lo que quedó en su header3.xml — escudo 723900 → 800100 EMU
+   y flotante, y las cuatro líneas de 10 → 11 pt. Nada más de ese archivo cambió.
+   ⚠️ El escudo va ANCLADO (wp:anchor + wrapNone), no en línea: así su alto NO
+   arrastra el de la fila. En línea, 800100 EMU (63 pt) es más alto que las
+   cuatro líneas de texto (≈51 pt) y el membrete entero crecería — que es
+   justamente lo que el ajuste del usuario evita.
    ⚠️ La celda del logo se mantiene aunque no haya logo cargado: así el texto
    ocupa exactamente la misma posición con logo y sin él, y cargarlo después no
    mueve nada. Ningún nombre de institución vive en el código: las 4 líneas y el
@@ -10877,14 +10899,20 @@ function ojEncabezadoXml(cfg){
   var lineas=[cfg.ojMinisterio,cfg.ojInstitucion,cfg.ojUnidad,
               ojEstacionLabel(cfg.ojDependencia||lcUnidadNombre(cfg),true)];
   var txt=lineas.map(function(t,i){
-    return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_TABLA}),{after:0,keepLines:false});
+    return ojxP(ojxRun(String(t||'').toUpperCase(),{b:i===0,sz:OJX_SZ_MEMBRETE}),{after:0,keepLines:false});
   }).join('');
-  // La celda del logo mantiene su medida absoluta (1,91 cm); la del texto absorbe
+  // La celda del logo mantiene su medida absoluta (1560 tw); la del texto absorbe
   // el cambio de ancho, así el membrete se ve igual en cualquier tamaño de hoja.
   var wLogo=1560, wTxt=OJX_W-wLogo;
   var img=cfg.ojLogoB64
-    ? '<w:r><w:rPr><w:noProof/></w:rPr><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'+
-      '<wp:extent cx="723900" cy="723900"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'+
+    ? '<w:r><w:rPr><w:noProof/></w:rPr><w:drawing>'+
+      '<wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0" '+
+        'relativeHeight="251658240" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">'+
+      '<wp:simplePos x="0" y="0"/>'+
+      '<wp:positionH relativeFrom="column"><wp:posOffset>'+OJX_LOGO_X+'</wp:posOffset></wp:positionH>'+
+      '<wp:positionV relativeFrom="paragraph"><wp:posOffset>'+OJX_LOGO_Y+'</wp:posOffset></wp:positionV>'+
+      '<wp:extent cx="'+OJX_LOGO+'" cy="'+OJX_LOGO+'"/><wp:effectExtent l="0" t="0" r="0" b="0"/>'+
+      '<wp:wrapNone/>'+
       '<wp:docPr id="1" name="Escudo"/><wp:cNvGraphicFramePr>'+
       '<a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>'+
       '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'+
@@ -10893,9 +10921,9 @@ function ojEncabezadoXml(cfg){
       '<pic:nvPicPr><pic:cNvPr id="0" name=""/><pic:cNvPicPr>'+
       '<a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr></pic:nvPicPr>'+
       '<pic:blipFill><a:blip r:embed="rId1"/><a:srcRect/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'+
-      '<pic:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="723900" cy="723900"/></a:xfrm>'+
+      '<pic:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/><a:ext cx="'+OJX_LOGO+'" cy="'+OJX_LOGO+'"/></a:xfrm>'+
       '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>'+
-      '</wp:inline></w:drawing></w:r>'
+      '</wp:anchor></w:drawing></w:r>'
     : '';
   var sinBordes='<w:tcBorders>'+['top','left','bottom','right'].map(function(x){
     return '<w:'+x+' w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/>';
@@ -11817,7 +11845,27 @@ function lcRunHtml(r,files,rels){
         // EMU → px: 914400 EMU = 1 pulgada = 96 px
         var cx=ext?Number(ext.getAttribute('cx')||0)/9525:0;
         var cy=ext?Number(ext.getAttribute('cy')||0)/9525:0;
-        txt+='<img src="'+uri+'"'+(cx?' style="width:'+cx+'px;height:'+cy+'px"':'')+' alt="">';
+        var med=cx?' style="width:'+cx+'px;height:'+cy+'px"':'';
+        /* ⚠️ Imagen ANCLADA con wrapNone (el escudo del membrete): en Word flota
+           y NO aporta alto a la línea. Puesta en línea, empujaba el cuerpo de la
+           primera hoja hacia abajo y la vista dejaba de coincidir con Word. Se
+           saca del flujo con un contenedor de alto cero, en la misma posición
+           relativa que declara el anclaje (posOffset, en EMU). */
+        var anc=lcHijo(k,'anchor'), wrapN=anc?lcHijo(anc,'wrapNone'):null;
+        if(anc&&wrapN){
+          var pos=function(eje){
+            var n=lcHijo(anc,'position'+eje); n=n?lcHijo(n,'posOffset'):null;
+            return n?Number(n.textContent||0)/9525:0;
+          };
+          /* ⚠️ El contenedor lleva alto cero pero NO ancho cero: el CSS de
+             impresión trae `img{max-width:100%}`, y con ancho cero el escudo
+             se quedaba en 0 px de ancho (con su alto intacto, así que en el
+             XML no se notaba: hay que medir el render). */
+          txt+='<span style="position:relative;display:block;height:0">'+
+               '<img src="'+uri+'" style="position:absolute;left:'+pos('H')+'px;top:'+pos('V')+'px'+
+               (cx?';width:'+cx+'px;height:'+cy+'px':'')+'" alt=""></span>';
+        }
+        else txt+='<img src="'+uri+'"'+med+' alt="">';
       }
     }
   }

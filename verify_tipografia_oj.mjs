@@ -27,6 +27,8 @@ import { inflateRawSync } from 'zlib';
 
 const ROOT = 'd:/UsurarioDocumentos/Escritorio/Proyectos 2026/APP Capturas/Crear App';
 const REF = join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ - copia.docx');
+// Estándar del MEMBRETE: el formato con el encabezado reajustado por el usuario.
+const REF_HDR = join(ROOT, 'Documentos/Otro/Propuesta Plantilla OJ.docx');
 const PORT = 8190;
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.json':'application/json', '.png':'image/png', '.svg':'image/svg+xml' };
 const server = http.createServer(async (req, res) => {
@@ -142,8 +144,15 @@ const refStyles = refPkg['word/styles.xml'].toString('utf8');
 const perfilar = (xml, styles) => page.evaluate(([a, b]) => window.__perf(a, b), [xml, styles]);
 
 const ref = await perfilar(refPkg['word/document.xml'].toString('utf8'), refStyles);
-const refHdr = await perfilar(refPkg['word/header3.xml'].toString('utf8'), refStyles);
 const refFtr = await perfilar(refPkg['word/footer3.xml'].toString('utf8'), refStyles);
+/* ⚠️ El MEMBRETE tiene una referencia propia: el 2026-08-13 el usuario reajustó
+   a mano el encabezado de «Propuesta Plantilla OJ.docx» (escudo 723900 → 800100
+   EMU y flotante, las cuatro líneas de 10 → 11 pt) y ese archivo pasó a ser el
+   estándar de esta parte. El resto del oficio se sigue midiendo contra la copia
+   pristina, que no cambió. */
+const refHdrPkg = leerDocx(await readFile(REF_HDR));
+const refHdr = await perfilar(refHdrPkg['word/header3.xml'].toString('utf8'),
+                              refHdrPkg['word/styles.xml'].toString('utf8'));
 
 // ── El documento generado ──
 const G = await page.evaluate(async () => {
@@ -205,7 +214,7 @@ const negDe = p => p ? p.runs.filter(r => r.txt).some(r => r.b) : null;
 
 const clases = [
   ['Párrafo de presentación', /^De manera atenta/, false],
-  ['Título de numeral',       /IDENTIFICACIÓN DEL CAPTURADO/, false],
+  ['Título de numeral',       /IDENTIFICACIÓN DEL (CAPTURADO|APREHENDIDO)/, false],
   ['Etiqueta de tabla',       /^Nombres y apellidos$/, true],
   ['Valor de tabla',          /^Documento de identidad$/, true],
   ['Bloque de contacto',      /^www\./, false],
@@ -223,14 +232,41 @@ clases.forEach(([nombre, re, tabla]) => {
 const cuerpoRef = buscar(ref, /^De manera atenta/, false), cuerpoGen = buscar(gen, /^De manera atenta/, false);
 log(cuerpoRef.jc === cuerpoGen.jc && cuerpoGen.jc === 'both',
   'El cuerpo va justificado, igual que en el formato', 'jc=' + cuerpoGen.jc);
-log(buscar(gen, /IDENTIFICACIÓN DEL CAPTURADO/, false).estilo === buscar(ref, /IDENTIFICACIÓN DEL CAPTURADO/, false).estilo,
+/* ⚠️ El título del numeral 1 NO siempre dice «CAPTURADO»: si el simulador saca
+   el escenario SRPA, el oficio dice «APREHENDIDO» (terminología de menores,
+   Ley 1098). Buscar solo «CAPTURADO» dejaba la comparación en `undefined` y la
+   suite reventaba en ~1 de cada 5 corridas — fallo preexistente, ajeno a la
+   tipografía. Se busca el numeral por su número, que no cambia. */
+const tRe = /^1\.\s+IDENTIFICACIÓN DEL/;
+const tGen = buscar(gen, tRe, false), tRef = buscar(ref, tRe, false);
+log(!!tGen && !!tRef && tGen.estilo === tRef.estilo,
   'Los títulos usan el MISMO estilo de Word que el formato, no formato directo',
-  'estilo ' + buscar(gen, /IDENTIFICACIÓN DEL CAPTURADO/, false).estilo);
+  tGen ? 'estilo ' + tGen.estilo + ' · «' + tGen.txt.trim() + '»' : '(sin título)');
 const hRef = [...new Set(refHdr.parr.flatMap(p => p.runs).filter(r => r.txt).map(r => r.sz))];
 const hGen = [...new Set(genHdr.parr.flatMap(p => p.runs).filter(r => r.txt).map(r => r.sz))];
 log(hRef.join() === hGen.join(),
-  'Membrete: mismo cuerpo que el formato (y que la guía institucional, Arial 10)',
+  'Membrete: mismo cuerpo que el formato con el encabezado reajustado (Arial 11)',
   `referencia ${hRef.map(s => s / 2).join('/')}pt · generado ${hGen.map(s => s / 2).join('/')}pt`);
+log(hGen.length === 1 && hGen[0] === 22,
+  '⚠️ Y NO arrastró a las tablas: el membrete tiene constante propia',
+  'membrete ' + hGen.map(s => s / 2).join('/') + 'pt');
+const szTablas = [...new Set(gen.parr.filter(p => p.tabla).flatMap(p => p.runs)
+  .filter(r => r.txt).map(r => r.sz))];
+log(szTablas.length === 1 && szTablas[0] === 20,
+  'Las 3 tablas del oficio siguen en 10 pt, sin tocar', szTablas.map(s => s / 2).join('/') + 'pt');
+/* El escudo: medida y anclaje que dejó el usuario en el formato. Flotante para
+   que su alto NO arrastre el de la fila del membrete. */
+const dib = (t) => {
+  const m = t.match(/<wp:(inline|anchor)\b[\s\S]*?<wp:extent cx="(\d+)" cy="(\d+)"/);
+  const off = [...t.matchAll(/<wp:posOffset>(-?\d+)<\/wp:posOffset>/g)].map(x => +x[1]);
+  return m ? { modo: m[1], cx: +m[2], cy: +m[3], off, wrapNone: /<wp:wrapNone\/>/.test(t) } : null;
+};
+const eGen = dib(G.files[kHdr[0]]);
+const eRef = dib(refHdrPkg['word/header3.xml'].toString('utf8'));
+log(!!eGen && !!eRef && eGen.modo === eRef.modo && eGen.cx === eRef.cx && eGen.cy === eRef.cy &&
+    eGen.wrapNone === eRef.wrapNone && eGen.off.join() === eRef.off.join(),
+  '⚠️ El escudo sale con la medida, el anclaje y el desplazamiento del formato',
+  eGen ? `${eGen.modo} ${eGen.cx}×${eGen.cy} EMU off=${eGen.off.join('/')} wrapNone=${eGen.wrapNone}` : '(sin dibujo)');
 
 /* ══ D · EL PIE, RUN POR RUN ════════════════════════════════════════════════ */
 console.log('\n── D · El pie de página, incluidos los campos PAGE/NUMPAGES ──');
@@ -270,7 +306,7 @@ const V = await page.evaluate(async () => {
     return { pt: +(parseFloat(cs.fontSize) * 72 / 96).toFixed(1), fam: cs.fontFamily.split(',')[0].replace(/"/g, ''), peso: cs.fontWeight };
   }
   const r = {
-    cuerpo: m(/^De manera atenta/), titulo: m(/IDENTIFICACIÓN DEL CAPTURADO/),
+    cuerpo: m(/^De manera atenta/), titulo: m(/IDENTIFICACIÓN DEL (CAPTURADO|APREHENDIDO)/),
     etiqueta: m(/^Nombres y apellidos$/), hechos: m(/^HECHOS$/),
     anexos: m(/^Anexos:/), contacto: m(/^www\./), membrete: m(/^MINISTERIO/),
     piePalabra: m(/^Página$/), pieNumero: null
@@ -282,7 +318,7 @@ const V = await page.evaluate(async () => {
   cont.remove();
   return r;
 });
-const esperado = { cuerpo:11, titulo:11, etiqueta:10, hechos:11, anexos:10, contacto:9, membrete:10, piePalabra:9, pieNumero:9 };
+const esperado = { cuerpo:11, titulo:11, etiqueta:10, hechos:11, anexos:10, contacto:9, membrete:11, piePalabra:9, pieNumero:9 };
 Object.entries(esperado).forEach(([k, pt]) => {
   const v = V[k];
   log(!!v && v.pt === pt && v.fam === 'Arial',

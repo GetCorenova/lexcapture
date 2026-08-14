@@ -1862,6 +1862,51 @@ tocar nada y **reproduciendo cada defecto sobre la app real** con Playwright. `v
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=60` / `cache-v60`, `_BUILD=60`.
 
+## Encabezado del oficio OJ reajustado por el usuario (2026-08-13)
+El usuario cambió a mano el membrete de `Documentos/Otro/Propuesta Plantilla OJ.docx` y pidió que
+**todos** los oficios de dejando a disposición salgan así, sin tocar nada más. Verificado con
+`verify_tipografia_oj.mjs` (**39 checks**, antes 36) y abriendo el `.docx` en **Word real**
+(COM → PDF → render con Edge).
+- **Se midió el archivo, no se estimó**: comparado contra la versión anterior del repositorio, lo
+  único que cambió es `word/header3.xml` — `document.xml` y hasta los bytes del escudo
+  (`word/media/image1.png`) son idénticos. Dentro de ese header, dos cosas: el escudo pasa de
+  `wp:inline` 723900 EMU a **`wp:anchor` de 800100 EMU** (2,22 cm) con `wrapNone` y desplazamiento
+  `posOffset` H=43815 / V=−96520, y las cuatro líneas pierden su `w:sz 20` → heredan el
+  `docDefaults` de la plantilla, que es **`sz 22` = 11 pt**.
+- ⚠️ **El membrete estrena constante propia, `OJX_SZ_MEMBRETE`**. Se imprimía con `OJX_SZ_TABLA`,
+  que usan también las 3 tablas, los anexos y el bloque de firma: reutilizarla habría subido a 11 pt
+  medio documento. Hay un check que exige que las tablas sigan en 10 pt.
+- ⚠️ **El escudo va ANCLADO, no en línea, y eso es lo que preserva el diseño**: 800100 EMU son 63 pt,
+  más alto que las cuatro líneas de texto (≈51 pt), así que en línea el membrete entero crecería —
+  justo lo que el ajuste del usuario evita. Flotante, su alto no arrastra el de la fila.
+- ⚠️ **No se copian los adornos de ida y vuelta de Word** que trae ese dibujo (`wp14:anchorId/editId`,
+  `wp14:sizeRelH/V` al 0 %, `a14:useLocalDpi`): no afectan al render y exigirían declarar los
+  prefijos `wp14`/`a14` en `OJ_NS_W` y en su `mc:Ignorable`, que solo puede nombrar prefijos
+  declarados (lección heredada del FPJ-5 v2.1).
+- **La vista de impresión (PDF) aprendió a respetar el anclaje.** `lcRunHtml` ponía toda imagen en
+  línea, así que el escudo empujaba el cuerpo de la primera hoja hacia abajo: **divergencia
+  PREEXISTENTE**, no de este cambio (cuerpo a 109,7 pt en la vista contra 99,0 pt en Word), que este
+  cambio habría agravado a 115,7 pt. Con la rama nueva —contenedor de alto cero + `position:absolute`
+  con los `posOffset`— la vista arranca el cuerpo en **99,9 pt**. Solo afecta a imágenes ancladas, que
+  en toda la app son únicamente este escudo (la firma y el FPJ-5/FPJ-6 usan `wp:inline` o VML).
+- ⚠️ **El contenedor lleva alto cero pero NO ancho cero**: el CSS de impresión trae
+  `img{max-width:100%}` y con ancho cero el escudo se quedaba en **0 px de ancho**, con su alto
+  intacto — invisible en el XML, solo aparece **midiendo el render**.
+- **Medido en Word real**: escudo 63,0 × 63,0 pt en `left=3,5 / top=−7,6` con `wrapNone` y las cuatro
+  líneas a 11 pt — **idéntico, valor por valor, al archivo del usuario**; cuerpo arrancando en
+  y=99,0 pt; **3 páginas y 3 tablas**, igual que antes.
+- ⚠️ **El membrete tiene ahora su propia referencia en la suite**: se compara contra
+  `Propuesta Plantilla OJ.docx` (el reajustado), mientras el resto del oficio sigue midiéndose contra
+  `Propuesta Plantilla OJ - copia.docx`, que no cambió.
+- ⚠️ **Fallo PREEXISTENTE corregido en la suite**: reventaba en ~1 de cada 5 corridas porque buscaba
+  «IDENTIFICACIÓN DEL CAPTURADO» y el simulador saca a veces el escenario SRPA, donde el oficio dice
+  «APREHENDIDO». Confirmado reproduciéndolo también contra el build anterior (2 fallos en 10
+  corridas). Ahora el numeral se busca por su número, que no cambia.
+- Regresiones en verde: **tipografía OJ 39** · OJ 186 · fpj6 122 · mejora1 129 · mejora2 38 ·
+  mejora3 51 · firma 53 · editable 28 · export 74 · envío 39 · invitado 33 · simulador 41 ·
+  personas 24 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=61` / `cache-v61`, `_BUILD=61`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
