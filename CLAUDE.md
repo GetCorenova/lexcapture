@@ -1907,6 +1907,65 @@ El usuario cambió a mano el membrete de `Documentos/Otro/Propuesta Plantilla OJ
   personas 24 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=61` / `cache-v61`, `_BUILD=61`.
 
+## El acta de un menor dice «aprehendido» (2026-08-14)
+Reportado en campo con el acta impresa y dos pantallazos con recuadro rojo. **No existe un FPJ-6
+para adolescentes**: la Fiscalía publica UN formato, redactado para adultos, y los fiscales devuelven
+el acta de un menor si trae la palabra «capturado» — el término jurídico del SRPA es «aprehendido»
+(Ley 1098 de 2006). La app ya respetaba esa distinción en el FPJ-5 (plantilla CESPA, casilla primaria
+T.I.) y en todo el módulo de orden judicial (`ojTermino`); **el acta era el único documento que
+seguía diciendo «capturado» para un menor**. Verificado con `verify_fpj6.mjs` (**140 checks**, antes
+122) y abriendo los `.docx` en **Word real** (COM).
+
+- **Un solo predicado para los dos flujos**, `f6EsMenor(c)`, porque el acta es la misma y se llega a
+  ella por el mismo sheet: flagrancia → `tipo === 'CESPA'` (en esta app el tipo de captura **es** el
+  destino); orden judicial → `ojEsAdolescente`, ⚠️ **que NO se reimplementa** — dos criterios
+  distintos para la misma persona acabarían dando un oficio que dice «aprehendido» y un acta que dice
+  «capturado» del mismo procedimiento. La llamada va con guarda: un caso OJ del formato anterior
+  (`ojv` ausente) puede no tener la rama `oj` completa y `ojEsAdolescente` la recorre entera.
+- **La sustitución es una tabla de cinco entradas (`F6_TERM`) sobre el texto de cada `w:t`**, y se
+  aplica **lo primero**, antes de escribir o medir una sola celda: toda la maquetación de Mejora 4
+  (`_docSobreLinea`, `_docAnchoRenglon`, `_docCabeEnUnaLinea`, `_f6Blancos`) **mide** el texto del
+  formato para conservar sus líneas, así que sustituir después dejaría la línea calculada sobre un
+  texto que ya no es el que se imprime.
+- Cambia: el **título** («ACTA DE DERECHOS DEL APREHENDIDO»), el encabezado del art. 303 C.P.P.
+  («al aprehendido se le hizo saber sobre»), el derecho 1 («motivó su **aprehensión**»), los **tres**
+  rótulos de firma y huella, y **C.C. → T.I.** en la Constancia de Buen Trato.
+- ⚠️ **Dos de los tres rótulos de firma viven dentro de un CUADRO DE TEXTO** (`wps:txbx` /
+  `w:txbxContent`), no de una celda — es el recuadro que el usuario marcó en el pantallazo. Se
+  alcanzan porque el recorrido es por `w:t` bajo el `body`, no por el arreglo de celdas. Medido en
+  Word: el cuadro sigue en **171 × 33,8 pt y una sola línea** con la palabra más larga.
+- ⚠️ **«C.C.» → «T.I.» es una etiqueta IMPRESA del formato, no un dato**: por eso se sustituye en el
+  texto y no por la vía de `_f6Blancos`, que solo rellena los renglones. Las dos cadenas miden lo
+  mismo, así que ninguna medida de línea se mueve.
+- ⚠️ **La tabla es deliberadamente corta, y lo que NO está en ella importa tanto como lo que está.**
+  Siguen diciendo «captura», a propósito —así las dejó el usuario sobre el documento impreso, y
+  describen el PROCEDIMIENTO, no a la persona—: «…en casos de captura», «Se cumple el procedimiento
+  de captura de una persona…», «3. La persona a quien deseo se le comunique mi captura es:» y «…el
+  personal que realizó el procedimiento de la captura…». **Cambiar de más es tan defecto como cambiar
+  de menos**: el acta que firma el aprehendido tiene que seguir siendo el formato oficial, no una
+  redacción parecida. Hay un check dedicado a las cuatro.
+- **La garantía es una comparación, no una lista de expectativas**: la suite genera **dos actas
+  gemelas** con los MISMOS datos y el tipo de captura como única variable, y exige que entre ellas
+  difieran **exactamente 7 runs** —los de la terminología— y que, quitando los textos, el
+  `document.xml` sea **idéntico**: la terminología no toca un `rPr`, un `tcW` ni una tabla. Medido
+  además en Word real: **2 páginas, 5 tablas**, título en 1 línea, constancia en 6, y Word abre sin
+  pedir reparar, igual que el acta del adulto.
+- La interfaz acompaña al documento (`f6Abrir`, `f6Faltantes`, `f6Generar`, el nombre del archivo):
+  con un menor habla de **aprehensión** y de **el aprehendido**; con un adulto no cambia una coma.
+- ⚠️ **Pendiente de otro documento, no de este**: el catálogo de anexos del oficio OJ imprime
+  «Acta de derechos del capturado y constancia de buen trato» también en una orden SRPA. Es un
+  literal del que dependen `ojAnexosAuto` y `ojMigrarMejora3` para casar los anexos ya guardados, así
+  que flexionarlo es un cambio aparte.
+- ⚠️ **`verify_editable`, `verify_mejora2` y `verify_tipografia_oj` leen dos `.docx` de referencia**
+  (`Documentos/Otro/Propuesta Plantilla OJ.docx` y `… - copia.docx`) que en el árbol de trabajo están
+  **renombrados** (`Propuesta_Plantilla_OJ.docx`). Sin ellos mueren con `ENOENT` antes de comprobar
+  nada — comprobado que falla igual contra el build anterior. Con los archivos en su sitio, las tres
+  pasan.
+- Regresiones en verde: **fpj6 140** · OJ 186 · mejora1 129 · mejora2 38 · mejora3 51 · firma 53 ·
+  editable 28 · export 74 · tipografía OJ 39 · envío 39 · invitado 33 · simulador 41 · personas 24 ·
+  multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=62` / `cache-v62`, `_BUILD=62`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

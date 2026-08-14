@@ -2124,7 +2124,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 61;
+var _BUILD = 62;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6249,6 +6249,26 @@ function f6Municipio(c) {
   var l = (c && c.lugar) || {}, g = (c && c.oj && c.oj.diligencia) || {};
   return l.muni || g.lugarMunicipio || '';
 }
+/* ¿La persona es menor de edad? De aquí depende la TERMINOLOGÍA de todo el
+   documento — ver `F6_TERM` en el generador.
+   ⚠️ UN SOLO PREDICADO para los dos flujos, porque el acta es la misma y se
+   llega a ella por el mismo sheet:
+     · FLAGRANCIA → el tipo de captura, que en esta app ES el destino: URI para
+       adultos, CESPA para menores. Es el mismo criterio con el que el FPJ-5
+       decide su plantilla y marca T.I. en vez de C.C. (`markDocType`).
+     · ORDEN JUDICIAL → `ojEsAdolescente`, que ya decide la ruta de adolescentes
+       (regla R1 del motor de destinatario) y la terminología del oficio
+       (`ojTermino`). No se reimplementa aquí: dos criterios distintos para la
+       misma persona acabarían dando un oficio que dice «aprehendido» y un acta
+       que dice «capturado» del mismo procedimiento.
+   ⚠️ La llamada va con guarda: un caso OJ del formato anterior (`ojv` ausente)
+   puede no tener la rama `oj` completa, y `ojEsAdolescente` la recorre entera. */
+function f6EsMenor(c) {
+  if (!c) return false;
+  if (c.tipo === 'CESPA') return true;
+  if (c.oj && c.oj.orden && c.oj.requerido) { try { return !!ojEsAdolescente(c); } catch (e) {} }
+  return false;
+}
 /* Calidad procesal para la Constancia de Buen Trato («indiciado (a) ___ o
    imputado(a) ____»). Regla del usuario (2026-08-04):
    · Flagrancia → INDICIADO. La captura se produce sin que ningún despacho haya
@@ -6337,12 +6357,12 @@ function f6Mapa(c, cap, acta) {
    generar: un acta con la fecha o el lugar en blanco no sirve para nada, y es
    mejor decir qué falta que entregar el papel incompleto. */
 function f6Faltantes(c, cap) {
-  var f = [], m = f6Momento(c);
-  if (!fullName(cap)) f.push('Nombres y apellidos del capturado');
+  var f = [], m = f6Momento(c), menor = f6EsMenor(c), acc = menor ? 'aprehensión' : 'captura';
+  if (!fullName(cap)) f.push('Nombres y apellidos ' + (menor ? 'del aprehendido' : 'del capturado'));
   if (!sinPuntos(cap && cap.numDoc)) f.push('Número de identificación');
-  if (!(m.d && m.m && m.a)) f.push('Fecha de la captura');
-  if (!(m.h && m.mi)) f.push('Hora de la captura');
-  if (!f6Lugar(c)) f.push('Lugar de la captura');
+  if (!(m.d && m.m && m.a)) f.push('Fecha de la ' + acc);
+  if (!(m.h && m.mi)) f.push('Hora de la ' + acc);
+  if (!f6Lugar(c)) f.push('Lugar de la ' + acc);
   return f;
 }
 
@@ -6678,6 +6698,59 @@ function _f6Marca(tcs, i, etiqueta, marcar, anchoTw) {
   // Sin marca no se toca nada: el formato queda exactamente como viene.
   if (marcar && anchoTw) _docCabeEnUnaLinea(tcs[i], anchoTw, 14);
 }
+/* ═══ TERMINOLOGÍA DEL ACTA CUANDO LA PERSONA ES MENOR DE EDAD ═════════════
+   No existe un FPJ-6 aparte para adolescentes: la Fiscalía publica UN formato,
+   redactado para adultos. Pero los despachos devuelven el acta de un menor si
+   trae la palabra «capturado», porque el término jurídico del SRPA es
+   «aprehendido» (Ley 1098 de 2006) — es la misma distinción legal, no
+   cosmética, que la app ya respeta en el FPJ-5 (plantilla CESPA) y en el
+   módulo de orden judicial (`ojTermino`). Aquí faltaba.
+
+   ⚠️ ESTA TABLA ES DELIBERADAMENTE CORTA, y lo que NO está en ella importa
+   tanto como lo que está. El formato se conserva palabra por palabra salvo en
+   estos cinco puntos, que son los que el usuario marcó sobre el documento
+   impreso. Siguen diciendo «captura», a propósito, porque así los marcó él y
+   porque describen el PROCEDIMIENTO, no a la persona:
+     · «…diligenciado por Policía Nacional o Judicial en casos de captura»
+     · «Se cumple el procedimiento de captura de una persona…»
+     · «3. La persona a quien deseo se le comunique mi captura es:»
+     · «…el personal que realizó el procedimiento de la captura…»
+   Cambiar de más aquí es tan defecto como cambiar de menos: el acta que firma
+   el aprehendido tiene que seguir siendo el formato oficial.
+
+   ⚠️ «C.C.» → «T.I.» en la Constancia de Buen Trato es una etiqueta IMPRESA
+   del formato, no un dato: por eso se sustituye en el texto y no por la vía de
+   `_f6Blancos`, que solo rellena los renglones. El documento del menor es la
+   tarjeta de identidad — mismo criterio con el que el FPJ-5 marca la casilla
+   primaria T.I. en CESPA. Las dos cadenas miden lo mismo, así que ninguna
+   medida de línea se mueve. */
+var F6_TERM = [
+  ['CAPTURADO',         'APREHENDIDO'],        // título del formato
+  ['Capturado',         'Aprehendido'],
+  ['capturado',         'aprehendido'],        // «al capturado…», «…del capturado (a)» ×3
+  ['motivó su captura', 'motivó su aprehensión'],
+  ['C.C.',              'T.I.']                // Constancia de Buen Trato
+];
+/* Se aplica sobre el texto de cada `w:t`, sin tocar ni un `rPr`, ni un ancho,
+   ni la estructura: el documento del menor y el del adulto son el mismo archivo
+   salvo por esas palabras.
+   ⚠️ Va ANTES que cualquier otra escritura, porque todo lo que viene después
+   MIDE el texto del formato para maquetar (`_docSobreLinea`, `_docAnchoRenglon`,
+   `_docCabeEnUnaLinea`, `_f6Blancos`). Sustituir después dejaría la línea
+   calculada sobre un texto que ya no es el que se imprime. */
+function _f6Terminologia(root) {
+  var W = FPJ_W, ts = root.getElementsByTagNameNS(W, 't'), n = 0, i, k;
+  for (i = 0; i < ts.length; i++) {
+    var antes = ts[i].textContent, txt = antes;
+    for (k = 0; k < F6_TERM.length; k++) txt = txt.split(F6_TERM[k][0]).join(F6_TERM[k][1]);
+    if (txt === antes) continue;
+    ts[i].textContent = txt;
+    // Los rótulos del formato arrancan con un espacio (« del aprehendido (a)»).
+    if (/^\s|\s$/.test(txt)) ts[i].setAttribute('xml:space', 'preserve');
+    n++;
+  }
+  return n;
+}
 /* Las 21 casillas del encabezado, un dígito cada una. Los sobrantes de un
    radicado más largo (23 dígitos es corriente en Ley 906) se escriben SEGUIDOS
    dentro de la última casilla, para que el número se lea completo y en orden.
@@ -6860,6 +6933,12 @@ function buildActaBlob(ctx, papel) {
     var doc = new DOMParser().parseFromString(new TextDecoder().decode(files['word/document.xml']), 'application/xml');
     var W = FPJ_W;
     var body = doc.getElementsByTagNameNS(W,'body')[0];
+    /* MENOR DE EDAD → «aprehendido», no «capturado». Lo PRIMERO que se hace,
+       antes de medir o escribir una sola celda: la maquetación de más abajo
+       mide el texto del formato para conservar sus líneas, y tiene que medir el
+       texto que de verdad se va a imprimir. Ver `F6_TERM`. */
+    var menor = f6EsMenor(c);
+    if (menor) _f6Terminologia(body);
     var tcs = Array.from(body.getElementsByTagNameNS(W,'tc'));
     var pars = Array.from(body.getElementsByTagNameNS(W,'p'));
     var m = f6Mapa(c, cap, acta), i;
@@ -6973,7 +7052,7 @@ function buildActaBlob(ctx, papel) {
     var blob = new Blob([_buildZip(zf)], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
     return {
       blob: blob,
-      fname: 'FPJ6_Acta_' + (cap.priApe || 'capturado') + '_' + (cap.priNom || '') + '.docx',
+      fname: 'FPJ6_Acta_' + (cap.priApe || (menor ? 'aprehendido' : 'capturado')) + '_' + (cap.priNom || '') + '.docx',
       label: 'Acta de derechos (FPJ-6)',
       files: files,
       noPDF: true,                                  // ver la cabecera del módulo
@@ -6990,7 +7069,7 @@ var _f6Ctx = null;
 function abrirActaDerechos(id) {
   var c = DB.getCase(id); if (!c) { toast('Caso no encontrado'); return; }
   var caps = c.capturados || [];
-  var termino = c.tipo === 'CESPA' ? 'aprehendida' : 'capturada';
+  var termino = f6EsMenor(c) ? 'aprehendida' : 'capturada';
   if (!caps.length) { toast('Esta captura no tiene ninguna persona registrada'); return; }
   if (caps.length === 1) { f6Abrir(id, 0); return; }
   openModal(
@@ -7013,7 +7092,7 @@ function f6Abrir(id, idx) {
   _f6Ctx = { id:id, idx:idx };
   var m = f6Mapa(c, cap, acta);
   var faltan = f6Faltantes(c, cap);
-  var menor = c.tipo === 'CESPA';
+  var menor = f6EsMenor(c);
 
   function kv(k, v) {
     return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>';
@@ -7039,7 +7118,7 @@ function f6Abrir(id, idx) {
     ' · ' + (menor ? 'aprehensión' : 'captura') + ' del ' + escHtml(fmtDate(c.fechaProc)) + '</p>' +
 
     (faltan.length
-      ? '<div class="oj-alert dura"><b>Faltan datos de la captura</b>' +
+      ? '<div class="oj-alert dura"><b>Faltan datos de la ' + (menor ? 'aprehensión' : 'captura') + '</b>' +
         'El acta los imprime y no se pueden inventar: ' + escHtml(faltan.join(' · ')) + '.</div>' +
         '<button class="btn bs bbl" style="margin-bottom:14px" onclick="closeModal();editCase(\'' + id + '\')">Editar la captura</button>'
       : '') +
@@ -7102,7 +7181,8 @@ function f6Abrir(id, idx) {
 
     '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
     'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>Los renglones de firma del capturado, la huella, los servidores y el fiscal se dejan en blanco: ' +
+    '<span>Los renglones de firma ' + (menor ? 'del aprehendido' : 'del capturado') +
+    ', la huella, los servidores y el fiscal se dejan en blanco: ' +
     'el acta se imprime para firmarse y estamparse a mano.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="f6Generar()">Generar acta</button>' +
@@ -7163,12 +7243,13 @@ async function f6Generar() {
   _f6Ctx = null;                               // ya se guardó: closeModal no repite la escritura
   if (!res) { if (ctx) toast('No se pudo guardar el acta'); return; }
   var c = res.caso, cap = (c.capturados || [])[res.idx] || {};
-  var faltan = f6Faltantes(c, cap);
+  var faltan = f6Faltantes(c, cap), menor = f6EsMenor(c);
   if (faltan.length) {
     openModal(
       '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
       '<div class="oj-alert dura"><b>No se puede generar todavía</b>' +
-      'El acta la firma el capturado: no puede salir con la fecha, la hora o su identificación en blanco.</div>' +
+      'El acta la firma ' + (menor ? 'el aprehendido' : 'el capturado') +
+      ': no puede salir con la fecha, la hora o su identificación en blanco.</div>' +
       faltan.map(function(x) { return '<div class="oj-kv"><span>Falta</span><span>' + escHtml(x) + '</span></div>'; }).join('') +
       '<button class="btn bp bbl" style="margin-top:16px" onclick="closeModal();editCase(\'' + c.id + '\')">Editar la captura</button>'
     );
@@ -7176,7 +7257,7 @@ async function f6Generar() {
   }
   closeModal();
   var ctxDoc = { caso:c, capturado:cap, acta:f6Acta(c, cap.id) || f6Estructura(cap.id) };
-  lcPedirExport('FPJ6', 'Acta de derechos del capturado — ' + fullName(cap), function(sel) {
+  lcPedirExport('FPJ6', 'Acta de derechos ' + (menor ? 'del aprehendido' : 'del capturado') + ' — ' + fullName(cap), function(sel) {
     lcProducirDoc('FPJ6', ctxDoc, sel);
   });
 }

@@ -820,6 +820,139 @@ log(sz.etniaSinMarcar.length === 1 && sz.etniaSinMarcar[0] === 22 && sz.etniaMar
   '⚠️ Excepción medida: «AFROCOLOMBIANO» sola ocupa 2102 de 2221 tw, así que con la X no cabe a 11 pt — se reduce, como fijó Mejora 4 obs. 5',
   `sin marcar sz ${sz.etniaSinMarcar.join('/')} · marcada sz ${sz.etniaMarcada.join('/')}`);
 
+/* ══ J · MENOR DE EDAD: «APREHENDIDO», NO «CAPTURADO» ══════════════════════
+   No hay un FPJ-6 aparte para adolescentes: la Fiscalía publica UN formato,
+   redactado para adultos, y los despachos devuelven el acta de un menor si trae
+   la palabra «capturado» (el término del SRPA es «aprehendido», Ley 1098/2006).
+   Se mide de las dos maneras, porque las dos pueden fallar por separado:
+     · que la palabra CAMBIE donde tiene que cambiar, y
+     · que NO cambie nada más — el acta del menor tiene que seguir siendo el
+       formato oficial, no una redacción parecida.
+   Por eso el documento del menor se compara contra el de un ADULTO generado con
+   EXACTAMENTE los mismos datos: la única diferencia admisible es el vocabulario. */
+console.log('\n── J · El acta de un menor (CESPA / SRPA) ──');
+
+// El predicado, primero: de él dependen el documento y la interfaz.
+const predicado = await page.evaluate(() => {
+  const base = () => ({ capturados: [{}], narracion: {}, lugar: {} });
+  const oj = adolescente => {
+    const c = SIM.genOJ(); c.isTest = false;
+    c.oj.orden.tipoOrden = adolescente ? 'SRPA' : 'ORDINARIA';
+    if (!adolescente) { c.oj.requerido.fechaNac = '1990-04-01'; c.oj.proceso.fechaHechos = '2025-01-10'; }
+    return c;
+  };
+  return {
+    cespa:   f6EsMenor(Object.assign(base(), { tipo: 'CESPA' })),
+    uri:     f6EsMenor(Object.assign(base(), { tipo: 'URI' })),
+    ojSrpa:  f6EsMenor(oj(true)),
+    ojAdulto:f6EsMenor(oj(false)),
+    legado:  f6EsMenor({ tipo: 'OJ', capturados: [{}] }),   // caso OJ sin la rama `oj`
+    nulo:    f6EsMenor(null)
+  };
+});
+log(predicado.cespa === true && predicado.uri === false,
+  'En flagrancia el tipo de captura ES el destino: CESPA → menor, URI → adulto',
+  JSON.stringify(predicado));
+log(predicado.ojSrpa === true && predicado.ojAdulto === false,
+  '⚠️ Y en orden judicial NO se reimplementa el criterio: se reusa `ojEsAdolescente`, el mismo que ya decide la ruta y la terminología del oficio');
+log(predicado.legado === false && predicado.nulo === false,
+  '⚠️ Un caso OJ del formato anterior (sin la rama `oj`) no revienta el predicado: cae a adulto');
+
+/* Dos actas gemelas: los MISMOS datos, y el tipo de captura como única
+   variable. Cualquier otra diferencia entre las dos es un defecto. */
+const semillaGemela = (id, tipo) => page.evaluate(async ([id, tipo]) => {
+  const c = {
+    id, tipo, nunc: '0500160001202602', fechaProc: '2026-08-03',
+    destino: tipo === 'CESPA' ? 'CESPA Medellín' : 'Fiscalía URI Centro',
+    conductas: ['Hurto calificado y agravado'],
+    lugar: { dir: 'CL 52 # 50-31', barrio: 'La Candelaria', muni: 'Medellín', depto: 'Antioquia' },
+    capturados: [{
+      id: 'per-' + id, rol: 'Capturado', tipoDoc: 'TI', numDoc: '1.028.111.222', expEn: 'Medellín',
+      priNom: 'Juan', segNom: 'David', priApe: 'Osorio', segApe: 'Ruiz',
+      fn: '2009-05-10', sexo: 'M', lugNac: 'Medellín, Antioquia', ecivil: 'Soltero',
+      ocup: 'Estudiante', dirRes: 'KR 45 # 30-12', tel: '3001234567',
+      correo: 'j@prueba.test', padres: 'Ana Ruiz y Pedro Osorio'
+    }],
+    victimas: [], testigos: [], sinVictima: true, sinTestigo: true,
+    narracion: { fechaCapD: '03', fechaCapM: '08', fechaCapA: '2026', horaCapH: '14', horaCapM: '35', texto: 'Relato.' },
+    actas: [{ personaId: 'per-' + id, presentoDoc: 'SI', obs: 'Ninguna.',
+              comunica: { nombre: 'Ana Ruiz', numDoc: '43.111.222', tel: '3109998877', hora: '14:50' }, updated: 0 }]
+  };
+  await DB.saveCase(c); await DB.savePerson(c.capturados[0]);
+  return c.id;
+}, [id, tipo]);
+
+async function actaDe(id, archivo) {
+  await page.evaluate(i => abrirActaDerechos(i), id);
+  await page.waitForTimeout(250);
+  const visto = await page.$eval('#modal-c', m => m.textContent);
+  const [dl] = await Promise.all([
+    page.waitForEvent('download', { timeout: 20000 }),
+    page.evaluate(async () => { await f6Generar(); })
+  ]);
+  const ruta = join(SALIDA, archivo);
+  await writeFile(ruta, await readFile(await dl.path()));
+  const xml = leerDocx(await readFile(ruta))['word/document.xml'].toString('utf8');
+  return { xml, visto, nombre: dl.suggestedFilename() };
+}
+
+await semillaGemela('f6-menor', 'CESPA');
+await semillaGemela('f6-adulto', 'URI');
+const aMenor  = await actaDe('f6-menor',  'verify_fpj6_menor.docx');
+const aAdulto = await actaDe('f6-adulto', 'verify_fpj6_adulto.docx');
+const runs = xml => (xml.match(/<w:t[^>]*>[^<]*<\/w:t>/g) || []).map(x => x.replace(/<[^>]+>/g, ''));
+const rM = runs(aMenor.xml), rA = runs(aAdulto.xml);
+const planoM = rM.join(' '), planoA = rA.join(' ');
+
+// 1 · Lo que TIENE que cambiar
+log(!/capturad/i.test(planoM) && /capturad/i.test(planoA),
+  '⚠️ La exigencia del despacho: en el acta de un menor no queda una sola «capturado», y en la del adulto sigue estando',
+  'menor ' + (planoM.match(/capturad/gi) || []).length + ' · adulto ' + (planoA.match(/capturad/gi) || []).length);
+log(/ACTA DE DERECHOS DEL APREHENDIDO/.test(planoM),
+  'El título del formato dice APREHENDIDO', rM.find(t => /ACTA DE DERECHOS/.test(t)));
+log(/al aprehendido se le hizo saber sobre/.test(planoM),
+  'Y el encabezado del art. 303 C.P.P.: «al aprehendido se le hizo saber sobre»');
+log(/motivó su aprehensión y el funcionario que la ordenó/.test(planoM),
+  'El derecho 1 dice «motivó su aprehensión», como marcó el usuario sobre el documento impreso');
+log((planoM.match(/del aprehendido \(a\)/g) || []).length === 3,
+  '⚠️ Los TRES rótulos de firma y huella — dos de ellos viven dentro de un cuadro de texto, no de una celda',
+  (planoM.match(/del aprehendido \(a\)/g) || []).length + ' de 3');
+log(/identificado\(a\) con {1,2}T\.I\./.test(planoM) && !/C\.C\./.test(planoM) && /identificado\(a\) con {1,2}C\.C\./.test(planoA),
+  'La Constancia de Buen Trato pide T.I., no C.C. — el documento del menor es la tarjeta de identidad');
+log(/T\.I\. 1028111222/.test(planoM.replace(/\s+/g, ' ')),
+  'Y el número sigue cayendo sobre esa línea, sin puntos', planoM.replace(/\s+/g,' ').match(/T\.I\. ?\d+/)?.[0]);
+
+// 2 · Lo que NO puede cambiar: el resto es el formato oficial
+const conservadas = [
+  'diligenciado por Policía Nacional o Judicial en casos de captura',
+  'Se cumple el procedimiento de captura de una persona',
+  'se le comunique mi captura',
+  'el personal que realizó el procedimiento de la captura'
+];
+const faltaConservada = conservadas.filter(f => !planoM.replace(/\s+/g, ' ').includes(f));
+log(faltaConservada.length === 0,
+  '⚠️ Cambiar de más es tan defecto como cambiar de menos: las cuatro frases del formato que hablan del PROCEDIMIENTO siguen diciendo «captura»',
+  faltaConservada.length ? 'perdidas → ' + faltaConservada.join(' | ') : 'las 4 intactas');
+log(rM.length === rA.length,
+  'El acta del menor tiene exactamente los mismos runs de texto que la del adulto', `${rM.length} vs ${rA.length}`);
+const distintos = rM.map((t, i) => t === rA[i] ? null : i).filter(i => i !== null);
+log(distintos.length === 7,
+  '⚠️ Con los MISMOS datos, entre las dos actas solo difieren los 7 runs de la terminología: ni un dato, ni un ancho, ni una línea más',
+  'runs distintos: ' + distintos.join(', '));
+const sinTextos = x => x.replace(/<w:t[^>]*>[^<]*<\/w:t>/g, '<w:t/>');
+log(sinTextos(aMenor.xml) === sinTextos(aAdulto.xml),
+  '⚠️ Y quitando los textos, el XML es IDÉNTICO: la terminología no toca un `rPr`, un `tcW` ni una tabla');
+log((aMenor.xml.match(/<w:tbl>/g) || []).length === 5 && celdas(aMenor.xml).length === 113,
+  'El formato conserva sus 5 tablas y sus 113 celdas', celdas(aMenor.xml).length + ' celdas');
+
+// 3 · Coherencia con el resto del acta y con la interfaz
+log(/indiciado \(a\) ?X/.test(planoM.replace(/\s+/g, ' ')),
+  'La calidad procesal no se toca: una captura en flagrancia sigue marcando «indiciado»');
+log(/aprehensión/.test(aMenor.visto) && !/El capturado presentó/.test(aMenor.visto),
+  'El formulario del acta también habla de aprehensión cuando la persona es menor');
+log(/captura/.test(aAdulto.visto) && !/aprehensión/.test(aAdulto.visto),
+  '…y sigue hablando de captura cuando es un adulto');
+
 log(errores.length === 0, 'Consola sin errores', errores.slice(0, 3).join(' | ') || 'ninguno');
 
 console.log(`\n${fails === 0 ? '✅ TODO OK' : '❌ ' + fails + ' FALLO(S)'} — ${n} comprobaciones`);
