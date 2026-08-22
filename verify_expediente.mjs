@@ -56,7 +56,7 @@ const m = await page.evaluate(() => {
     tit: [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim())
   };
 });
-log(m.n === 7 && !m.scroll, '[1] El menu sigue en 7 items y no se desplaza', m.alto + 'px de ' + m.tope + 'px');
+log(m.n === 5 && !m.scroll, '[1] El menu esta en 5 items y no se desplaza', m.alto + 'px de ' + m.tope + 'px');
 console.log('      ' + m.tit.join(' | '));
 
 // [2] hay una entrada al expediente

@@ -2397,15 +2397,71 @@ mismo cambio**. Lo que quedó encerrado dentro:
   contra el build anterior (HEAD): falla idéntico.** Ya estaba documentado el 2026-08-08.
 - Anti-caché `?v=69` / `cache-v69`, `_BUILD=69`.
 
+### PASOS 3 y 4 — el menú deja de crecer y el caso estrena casa (2026-08-22)
+Ejecutados tras probar los dos primeros. `verify_menu_expediente.mjs` (**16 checks**, nuevo).
+
+**Paso 3 · el canal deja de ser una dimensión del menú — 7 ítems → 5.**
+- **Un documento = UN ítem.** `lcSalidaDoc(id)` sustituye al par «Enviar X» + «Descargar X»:
+  ⚠️ **abre el sheet de canales SOLO donde hay algo que elegir.** En un equipo sin Web Share de
+  archivos —todo escritorio— ese sheet enseñaba **un único botón** («Descargar documento»), o sea
+  «Enviar X» resultaba ser «Descargar X» con un toque de ceremonia; ahí se descarga directo. Con Web
+  Share, el mismo ítem ofrece los dos canales.
+- **«Editar captura» salió del menú**: repetía exactamente el toque en la tarjeta (`.cc` ya llama a
+  `editCase`) y era uno de los dos ítems que se iban bajo el borde al desplazarse el menú. Sigue
+  alcanzable por la tarjeta y desde el expediente. Hay checks de las dos vías.
+- `lcNombreDoc(c)` / `lcDescDoc(c)`: punto único del nombre del documento oficial, que ahora usan el
+  menú, el expediente y el diálogo de exportación.
+- **Medido**: **476 px de un presupuesto de 640** (antes 625), y el menú tapa el **60 %** de la
+  pantalla en vez del 78 %. Las **tres salidas urgentes siguen a dos toques**, que era la condición
+  que la auditoría se puso a sí misma.
+- ⚠️ **Y ya no crece con los formatos**: acta de incautación, rótulo y cadena de custodia entrarán en
+  `lcEstadoDocs`, que los pinta en el expediente. El menú se queda en cinco.
+
+**Paso 4 · el expediente es la casa del caso.**
+- **`lcEstadoDocs(c)`** — qué documento está listo y qué le falta. ⚠️ **No reimplementa ni una regla**:
+  llama a los MISMOS validadores que bloquean al generar (`ojBloqueoDoc`, `f6Faltantes`) y a la misma
+  guarda del NUNC de `buildFPJBlob`. Dos criterios distintos sobre el mismo caso es el defecto que ya
+  se corrigió entre descargar y enviar; aquí la pantalla tiene que decir lo que dirá el motor o miente.
+  **Es también el punto de extensión**: un formato nuevo se agrega ahí y aparece solo en la pantalla.
+- **`lcPlazo36(c, now)`** — el plazo del art. 28 C.P., **punto único**, porque lo pintan la tarjeta de
+  la lista y el expediente y no pueden discrepar. ⚠️ Se mide desde `created`, que es lo que la lista
+  ya usaba: es una aproximación (el plazo corre desde la hora de la captura), pero cambiar la base
+  movería el semáforo de todas las capturas guardadas y **eso es una decisión aparte, no un efecto
+  colateral de reorganizar pantallas**. El reloj exacto de orden judicial (`ojPlazo36`, desde la hora
+  de la diligencia) no se toca: es el que se imprime en el oficio.
+- **`lcResumenCaso(c)`** — la **vista de consulta que no existía**: hasta ahora, para ver qué había en
+  un caso había que abrirlo en el wizard, o sea entrar a modificarlo. Los EMP se muestran con
+  `lcEmpLineas`, la misma primitiva que los imprime en el numeral 7: lo que se lee es lo que va a
+  salir, no una segunda redacción.
+- **Tres bloques nuevos** (`#exp-estado`, `#exp-docs`, `#exp-contenido`), y la pantalla pasa a
+  titularse **Expediente**. Los documentos se pintan con **`.type-card`**, el mismo componente de
+  «Nueva captura»: no se estrena un patrón visual para esto.
+- ⚠️ **El color de la tarjeta lo pone el TIPO DE CAPTURA** (azul URI · rosa CESPA · violeta orden
+  judicial), no la jerarquía del documento. Un primer intento le dio violeta al FPJ-5 por ser «el
+  principal», y en este sistema el violeta **significa orden judicial**. El acta lleva tono neutro
+  (`.tc-neutro`) y **glifo propio** (`ACT_IC.acta`, un documento firmado): con el mismo icono y el
+  mismo color las dos tarjetas eran indistinguibles.
+- **Se retiró `#dos-btn-send`** de la pantalla: esa acción está ahora en el bloque de Documentos de la
+  misma pantalla, y ofrecerla dos veces era la duplicación de la auditoría a menor escala.
+- **`renderExpediente` va SEPARADO de `updateDosPreview`**: el editor de secciones repinta el dossier
+  en cada toque y no tiene por qué recalcular el estado de los documentos.
+
+**Regresiones.** Suites adaptadas al recorrido nuevo **sin bajar su cuenta**: `verify_personas` 25,
+`verify_envio_doc` 39 (su check [8] mide ahora la tarjeta del documento en vez del botón retirado),
+`verify_fpj6` 140, `verify_expediente` 13. En verde: **menú+expediente 16** · expediente 13 ·
+almacén 12 · personas 25 · envío 39 · fpj6 140 · mejora1 153 · mejora2 38 · mejora3 51 · export 74 ·
+firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 · invitado 33 · simulador 41 ·
+orden 33 · ola1 38 · ola3 33 · ola4 22 · multipersona · DS 10.
+⚠️ `verify_oj` [18] y `verify_ola2` [12] siguen fallando **por el calendario** (sábado), comprobado
+contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
+
 ### Lo que queda propuesto y NO se ha hecho
-- **Paso 3 — colapsar el canal en el menú**: un documento, una entrada (7 → 5 ítems); «Enviar X» y
-  «Descargar X» convergen hoy en la misma pantalla —medido: en escritorio el sheet de envío muestra
-  **solo** «Descargar documento»—, y «Editar captura» repite el toque en la tarjeta.
-- **Paso 4 — el expediente como casa del caso**: estado (plazo de 36 h y qué falta), documentos
-  agrupados en módulos y el bloque de elementos preparado para rótulo y cadena de custodia.
-- **Paso 5 — las tres funciones pendientes**: ampliar `elementos[]` (hoy es solo `{cant, desc}`) con
-  rótulo y traspasos, y registrar los formatos en `LC_DOCS`. ⚠️ **Faltan los formatos oficiales**: no
-  hay ninguno en `Documentos/` para incautación, rótulo ni cadena de custodia.
+- **Las tres funciones pendientes**: ampliar `elementos[]` (hoy es solo `{cant, desc}`) con rótulo y
+  traspasos, y registrar los formatos en `LC_DOCS` + `lcEstadoDocs`. ⚠️ **Faltan los formatos
+  oficiales**: no hay ninguno en `Documentos/` para incautación, rótulo ni cadena de custodia.
+  ⚠️ La cadena de custodia es **una secuencia de traspasos por cada elemento**, así que su sitio es
+  un bloque propio del expediente, no un ítem de menú — y sube los bytes por captura (ver el techo
+  del paso 1).
 - ⚠️ **Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ
   en vez de leer `LC_DOCS`, así que **el acta FPJ-6 no tiene ruta de envío** aunque esté registrada
   como documento. Es el último resto de la cadena de `if (esOJ)` que `LC_DOCS` vino a sustituir.

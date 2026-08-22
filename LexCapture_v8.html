@@ -974,6 +974,10 @@ body.guest{padding-top:38px}
 .tc-uri .tic{background:var(--uriB);color:var(--uriT)}
 .tc-csp .tic{background:var(--cspB);color:var(--cspT)}
 .tc-oj .tic{background:var(--ojB);color:var(--oj-2)}
+/* Tono neutro para una tarjeta de documento que no representa un tipo de
+   captura (el acta de derechos): mismo tratamiento que el icono de un ítem del
+   sheet, así no se apropia de un color con significado. */
+.tc-neutro .tic{background:var(--surface-2);border:1px solid var(--border);color:var(--text-2)}
 
 /* ═══ DOSSIER ═══ */
 .dos-preview{
@@ -1237,6 +1241,19 @@ body.guest{padding-top:38px}
 .oj-kv span:first-child{color:var(--text-3);flex:0 0 auto}
 .oj-kv span:last-child{text-align:right;color:var(--text)}
 .oj-fund{font-size:11.5px;color:var(--text-3);margin-top:6px;font-style:italic}
+/* Expediente: dato de solo lectura. A diferencia de .oj-kv (etiqueta y valor en
+   una línea, valor a la derecha), aquí el valor puede ser una lista de nombres o
+   los elementos ya numerados, así que va debajo, alineado a la izquierda y
+   respetando los saltos de línea. */
+.exp-kv{padding:9px 0;border-bottom:1px solid var(--border)}
+.exp-kv:last-child{border-bottom:0}
+.exp-kv .k{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:3px}
+.exp-kv .v{display:block;font-size:13.5px;color:var(--text);white-space:pre-line;line-height:1.55}
+/* Estado de un documento dentro de su tarjeta. */
+.exp-st{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;margin-top:3px}
+.exp-st.ok{color:var(--ok)}
+.exp-st.falta{color:var(--warn)}
+.exp-st .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 /* Bloque plegable: datos que no salen en el oficio y no deben costar scroll. */
 .oj-mas>summary{
   cursor:pointer;list-style:none;font-size:12.5px;font-weight:650;color:var(--text-2);
@@ -1588,8 +1605,8 @@ body.guest{padding-top:38px}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div class="ttl">
-        <h1>Dossier</h1>
-        <span class="sub" id="dos-sub">Salidas del caso</span>
+        <h1>Expediente</h1>
+        <span class="sub" id="dos-sub">Sin captura seleccionada</span>
       </div>
     </header>
     <div class="pane stack">
@@ -1598,9 +1615,19 @@ body.guest{padding-top:38px}
       <div id="dos-empty" class="empty" style="display:none">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
         <h3>Sin captura seleccionada</h3>
-        <p>Abre una captura y toca «Enviar / Dossier» para ver aquí todas sus salidas.</p>
+        <p>Abre una captura y toca «Expediente del caso» para ver aquí su estado, sus documentos y su dossier.</p>
         <button class="cta" onclick="go('capturas')">Ir a Capturas</button>
       </div>
+
+      <!-- Estado del caso: el plazo de 36 h y qué le falta a cada documento.
+           Va PRIMERO porque es lo único de esta pantalla que puede exigir una
+           acción inmediata; lo demás se consulta. -->
+      <div class="card" id="exp-estado" style="display:none"></div>
+
+      <!-- Documentos del caso, agrupados. Aquí es donde entra un formato nuevo
+           (acta de incautación, rótulo, cadena de custodia): en este bloque, no
+           en el menú ⋮ — por eso el menú deja de crecer. -->
+      <div class="card" id="exp-docs" style="display:none"></div>
 
       <!-- Editor del dossier (mensaje de WhatsApp) -->
       <div class="card" id="dos-preview-wrap" style="display:none">
@@ -1621,12 +1648,18 @@ body.guest{padding-top:38px}
         <div id="dos-sec-inner" style="display:none;margin-top:10px"></div>
       </div>
 
-      <!-- Todas las salidas del caso en un solo lugar -->
+      <!-- Salidas del dossier. «Enviar el documento» salió de aquí: ahora vive
+           en el bloque de Documentos, que es su sitio, y así no se ofrece la
+           misma acción dos veces en la misma pantalla. -->
       <div id="dos-actions" class="stack-sm" style="display:none">
         <button class="btn bwa bbl" onclick="shareDosWA()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Compartir por WhatsApp</button>
         <button class="btn bs bbl" onclick="copyDosTxt()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar texto</button>
-        <button id="dos-btn-send" class="btn bs bbl" onclick="abrirEnvioDoc(_dosCasoId)">Enviar FPJ-5 URI</button>
       </div>
+
+      <!-- Lo que la captura tiene registrado: la vista de CONSULTA que faltaba.
+           Hasta ahora, para ver qué había en un caso había que abrirlo en el
+           wizard, es decir entrar a modificarlo. -->
+      <div class="card" id="exp-contenido" style="display:none"></div>
 
     </div>
   </section>
@@ -2164,7 +2197,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 69;
+var _BUILD = 70;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3242,9 +3275,7 @@ function renderCases() {
     var tbadge = c.tipo==='CESPA'?'b-csp':c.tipo==='OJ'?'b-oj':'b-uri';
     var barColor = c.tipo==='CESPA'?'var(--cspT)':c.tipo==='OJ'?'var(--oj-2)':'var(--uriT)';
     var tipoLbl = c.tipo==='OJ'?'Judicial':c.tipo;
-    var hrs = (now-(c.created||0))/3600000;
-    var urgBadge = (!c.isTest&&hrs>=36)?'<span class="badge b-venc">VENCIDO &gt;36H</span>':
-      (!c.isTest&&hrs>=24&&hrs<36)?'<span class="badge b-urg">URGENTE</span>':'';
+    var urgBadge = lcPlazo36(c, now).badge;
     var testBadge = c.isTest?'<span class="badge b-test">Demo</span>':'';
     var extra = nCap>1?' <span class="txd" style="font-size:.75rem">(+'+(nCap-1)+' más)</span>':'';
     var conducta = (c.conductas||[]).filter(Boolean)[0]||c.delitoOrden||'Sin conducta';
@@ -3260,6 +3291,28 @@ function renderCases() {
       '</div>'+
     '</div><div class="cc-lbar" style="background:'+barColor+'"></div></div>';
   }).join('');
+}
+
+/* Plazo del art. 28 C.P. (36 horas) — PUNTO ÚNICO.
+   Lo pintan la tarjeta de la lista y el expediente, así que no puede vivir
+   suelto en dos sitios: uno diría «URGENTE» y el otro no.
+   ⚠️ Se mide desde `created`, que es lo que la lista ya venía usando. Es una
+   aproximación —el plazo corre desde la hora de la captura, no desde que se
+   abrió el registro—, pero cambiar la base cambiaría el semáforo de todas las
+   capturas guardadas y eso es una decisión aparte, no un efecto colateral de
+   reorganizar pantallas. El módulo de orden judicial tiene además su propio
+   reloj exacto (`ojPlazo36`, desde la hora de la diligencia), que es el que se
+   imprime en el oficio y que no se toca.
+   ⚠️ Los casos de demostración no cuentan el plazo: no son procedimientos. */
+function lcPlazo36(c, now) {
+  now = now || Date.now();
+  var hrs = (now - (c && c.created || 0)) / 3600000;
+  if (!c || c.isTest) return { hrs: hrs, estado: 'demo', restan: null, badge: '' };
+  if (hrs >= 36) return { hrs: hrs, estado: 'vencido', restan: 0,
+    badge: '<span class="badge b-venc">VENCIDO &gt;36H</span>' };
+  if (hrs >= 24) return { hrs: hrs, estado: 'urgente', restan: 36 - hrs,
+    badge: '<span class="badge b-urg">URGENTE</span>' };
+  return { hrs: hrs, estado: 'ok', restan: 36 - hrs, badge: '' };
 }
 
 function delCase(id) {
@@ -4531,7 +4584,11 @@ var ACT_IC = {
      sheet de envío para hablar de «Descargas», y dos glifos idénticos con dos
      significados distintos se leen mal. Los dos renglones desiguales dicen
      «expediente», y una sola raya se leía como un signo de menos. */
-  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 12h8M8 15.5h5"/></svg>'
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 12h8M8 15.5h5"/></svg>',
+  /* Documento FIRMADO: el acta se imprime para que el capturado la suscriba, y
+     eso es lo que la distingue del informe oficial cuando van una al lado de la
+     otra en el expediente. */
+  acta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17c1.2-2.2 2.1-3.3 2.7-3.3.9 0 .6 2.6 1.5 2.6.6 0 1.1-1 1.8-1 .8 0 1.2 1.7 2 1.7"/></svg>'
 };
 // Botón ⋮ de una fila/tarjeta de lista. `fn` recibe el id del registro.
 function moreBtn(fn, id) {
@@ -4598,42 +4655,64 @@ function openCaseSheet(id) {
   // Nombre del documento oficial según el tipo de caso: FPJ-5 en flagrancia
   // (URI/CESPA) u Oficio de Disposición por orden judicial (Juzgado/Fiscalía).
   var isOJ = c.tipo==='OJ';
-  var docNom = isOJ ? 'Disposición' : 'FPJ-5';
-  var docDe  = c.ojv===2
-    ? 'Oficio de puesta a disposición por orden judicial'
-    : (isOJ
-      ? 'Oficio de disposición a Juzgado o Fiscalía'
-      : (c.tipo==='CESPA' ? 'Informe de aprehensión en flagrancia (CESPA)' : 'Formato de captura en flagrancia'));
+  /* ⚠️ El menú guarda SOLO las salidas de las primeras horas, a dos toques, y
+     manda el resto al expediente. No es una preferencia estética: la lista era
+     un PRODUCTO CARTESIANO de documento × canal («Enviar X» + «Descargar X» por
+     cada formato), así que crecía dos ítems por documento nuevo. Con los tres
+     que faltan —acta de incautación, rótulo y cadena de custodia— llegaba a 12-14
+     ítems, y medido en un teléfono el menú ya se desplaza a partir de 8 (691 px
+     sobre un presupuesto de 640). Colapsado el canal, un documento es un ítem; y
+     lo que no corre prisa vive en el expediente, que sí tiene sitio. */
   openActionSheet(head,
-    // 1) Enviar el documento oficial (WhatsApp o correo, como .docx adjunto)
-    actItem('abrirEnvioDoc', id, ACT_IC.send, 'Enviar '+docNom, 'Por WhatsApp o correo — '+docDe, '', ACT_ACC) +
-    // 2) Descargar el mismo documento oficial en el dispositivo
-    actItem('descargarDocCaso', id, ACT_IC.dl, 'Descargar '+docNom, docDe+' (.docx)') +
-    // 2b) Acta de derechos del capturado (FPJ-6). Es otra SALIDA del caso, como
-    //     el documento oficial y el dossier: se imprime, se firma y se archiva.
-    //     No es un paso del wizard — el flujo de captura no la conoce.
+    // 1) El documento oficial del caso. El canal (descargar o compartir) se
+    //    elige DESPUÉS, donde de verdad hay algo que elegir.
+    actItem('lcSalidaDoc', id, ACT_IC.send, lcNombreDoc(c), lcDescDoc(c), '', ACT_ACC) +
+    // 2) Acta de derechos del capturado (FPJ-6). Es otra SALIDA del caso, como
+    //    el documento oficial y el dossier: se imprime, se firma y se archiva.
+    //    No es un paso del wizard — el flujo de captura no la conoce.
     actItem('abrirActaDerechos', id, ACT_IC.dossier, 'Acta de derechos',
       'FPJ-6 con la información del caso — para imprimir y firmar', '', ACT_URI) +
     // 3) Enviar el dossier (resumen de texto) por WhatsApp o correo
     actItem('enviarDossierCaso', id, ACT_IC.wa, 'Enviar Dossier', 'Resumen del caso por WhatsApp o correo', '', ACT_OK) +
-    /* 4) Expediente del caso.
-       ⚠️ Esta entrada FALTABA: `abrirDossierCaso` se quedó sin ningún llamador al
-       aplanar el menú (commit b7dbd7c), y con ella quedaron fuera de alcance el
-       editor del texto del dossier, sus secciones y tres campos que ninguna otra
-       pantalla pide —SPOA, No. de incidente y fiscal que recibe—, que el dossier
-       sí imprime. Ocupa el sitio de «Copiar Dossier» en vez de sumar un ítem: con
-       ocho el menú ya se desplaza en un teléfono, y copiar vive dentro del
-       expediente, donde además respeta lo que el funcionario acabe de editar. */
+    /* 4) Expediente: el caso completo. Es la casa de todo lo que no cabe en un
+       menú —lo que se consulta y lo que se diligencia—, y la razón por la que la
+       lista deja de crecer: un documento nuevo entra ahí, no aquí. */
     actItem('abrirDossierCaso', id, ACT_IC.folder, 'Expediente del caso',
-      'Edita el texto del dossier y sus secciones · SPOA, incidente y fiscal que recibe') +
+      'Estado, documentos, dossier y contenido de la captura') +
     // 4b) Captura OJ del formato anterior: pasarla al módulo nuevo
     (isOJ && c.ojv !== 2
       ? actItem('ojCompletarCaso', id, ACT_IC.edit, 'Completar al formato nuevo',
           'Pasa esta captura al módulo de orden judicial con sus datos actuales', '', ACT_OJ)
       : '') +
-    // 5) Editar   6) Eliminar
-    actItem('editCase', id, ACT_IC.edit, 'Editar captura', 'Abre el formulario para modificar los datos') +
+    /* 5) Eliminar. «Editar captura» salió del menú: repetía exactamente el toque
+       en la tarjeta (`.cc` ya llama a `editCase`), y era además uno de los dos
+       ítems que se iban bajo el borde en cuanto el menú se desplazaba. Sigue
+       alcanzable por la tarjeta y desde el expediente. */
     actItem('delCase', id, ACT_IC.del, 'Eliminar', 'Borra el registro de '+termino+' de forma permanente', ' danger'));
+}
+
+/* Nombre y descripción del documento oficial de un caso — punto único, porque
+   los usan el menú, el expediente y el diálogo de exportación. */
+function lcNombreDoc(c) {
+  return (c.tipo==='OJ' || c.ojv===2) ? 'Oficio de disposición'
+    : (c.tipo==='CESPA' ? 'Informe FPJ-5 CESPA' : 'Informe FPJ-5 URI');
+}
+function lcDescDoc(c) {
+  if (c.ojv===2) return 'Oficio de puesta a disposición por orden judicial';
+  if (c.tipo==='OJ') return 'Oficio de disposición a Juzgado o Fiscalía';
+  return c.tipo==='CESPA' ? 'Informe de aprehensión en flagrancia (CESPA)'
+    : 'Formato de captura en flagrancia';
+}
+
+/* Salida del documento oficial: UNA entrada; el canal se elige después.
+   ⚠️ El sheet de canales solo se abre donde hay algo que elegir. En un equipo sin
+   Web Share de archivos —todo escritorio— ese sheet enseña un ÚNICO botón
+   («Descargar documento»): es exactamente la duplicación que midió la auditoría,
+   «Enviar X» resultando ser «Descargar X» con un toque de ceremonia. Ahí se
+   descarga directo y nadie pierde un toque. */
+function lcSalidaDoc(id) {
+  if (_docShareOk() || _capNative()) { abrirEnvioDoc(id); return; }
+  lcExportarCaso(id);
 }
 // Abre la pantalla de salidas del caso (dossier WhatsApp + FPJ-5) con el caso ya cargado.
 // Se conserva como vía alterna (hash #dossier); el sheet de la captura ahora ofrece
@@ -5772,6 +5851,80 @@ function genDossier(caso) {
 var _dosCasoId=null;
 var _dosSecEditorOpen=false;
 
+/* ═══ ESTADO DE LOS DOCUMENTOS DE UN CASO ══════════════════════════════════
+   Qué documento está listo y qué le falta al que no lo está.
+   ⚠️ NO se reimplementa ni una regla: se llama a los MISMOS validadores que
+   bloquean al generar (`ojBloqueoDoc` y `f6Faltantes`) y a la misma guarda del
+   NUNC que corta `buildFPJBlob`. Dos criterios distintos sobre el mismo caso es
+   exactamente el defecto que ya se corrigió entre descargar y enviar: esta
+   pantalla tiene que decir lo mismo que dirá el motor, o miente. */
+function lcEstadoDocs(c) {
+  var docs = [];
+
+  // 1 · El documento oficial del caso (FPJ-5 u oficio de orden judicial)
+  var falta = [];
+  if (c.tipo === 'OJ' || c.ojv === 2) {
+    try {
+      falta = ojBloqueoDoc(ojCasoParaDocumento(c), ojEsLegado(c))
+        .map(function(v){ return v && v.msg ? v.msg : String(v); });
+    } catch (e) { falta = []; }
+  } else {
+    if ((c.nunc || '').replace(/\D/g, '').length !== 16) falta.push('NUNC de 16 dígitos');
+    if (!(c.capturados || []).length) falta.push('Al menos un capturado registrado');
+  }
+  /* ⚠️ El color lo pone el TIPO DE CAPTURA (azul URI · rosa CESPA · violeta orden
+     judicial), que es lo que significa en este sistema y lo que ya dice la
+     insignia de la tarjeta en la lista. Darle violeta a un FPJ-5 de flagrancia
+     porque es «el documento principal» diría «orden judicial» a quien lo mire. */
+  docs.push({ lbl: lcNombreDoc(c), de: lcDescDoc(c), falta: falta, accion: 'lcSalidaDoc',
+    tc: c.tipo==='CESPA' ? 'tc-csp' : (c.tipo==='OJ' ? 'tc-oj' : 'tc-uri'), ic: ACT_IC.dossier });
+
+  // 2 · El acta de derechos, que es INDIVIDUAL: una por persona capturada
+  var caps = c.capturados || [];
+  var menor = (typeof f6EsMenor === 'function') ? f6EsMenor(c) : (c.tipo === 'CESPA');
+  var sinActa = [];
+  caps.forEach(function(p) {
+    if (f6Faltantes(c, p).length) sinActa.push(fullName(p) || 'Sin nombre');
+  });
+  docs.push({
+    lbl: 'Acta de derechos',
+    de: caps.length > 1
+      ? 'FPJ-6 · una por cada persona ' + (menor ? 'aprehendida' : 'capturada') + ' (' + caps.length + ')'
+      : 'FPJ-6 — para imprimir y firmar',
+    falta: caps.length
+      ? (sinActa.length ? ['Faltan datos de: ' + sinActa.join(', ')] : [])
+      : ['Ninguna persona registrada'],
+    /* Tono neutro y glifo propio: el acta es del mismo caso, así que repetir el
+       color del tipo la haría indistinguible del documento oficial de al lado. */
+    accion: 'abrirActaDerechos', tc: 'tc-neutro', ic: ACT_IC.acta
+  });
+  return docs;
+}
+
+/* Resumen de lo que la captura tiene registrado. Es la vista de CONSULTA que la
+   app no tenía: hasta ahora, para saber qué había en un caso había que abrirlo
+   en el wizard, o sea entrar a modificarlo. */
+function lcResumenCaso(c) {
+  var f = [];
+  var caps = c.capturados || [], vics = c.victimas || [], tests = c.testigos || [];
+  var conds = (c.conductas || []).filter(Boolean);
+  var vehs = (c.vehiculos || []).filter(Boolean);
+  var emps = (typeof lcEmpDeCaso === 'function') ? lcEmpDeCaso(c) : (c.elementos || []);
+  f.push(['Conductas', conds.length ? conds.join(' · ') : '—']);
+  f.push([c.tipo === 'CESPA' ? 'Aprehendidos' : 'Capturados',
+    caps.length ? caps.map(function(p){ return fullName(p) || 'Sin nombre'; }).join(' · ') : '—']);
+  if (!c.sinVictima) f.push(['Víctimas', vics.length ? vics.map(function(p){ return fullName(p) || 'Sin nombre'; }).join(' · ') : '—']);
+  if (!c.sinTestigo) f.push(['Testigos', tests.length ? tests.map(function(p){ return fullName(p) || 'Sin nombre'; }).join(' · ') : '—']);
+  f.push(['Vehículos', vehs.length
+    ? vehs.map(function(v){ return [v.clase, v.marca, lcPlaca(v.placas)].filter(Boolean).join(' '); }).join(' · ')
+    : 'Ninguno']);
+  /* Los elementos se enseñan YA NUMERADOS, con la misma primitiva que los
+     imprime en el numeral 7 del formato: lo que se lee aquí es lo que va a
+     salir en el informe, no una segunda redacción. */
+  f.push(['Elementos (EMP y EF)', emps.length ? lcEmpLineas(emps).join('\n') : 'Ninguno']);
+  return f;
+}
+
 /* Texto del dossier de un caso — PUNTO ÚNICO del que beben todas sus salidas
    (compartir y copiar, desde el menú de la captura y desde el expediente).
    ⚠️ Si el caso es el que está abierto en el expediente, manda lo que haya en el
@@ -5791,16 +5944,79 @@ function _dosTexto(id) {
 function renderDossier() {
   var emp=document.getElementById('dos-empty');
   var caso=_dosCasoId?DB.getCase(_dosCasoId):null;
-  // Pantalla de salidas por-caso: se entra desde una captura (o al recargar con #dossier).
+  // Expediente por-caso: se entra desde una captura (o al recargar con #dossier).
   if(!caso){
     if(emp) emp.style.display='block';
-    document.getElementById('dos-preview-wrap').style.display='none';
-    document.getElementById('dos-actions').style.display='none';
+    ['dos-preview-wrap','dos-actions','exp-estado','exp-docs','exp-contenido'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.style.display='none';
+    });
     var sub=document.getElementById('dos-sub'); if(sub) sub.textContent='Sin captura seleccionada';
     return;
   }
   if(emp) emp.style.display='none';
+  renderExpediente(caso);
   updateDosPreview(caso);
+}
+
+/* Los tres bloques propios del expediente: estado, documentos y contenido.
+   ⚠️ Va SEPARADO de `updateDosPreview` a propósito: el editor de secciones
+   repinta el dossier en cada toque (`toggleSecItem` y compañía) y no tiene por
+   qué recalcular el estado de los documentos ni volver a pintar el resumen. */
+function renderExpediente(caso) {
+  var est=document.getElementById('exp-estado'),
+      box=document.getElementById('exp-docs'),
+      cont=document.getElementById('exp-contenido');
+  if(!est||!box||!cont) return;
+
+  // ── Estado: el plazo del art. 28 C.P. y lo que falta para cada documento ──
+  var pl=lcPlazo36(caso), docs=lcEstadoDocs(caso);
+  var pendientes=docs.filter(function(d){ return d.falta.length; });
+  var hPlazo;
+  if(pl.estado==='demo'){
+    hPlazo='<div class="oj-alert info"><b>Caso de demostración</b>'+
+      'No cuenta el plazo de 36 horas: no es un procedimiento real.</div>';
+  } else if(pl.estado==='vencido'){
+    hPlazo='<div class="oj-alert dura"><b>Plazo vencido</b>'+
+      'Han pasado más de 36 horas desde que se registró la captura (art. 28 C.P.).</div>';
+  } else {
+    var h=Math.floor(pl.restan), mi=Math.round((pl.restan-h)*60);
+    if(mi===60){ h+=1; mi=0; }
+    hPlazo='<div class="oj-alert '+(pl.estado==='urgente'?'blanda':'ok')+'"><b>Plazo de 36 horas</b>'+
+      'Quedan '+h+' h '+(mi<10?'0':'')+mi+' min para poner a disposición.</div>';
+  }
+  est.innerHTML='<div class="st" style="margin-top:0">Estado</div>'+hPlazo+
+    (pendientes.length
+      ? '<div class="oj-alert blanda"><b>Faltan datos</b>'+
+        pendientes.map(function(d){ return escHtml(d.lbl)+': '+escHtml(d.falta.join(' · ')); }).join('<br>')+
+        '</div><button class="btn bs bsm" onclick="editCase(\''+caso.id+'\')">Completar la captura</button>'
+      : '<p class="oj-hint" style="margin:0">Todos los documentos del caso se pueden generar.</p>');
+  est.style.display='block';
+
+  /* ── Documentos, agrupados. Reutiliza `.type-card`, el mismo componente de
+     tarjeta que la pantalla «Nueva captura»: no se estrena un patrón visual
+     para esto. Un formato nuevo se agrega en `lcEstadoDocs` y aparece aquí. ── */
+  box.innerHTML='<div class="st" style="margin-top:0">Documentos</div>'+
+    docs.map(function(d){
+      var ok=!d.falta.length;
+      return '<button class="type-card '+d.tc+'" onclick="'+d.accion+'(\''+caso.id+'\')">'+
+        '<div class="tic">'+d.ic+'</div>'+
+        '<div class="tbd"><div class="tbt">'+escHtml(d.lbl)+'</div>'+
+          '<div class="tbd2">'+escHtml(d.de)+'</div>'+
+          '<div class="exp-st '+(ok?'ok':'falta')+'"><span class="dot"></span>'+
+            (ok?'Listo para generar':'Faltan datos')+'</div>'+
+        '</div><span class="tarr">›</span></button>';
+    }).join('');
+  box.style.display='block';
+
+  // ── Contenido de la captura: la vista de consulta que no existía ──
+  cont.innerHTML='<div class="st" style="margin-top:0">Contenido de la captura</div>'+
+    lcResumenCaso(caso).map(function(kv){
+      return '<div class="exp-kv"><span class="k">'+escHtml(kv[0])+'</span>'+
+        '<span class="v">'+escHtml(kv[1])+'</span></div>';
+    }).join('')+
+    '<button class="btn bs bbl" style="margin-top:14px" onclick="editCase(\''+caso.id+'\')">'+
+    'Editar la captura</button>';
+  cont.style.display='block';
 }
 
 function updateDosPreview(caso) {
@@ -5812,12 +6028,10 @@ function updateDosPreview(caso) {
   var sub=document.getElementById('dos-sub');
   if(sub) sub.textContent=(caso.capturados&&caso.capturados[0])?fullName(caso.capturados[0]):'Sin capturado';
   lcDossierExtraHint(caso);
-  var btnSend=document.getElementById('dos-btn-send');
-  if(btnSend){
-    if(caso.tipo==='CESPA') btnSend.textContent='Enviar FPJ-5 CESPA';
-    else if(caso.tipo==='OJ') btnSend.textContent='Enviar Oficio Disposición';
-    else btnSend.textContent='Enviar FPJ-5 URI';
-  }
+  /* El botón «Enviar FPJ-5 / Oficio» que vivía aquí se retiró: la misma acción
+     está en el bloque de Documentos de esta misma pantalla, que es su sitio.
+     Ofrecerla dos veces en una pantalla es la duplicación que la auditoría
+     encontró entre «Enviar X» y «Descargar X», repetida a menor escala. */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

@@ -71,10 +71,12 @@ const SEL_DL = '#share-it-dl';
   await page.click('#cl .prow-more');
   await page.waitForTimeout(300);
   const actTxt = await page.$eval('#act-sheet', el => el.textContent);
-  // «Copiar Dossier» pasó a vivir dentro del expediente (que había perdido su
-  // entrada); el menú ofrece ahora esa entrada en su lugar.
-  log(/Enviar FPJ-5/.test(actTxt) && /Descargar FPJ-5/.test(actTxt) && /Enviar Dossier/.test(actTxt) && /Expediente del caso/.test(actTxt),
-    '[1] Menu de la captura ofrece enviar/descargar documento, enviar dossier y abrir el expediente', actTxt.replace(/\s+/g, ' ').slice(0, 90));
+  /* El canal se colapso: un documento es UN item («Informe FPJ-5 URI»), y el
+     canal —descargar o compartir— se elige despues. «Copiar Dossier» y «Editar
+     captura» viven en el expediente y en la tarjeta respectivamente. */
+  log(/Informe FPJ-5 URI/.test(actTxt) && /Acta de derechos/.test(actTxt) && /Enviar Dossier/.test(actTxt)
+      && /Expediente del caso/.test(actTxt) && !/Descargar /.test(actTxt),
+    '[1] Menu de la captura: el documento en un solo item, acta, dossier y expediente', actTxt.replace(/\s+/g, ' ').slice(0, 90));
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 
@@ -254,22 +256,24 @@ const SEL_DL = '#share-it-dl';
   const r7 = await page.evaluate(() => window._shared);
   log(!!r7 && r7.n === 1 && /^OJ_.*\.docx$/.test(r7.name), '[7] OJ: navigator.share recibe el documento OJ adjunto', JSON.stringify(r7));
 
-  // ---- 8. Dossier: botón Enviar por tipo abre el sheet ----
+  /* ---- 8. Expediente: el documento del caso, nombrado por tipo, en su bloque ----
+     El boton suelto #dos-btn-send que vivia aqui se retiro: la misma accion esta
+     en el bloque de Documentos de esta pantalla, asi que no se ofrece dos veces. */
   await page.evaluate((id) => { go('dossier'); _dosCasoId = id; renderDossier(); }, uriId);
-  await page.waitForTimeout(300);
-  const dosSendUri = await page.$eval('#dos-btn-send', el => el.textContent).catch(() => '');
-  log(/Enviar FPJ-5 URI/.test(dosSendUri), '[8] Dossier URI: boton Enviar FPJ-5 URI', dosSendUri);
-  await page.evaluate((id) => { _dosCasoId = id; var c = DB.getCase(id); updateDosPreview(c); }, ojId);
-  await page.waitForTimeout(200);
-  const dosSendOj = await page.$eval('#dos-btn-send', el => el.textContent).catch(() => '');
-  log(/Enviar Oficio Disposición/.test(dosSendOj), '[8] Dossier OJ: boton Enviar Oficio Disposicion', dosSendOj);
-  await page.click('#dos-btn-send');
-  await page.waitForTimeout(300);
-  // El boton del dossier tambien pasa por el dialogo de salida.
-  await elegirExport('DOCX', 'CARTA');
   await page.waitForTimeout(400);
+  const dosSendUri = await page.$eval('#exp-docs .type-card .tbt', el => el.textContent).catch(() => '');
+  log(/Informe FPJ-5 URI/.test(dosSendUri), '[8] Expediente URI: el documento se llama Informe FPJ-5 URI', dosSendUri);
+  await page.evaluate((id) => { _dosCasoId = id; renderDossier(); }, ojId);
+  await page.waitForTimeout(300);
+  const dosSendOj = await page.$eval('#exp-docs .type-card .tbt', el => el.textContent).catch(() => '');
+  log(/Oficio de disposición/.test(dosSendOj), '[8] Expediente OJ: el documento se llama Oficio de disposicion', dosSendOj);
+  await page.click('#exp-docs .type-card');
+  await page.waitForTimeout(400);
+  // La tarjeta del documento tambien pasa por el dialogo de salida.
+  await elegirExport('DOCX', 'CARTA');
+  await page.waitForTimeout(500);
   const dosSheetOn = await page.$eval('#share-sheet', el => el.classList.contains('on'));
-  log(dosSheetOn, '[8] Boton Enviar del dossier abre el sheet tras elegir formato y tamano');
+  log(dosSheetOn, '[8] La tarjeta del documento abre el sheet tras elegir formato y tamano');
   await page.evaluate(() => closeShareSheet());
 
   // ---- 9. Regresión: descarga clásica sigue funcionando ----

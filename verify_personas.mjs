@@ -114,10 +114,11 @@ await page.screenshot({ path: OUT('07_capturas') });
 await page.click('.cc .prow-more');
 await page.waitForTimeout(450);
 const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
-// 7 desde que el acta de derechos (FPJ-6) es otra salida del caso, junto al
-// documento oficial y el dossier. Todas siguen etiquetadas y sin duplicarse.
-log(ccItems.length === 7 && ccItems.includes('Acta de derechos'),
-  'Sheet de captura con 7 acciones etiquetadas', JSON.stringify(ccItems));
+// 5 desde que el canal se colapsó: un documento es UN ítem (el canal —descargar
+// o compartir— se elige después), y lo que no corre prisa vive en el expediente.
+// Era un producto cartesiano documento × canal, que crecía dos ítems por formato.
+log(ccItems.length === 5 && ccItems.includes('Acta de derechos') && ccItems.includes('Expediente del caso'),
+  'Sheet de captura con 5 acciones etiquetadas', JSON.stringify(ccItems));
 log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
 await page.screenshot({ path: OUT('08_capturas_sheet') });
 
@@ -136,8 +137,9 @@ log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de elim
 // dentro del expediente, donde además respeta lo que el funcionario acabe de
 // editar. Lo que NO puede pasar es que copiar se haya perdido — se comprueba abajo.
 const actAll = await page.$eval('#act-items', el => el.textContent);
-log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dossier/.test(actAll) && /Expediente del caso/.test(actAll),
-  'Sheet ofrece enviar/descargar documento, enviar dossier y abrir el expediente');
+log(/Informe FPJ-5/.test(actAll) && /Acta de derechos/.test(actAll) && /Enviar Dossier/.test(actAll) && /Expediente del caso/.test(actAll)
+    && !/Descargar /.test(actAll),
+  'Sheet ofrece el documento (un solo ítem), acta, dossier y expediente');
 // Copiar el dossier sigue siendo alcanzable, un nivel adentro
 const copiaViva = await page.evaluate(() => {
   const id = DB.getCases()[0].id;
@@ -149,19 +151,27 @@ const copiaViva = await page.evaluate(() => {
   return ok;
 });
 log(copiaViva, 'Copiar el dossier no se perdió: vive dentro del expediente');
-// La 1ª acción ("Enviar FPJ-5") pide formato y tamaño y luego abre el sheet
+// La 1ª acción es el documento oficial, ahora en un solo ítem.
 await page.click('#act-items .sheet-item:nth-child(1)');
 await page.waitForTimeout(500);
 // El FPJ-5 no tiene formato que elegir (solo Word); la primera vez sí se pide
 // el tamaño de papel, que es del equipo y a partir de ahí queda recordado.
-log(await page.isVisible('#exp-papel-CARTA'), 'Acción "Enviar FPJ-5" pide primero el tamaño de papel');
+log(await page.isVisible('#exp-papel-CARTA'), 'La acción del documento pide primero el tamaño de papel');
 log(!(await page.isVisible('#exp-fmt-PDF').catch(() => false)), 'Y no ofrece PDF para el formato de la Fiscalía');
 await page.click('#exp-papel-CARTA');
-await page.click('#exp-go');
-await page.waitForTimeout(600);
-const sendOk = await page.evaluate(() => document.getElementById('share-sheet').classList.contains('on') && !!_shareCasoId);
-log(sendOk, 'Y después abre el sheet de envío del documento');
-await page.evaluate(() => closeShareSheet());
+/* Sin Web Share (todo escritorio) NO hay canal que elegir: el sheet de envío
+   enseñaría un único botón, «Descargar documento». Ahí se entrega directo — era
+   justo la duplicación que medía la auditoría entre «Enviar X» y «Descargar X».
+   Donde sí hay Web Share, el mismo ítem abre el sheet con los dos canales. */
+const [dlDoc] = await Promise.all([
+  page.waitForEvent('download', { timeout: 9000 }).catch(() => null),
+  page.click('#exp-go')
+]);
+await page.waitForTimeout(500);
+const sinCeremonia = await page.evaluate(() =>
+  !document.getElementById('share-sheet').classList.contains('on'));
+log(!!dlDoc && sinCeremonia, 'Y entrega el .docx sin un sheet de un solo botón',
+  dlDoc ? dlDoc.suggestedFilename() : 'sin descarga');
 await page.screenshot({ path: OUT('09_dossier') });
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);
