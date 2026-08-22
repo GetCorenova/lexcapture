@@ -2706,7 +2706,7 @@ async function doSetPin() {
     var salt=crypto.getRandomValues(new Uint8Array(16));
     _sessionKey=await _lcDeriveKey(a, salt);
     var hash=await _lcHashPin(a, salt);
-    localStorage.setItem('lc_key_salt', btoa(String.fromCharCode(...salt)));
+    localStorage.setItem('lc_key_salt', _b64FromBytes(salt));
     localStorage.setItem('lc_key_hash', hash);
     var rawC=localStorage.getItem('lc_cases'), rawP=localStorage.getItem('lc_persons');
     _casesCache=(rawC&&(rawC[0]==='['||rawC[0]==='{'))?(JSON.parse(rawC)||[]):[];
@@ -2755,6 +2755,25 @@ function forgotPin() {
   location.reload();
 }
 
+/* Base64 de un arreglo de bytes, POR TROZOS.
+   ⚠️ Lo obvio —pasarle el arreglo entero a `String.fromCharCode` con el operador
+   de propagación— revienta con una carga grande: pasa un argumento por byte y el
+   motor tiene un tope (~124 000 en Chrome), así que a partir de ahí lanza
+   «RangeError: Maximum call stack size exceeded». Como TODAS las capturas viven
+   en un solo blob cifrado (`lc_cases`), ese tope era el techo real de la
+   aplicación: medido, dejaba de guardar entre la captura 23 y la 27 — y la
+   tarjeta se quedaba en la lista aunque nunca hubiera llegado al disco.
+   Los trozos de 32 KB están muy por debajo del límite y el resultado es
+   IDÉNTICO byte a byte al de la versión anterior, así que lo ya guardado se
+   sigue descifrando sin migrar nada. */
+function _b64FromBytes(buf) {
+  var CHUNK = 0x8000, s = '';
+  for (var i = 0; i < buf.length; i += CHUNK) {
+    s += String.fromCharCode.apply(null, buf.subarray(i, i + CHUNK));
+  }
+  return btoa(s);
+}
+
 async function _lcDeriveKey(pin, salt) {
   var km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({name:'PBKDF2',salt:salt,iterations:100000,hash:'SHA-256'}, km, {name:'AES-GCM',length:256}, false, ['encrypt','decrypt']);
@@ -2762,14 +2781,14 @@ async function _lcDeriveKey(pin, salt) {
 async function _lcHashPin(pin, salt) {
   var data = new Uint8Array([...salt, ...new TextEncoder().encode(pin)]);
   var h = await crypto.subtle.digest('SHA-256', data);
-  return btoa(String.fromCharCode(...new Uint8Array(h)));
+  return _b64FromBytes(new Uint8Array(h));
 }
 async function _lcEncrypt(text) {
   var iv = crypto.getRandomValues(new Uint8Array(12));
   var enc = await crypto.subtle.encrypt({name:'AES-GCM',iv:iv}, _sessionKey, new TextEncoder().encode(text));
   var buf = new Uint8Array(12 + enc.byteLength);
   buf.set(iv); buf.set(new Uint8Array(enc), 12);
-  return btoa(String.fromCharCode(...buf));
+  return _b64FromBytes(buf);
 }
 async function _lcDecrypt(b64) {
   var buf = Uint8Array.from(atob(b64), function(c){return c.charCodeAt(0);});
@@ -2797,6 +2816,47 @@ function _lcEncSave(key, val) {
   _lcWriteChain[key] = result.catch(function(e){console.error('[LexCapture] cifrado error',key,e);});
   return result;
 }
+/* Guardado cifrado de una colección con REVERSIÓN de su caché en memoria.
+   ⚠️ El patrón anterior era `_cache = v; return _lcEncSave(k, v);` — la caché se
+   actualizaba ANTES de saber si la escritura iba a funcionar. Si fallaba (hoy la
+   cuota de localStorage; hasta este build, también el techo del cifrado), la
+   lista seguía mostrando una captura que no estaba en el disco y que desaparecía
+   al recargar. En una aplicación donde el dato es un procedimiento judicial, una
+   captura que se ve y no existe es peor que un error a la cara.
+   ⚠️ Solo se revierte si la caché sigue teniendo EXACTAMENTE lo que se intentó
+   escribir: si entretanto entró otro guardado (las escrituras se serializan por
+   clave, pero la caché se toca de inmediato), manda ese y revertir lo borraría. */
+/* Mensaje honesto de un fallo al guardar. Antes se culpaba siempre al PIN
+   («el PIN pudo bloquearse»), que es solo UNA de las causas: la que de verdad
+   se estaba dando era el techo del cifrado, y la que queda es la memoria del
+   equipo llena. Señalar la causa equivocada manda al usuario a reintentar algo
+   que va a volver a fallar. */
+function _lcMsgGuardado(e, queCosa) {
+  var n = (e && (e.name || '')) + ' ' + (e && (e.message || ''));
+  if (/Quota|NS_ERROR_DOM_QUOTA|storage/i.test(n)) {
+    return '⚠️ No se pudo guardar ' + queCosa + ': la memoria del equipo está llena. ' +
+           'Exporta y elimina capturas antiguas desde Ajustes.';
+  }
+  if (/Sin sesión activa/i.test(n)) {
+    return '⚠️ No se pudo guardar ' + queCosa + ': la sesión se cerró. Vuelve a ingresar el PIN.';
+  }
+  return '⚠️ No se pudo guardar ' + queCosa + '. No se perdió nada de lo diligenciado: vuelve a intentarlo.';
+}
+function _lcLeerCases()      { return _casesCache; }
+function _lcEscribirCases(v) { _casesCache = v; }
+function _lcLeerPersons()      { return _personsCache; }
+function _lcEscribirPersons(v) { _personsCache = v; }
+function _lcLeerDraft()      { return _draftCache; }
+function _lcEscribirDraft(v) { _draftCache = v; }
+function _lcGuardarCache(key, val, leer, escribir) {
+  var prev = leer();
+  escribir(val);
+  return _lcEncSave(key, val).catch(function(e) {
+    if (leer() === val) escribir(prev);
+    throw e;
+  });
+}
+
 async function _lcLoadCaches() {
   var enc;
   enc = localStorage.getItem('lc_cases');
@@ -2854,7 +2914,7 @@ var _draftCache = null;
 var _firmasCache = null;
 var DB = {
   getDraft: function() { return _draftCache; },
-  saveDraft: function(d) { _draftCache = d; return _lcEncSave('draft', d); },
+  saveDraft: function(d) { return _lcGuardarCache('draft', d, _lcLeerDraft, _lcEscribirDraft); },
   clearDraft: function() {
     if (_draftCache === null) return Promise.resolve();
     _draftCache = null;
@@ -2863,9 +2923,14 @@ var DB = {
     return Promise.resolve();
   },
   getCases: function() { return _casesCache !== null ? _casesCache : []; },
-  saveCases: function(c) { _casesCache = c; return _lcEncSave('cases', c); },
+  saveCases: function(c) { return _lcGuardarCache('cases', c, _lcLeerCases, _lcEscribirCases); },
   getCase: function(id) { var a=this.getCases(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
-  saveCase: function(c) { var a=this.getCases(); var i=a.findIndex(function(x){return x.id===c.id;}); if(i>=0) a[i]=c; else a.push(c); return this.saveCases(a); },
+  /* ⚠️ `.slice()` no es cosmético: `getCases()` devuelve la caché VIVA, y hacer
+     `push` sobre ella la muta antes de saber si el guardado va a funcionar —
+     así la reversión de `_lcGuardarCache` no tendría nada que revertir y la
+     captura se quedaría en la lista sin estar en el disco. Sobre una copia, la
+     caché solo cambia si la escritura sale bien. */
+  saveCase: function(c) { var a=this.getCases().slice(); var i=a.findIndex(function(x){return x.id===c.id;}); if(i>=0) a[i]=c; else a.push(c); return this.saveCases(a); },
   delCase: function(id) { return this.saveCases(this.getCases().filter(function(c){return c.id!==id;})); },
   /* Firma manuscrita de un perfil. Una sola por perfil: guardar reemplaza. */
   getFirma: function(idPerfil) {
@@ -2883,9 +2948,9 @@ var DB = {
     return _lcEncSave('firmas', _firmasCache);
   },
   getPersons: function() { return _personsCache !== null ? _personsCache : []; },
-  savePersons: function(p) { _personsCache = p; return _lcEncSave('persons', p); },
+  savePersons: function(p) { return _lcGuardarCache('persons', p, _lcLeerPersons, _lcEscribirPersons); },
   getPerson: function(id) { var a=this.getPersons(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
-  savePerson: function(p) { var a=this.getPersons(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
+  savePerson: function(p) { var a=this.getPersons().slice(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
     // Modo invitado: configuración propia en memoria. Ni se lee ni se escribe la
@@ -3585,7 +3650,7 @@ async function wizSave() {
     wc=null; go('capturas'); renderDraftSlot(); guestToastGuardado('Caso guardado ✓');
   } catch(e) {
     console.error('[LexCapture] error guardando caso', e);
-    toast('⚠️ Error guardando el caso — el PIN pudo bloquearse. Vuelve a intentarlo.');
+    toast(_lcMsgGuardado(e, 'la captura'), 6000);
   }
 }
 
@@ -7554,7 +7619,7 @@ async function f6Guardar() {
     await DB.savePerson(Object.assign({}, DB.getPerson(cap.id) || {}, cap, { rol:'Capturado' }));
   } catch (e) {
     console.error('[LexCapture] error guardando el acta', e);
-    toast('⚠️ Error guardando el acta — el PIN pudo bloquearse. Vuelve a intentarlo.');
+    toast(_lcMsgGuardado(e, 'el acta'), 6000);
     return null;
   }
   return { caso: DB.getCase(ctx.id), idx: ctx.idx };
@@ -12310,7 +12375,7 @@ async function ojGuardarCaso(silencioso){
     return true;
   }catch(e){
     console.error('[LexCapture OJ] guardando caso',e);
-    toast('⚠️ Error guardando el caso — el PIN pudo bloquearse. Vuelve a intentarlo.');
+    toast(_lcMsgGuardado(e, 'la captura'), 6000);
     return false;
   }
 }
