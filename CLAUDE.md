@@ -2239,6 +2239,54 @@ Pedido en campo para **Capturas y Personas**: poder escoger el orden de la lista
 - Regresiones en verde: **orden 33** · OJ 187 · mejora1 129 · mejora3 51 · fpj6 140 · simulador 41 ·
   personas 24 · invitado 33 · ola1 38 · ola2 34 · DS 10.
 
+## El numeral 7: la cantidad, una sola vez, y aire entre elementos (2026-08-22)
+Dos observaciones de campo sobre el mismo pantallazo del FPJ-5 impreso (recuadros rojos sobre el
+apartado «7. DESCRIPCIÓN DE EMP Y EF RECOLECTADOS»). Verificado con `verify_mejora1.mjs`
+(**153 checks**, antes 129) y abriendo los `.docx` de URI y CESPA en **Word real** (COM → PDF →
+render con Edge).
+
+- **El número salía escrito dos veces**: «02 (dos) **Dos** cheques de Bancolombia…», «01 (uno) **Un**
+  celular marca Samsung…». No era un fallo del motor: el funcionario escribe la cantidad **dentro**
+  del campo Descripción («Dos cheques…») y la app antepone «02 (dos) » al componer el renglón.
+  ⚠️ **El camino de pegar texto de corrido nunca tuvo el problema** —`lcEmpParsear` ya toma la
+  palabra inicial COMO la cantidad y la retira—; el defecto era exclusivo de las filas
+  diligenciadas a mano, que es justo como lo hizo el usuario del reporte.
+- **`lcEmpSinCant(d,cant)`** retira ese anuncio al COMPONER (`lcEmpDesc`), no al guardar: lo que el
+  funcionario escribió sigue intacto en su campo y **una captura ya guardada sale corregida sin
+  migrar nada**. Reconoce las cuatro formas que ya entendía el parser: «02 (dos) …», «Un (1) …»,
+  «2 …» y «Dos …».
+- ⚠️ **Solo se retira si nombra la MISMA cantidad del campo «Cant.»** — que es cuando consta que es
+  una repetición. Con cantidades distintas («Tres cuchillos» con Cant. 2) **no se toca nada**: la app
+  no sabe cuál de las dos es la buena, y el desacuerdo queda a la vista en «Así quedará el numeral 7»
+  para que el funcionario lo corrija. **Cambiarle por cuenta propia la cantidad a un elemento
+  material probatorio es peor que dejar el número repetido** — misma regla que ya rige el corte de
+  `_lcEmpCortar` («inventar un elemento es peor que no separarlo»).
+- ⚠️ **`LC_RE_NO_CANT`: un número seguido de otro numeral o de una unidad NO es la cantidad.**
+  «Dos **mil** pesos» con Cant. 2 no puede quedar en «02 (dos) mil pesos», ni «**9 mm**» perder su
+  calibre. Sin esa guarda el arreglo habría roto descripciones correctas.
+- **Defecto PREEXISTENTE corregido de paso**: `lcPlural` pluralizaba también un primer «palabra» que
+  era un número — el build anterior imprimía «05 (cinco) **5es** tarjetas debito» y «02 (dos) **02es**
+  (dos) cheques». Ahora un token sin letras no se pluraliza.
+- **Aire entre elementos** (`_fpjEspaciado`, `FPJ_EMP_AIRE=60`): dos EMP seguidos llegaban pegados a
+  la línea que los separa y se leían como un párrafo corrido. Se resuelve con **espaciado de párrafo
+  de 3 pt arriba y abajo**, no con un renglón vacío de por medio: un párrafo vacío se comería un
+  renglón del formato —de los que la app reproduce uno por elemento— y descuadraría la relación.
+  Además el espaciado viaja con el elemento cuando el funcionario edita el `.docx`.
+- ⚠️ **Solo los renglones ESCRITOS.** Un renglón que se queda vacío es el del formato y sale byte a
+  byte como en la plantilla; **sin elementos no se toca el apartado**, como ya era la regla.
+- ⚠️ **El orden de los hijos de `w:pPr` lo fija el esquema**: `spacing` va después de `pBdr`/`shd` y
+  **antes** de `ind`/`jc`/`rPr`. Ponerlo donde caiga hace que Word abra el documento «dañado» —
+  misma lección de `_fpjKeepNext` y del motor del OJ. Hay un check que lo mide sobre el `pPr` real.
+- **La vista previa del wizard enseña el aire** (`.lc-emp-l`): si el documento separa los elementos
+  y «Así quedará el numeral 7» no, la vista deja de ser lo que se va a imprimir.
+- **Medido en Word real, contra el build anterior**: en las **8 muestras** (URI y CESPA × 0, 1, 2 y 5
+  elementos) el **número de páginas es idéntico** y las **35 tablas** siguen intactas — el aire no
+  costó una hoja en ningún caso. Word abre los ocho sin pedir reparar.
+- ⚠️ **Los checks nuevos no son decorativos**: contra el build anterior fallan **15 de 153**.
+- Regresiones en verde: **mejora1 153** · fpj5 tipografía 69 · fpj6 140 · export 74 · multipersona ·
+  simulador 41 · personas 24 · invitado 33 · ola1 38 · orden 33.
+  Anti-caché `?v=68` / `cache-v68`, `_BUILD=68`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

@@ -701,6 +701,107 @@ await page.waitForTimeout(400);
 log(await page.evaluate(() => { const p = DB.getPersons().find(x => x.numDoc === '55554444'); return p && p.dirRes; }) === 'TV 39 # 70-12',
   'El módulo Personas guarda la dirección con el mismo formato');
 
+/* ═══════════ El número no se escribe DOS VECES ═══════════
+   Reportado en campo con el documento a la vista: el funcionario escribe «Dos
+   cheques…» en el campo Descripción y la app antepone «02 (dos) », así que el
+   renglón salía «02 (dos) Dos cheques…» / «01 (uno) Un celular…».
+   ⚠️ La guarda que importa NO es que se quite, sino CUÁNDO se quita: solo si la
+   descripción nombra la MISMA cantidad del campo «Cant.». Con cantidades
+   distintas la app no sabe cuál es la buena y no toca nada — cambiarle la
+   cantidad a un elemento material probatorio es peor que dejarla repetida. */
+sec('El número en letras, una sola vez');
+const numDos = await page.evaluate(() => [
+  ['2|Dos cheques de Bancolombia, uno identificado con el número KL614882', lcEmpLinea({ cant: 2, desc: 'Dos cheques de Bancolombia, uno identificado con el número KL614882' })],
+  ['1|Un celular marca Samsung Galaxy A32, color negro', lcEmpLinea({ cant: 1, desc: 'Un celular marca Samsung Galaxy A32, color negro' })],
+  ['3|Tres cuchillos marca Stainless', lcEmpLinea({ cant: 3, desc: 'Tres cuchillos marca Stainless' })],
+  ['2|02 (dos) cheques', lcEmpLinea({ cant: 2, desc: '02 (dos) cheques' })],
+  ['1|Una (1) prenda de vestir', lcEmpLinea({ cant: 1, desc: 'Una (1) prenda de vestir' })],
+  ['5|5 tarjetas debito', lcEmpLinea({ cant: 5, desc: '5 tarjetas debito' })],
+  ['1|celular marca Samsung', lcEmpLinea({ cant: 1, desc: 'celular marca Samsung' })],
+  ['2|celular marca Nokia', lcEmpLinea({ cant: 2, desc: 'celular marca Nokia' })]
+]);
+const esperado = {
+  '2|Dos cheques de Bancolombia, uno identificado con el número KL614882': '02 (dos) cheques de Bancolombia, uno identificado con el número KL614882',
+  '1|Un celular marca Samsung Galaxy A32, color negro': '01 (uno) celular marca Samsung Galaxy A32, color negro',
+  '3|Tres cuchillos marca Stainless': '03 (tres) cuchillos marca Stainless',
+  '2|02 (dos) cheques': '02 (dos) cheques',
+  '1|Una (1) prenda de vestir': '01 (uno) prenda de vestir',
+  '5|5 tarjetas debito': '05 (cinco) tarjetas debito',
+  '1|celular marca Samsung': '01 (uno) celular marca Samsung',
+  '2|celular marca Nokia': '02 (dos) celulares marca Nokia'
+};
+for (const [ent, sal] of numDos)
+  log(sal === esperado[ent], 'Sin repetir la cantidad: ' + ent.split('|')[1].slice(0, 40), sal);
+// Lo que NO se toca: cantidades que no concuerdan, y numerales que arrastran otro.
+const noToca = await page.evaluate(() => [
+  lcEmpLinea({ cant: 2, desc: 'Tres cuchillos marca Stainless' }),
+  lcEmpLinea({ cant: 1, desc: 'Dos cheques de Bancolombia' }),
+  lcEmpLinea({ cant: 2, desc: 'Dos mil pesos en efectivo' }),
+  lcEmpLinea({ cant: 9, desc: '9 mm cartuchos' }),
+  lcEmpLinea({ cant: 1, desc: 'revólver calibre 38 con tres cartuchos' })
+]);
+log(noToca[0] === '02 (dos) Tres cuchillos marca Stainless',
+  '⚠️ Cantidades que NO concuerdan: la app no elige por su cuenta, deja el desacuerdo a la vista', noToca[0]);
+log(noToca[1] === '01 (uno) Dos cheques de Bancolombia', 'Y al revés, igual', noToca[1]);
+log(noToca[2] === '02 (dos) Dos mil pesos en efectivo',
+  '⚠️ Un numeral que arrastra otro no es la cantidad: «Dos mil» se queda entero', noToca[2]);
+log(noToca[3] === '09 (nueve) 9 mm cartuchos',
+  '⚠️ Ni un número con unidad de medida: «9 mm» es descripción, y ya no se pluraliza en «9es»', noToca[3]);
+log(noToca[4] === '01 (uno) revólver calibre 38 con tres cartuchos',
+  'Una descripción sin anuncio de cantidad sigue intacta', noToca[4]);
+
+/* ═══════════ Aire entre elementos ═══════════
+   Segunda observación del mismo reporte: dos EMP seguidos llegaban pegados a la
+   línea que los separa y se leían como un párrafo corrido. */
+sec('Un espacio entre cada EMP');
+await page.evaluate(async () => {
+  const c = DB.getCases().find(x => (x.capturados || []).some(p => p.priApe === 'RUIZ'));
+  for (const tipo of ['URI', 'CESPA']) {
+    const k = JSON.parse(JSON.stringify(c));
+    k.id = 'AIRE_' + tipo;
+    k.tipo = tipo;
+    k.elementos = [
+      { cant: 2, desc: 'Dos cheques de Bancolombia con firmas ilegibles' },
+      { cant: 1, desc: 'Un celular marca Samsung Galaxy A32, color negro' }
+    ];
+    k.narracion = Object.assign({}, k.narracion, { emp: '' });
+    await DB.saveCase(k);
+  }
+});
+for (const tf of ['URI', 'CESPA']) {
+  const xa = await docXmlDe('AIRE_' + tf, 'CARTA', 'aire-' + tf);
+  const i = xa.search(/7\.\s*DESCRIPCI.N DE EMP/i);
+  const j = xa.search(/evento de requerir m.s espacio/i);
+  const seg = xa.slice(i, j);
+  const esp = [...seg.matchAll(/<w:spacing\b[^>]*\/>/g)].map(m => m[0]);
+  log(esp.length === 2, `[${tf}] Los dos renglones escritos llevan espaciado propio`, esp.length);
+  log(esp.length === 2 && esp.every(e => /w:before="60"/.test(e) && /w:after="60"/.test(e)),
+    `[${tf}] 3 pt arriba y 3 pt abajo, para que el texto no toque la línea`, esp[0]);
+  // El esquema manda: w:spacing va ANTES de w:ind/w:jc/w:rPr, o Word abre el
+  // documento «dañado». Se mide sobre el pPr real, no sobre la intención.
+  const pPrs = [...seg.matchAll(/<w:pPr>([\s\S]*?)<\/w:pPr>/g)].map(m => m[1]).filter(x => /<w:spacing/.test(x));
+  log(pPrs.length === 2 && pPrs.every(x => {
+    const s = x.indexOf('<w:spacing');
+    return ['<w:ind', '<w:jc', '<w:rPr'].every(t => x.indexOf(t) < 0 || x.indexOf(t) > s);
+  }), `[${tf}] ⚠️ El orden de los hijos de w:pPr respeta el esquema (spacing antes de ind/jc/rPr)`);
+  log((xa.match(/<w:tbl>/g) || []).length === 35,
+    `[${tf}] ⚠️ El formato conserva sus 35 tablas: la calibración no se movió`, (xa.match(/<w:tbl>/g) || []).length);
+  const l7 = numeral7(xa);
+  log(!!l7 && l7[0] === '02 (dos) cheques de Bancolombia con firmas ilegibles' &&
+    l7[1] === '01 (uno) celular marca Samsung Galaxy A32, color negro',
+    `[${tf}] Y los dos renglones salen sin el número repetido`, l7 && l7.join(' | '));
+}
+// Un apartado sin elementos no se toca: tiene que salir como la plantilla.
+const xVacio = await page.evaluate(async () => {
+  const k = JSON.parse(JSON.stringify(DB.getCase('AIRE_URI')));
+  k.id = 'AIRE_0'; k.elementos = []; k.narracion = Object.assign({}, k.narracion, { emp: '' });
+  const out = await buildFPJBlob(k, 'CARTA');
+  return out ? new TextDecoder().decode(out.files['word/document.xml']) : null;
+});
+const segV = xVacio.slice(xVacio.search(/7\.\s*DESCRIPCI.N DE EMP/i), xVacio.search(/evento de requerir m.s espacio/i));
+log(!/<w:spacing/.test(segV),
+  '⚠️ Sin elementos NO se toca el apartado: ni un espaciado en los renglones del formato');
+
 log(consoleErrors.length === 0, 'Consola sin errores', consoleErrors.slice(0, 3).join(' | ') || 'limpia');
 
 console.log('\n' + (fails ? `❌ ${fails} de ${n} comprobaciones fallaron` : `✅ ${n} comprobaciones en verde`));

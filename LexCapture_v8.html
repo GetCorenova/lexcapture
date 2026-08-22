@@ -1392,6 +1392,9 @@ body.guest{padding-top:38px}
   background:var(--surface-2);border:1px solid var(--border);border-radius:var(--rs);
   padding:10px 12px;margin:0;color:var(--text-2)
 }
+/* El aire entre elementos que lleva el documento, para que la vista previa siga
+   siendo lo que se va a imprimir. */
+.lc-emp-prev .lc-emp-l+.lc-emp-l{margin-top:7px}
 @media(min-width:520px){ .lc-dt{grid-template-columns:1.4fr 1fr;column-gap:10px} }
 
 /* ═══ RESPONSIVE ═══ */
@@ -2153,7 +2156,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 67;
+var _BUILD = 68;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3858,15 +3861,48 @@ function lcNumPalabra(n){
 function lcPlural(pal){
   var s=String(pal||''); if(!s) return s;
   var base=_noAcc(s).toLowerCase();
+  if(!/[a-z]/.test(base)) return s;                   // «9 mm»: un número no se pluraliza («9es»)
   if(/[aeiou]$/.test(base)) return s+'s';
   if(/z$/.test(base)) return s.slice(0,-1)+'ces';
   if(/[sx]$/.test(base)) return s;                    // "lunes", "tórax": invariables
   if(/[íú]$/i.test(s)) return s+'es';
   return s+'es';                                      // revólver→revólveres, papel→papeles
 }
+/* Lo que puede venir DETRÁS de un número sin que ese número sea la cantidad del
+   elemento: otro numeral que lo multiplica («Dos mil pesos» con Cant. 2 no puede
+   quedar en «02 (dos) mil pesos») o una unidad de medida, que convierte el
+   número en parte de la descripción («9 mm», «38 largo»). */
+var LC_RE_NO_CANT=/^(?:mil|mill[oó]n|millones|cientos?|cientas|mm|cm|mts?|metros?|mil[íi]metros|cent[íi]metros|pulgadas?|gr|grs|gramos|kg|kilos?|lt|lts|litros?|ml|cc)\b/i;
+/* ¿La descripción REPITE la cantidad que ya encabeza el renglón?
+   El funcionario escribe «Dos cheques de Bancolombia…» en el campo Descripción y
+   la app antepone «02 (dos) », así que el número salía impreso DOS VECES:
+   «02 (dos) Dos cheques…», «01 (uno) Un celular…». Ese anuncio se retira de la
+   descripción al componer el renglón.
+   ⚠️ Solo cuando nombra la MISMA cantidad del campo «Cant.» — que es cuando
+   consta que es una repetición. Si nombran cantidades distintas («tres …» con
+   Cant. 2) no se toca nada: la app no sabe cuál de las dos es la buena, y el
+   desacuerdo queda a la vista en «Así quedará el numeral 7» para que el
+   funcionario lo corrija. Cambiarle por cuenta propia la cantidad a un elemento
+   material probatorio es peor que dejar el número repetido.
+   ⚠️ Se retira al COMPONER, no al guardar: lo que el funcionario escribió sigue
+   intacto en su campo, y una captura ya guardada sale corregida sin migrar nada. */
+function lcEmpSinCant(d,cant){
+  var m=d.match(/^(?:(\d{1,3})\s*\(\s*[^)]*\)|([A-Za-zÁÉÍÓÚÑáéíóúñ]+)\s*\(\s*(\d{1,3})\s*\)|(\d{1,3})|([A-Za-zÁÉÍÓÚÑáéíóúñ]+))[\s.,:;-]+(?=\S)/);
+  if(!m) return d;
+  var n;
+  if(m[1]!==undefined) n=parseInt(m[1],10);
+  else if(m[3]!==undefined) n=parseInt(m[3],10);
+  else if(m[4]!==undefined) n=parseInt(m[4],10);
+  else n=LC_PAL_NUM[_noAcc(m[5]||'').toLowerCase()];
+  if(n===undefined||n!==cant) return d;
+  var resto=d.slice(m[0].length);
+  if(LC_RE_NO_CANT.test(resto)) return d;
+  return resto;
+}
 function lcEmpDesc(desc,cant){
   var d=String(desc||'').trim().replace(/\s+/g,' ');
   if(!d) return '';
+  d=lcEmpSinCant(d,cant);
   if(cant<=1) return d;
   var partes=d.split(' ');
   partes[0]=lcPlural(partes[0]);
@@ -4747,7 +4783,9 @@ function lcEmpPrevHtml(){
   var lineas=lcEmpLineas(lcEmpLeerDom()||lcEmpItems());
   if(!lineas.length) return '';
   return '<div class="st">Así quedará el numeral 7</div>'+
-    '<pre class="lc-emp-prev">'+escHtml(lineas.join('\n'))+'</pre>';
+    '<div class="lc-emp-prev">'+lineas.map(function(l){
+      return '<div class="lc-emp-l">'+escHtml(l)+'</div>';
+    }).join('')+'</div>';
 }
 /* Lo que hay en pantalla, tal cual. No se descartan las filas sin descripción:
    una fila recién agregada está vacía por definición y tiene que sobrevivir a
@@ -5843,6 +5881,40 @@ function _fpjKeepNext(p){
   else if(pStyle) pPr.appendChild(kn);
   else pPr.insertBefore(kn,pPr.firstChild);
 }
+/* Aire arriba y abajo de cada elemento, para que dos EMP seguidos no se lean
+   como un solo párrafo corrido (los renglones del apartado están separados por
+   una línea, y el texto llegaba pegado a ella por los dos lados).
+   ⚠️ Se consigue con ESPACIADO DE PÁRRAFO, no con un renglón vacío de por medio:
+   un párrafo vacío se comería un renglón del formato —de los que la app
+   reproduce uno por elemento— y descuadraría la relación. Además el espaciado
+   viaja con el elemento cuando el funcionario edita el .docx.
+   ⚠️ El orden de los hijos de w:pPr lo fija el esquema: `spacing` va DESPUÉS de
+   pBdr/shd y ANTES de ind/jc/rPr. Ponerlo donde caiga hace que Word abra el
+   documento «dañado» — misma lección que _fpjKeepNext y que el motor del OJ. */
+var FPJ_EMP_AIRE=60;                                  // 3 pt arriba y 3 pt abajo
+function _fpjEspaciado(p,tw){
+  var W=FPJ_W;
+  if(!p||p.localName!=="p") return;
+  var doc=p.ownerDocument;
+  var pPr=p.getElementsByTagNameNS(W,"pPr")[0];
+  if(!pPr||pPr.parentNode!==p){
+    pPr=doc.createElementNS(W,"w:pPr");
+    p.insertBefore(pPr,p.firstChild);
+  }
+  var sp=pPr.getElementsByTagNameNS(W,"spacing")[0];
+  if(!sp||sp.parentNode!==pPr){
+    sp=doc.createElementNS(W,"w:spacing");
+    // Primer hijo que, según el esquema, va DETRÁS de w:spacing.
+    var post=["ind","contextualSpacing","mirrorIndents","suppressOverlap","jc",
+              "textDirection","textAlignment","textboxTightWrap","outlineLvl",
+              "divId","cnfStyle","rPr","sectPr","pPrChange"],ref=null;
+    for(var n=pPr.firstChild;n&&!ref;n=n.nextSibling)
+      if(n.nodeType===1&&post.indexOf(n.localName)>=0) ref=n;
+    pPr.insertBefore(sp,ref);                         // ref null ⇒ al final
+  }
+  sp.setAttribute("w:before",String(tw));
+  sp.setAttribute("w:after",String(tw));
+}
 /* Escribe un elemento por renglón. Si hay más elementos que renglones se
    agregan los que falten clonando el último — que es exactamente lo que el
    propio formato autoriza al pie del apartado ("se puede ampliar el número de
@@ -5868,7 +5940,12 @@ function _fpjEmp(body,lineas){
     ult.parentNode.insertBefore(cp,ult.nextSibling);
     slots.push(cp);
   }
-  for(var k=0;k<slots.length;k++) _setParForce(slots[k],lineas[k]||"");
+  for(var k=0;k<slots.length;k++){
+    _setParForce(slots[k],lineas[k]||"");
+    /* ⚠️ Solo los renglones ESCRITOS. Un renglón que se queda vacío es el del
+       formato y tiene que salir byte a byte como viene en la plantilla. */
+    if(lineas[k]) _fpjEspaciado(slots[k],FPJ_EMP_AIRE);
+  }
   /* La barra «7. DESCRIPCIÓN DE EMP…» no puede quedarse sola al pie de una
      página: se lleva consigo el primer renglón.
      ⚠️ Solo el título. Encadenar TAMBIÉN los renglones entre sí obliga al
