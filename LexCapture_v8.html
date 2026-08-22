@@ -1611,6 +1611,14 @@ body.guest{padding-top:38px}
              seguir estando en algún sitio, y su sitio es donde se usan. -->
         <button class="btn bs bsm" style="margin-top:12px" onclick="lcDossierExtra()">Datos del Dossier</button>
         <p style="font-size:.72rem;color:var(--txD);margin:8px 0 0" id="dos-extra-hint"></p>
+
+        <!-- Editor de secciones. El motor (toggleSecEditor / renderSecEditor y sus
+             cinco funciones) estaba completo y con su CSS, pero se había quedado
+             SIN este botón y sin el contenedor: no había forma de abrirlo. -->
+        <button class="btn bs bsm" id="dos-sec-btn" style="margin-top:8px;display:flex;justify-content:space-between;width:100%" onclick="toggleSecEditor()">
+          <span>Secciones del dossier</span><span>▼</span>
+        </button>
+        <div id="dos-sec-inner" style="display:none;margin-top:10px"></div>
       </div>
 
       <!-- Todas las salidas del caso en un solo lugar -->
@@ -2156,7 +2164,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 68;
+var _BUILD = 69;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -4518,7 +4526,12 @@ var ACT_IC = {
   del:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
   send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>',
   dossier:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>',
-  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>'
+  dl:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>',
+  /* Carpeta CON contenido: la carpeta a secas ya la usa la tarjeta guía del
+     sheet de envío para hablar de «Descargas», y dos glifos idénticos con dos
+     significados distintos se leen mal. Los dos renglones desiguales dicen
+     «expediente», y una sola raya se leía como un signo de menos. */
+  folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M8 12h8M8 15.5h5"/></svg>'
 };
 // Botón ⋮ de una fila/tarjeta de lista. `fn` recibe el id del registro.
 function moreBtn(fn, id) {
@@ -4603,8 +4616,16 @@ function openCaseSheet(id) {
       'FPJ-6 con la información del caso — para imprimir y firmar', '', ACT_URI) +
     // 3) Enviar el dossier (resumen de texto) por WhatsApp o correo
     actItem('enviarDossierCaso', id, ACT_IC.wa, 'Enviar Dossier', 'Resumen del caso por WhatsApp o correo', '', ACT_OK) +
-    // 4) Copiar el dossier al portapapeles
-    actItem('copiarDossierCaso', id, ACT_IC.copy, 'Copiar Dossier', 'Copia el texto del dossier al portapapeles') +
+    /* 4) Expediente del caso.
+       ⚠️ Esta entrada FALTABA: `abrirDossierCaso` se quedó sin ningún llamador al
+       aplanar el menú (commit b7dbd7c), y con ella quedaron fuera de alcance el
+       editor del texto del dossier, sus secciones y tres campos que ninguna otra
+       pantalla pide —SPOA, No. de incidente y fiscal que recibe—, que el dossier
+       sí imprime. Ocupa el sitio de «Copiar Dossier» en vez de sumar un ítem: con
+       ocho el menú ya se desplaza en un teléfono, y copiar vive dentro del
+       expediente, donde además respeta lo que el funcionario acabe de editar. */
+    actItem('abrirDossierCaso', id, ACT_IC.folder, 'Expediente del caso',
+      'Edita el texto del dossier y sus secciones · SPOA, incidente y fiscal que recibe') +
     // 4b) Captura OJ del formato anterior: pasarla al módulo nuevo
     (isOJ && c.ojv !== 2
       ? actItem('ojCompletarCaso', id, ACT_IC.edit, 'Completar al formato nuevo',
@@ -4672,7 +4693,7 @@ function descargarDocCaso(id) { lcExportarCaso(id); }
 function enviarDossierCaso(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
-  var text = genDossier(c);
+  var text = _dosTexto(id);
   if (navigator.share) {
     navigator.share({ text: text }).then(function(){ toast('Dossier compartido ✓'); }).catch(function(e){
       if (e && e.name === 'AbortError') return;           // el usuario cerró el selector
@@ -4693,18 +4714,18 @@ function _dossierChoiceSheet(id) {
 }
 function _dossierShareWA(id) {
   var c = DB.getCase(id); if (!c) return;
-  window.open('https://wa.me/?text='+encodeURIComponent(genDossier(c)), '_blank');
+  window.open('https://wa.me/?text='+encodeURIComponent(_dosTexto(id)), '_blank');
 }
 function _dossierShareMail(id) {
   var c = DB.getCase(id); if (!c) return;
   var cap = (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : 'captura';
-  location.href = 'mailto:?subject='+encodeURIComponent('Dossier — '+cap)+'&body='+encodeURIComponent(genDossier(c));
+  location.href = 'mailto:?subject='+encodeURIComponent('Dossier — '+cap)+'&body='+encodeURIComponent(_dosTexto(id));
 }
 // Copia el dossier al portapapeles (misma primitiva de fallback que copyDosTxt).
 function copiarDossierCaso(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
-  var txt = genDossier(c);
+  var txt = _dosTexto(id);
   if (navigator.clipboard) {
     navigator.clipboard.writeText(txt).then(function(){ toast('Dossier copiado ✓'); }).catch(function(){ _copyFallback(txt); });
   } else { _copyFallback(txt); }
@@ -5523,12 +5544,23 @@ async function simEditPending(){
   window._simCase=null; editCase(c.id);
 }
 
+/* Compartir el dossier desde el expediente.
+   ⚠️ Tiene que ser EXACTAMENTE tan capaz como el ítem «Enviar Dossier» del menú
+   de la captura, o mandar al usuario aquí sería quitarle algo: por eso usa el
+   mismo selector nativo y, donde no lo hay (escritorio) o donde el equipo lo
+   rechaza, el mismo sub-sheet de WhatsApp / correo. La diferencia a favor es que
+   aquí sale lo que el funcionario acabe de editar. */
 function shareDosWA(){
-  var txt=document.getElementById('dos-txt');
-  var text=txt?txt.value:'';
+  var text=_dosTexto(_dosCasoId);
   if(!text){toast('Nada que compartir');return;}
-  if(navigator.share){navigator.share({text:text}).catch(function(){});}
-  else{window.open('https:'+String.fromCharCode(47,47)+'wa.me/?text='+encodeURIComponent(text));}
+  if(navigator.share){
+    navigator.share({text:text}).then(function(){toast('Dossier compartido ✓');}).catch(function(e){
+      if(e&&e.name==='AbortError') return;          // el usuario cerró el selector
+      _dossierChoiceSheet(_dosCasoId);
+    });
+    return;
+  }
+  _dossierChoiceSheet(_dosCasoId);
 }
 
 function openCamera(prefix){
@@ -5739,6 +5771,22 @@ function genDossier(caso) {
 
 var _dosCasoId=null;
 var _dosSecEditorOpen=false;
+
+/* Texto del dossier de un caso — PUNTO ÚNICO del que beben todas sus salidas
+   (compartir y copiar, desde el menú de la captura y desde el expediente).
+   ⚠️ Si el caso es el que está abierto en el expediente, manda lo que haya en el
+   editor: el funcionario pudo ajustar el mensaje antes de mandarlo, y
+   regenerarlo por debajo tiraría su edición sin decírselo. En cualquier otro
+   caso se genera, que es lo que se hacía siempre. */
+function _dosTexto(id) {
+  var c = DB.getCase(id);
+  if (!c) return '';
+  if (id && id === _dosCasoId) {
+    var ta = document.getElementById('dos-txt');
+    if (ta && ta.value.trim()) return ta.value;
+  }
+  return genDossier(c);
+}
 
 function renderDossier() {
   var emp=document.getElementById('dos-empty');

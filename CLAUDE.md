@@ -2287,6 +2287,132 @@ render con Edge).
   simulador 41 · personas 24 · invitado 33 · ola1 38 · orden 33.
   Anti-caché `?v=68` / `cache-v68`, `_BUILD=68`.
 
+## Auditoría del módulo Capturas (2026-08-22) — el menú no era el problema de fondo
+El usuario pidió evaluar, **antes de tocar código**, si convenía reorganizar el menú ⋮ de una captura
+en módulos visuales (referencia: pantallazo de otra app), porque la lista va a crecer con **acta de
+incautación, rótulo y cadena de custodia**. La auditoría se hizo **midiendo la app real** en un
+teléfono de 384×800, no estimando. Conclusión entregada: **SÍ, pero con modificaciones — y no en
+primer lugar**. Se ejecutaron los dos primeros pasos del plan; los dos siguientes (colapsar el canal
+en el menú y convertir el expediente en la casa del caso) quedan pendientes de decisión del usuario.
+
+### El diagnóstico que cambió el orden del trabajo
+- ⚠️ **El menú no crece por desorden: crece porque es un PRODUCTO CARTESIANO documento × canal**
+  aplanado en una lista. Hoy: 3 documentos (FPJ-5, FPJ-6, dossier) × ~2 canales + 2 administrativas
+  = 7 ítems. Con las tres funciones pendientes: 6 documentos → **12-14 ítems**. Categorizar reparte
+  esos 14 en cuatro cajones, pero **siguen siendo 14**, ahora un toque más adentro. Lo que sí reduce
+  es **quitar la dimensión del canal** (ya se elige después, en `lcPedirExport`).
+- **Medido** (presupuesto de 640 px = 80 vh en un teléfono de 800 px): 7 ítems = 625 px (**78 % de la
+  pantalla**); 8 ítems = 691 px → **ya se desplaza hoy**, en las capturas OJ del formato anterior;
+  10 ítems = 822 px (28 % oculto); 13 = 1019 px (37 % oculto).
+- ⚠️ **La cuadrícula de módulos de la referencia se descartó como patrón PRINCIPAL**, y no por
+  estética: esa app tiene decenas de funciones independientes y ningún objeto central, así que la
+  cuadrícula es su índice. Aquí el objeto central **es la captura** y todo son salidas suyas.
+  Sustituir el menú le añadiría 1-2 toques a las **tres salidas urgentes** (acta, documento oficial,
+  dossier), que hoy están a **2 toques** medidos. El patrón sí encaja **dentro** del expediente,
+  donde hay sitio y no hay reloj de 36 horas.
+- ⚠️ **El rendimiento no estaba en discusión y se comprobó para no discutirlo**: pintar el menú
+  cuesta **0,23 ms** de media, el DOM inicial son 648 nodos y la carga 272 ms. Ninguna alternativa se
+  decide por ahí.
+
+### PASO 1 — el techo de almacenamiento: la app dejaba de guardar entre la captura 23 y la 27
+⚠️ **Éste era el hallazgo grave, y no se veía desde la interfaz.** Todas las capturas viven en **un
+solo blob cifrado** (`lc_cases`) y `_lcEncrypt` cerraba con `btoa(String.fromCharCode` + operador de
+propagación). Ese operador pasa **un argumento por byte** y el motor tiene un tope: medido,
+**124 015 caracteres**. Pasado eso, `RangeError: Maximum call stack size exceeded`.
+- **El modo de fallo era el peor posible**: `DB.saveCases` actualizaba la caché en memoria **antes**
+  de cifrar, así que **la tarjeta aparecía en la lista** (27 en pantalla) sin haber llegado al disco;
+  al recargar quedaban 26 y la última se había evaporado. Reproducido end-to-end.
+- ⚠️ **Y las tres funciones pendientes AGRAVAN ese techo**: la cadena de custodia es un registro de
+  traspasos **por cada elemento**, o sea que multiplica los bytes por captura. Reorganizar el menú
+  encima de esto habría sido pintar la puerta de una casa que pierde el suelo.
+- **Arreglo**: `_b64FromBytes(buf)` — base64 **por trozos de 32 KB**. El resultado es **idéntico byte
+  a byte** al anterior, así que **lo ya guardado se sigue descifrando sin migrar nada** (hay un check
+  que cifra con el código viejo y lee con el nuevo). Medido: de ~26 capturas a **200+** (1,3 MB en
+  localStorage; el siguiente límite ya es la cuota del navegador, no el código).
+- ⚠️ **El idiom peligroso ya no existe en el archivo**, ni siquiera en los otros dos sitios donde era
+  inofensivo (el salt de 16 bytes y el hash de 32): los tres pasan por el helper. `verify_almacen`
+  [2] exige **cero** apariciones — por eso el comentario que lo explica está redactado sin escribirlo
+  literalmente, para que la búsqueda siga siendo fiable.
+- **La caché ya no se queda por delante de una escritura fallida** (`_lcGuardarCache`): si el
+  guardado falla, se revierte. ⚠️ Solo se revierte **si la caché sigue teniendo exactamente lo que se
+  intentó escribir** — si entretanto entró otro guardado, manda ese.
+- ⚠️ **`saveCase`/`savePerson` ahora trabajan sobre `.slice()` y NO es cosmético**: `getCases()`
+  devuelve la caché **viva**, y el `push` la mutaba en el sitio, así que la reversión no tenía nada
+  que revertir. Lo destapó el propio check [9], que fallaba con la reversión ya escrita.
+- **El aviso dejó de culpar siempre al PIN** (`_lcMsgGuardado`): distingue memoria llena, sesión
+  cerrada y el resto. Decía «el PIN pudo bloquearse» mientras la causa real era el techo del cifrado
+  — mandaba al usuario a reintentar algo que iba a volver a fallar.
+
+### PASO 2 — el expediente del caso había perdido su única puerta
+⚠️ **`#screen-dossier` existía, funcionaba, estaba mantenida y NADIE podía llegar a ella.**
+`abrirDossierCaso` aparecía **una sola vez en todo el documento**: su propia definición. Los únicos
+`go('dossier')` vivos salían del **simulador**. El commit `b7dbd7c` (2026-07-22), que aplanó el menú,
+anunció que «la pantalla hub #dossier se conserva como vía alterna» y **retiró la vía alterna en el
+mismo cambio**. Lo que quedó encerrado dentro:
+- **SPOA, No. de incidente y fiscal que recibe.** La Mejora 1 (2026-08-01) los sacó del wizard
+  diciendo «se diligencian en Dossier → Datos del Dossier». Recorridos los 9 pasos del wizard: **no
+  estaban en ninguno**. Llevaban tres semanas sin ninguna vía de captura, y el dossier los imprime en
+  «ES DEJADO A DISPOSICIÓN» y en la línea «Recibe».
+- **El editor del texto del dossier** (`#dos-txt`) y **el editor de secciones** (activar, desactivar
+  y reordenar las diez secciones): `toggleSecEditor` sin llamador y su botón `#dos-sec-btn`
+  **inexistente en el HTML** — unas 80 líneas de código vivo sin puerta, con su CSS completo.
+- ⚠️ **Esto es la prueba de por qué un menú no puede ser la única casa de un caso**: un *bottom sheet*
+  aloja **verbos**. Todo lo que era **contenido** (un texto que se edita, campos que se diligencian)
+  se quedó sin sitio en cuanto la pantalla que lo alojaba perdió el enlace. Es exactamente lo que
+  volvería a pasar con la cadena de custodia, que es contenido, no un botón.
+
+**Cómo se repuso, sin que el menú creciera:**
+- Nuevo ítem **«Expediente del caso»** (`ACT_IC.folder`) → `abrirDossierCaso`. ⚠️ **Ocupa el sitio de
+  «Copiar Dossier» en vez de sumar un ítem**: con ocho el menú **ya se desplaza** en un teléfono, así
+  que añadirlo sin más habría metido una regresión de UX con el propio arreglo. Copiar vive dentro
+  del expediente, donde además respeta lo que el funcionario acabe de editar. Siguen siendo 7 ítems
+  y 625 px.
+- **`_dosTexto(id)` es el punto único** del que beben **todas** las salidas del dossier (compartir y
+  copiar, desde el menú y desde el expediente). ⚠️ Si el caso es el que está abierto en el
+  expediente, **manda lo que haya en el editor**: regenerarlo por debajo tiraría la edición del
+  funcionario sin decírselo. Cualquier otro caso se genera, como siempre.
+- **`shareDosWA` tenía que quedar tan capaz como el ítem del menú**, o mandar al usuario al
+  expediente sería quitarle algo: ahora usa el mismo selector nativo y el mismo sub-sheet de
+  WhatsApp / correo (`_dossierChoiceSheet`) donde no lo hay. Antes abría `wa.me` a secas.
+- **El editor de secciones recuperó su botón y su contenedor.** El motor y el CSS no se tocaron.
+
+### Verificación
+- **`verify_almacen.mjs` (12 checks, nuevo)**: techo, ida y vuelta con 1,2 M de caracteres multibyte,
+  **compatibilidad con lo cifrado por el código anterior**, mismo formato de salida, 200 capturas que
+  sobreviven a recargar, reversión de caché, mensajes por causa, modo invitado sin escribir un byte.
+- **`verify_expediente.mjs` (13 checks, nuevo)**: el menú sigue en 7 ítems sin desplazarse, la
+  entrada existe y abre con el caso cargado, los tres campos se diligencian / se imprimen /
+  persisten, el editor de secciones abre y su cambio se refleja al instante, la edición manda sobre
+  lo generado, y **ninguna función del expediente se quedó sin puerta**.
+- **Suites existentes adaptadas al flujo nuevo sin bajar su cuenta**: `verify_personas` 24 → **25**
+  (la expectativa pasó a «Expediente del caso» y se **añadió** un check de que copiar no se perdió) y
+  `verify_envio_doc` **39** (misma adaptación).
+- Regresiones en verde: **almacén 12** · **expediente 13** · personas 25 · envío 39 · fpj6 140 ·
+  mejora1 153 · export 74 · firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 ·
+  mejora2 38 · mejora3 51 · invitado 33 · simulador 41 · orden 33 · ola1 38 · ola3 33 · ola4 22 ·
+  multipersona · DS 10.
+- ⚠️ **`verify_oj` [18] y `verify_ola2` [12] fallan hoy por el CALENDARIO, no por este trabajo**: es
+  sábado y `ojResolverDestino` enruta correctamente a R4-B (juez de turno, C-042/2018) porque no hay
+  despacho disponible; las suites dan por hecho un día hábil. **Comprobado ejecutando `verify_ola2`
+  contra el build anterior (HEAD): falla idéntico.** Ya estaba documentado el 2026-08-08.
+- Anti-caché `?v=69` / `cache-v69`, `_BUILD=69`.
+
+### Lo que queda propuesto y NO se ha hecho
+- **Paso 3 — colapsar el canal en el menú**: un documento, una entrada (7 → 5 ítems); «Enviar X» y
+  «Descargar X» convergen hoy en la misma pantalla —medido: en escritorio el sheet de envío muestra
+  **solo** «Descargar documento»—, y «Editar captura» repite el toque en la tarjeta.
+- **Paso 4 — el expediente como casa del caso**: estado (plazo de 36 h y qué falta), documentos
+  agrupados en módulos y el bloque de elementos preparado para rótulo y cadena de custodia.
+- **Paso 5 — las tres funciones pendientes**: ampliar `elementos[]` (hoy es solo `{cant, desc}`) con
+  rótulo y traspasos, y registrar los formatos en `LC_DOCS`. ⚠️ **Faltan los formatos oficiales**: no
+  hay ninguno en `Documentos/` para incautación, rótulo ni cadena de custodia.
+- ⚠️ **Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ
+  en vez de leer `LC_DOCS`, así que **el acta FPJ-6 no tiene ruta de envío** aunque esté registrada
+  como documento. Es el último resto de la cadena de `if (esOJ)` que `LC_DOCS` vino a sustituir.
+- ⚠️ **No existe vista de consulta de una captura**: tocar la tarjeta entra al **wizard en modo
+  edición**, con su foto inicial, su autoguardado y su diálogo al salir. Para responder «¿ya se firmó
+  el acta?» hay que abrir el caso para modificarlo.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

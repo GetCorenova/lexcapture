@@ -71,8 +71,10 @@ const SEL_DL = '#share-it-dl';
   await page.click('#cl .prow-more');
   await page.waitForTimeout(300);
   const actTxt = await page.$eval('#act-sheet', el => el.textContent);
-  log(/Enviar FPJ-5/.test(actTxt) && /Descargar FPJ-5/.test(actTxt) && /Enviar Dossier/.test(actTxt) && /Copiar Dossier/.test(actTxt),
-    '[1] Menu de la captura ofrece enviar/descargar documento y enviar/copiar dossier', actTxt.replace(/\s+/g, ' ').slice(0, 90));
+  // «Copiar Dossier» pasó a vivir dentro del expediente (que había perdido su
+  // entrada); el menú ofrece ahora esa entrada en su lugar.
+  log(/Enviar FPJ-5/.test(actTxt) && /Descargar FPJ-5/.test(actTxt) && /Enviar Dossier/.test(actTxt) && /Expediente del caso/.test(actTxt),
+    '[1] Menu de la captura ofrece enviar/descargar documento, enviar dossier y abrir el expediente', actTxt.replace(/\s+/g, ' ').slice(0, 90));
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 

@@ -131,10 +131,24 @@ await page.waitForTimeout(450);
 const cespaDel = await page.$eval('#act-items .sheet-item.danger .de', e => e.textContent);
 log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de eliminar', cespaDel);
 
-// El sheet de la captura ofrece las salidas directas (documento + dossier)
+// El sheet de la captura ofrece las salidas directas (documento + dossier) y la
+// entrada al expediente. «Copiar Dossier» dejó de ser un ítem del menú: vive
+// dentro del expediente, donde además respeta lo que el funcionario acabe de
+// editar. Lo que NO puede pasar es que copiar se haya perdido — se comprueba abajo.
 const actAll = await page.$eval('#act-items', el => el.textContent);
-log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dossier/.test(actAll) && /Copiar Dossier/.test(actAll),
-  'Sheet ofrece enviar/descargar documento y enviar/copiar dossier');
+log(/Enviar FPJ-5/.test(actAll) && /Descargar FPJ-5/.test(actAll) && /Enviar Dossier/.test(actAll) && /Expediente del caso/.test(actAll),
+  'Sheet ofrece enviar/descargar documento, enviar dossier y abrir el expediente');
+// Copiar el dossier sigue siendo alcanzable, un nivel adentro
+const copiaViva = await page.evaluate(() => {
+  const id = DB.getCases()[0].id;
+  abrirDossierCaso(id);
+  const btn = [...document.querySelectorAll('#screen-dossier button')]
+    .find(b => /Copiar texto/i.test(b.textContent));
+  const ok = !!btn && document.getElementById('screen-dossier').classList.contains('on');
+  go('capturas');
+  return ok;
+});
+log(copiaViva, 'Copiar el dossier no se perdió: vive dentro del expediente');
 // La 1ª acción ("Enviar FPJ-5") pide formato y tamaño y luego abre el sheet
 await page.click('#act-items .sheet-item:nth-child(1)');
 await page.waitForTimeout(500);
