@@ -120,7 +120,9 @@ const s7 = await page.evaluate(() => ({
 }));
 log(s7.titulo === 'Expediente' && s7.estado !== 'none' && s7.docs !== 'none' && s7.cont !== 'none',
   '[7] El expediente pinta estado, documentos y contenido', s7.titulo);
-log(s7.tarjetas.length === 2, '[7] Los documentos salen como tarjetas agrupadas', JSON.stringify(s7.tarjetas));
+const s7reg = await page.evaluate(() => lcEstadoDocs(DB.getCases()[0]).map(d => d.lbl));
+log(s7.tarjetas.length === s7reg.length && s7reg.every(l => s7.tarjetas.includes(l)),
+  '[7] Todo documento del registro sale como tarjeta agrupada', JSON.stringify(s7.tarjetas));
 log(/36 horas|vencido|demostraci/i.test(s7.plazo || ''), '[7] Y muestra el plazo del art. 28 C.P.', s7.plazo);
 
 // ── [8] El estado usa los MISMOS validadores que bloquean al generar ──

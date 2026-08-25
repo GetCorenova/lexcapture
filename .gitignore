@@ -31,3 +31,6 @@ verify_editable_oj.docx
 
 # Salida suelta de una corrida anterior de verify_fpj6 (ahora escribe en el temporal del sistema)
 verify_fpj6_*.docx
+
+# Salidas de verify_mejora1 (aire entre elementos del numeral 7)
+verify_mejora1_aire-*.docx

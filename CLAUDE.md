@@ -2456,18 +2456,170 @@ orden 33 · ola1 38 · ola3 33 · ola4 22 · multipersona · DS 10.
 contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 
 ### Lo que queda propuesto y NO se ha hecho
-- **Las tres funciones pendientes**: ampliar `elementos[]` (hoy es solo `{cant, desc}`) con rótulo y
-  traspasos, y registrar los formatos en `LC_DOCS` + `lcEstadoDocs`. ⚠️ **Faltan los formatos
-  oficiales**: no hay ninguno en `Documentos/` para incautación, rótulo ni cadena de custodia.
-  ⚠️ La cadena de custodia es **una secuencia de traspasos por cada elemento**, así que su sitio es
-  un bloque propio del expediente, no un ítem de menú — y sube los bytes por captura (ver el techo
-  del paso 1).
+- **Acta de incautación**: sigue sin formato oficial en `Documentos/`. (La cadena de custodia y el
+  rótulo ya están hechos — ver la sección siguiente.)
 - ⚠️ **Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ
   en vez de leer `LC_DOCS`, así que **el acta FPJ-6 no tiene ruta de envío** aunque esté registrada
   como documento. Es el último resto de la cadena de `if (esOJ)` que `LC_DOCS` vino a sustituir.
 - ⚠️ **No existe vista de consulta de una captura**: tocar la tarjeta entra al **wizard en modo
   edición**, con su foto inicial, su autoguardado y su diálogo al salir. Para responder «¿ya se firmó
   el acta?» hay que abrir el caso para modificarlo.
+
+## Cadena de custodia (FPJ-8) y rótulo de EMP y EF (FPJ-7) — 2026-08-25
+Los dos formatos que faltaban del apartado 7 del informe de captura. Pedidos en
+`Documentos/Otro/Funiones Cadena de Custodia y Rotulo.docx` (texto + 9 pantallazos con recuadro rojo
+numerado) sobre `FPJ 8 Registro Cadena De Custodia.pdf` y `FPJ 7 Rotulo Emp Y Ef.pdf`. Verificado con
+`verify_custodia.mjs` (**87 checks**, nuevo) y abriendo los PDF generados en un visor real.
+
+### ⚠️ La decisión de arquitectura: estos formatos son PDF, y NO se convierten — se estampan
+Los tres formatos anteriores (FPJ-5 URI/CESPA, FPJ-6) llegaron como `.docx` y por eso todo el motor
+documental de la app es OOXML. **Estos dos llegan como PDF plano, exportado de Excel por la
+Fiscalía** (sin AcroForm, sin campos). Las salidas posibles eran tres y solo una es defendible:
+1. **Convertir el PDF a `.docx`** (Word abre PDF): la conversión es aproximada y destruiría la
+   geometría de un formato oficial calibrado. Es exactamente el riesgo que llevó al FPJ-5 y al FPJ-6
+   a quedarse en solo-Word («Exportación v2»).
+2. **Reconstruir el formato en OOXML**, como el oficio OJ: son 21 casillas de NUNC, tres filas de
+   funcionario y ocho renglones reglados por formato; se puede, pero el resultado sería *un formato
+   parecido* al oficial, que es peor que no tenerlo.
+3. **Estampar sobre el PDF oficial** — lo que se hizo. Es el patrón que la propia nota de
+   «Exportación v2» dejó apuntado como canónico para un formato de tamaño fijo: *«la maquetación ES
+   el archivo original»*. Aquí el archivo oficial viaja **byte a byte** debajo y la app solo le añade
+   encima una capa de texto por **actualización incremental** (objetos nuevos + su tabla de
+   referencias cruzadas encadenada por `/Prev`), que es como se sella o se firma un PDF.
+   **Riesgo de maquetación cero**: ninguna casilla, línea, trama ni tipografía puede moverse, porque
+   nada de eso lo dibuja la app. Hay un check que compara los primeros N bytes del documento
+   generado con el archivo oficial y exige igualdad exacta.
+- **Motor nuevo** (`lcPdf*`, sin dependencias): `lcPdfEstampar` (actualización incremental),
+  `lcOpTexto` / `lcOpBorrar` (operadores de dibujo), `lcPdfWrap` (corte de renglón),
+  `lcWinAnsi` / `lcPdfTxt` (codificación y escape), `lcPdfDict` / `lcPdfObj` / `lcPdfStream`.
+- ⚠️ **El escudo que traen es el nacional, dentro del formato de la Fiscalía**, igual que en
+  `TPL_FPJ6` y en las plantillas del FPJ-5: se embebe porque es parte del formato oficial, no un
+  emblema que la app añada. No cambia nada de la regla de de-branding — el nombre de la institución
+  del usuario sigue siendo un campo suyo y el ícono de la app sigue siendo el monograma «L».
+- ⚠️ **NO se pregunta «Word o PDF» ni el tamaño de papel.** El documento ya ES un PDF y trae su
+  tamaño dentro. `LC_DOCS` gana la marca `esPDF`, y `lcPedirExport` sale antes de abrir el diálogo:
+  preguntar por una decisión que no existe es la duplicación que la auditoría del menú vino a quitar.
+  El productor (`lcProducirDoc`) lo entrega tal cual, sin pasar por la vista de impresión.
+
+### Lecciones del estampado que costaron tiempo
+- ⚠️ **El overlay tiene que declarar SU PROPIO estado gráfico y no heredar ni uno solo del formato.**
+  El flujo del FPJ-7 termina con el relleno en **blanco** y usa `Tc` (espaciado entre caracteres) 18
+  veces. Sin el preámbulo `0 g 0 G 1 w 0 Tc 0 Tw 100 Tz 0 Ts 0 Tr`, los datos salían **blancos sobre
+  blanco** —invisibles, no ausentes— y con el espaciado de la última etiqueta del formato. Se vio
+  porque los dígitos de la fecha sí aparecían: los precede un rectángulo blanco que termina en `0 g`
+  y de paso restauraba el color. Misma familia que el `w:sz` ausente del acta: **el defecto era la
+  AUSENCIA de la declaración**, no un valor equivocado.
+- ⚠️ **Los anchos de la fuente se embeben (métricas AFM de Helvetica), no se miden con canvas.** En
+  un teléfono Android `font-family:Arial` cae en Roboto y sus anchos no son esos: el centrado de las
+  casillas y el corte de renglón saldrían mal **justo en el dispositivo donde se usa la app**. Se usa
+  Helvetica (base-14, no hay que embeber la fuente) declarada como recurso propio `/LCF`: las fuentes
+  del formato traen `/FirstChar`–`/LastChar` que **no cubren las vocales acentuadas ni la ñ**.
+- ⚠️ **Al fundir el flujo original en un Form XObject, sus entradas (`/Filter`, `/Length`) van DENTRO
+  del diccionario nuevo, no pegadas detrás.** Dos `<< >>` seguidos delante de `stream` no son un
+  objeto válido y el visor pinta **la hoja en blanco sin dar ningún error** — que es lo que cuesta
+  encontrarlo.
+- ⚠️ El idiom `String.fromCharCode` con el operador de propagación **no vuelve a entrar en el
+  archivo**: `lcBytesStr` convierte por trozos de 8 KB (es el techo que dejaba a la app sin guardar a
+  partir de la captura 23, auditoría del 2026-08-22).
+
+### El rótulo se imprime en MEDIA HOJA CARTA (decisión del usuario)
+*«el rótulo debe de imprimirse en la mitad de un papel tamaño carta»*. Es una etiqueta que se ata al
+elemento embalado, no un documento de archivo. El PDF de la Fiscalía viene en una hoja de
+**16,9" × 13,1"** (exportada así desde Excel), así que la página se reencaja a **612 × 396 pt
+(8,5" × 5,5")**: el contenido del formato se envuelve en un **Form XObject** —los mismos bytes
+comprimidos, sin descomprimir ni redibujar— y se pinta escalado y centrado. El estampado va **dentro
+de la misma transformación**, así que sus coordenadas siguen siendo las del formato original y las
+tablas de geometría no cambian.
+- ⚠️ **Lo que se encaja es el MARCO DIBUJADO, no la página.** El PDF trae el formato dentro de una
+  hoja mucho mayor, con varios centímetros en blanco alrededor. Encajar la página entera regalaría
+  ese vacío y encogería el formato **un 23 % de más** (escala 0,42 en vez de 0,51) — en una etiqueta
+  que ya es pequeña, eso decide si se lee o no. El recorte se **midió** sobre las instrucciones de
+  dibujo del propio archivo (el rectángulo del marco exterior), no a ojo, y no recorta nada.
+- ⚠️ **El FPJ-8 NO se reencaja**: es el registro que acompaña al elemento y va en su hoja completa.
+
+### Geometría: medida, no estimada
+`FPJ8_G` y `FPJ7_G` son tablas de coordenadas en puntos, con el origen abajo-izquierda. **No están
+puestas a ojo**: salen de las propias instrucciones de dibujo del formato —los rectángulos de 1-2 pt
+que trazan las casillas y las líneas de escritura—, así que cada centro es el centro real de su
+casilla. ⚠️ Si la Fiscalía publica otra versión del formato, estas tablas se vuelven a **medir sobre
+el archivo nuevo**; no se ajustan por lo que se vea en pantalla.
+
+### Lo que el documento imprime, y de dónde sale
+- **La descripción se transcribe del numeral 7 con la MISMA primitiva que lo imprime** (`lcEmpLinea`):
+  lo que dice la cadena de custodia es palabra por palabra lo que dice el informe de captura. Hay un
+  check que compara las dos cadenas de texto. Con **varios** elementos en una misma cadena se numeran
+  «EMP 1:», «EMP 2:»…, que es la forma que fijó el requerimiento; **con uno solo va la línea a secas**.
+- **NUNC**: 16 dígitos en 21 casillas, reutilizando `f6Nunc` del acta. Las **5 del consecutivo quedan
+  en blanco** — ese número lo asigna el SPOA y no se conoce en el sitio.
+- **H / R / E**: el formato marca con «X» debajo de las tres columnas. ⚠️ Las etiquetas que usa la app
+  son las que **el propio formulario imprime al pie** («Halló, Recolectó o Embaló»), no las del
+  documento de requerimiento («halló, rotuló, envió»): el funcionario tiene el formato delante.
+  Nace con las tres marcadas —lo corriente es que las haga un solo funcionario— y se pueden repartir
+  entre hasta 3 filas, que es lo que el formato admite.
+- **Fecha**: «AAAA-MM-DD», el formato que el propio formulario imprime en gris bajo la casilla de
+  firma, con la fecha del procedimiento de captura.
+- ⚠️ **Las guías grises del formato se TAPAN antes de escribir, no se tachan encima.** Es explícito en
+  el requerimiento («las letras deben desaparecer y la fecha quedar limpiamente»): son el
+  «AAAA-MM-DD» de cada fila de firma del FPJ-8 y las 12 letras `A A A A M M D D` / `H O R A` del
+  FPJ-7. Se tapa **solo la de la fila que se llena**: las de las filas sin funcionario se quedan como
+  las trae el formato.
+- **Rótulo**: el «NÚMERO DEL EMP Y EF» es el que le corresponde **dentro de su cadena de custodia** y
+  cambia si se reparte de otra manera; la cantidad viene del numeral 7 y es editable; la dirección es
+  la de la captura y es editable; la **hora es la de la captura y queda editable** (lo pidió el
+  requerimiento); la ubicación es lo único que se teclea entero.
+- ⚠️ **«A quien se le encontró el EMP» SIEMPRE es una persona capturada del caso** (regla del
+  usuario): con una sola no se pregunta nada, con varias se elige cuál. **No es un campo de texto**
+  — un nombre libre ahí permitiría rotular el elemento a nombre de alguien que no está en la captura.
+- **«Rótulo diligenciado por»** = quien suscribe la cadena de custodia de ese elemento, con su cargo.
+- **Los nombres salen en MAYÚSCULAS** al imprimir (`mayus`), como en el FPJ-5 y en el acta, por
+  concordancia con la cédula y el SPOA. El dato guardado no se toca.
+- ⚠️ **Lo que se deja en blanco a propósito**: la casilla FIRMA de los dos formatos (se firma con
+  bolígrafo sobre el papel), el «No. ID» (la app no lo conoce), el «No de HISTORIA CLÍNICA» (lo
+  diligencia la entidad prestadora de salud, lo dice el propio formato) y **todo el reverso del
+  FPJ-8**, que va en el mismo PDF y por tanto sale completo —sus dos páginas— con una sola impresión.
+- **Lo que no cabe se avisa por toast**, nunca se recorta en silencio: un texto que no entra en los
+  renglones del formato se condensa hasta el 82 % y, si aun así sobra, se dice cuántos renglones
+  faltaron.
+
+### Reparto de elementos, compañero de patrulla y modelo
+- **Una sola pregunta con tres atajos**: cada elemento lleva su «N° de cadena», y los botones «Todos
+  en una» / «Uno por elemento» lo rellenan. Así se expresa cualquier partición —incluida «unas en
+  especial»— con un solo control, y la lista de botones «Generar» se recalcula sola.
+- **`cfg.perfiles[i].companero`** (grado, nombre, cédula, cargo): un procedimiento lo hace una
+  patrulla de dos, así que el compañero se registra **una vez** en el perfil y desde ahí se ofrece en
+  cada cadena de custodia. ⚠️ Queda abierta la opción «Otro funcionario»: la patrulla no siempre es
+  la misma. La **entidad** sale del perfil (`p.entidad`, campo del usuario) — ⚠️ sigue sin haber
+  ninguna institución escrita en el código, que es la regla del filtro de Play Store.
+- **Modelo**: `caso.custodia` (reparto + funcionarios) y `caso.rotulos[]` (lo que el rótulo pide y el
+  caso no tiene). Ni un solo campo que el caso ya tenga se guarda aquí — mismo criterio que
+  `caso.actas[]` en el FPJ-6.
+- ⚠️ **Cada EMP estrena un `id`** (`lcEmpIds`, patrón perezoso de `f6Abrir` con la persona). Es lo que
+  ata un rótulo a SU elemento: sin id habría que atarlo por posición, y reordenar o borrar un
+  elemento en el formulario le pasaría la ubicación de hallazgo a otro — en un documento de cadena de
+  custodia eso es atribuirle a un elemento la procedencia de otro. El id **viaja por el DOM**
+  (`<input type="hidden" data-c="id">`), porque `lcEmpLeerDom` reconstruye la lista entera desde el
+  formulario y sin eso se perdería al tocar un renglón.
+
+### Dónde vive, y por qué el menú no creció
+Los dos formatos entran por el **expediente** (`lcEstadoDocs`), no por el menú ⋮ de la captura, que
+**se queda en 5 ítems**: es exactamente el punto de extensión que dejó abierto la auditoría del
+módulo Capturas del 2026-08-22 para que el menú no vuelva a crecer un ítem por documento. Además el
+reparto de elementos y la ubicación de hallazgo son **contenido que se diligencia**, y un bottom
+sheet solo aloja verbos. Sin EMP registrados los dos dicen qué falta, en vez de ofrecer un formato en
+blanco.
+
+### Corregido de paso
+- ⚠️ **`ccPerfilActivo` y el `null` que el try/catch no atrapa**: `DB.getConfig()` puede **devolver**
+  null (el modo invitado guarda su configuración en memoria y no existe hasta que se entra), así que
+  `try { cfg = DB.getConfig(); }` no lanza — se caía más abajo, al generar el documento. Va con `|| {}`.
+- `verify_menu_expediente` [7] daba por hecho que el expediente tiene **2** documentos. Ahora la
+  expectativa se **deriva del registro** (`lcEstadoDocs`), así que no vuelve a quedarse obsoleta con
+  el siguiente formato. No bajó su cuenta: 16/16.
+- Regresiones en verde: **custodia 87** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
+  fpj5 tipografía 48 · tipografía OJ 42 · export 74 · editable 28 · firma 62 · envío 39 · almacén 12 ·
+  expediente 13 · menú+expediente 16 · personas 25 · invitado 33 · simulador 41 · orden 33 ·
+  multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=71` / `cache-v71`, `_BUILD=71`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
