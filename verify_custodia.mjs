@@ -413,6 +413,40 @@ log(numeros.antes === 1 && numeros.despues === 2,
   '⚠️ Y cambia con el reparto: el mismo celular es el N° 1 solo, y el N° 2 dentro de la cadena de los tres',
   JSON.stringify(numeros));
 
+/* ══ E2 · TIPOGRAFÍA ═══════════════════════════════════════════════════════
+   Un formato oficial se diligencia en UN solo cuerpo de letra. La comprobación
+   no mira «qué tamaños hay» sino que NO haya ninguno distinto de 11: es la misma
+   garantía estructural con la que se cerraron el acta FPJ-6 y el FPJ-5. */
+console.log('\n── E2 · Un solo cuerpo de letra: Arial 11 pt ──');
+
+const tamanos8 = [...new Set(ov8.textos.map(t => t.size))].sort((a, b) => a - b);
+const tamanos7 = [...new Set(ov7.textos.map(t => t.size))].sort((a, b) => a - b);
+log(tamanos8.length === 1 && tamanos8[0] === 11,
+  '⚠️ Todo lo que rellena la app en el FPJ-8 va a 11 pt — texto, fechas, números y las «X»',
+  tamanos8.join(' / ') + ' pt');
+log(tamanos7.length === 1 && tamanos7[0] === 11,
+  'Y en el FPJ-7 exactamente igual: los dos formatos comparten cuerpo',
+  tamanos7.join(' / ') + ' pt');
+
+/* La fuente: Arial declarada como tal, con SUS anchos, y sin embeber. */
+const fnt = /\/BaseFont\s*\/(\w+)/.exec(cola7);
+log(!!fnt && fnt[1] === 'ArialMT',
+  '⚠️ La fuente es Arial, declarada como tal — no la Helvetica de las 14 fuentes base',
+  fnt && fnt[1]);
+const mW = /\/FirstChar\s+(\d+)\/LastChar\s+(\d+)\/Widths\[([^\]]*)\]/.exec(cola7);
+log(!!mW && +mW[1] === 32 && +mW[2] === 255 && mW[3].trim().split(/\s+/).length === 224,
+  'Con /Widths propios de 32 a 255: el visor maqueta con la misma métrica con la que la app centró',
+  mW ? mW[3].trim().split(/\s+/).length + ' anchos' : 'sin /Widths');
+log(/\/FontDescriptor\s+\d+\s+0\s+R/.test(cola7) && !/\/FontFile/.test(cola7),
+  'Y sin embeber la fuente: descriptor sí, archivo de fuente no');
+/* ⚠️ La condensación (`Tz`) NO es un cambio de cuerpo: mantiene los 11 pt de
+   alto y solo estrecha el glifo, y es la válvula que impide que un nombre largo
+   desborde la casilla del formato. Con datos corrientes no debería dispararse. */
+const cond = ov8.textos.concat(ov7.textos).filter(t => t.tz !== 100);
+log(cond.length === 0,
+  'Con datos corrientes nada necesita condensarse: los 11 pt caben en las casillas',
+  cond.length ? cond.map(t => t.t + ' (' + t.tz + '%)').join(' · ') : 'ninguno');
+
 /* ══ F · LO QUE NO SE INVENTA ══════════════════════════════════════════════ */
 console.log('\n── F · Lo que se deja en blanco a propósito ──');
 

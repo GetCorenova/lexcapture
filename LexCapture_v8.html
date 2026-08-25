@@ -2211,7 +2211,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 71;
+var _BUILD = 72;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -8043,12 +8043,15 @@ async function f6Generar() {
 
 /* ── I · MOTOR DE ESTAMPADO PDF ───────────────────────────────────────────── */
 
-/* Anchos de Helvetica (métricas AFM de Adobe) por código WinAnsi, en milésimas
-   de em. Se embeben en vez de medirse con canvas —como sí hace `lcAnchoTexto`
+/* Anchos de Arial por código WinAnsi, en milésimas de em (Arial y Helvetica
+   comparten métrica: Arial se diseñó compatible con ella, y son las de la AFM de
+   Adobe). Se embeben en vez de medirse con canvas —como sí hace `lcAnchoTexto`
    para la firma del oficio— porque en un teléfono Android `font-family:Arial`
    cae en Roboto, cuyos anchos NO son estos: el centrado de las casillas y el
-   corte de renglón saldrían mal justo en el dispositivo donde se usa la app. */
-var LC_HELV_W = (function () {
+   corte de renglón saldrían mal justo en el dispositivo donde se usa la app.
+   Esta misma tabla se declara dentro del PDF (`/Widths`), así que lo que la app
+   mide y lo que el visor maqueta es exactamente lo mismo. */
+var LC_ARIAL_W = (function () {
   var w = [], i, t = {
     32:278,33:278,34:355,35:556,36:556,37:889,38:667,39:191,40:333,41:333,42:389,43:584,
     44:278,45:333,46:278,47:278,58:278,59:278,60:584,61:584,62:584,63:556,64:1015,
@@ -8097,7 +8100,7 @@ function lcWinAnsi(s) {
 }
 function lcPdfAncho(s, size) {
   var cs = lcWinAnsi(s), t = 0, i;
-  for (i = 0; i < cs.length; i++) t += LC_HELV_W[cs[i]] || 556;
+  for (i = 0; i < cs.length; i++) t += LC_ARIAL_W[cs[i]] || 556;
   return t * size / 1000;
 }
 function lcPdfTxt(s) {
@@ -8248,7 +8251,22 @@ function lcPdfEstampar(bytes, porPagina, hoja) {
 
   var nuevos = [], next = maxObj;
   function nuevo(txt) { next++; nuevos.push({ num: next, txt: txt }); return next; }
-  var fuente = nuevo('<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>');
+  /* ⚠️ ARIAL, declarada como tal y con SUS anchos, no la Helvetica de las 14
+     fuentes base. Va **sin embeber** —el visor usa la del sistema— pero con
+     `/Widths` y `/FontDescriptor` propios, que es lo que la hace conforme y lo
+     que garantiza que el visor maquete con la misma métrica con la que la app
+     centró las casillas.
+     ⚠️ Y no se reutiliza la `/F2` que el formato ya trae: su rango
+     `/FirstChar`–`/LastChar` **no cubre las vocales acentuadas ni la ñ**, así
+     que «Medellín» o «pantalón» saldrían con letras de ancho cero encimadas.
+     Los valores del descriptor son los del propio formato oficial. */
+  var anchos = [];
+  for (var iw = 32; iw <= 255; iw++) anchos.push(LC_ARIAL_W[iw]);
+  var descr = nuevo('<</Type/FontDescriptor/FontName/ArialMT/Flags 32/ItalicAngle 0' +
+    '/Ascent 905/Descent -210/CapHeight 728/AvgWidth 441/MaxWidth 2665/FontWeight 400' +
+    '/XHeight 250/StemV 44/FontBBox[-665 -210 2000 728]>>');
+  var fuente = nuevo('<</Type/Font/Subtype/TrueType/BaseFont/ArialMT/Encoding/WinAnsiEncoding' +
+    '/FirstChar 32/LastChar 255/Widths[' + anchos.join(' ') + ']/FontDescriptor ' + descr + ' 0 R>>');
 
   Object.keys(porPagina).forEach(function (k) {
     var ops = porPagina[k];
@@ -8393,7 +8411,14 @@ var FPJ7_G = {
   desc: { lineas:[440.6,415.4,390.4,365.2,340.1,315.0,289.9,264.8], x0:120.0, x1:1093.0 },
   sec7: { cols:[84.7,425.0,582.9,709.2,889.2,1122.8], y0:179.15, y1:215.70 }
 };
-var LC_PDF_SZ = 10;                                  // cuerpo de los datos
+/* ⚠️ UN SOLO CUERPO PARA TODO LO QUE RELLENA LA APP: Arial 11 pt. Texto,
+   fechas, números y las «X» de H/R/E — en los DOS formatos. Antes había tres
+   tamaños repartidos (10 en el cuerpo, 11 en las casillas del NUNC y la fecha,
+   12 en el hallazgo) sin que ninguno de los tres lo hubiera pedido nadie: es el
+   mismo defecto que se corrigió en el acta FPJ-6 y en el FPJ-5, y la misma
+   regla —un formato oficial se diligencia en un solo cuerpo de letra—.
+   ⚠️ Las etiquetas impresas del formato NO se tocan: solo se escribe encima. */
+var LC_PDF_SZ = 11;
 /* ⚠️ EL RÓTULO SE IMPRIME EN MEDIA HOJA CARTA. Es una etiqueta que se ata al
    elemento embalado, no un documento de archivo: en el sitio se imprime media
    carta y se corta. El PDF que publica la Fiscalía viene en una hoja enorme
@@ -8568,7 +8593,7 @@ function buildCustodiaBlob(ctx) {
   try {
     var c = ctx.caso, grupo = ctx.grupo;
     var cu = ccCustodia(c), G = FPJ8_G, ops = '', avisos = [];
-    ops += _ccCeldas(G.nunc, f6Nunc(c).digitos, G.nuncY, 11);
+    ops += _ccCeldas(G.nunc, f6Nunc(c).digitos, G.nuncY, LC_PDF_SZ);
 
     var fecha = ccFechaProc(c);
     var funcs = (cu.funcionarios || []).slice(0, G.filas.length).map(ccFuncDatos)
@@ -8591,7 +8616,7 @@ function buildCustodiaBlob(ctx) {
       if (fecha) {
         var fm = (F.y0 + F.fy) / 2;
         ops += lcOpBorrar(G.grisFecha.x, fm - G.grisFecha.alto / 2, G.grisFecha.w, G.grisFecha.alto);
-        ops += lcOpTexto((G.col.fir[0] + G.col.fir[1]) / 2, fm - 0.36 * 11, fecha, 11, 'c');
+        ops += lcOpTexto((G.col.fir[0] + G.col.fir[1]) / 2, fm - 0.36 * LC_PDF_SZ, fecha, LC_PDF_SZ, 'c');
       }
     });
 
@@ -8625,14 +8650,14 @@ function buildRotuloBlob(ctx) {
   try {
     var c = ctx.caso, it = ctx.item, G = FPJ7_G, ops = '', avisos = [];
     var m = rtMapa(c, it);
-    ops += _ccCeldas(G.nunc, m.nunc, G.filaY, 11);
+    ops += _ccCeldas(G.nunc, m.nunc, G.filaY, LC_PDF_SZ);
 
     var i;
-    if (m.fecha.length === 8) for (i = 0; i < 8; i++) ops += _ccCeldaLimpia(G.fecha[i], G.filaY, 11, m.fecha.charAt(i));
-    if (m.hora.length === 4) for (i = 0; i < 4; i++) ops += _ccCeldaLimpia(G.hora[i], G.filaY, 11, m.hora.charAt(i));
+    if (m.fecha.length === 8) for (i = 0; i < 8; i++) ops += _ccCeldaLimpia(G.fecha[i], G.filaY, LC_PDF_SZ, m.fecha.charAt(i));
+    if (m.hora.length === 4) for (i = 0; i < 4; i++) ops += _ccCeldaLimpia(G.hora[i], G.filaY, LC_PDF_SZ, m.hora.charAt(i));
 
-    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.numY, m.numero, 12, 'c', G.hallazgo.w);
-    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.cantY, m.cantidad, 12, 'c', G.hallazgo.w);
+    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.numY, m.numero, LC_PDF_SZ, 'c', G.hallazgo.w);
+    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.cantY, m.cantidad, LC_PDF_SZ, 'c', G.hallazgo.w);
 
     var anchoS = G.sitio.x1 - G.sitio.x0;
     var ld = lcPdfWrap(m.direccion, anchoS, LC_PDF_SZ), lu = lcPdfWrap(m.ubicacion, anchoS, LC_PDF_SZ);

@@ -2469,7 +2469,7 @@ contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 Los dos formatos que faltaban del apartado 7 del informe de captura. Pedidos en
 `Documentos/Otro/Funiones Cadena de Custodia y Rotulo.docx` (texto + 9 pantallazos con recuadro rojo
 numerado) sobre `FPJ 8 Registro Cadena De Custodia.pdf` y `FPJ 7 Rotulo Emp Y Ef.pdf`. Verificado con
-`verify_custodia.mjs` (**87 checks**, nuevo) y abriendo los PDF generados en un visor real.
+`verify_custodia.mjs` (**93 checks**, nuevo) y abriendo los PDF generados en un visor real.
 
 ### ⚠️ La decisión de arquitectura: estos formatos son PDF, y NO se convierten — se estampan
 Los tres formatos anteriores (FPJ-5 URI/CESPA, FPJ-6) llegaron como `.docx` y por eso todo el motor
@@ -2509,11 +2509,11 @@ Fiscalía** (sin AcroForm, sin campos). Las salidas posibles eran tres y solo un
   porque los dígitos de la fecha sí aparecían: los precede un rectángulo blanco que termina en `0 g`
   y de paso restauraba el color. Misma familia que el `w:sz` ausente del acta: **el defecto era la
   AUSENCIA de la declaración**, no un valor equivocado.
-- ⚠️ **Los anchos de la fuente se embeben (métricas AFM de Helvetica), no se miden con canvas.** En
-  un teléfono Android `font-family:Arial` cae en Roboto y sus anchos no son esos: el centrado de las
-  casillas y el corte de renglón saldrían mal **justo en el dispositivo donde se usa la app**. Se usa
-  Helvetica (base-14, no hay que embeber la fuente) declarada como recurso propio `/LCF`: las fuentes
-  del formato traen `/FirstChar`–`/LastChar` que **no cubren las vocales acentuadas ni la ñ**.
+- ⚠️ **Los anchos de la fuente se embeben (métricas de Arial), no se miden con canvas.** En un
+  teléfono Android `font-family:Arial` cae en Roboto y sus anchos no son esos: el centrado de las
+  casillas y el corte de renglón saldrían mal **justo en el dispositivo donde se usa la app**. La
+  misma tabla se declara dentro del PDF (`/Widths`), así que lo que la app mide y lo que el visor
+  maqueta es exactamente lo mismo.
 - ⚠️ **Al fundir el flujo original en un Form XObject, sus entradas (`/Filter`, `/Length`) van DENTRO
   del diccionario nuevo, no pegadas detrás.** Dos `<< >>` seguidos delante de `stream` no son un
   objeto válido y el visor pinta **la hoja en blanco sin dar ningún error** — que es lo que cuesta
@@ -2521,6 +2521,24 @@ Fiscalía** (sin AcroForm, sin campos). Las salidas posibles eran tres y solo un
 - ⚠️ El idiom `String.fromCharCode` con el operador de propagación **no vuelve a entrar en el
   archivo**: `lcBytesStr` convierte por trozos de 8 KB (es el techo que dejaba a la app sin guardar a
   partir de la captura 23, auditoría del 2026-08-22).
+
+### Un solo cuerpo de letra: Arial 11 pt en los dos formatos
+Todo lo que rellena la app —texto, fechas, números y las «X» de H/R/E— va a **Arial 11 pt**, igual en
+el FPJ-8 y en el FPJ-7. Antes había **tres** tamaños repartidos (10 en el cuerpo, 11 en las casillas
+del NUNC y la fecha, 12 en el hallazgo) sin que ninguno de los tres lo hubiera pedido nadie: es el
+mismo defecto que ya se corrigió en el acta FPJ-6 y en el FPJ-5, y la misma regla — un formato
+oficial se diligencia en un solo cuerpo de letra. `LC_PDF_SZ` es el único punto que lo decide.
+- ⚠️ **La fuente es Arial declarada como tal**, no la Helvetica de las 14 fuentes base: va
+  **sin embeber** (el visor usa la del sistema) pero con `/FontDescriptor` y `/Widths` propios de 32
+  a 255, que es lo que la hace conforme y lo que garantiza que el visor maquete con la misma métrica
+  con la que la app centró las casillas.
+- ⚠️ **No se reutiliza la `/F2` que el formato ya trae**, que también es ArialMT: su rango
+  `/FirstChar`–`/LastChar` **no cubre las vocales acentuadas ni la ñ** (la del FPJ-7 llega a 243), así
+  que «Medellín» o «pantalón» saldrían con letras de ancho cero encimadas.
+- ⚠️ Las **etiquetas impresas del formato no se tocan**: solo se escribe encima.
+- La condensación (`Tz`, hasta el 82 %) **no es un cambio de cuerpo** —mantiene los 11 pt de alto y
+  solo estrecha el glifo— y es la válvula que impide que un nombre largo desborde la casilla. Con
+  datos corrientes no se dispara; hay un check que lo mide.
 
 ### El rótulo se imprime en MEDIA HOJA CARTA (decisión del usuario)
 *«el rótulo debe de imprimirse en la mitad de un papel tamaño carta»*. Es una etiqueta que se ata al
@@ -2615,11 +2633,11 @@ blanco.
 - `verify_menu_expediente` [7] daba por hecho que el expediente tiene **2** documentos. Ahora la
   expectativa se **deriva del registro** (`lcEstadoDocs`), así que no vuelve a quedarse obsoleta con
   el siguiente formato. No bajó su cuenta: 16/16.
-- Regresiones en verde: **custodia 87** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
+- Regresiones en verde: **custodia 93** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
   fpj5 tipografía 48 · tipografía OJ 42 · export 74 · editable 28 · firma 62 · envío 39 · almacén 12 ·
   expediente 13 · menú+expediente 16 · personas 25 · invitado 33 · simulador 41 · orden 33 ·
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
-  Anti-caché `?v=71` / `cache-v71`, `_BUILD=71`.
+  Anti-caché `?v=72` / `cache-v72`, `_BUILD=72`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
