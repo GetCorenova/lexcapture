@@ -2211,7 +2211,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 72;
+var _BUILD = 73;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -8141,19 +8141,31 @@ function lcPdfWrap(txt, ancho, size) {
   if (cur) lineas.push(cur);
   return lineas;
 }
-/* Un dato que no cabe se CONDENSA (`Tz`) hasta el 82 % antes que desbordar la
-   casilla del formato. Por debajo deja de leerse, y un dato ilegible en un
-   documento judicial no vale más que uno ausente. */
-function lcOpTexto(x, y, s, size, align, maxW) {
+/* Escribe un dato. Si no cabe en su casilla, primero se CONDENSA (`Tz`) hasta el
+   88 % —eso no cambia el cuerpo de letra, solo estrecha el glifo— y solo si aun
+   así desborda se reduce el cuerpo, lo justo para que quepa.
+   ⚠️ Reducir es el último recurso y NUNCA es silencioso: quien llama pasa `rec`
+   y recibe qué dato hubo que encoger y a cuánto, para poder avisarlo. Un dato
+   que se sale de la casilla de un formato judicial —pisando la etiqueta de al
+   lado— es peor que uno un punto más pequeño, pero las dos cosas hay que
+   decirlas. */
+function lcOpTexto(x, y, s, size, align, maxW, rec) {
   var t = String(s == null ? '' : s);
   if (!t.replace(/\s/g, '')) return '';
-  var w = lcPdfAncho(t, size), px = x, esc = '', f = 1;
-  if (maxW && w > maxW) f = Math.max(0.82, maxW / w);
-  var wf = w * f;
+  var f = 1, sz = size, w = lcPdfAncho(t, sz);
+  if (maxW && w > maxW) {
+    f = Math.max(0.88, maxW / w);
+    if (w * f > maxW) {                       // condensar no basta: reducir el cuerpo
+      sz = size * (maxW / (w * f));
+      w = lcPdfAncho(t, sz);
+      if (rec) rec.push({ t: t, sz: sz, de: size });
+    }
+  }
+  var wf = w * f, px = x;
   if (align === 'c') px = x - wf / 2;
   else if (align === 'r') px = x - wf;
-  if (f !== 1) esc = ' ' + (f * 100).toFixed(1) + ' Tz';
-  return 'BT /LCF ' + size + ' Tf' + esc + ' 1 0 0 1 ' + px.toFixed(2) + ' ' + y.toFixed(2) +
+  var esc = f !== 1 ? ' ' + (f * 100).toFixed(1) + ' Tz' : '';
+  return 'BT /LCF ' + (+sz.toFixed(2)) + ' Tf' + esc + ' 1 0 0 1 ' + px.toFixed(2) + ' ' + y.toFixed(2) +
     ' Tm (' + lcPdfTxt(t) + ') Tj ET' + (esc ? ' 100 Tz' : '') + '\n';
 }
 /* Tapa en blanco lo que el formato trae impreso en gris como guía («AAAA-MM-DD»,
@@ -8268,9 +8280,16 @@ function lcPdfEstampar(bytes, porPagina, hoja) {
   var fuente = nuevo('<</Type/Font/Subtype/TrueType/BaseFont/ArialMT/Encoding/WinAnsiEncoding' +
     '/FirstChar 32/LastChar 255/Widths[' + anchos.join(' ') + ']/FontDescriptor ' + descr + ' 0 R>>');
 
-  Object.keys(porPagina).forEach(function (k) {
-    var ops = porPagina[k];
-    if (!ops) return;
+  /* ⚠️ Si el documento se reencaja en una hoja, se reencajan TODAS sus páginas,
+     lleven estampado o no: si no, el reverso del registro se quedaría con su
+     hoja original y el documento saldría con dos páginas de tamaño distinto.
+     ⚠️ El recorte, en cambio, solo se aplica a la PRIMERA: está medido sobre el
+     marco de la cara del formato, y no significa nada en las demás. */
+  var paginas = Object.keys(porPagina);
+  if (hoja) kids.forEach(function (x, i) { if (paginas.indexOf(String(i)) < 0) paginas.push(String(i)); });
+  paginas.forEach(function (k) {
+    var ops = porPagina[k] || '';
+    if (!ops && !hoja) return;
     var pn = kids[+k];
     if (!pn) throw new Error('La página ' + k + ' no existe en el formato');
     var o = lcPdfObj(src, pn);
@@ -8312,8 +8331,8 @@ function lcPdfEstampar(bytes, porPagina, hoja) {
          lee o no. El recorte se MIDIÓ sobre las instrucciones de dibujo del
          propio archivo (el rectángulo del marco exterior); no es un ajuste a
          ojo, y no recorta nada: encierra todo lo que el formato dibuja. */
-      var r = hoja.recorte || { x0:0, y0:0, x1:W, y1:H };
-      var m = hoja.margen || 0;
+      var r = (+k === 0 && hoja.recorte) ? hoja.recorte : { x0:0, y0:0, x1:W, y1:H };
+      var m = (+k === 0 && hoja.recorte) ? (hoja.margen || 0) : 0;
       var rw = r.x1 - r.x0, rh = r.y1 - r.y0;
       var esc = Math.min((hoja.w - 2 * m) / rw, (hoja.h - 2 * m) / rh);
       var tx = (hoja.w - rw * esc) / 2 - r.x0 * esc;
@@ -8388,45 +8407,59 @@ var FPJ8_G = {
      asigna el SPOA y no se conoce en el sitio (misma regla que el FPJ-6). */
   nunc: [80.58,103.43,127.03,152.35,178.82,205.38,234.27,263.98,293.30,324.95,358.60,
          393.38,426.67,455.70,485.45,519.83,554.27,584.85,614.55,648.20,685.42],
-  nuncY: 745.30,
+  nuncFila: [730.80, 767.80],                         // alto de la fila, no una línea base
   hre: [80.58, 103.50, 127.10],                       // Halló · Recolectó · Embaló
   col: { nom:[139.10,570.65], ced:[570.65,785.75], ent:[785.75,944.65], fir:[944.65,1203.65] },
   filas: [ { y0:572.80, y1:642.10, fy:602.10 },       // fy = línea que parte FIRMA / fecha
            { y0:511.80, y1:572.80, fy:537.40 },
            { y0:448.60, y1:511.80, fy:474.90 } ],
   desc: { lineas:[371.9,345.9,320.0,294.1,268.1,242.2,216.2], x0:95.0, x1:1136.0 },
-  grisFecha: { x:1022.0, w:108.0, alto:19.0 }
+  grisFecha: { x:1022.0, w:108.0, alto:19.0 },
+  pagina: { w:1277.42, h:987.10 },
+  /* El registro va en CARTA HORIZONTAL. ⚠️ No es una elección estética: la
+     página del formato mide 1277,42 × 987,10, cuya relación de aspecto es
+     1,2941 — EXACTAMENTE la de una carta horizontal (792 × 612). Reencajarla
+     ahí es la misma reducción que hace la impresora al ajustar a la hoja, sin
+     deformar ni un punto, y a cambio el documento pasa a tener un tamaño físico
+     conocido: sin eso, «11 pt» no significa nada. */
+  hoja: { w:792, h:612 }
 };
 var FPJ7_G = {
   nunc: [100.58,132.18,163.73,195.35,226.88,270.73,314.58,346.18,377.80,409.35,440.95,
          472.48,504.02,535.65,567.20,598.73,630.33,661.95,693.55,725.10,756.58],
   fecha: [798.10,824.15,850.28,876.35,902.35,928.40,954.45,980.42],   // A A A A M M D D
   hora:  [1032.47,1058.55,1084.20,1109.82],                           // H O R A
-  filaY: 708.10,
+  fila1: [693.85, 729.70],                            // NUNC y fecha/hora comparten fila
   hallazgo: { cx:132.0, numY:585.0, cantY:512.0, w:88 },
   dirLineas: [614.9, 589.8, 563.9],
   ubiLineas: [542.5, 517.4],
   sitio: { x0:302.0, x1:738.0 },
   persona: { x0:789.0, x1:1119.0, filas:[[563.9,589.4],[542.5,563.9],[517.4,542.5],[489.7,517.4]] },
   desc: { lineas:[440.6,415.4,390.4,365.2,340.1,315.0,289.9,264.8], x0:120.0, x1:1093.0 },
-  sec7: { cols:[84.7,425.0,582.9,709.2,889.2,1122.8], y0:179.15, y1:215.70 }
+  sec7: { cols:[84.7,425.0,582.9,709.2,889.2,1122.8], y0:179.15, y1:215.70 },
+  pagina: { w:1218.46, h:941.54 },
+  hoja: null                                          // se asigna abajo (media carta)
 };
 /* ⚠️ UN SOLO CUERPO PARA TODO LO QUE RELLENA LA APP: Arial 11 pt. Texto,
-   fechas, números y las «X» de H/R/E — en los DOS formatos. Antes había tres
-   tamaños repartidos (10 en el cuerpo, 11 en las casillas del NUNC y la fecha,
-   12 en el hallazgo) sin que ninguno de los tres lo hubiera pedido nadie: es el
-   mismo defecto que se corrigió en el acta FPJ-6 y en el FPJ-5, y la misma
-   regla —un formato oficial se diligencia en un solo cuerpo de letra—.
-   ⚠️ Las etiquetas impresas del formato NO se tocan: solo se escribe encima. */
+   fechas, números y las «X» de H/R/E — en los DOS formatos.
+
+   ⚠️ Y SON 11 PT SOBRE EL PAPEL IMPRESO, no dentro del archivo. La distinción
+   no es teórica: estos formatos vienen en hojas enormes —el registro mide
+   17,74" × 13,71" y el rótulo 16,9" × 13,1", exportados así desde Excel—, así
+   que al imprimirlos todo se reduce a la mitad larga. Declarar «11 pt» dentro
+   de una página de 17 pulgadas dejaba el dato en 6,8 pt reales en el registro y
+   en 5,6 pt en el rótulo, que es justo lo que se veía pequeño en el papel.
+   Ahora cada formato declara su página de origen y la HOJA en la que se imprime,
+   y el cuerpo con el que se escribe se deduce: `LC_PDF_SZ / escala`. Los 11 pt
+   son medibles con una regla sobre la hoja.
+   ⚠️ Las etiquetas impresas del formato NO se tocan: solo se escribe encima —y
+   por eso el dato sale más grande que ellas, que se imprimen a ~6 pt. */
 var LC_PDF_SZ = 11;
 /* ⚠️ EL RÓTULO SE IMPRIME EN MEDIA HOJA CARTA. Es una etiqueta que se ata al
    elemento embalado, no un documento de archivo: en el sitio se imprime media
-   carta y se corta. El PDF que publica la Fiscalía viene en una hoja enorme
-   (16,9" × 13,1", exportada así desde Excel), así que la página se reencaja a
-   612 × 396 pt —la mitad de una carta, 8,5" × 5,5"— escalando el formato
-   entero, sin redibujar ni mover una sola casilla. Ver `lcPdfEstampar`.
-   ⚠️ El FPJ-8 NO se reencaja: es el registro que acompaña al elemento y va en
-   su hoja completa, con su reverso. */
+   carta y se corta. La página se reencaja a 612 × 396 pt —la mitad de una carta,
+   8,5" × 5,5"— escalando el formato entero, sin redibujar ni mover una sola
+   casilla. Ver `lcPdfEstampar`. */
 var LC_HOJA_MEDIA_CARTA = {
   w: 612, h: 396,
   /* Marco exterior del formato, medido sobre sus propias instrucciones de
@@ -8435,16 +8468,30 @@ var LC_HOJA_MEDIA_CARTA = {
   recorte: { x0: 57, y0: 111, x1: 1147, y1: 849 },
   margen: 9                                       // 0,125" de respeto de impresión
 };
+FPJ7_G.hoja = LC_HOJA_MEDIA_CARTA;
+/* Cuánto encoge el formato al encajarlo en su hoja. PUNTO ÚNICO: lo usan el
+   constructor de operadores (para saber con qué cuerpo escribir) y
+   `lcPdfEstampar` (para dibujar), así que no pueden discrepar. */
+function lcHojaEscala(hoja, W, H) {
+  if (!hoja) return 1;
+  var r = hoja.recorte || { x0:0, y0:0, x1:W, y1:H }, m = hoja.margen || 0;
+  return Math.min((hoja.w - 2 * m) / (r.x1 - r.x0), (hoja.h - 2 * m) / (r.y1 - r.y0));
+}
+/* El cuerpo con el que hay que ESCRIBIR dentro del archivo para que en el papel
+   se midan LC_PDF_SZ puntos. */
+function _ccSz(G) { return LC_PDF_SZ / lcHojaEscala(G.hoja, G.pagina.w, G.pagina.h); }
 function _ccBase(y0, y1, size) { return (y0 + y1) / 2 - 0.36 * size; }
-function _ccCeldas(centros, txt, y, size) {
+function _ccCeldas(centros, txt, fila, size, rec) {
   var s = String(txt || '').replace(/\D/g, ''), out = '', i;
-  for (i = 0; i < centros.length && i < s.length; i++) out += lcOpTexto(centros[i], y, s.charAt(i), size, 'c');
+  var y = _ccBase(fila[0], fila[1], size);
+  for (i = 0; i < centros.length && i < s.length; i++) out += lcOpTexto(centros[i], y, s.charAt(i), size, 'c', 0, rec);
   return out;
 }
 /* Casilla del formato con una letra gris de guía debajo: se tapa antes de
    escribir, para que el dígito quede limpio y no encima de la letra. */
-function _ccCeldaLimpia(cx, y, size, ch) {
-  return lcOpBorrar(cx - 9.5, y - 3.4, 19, size + 4) + lcOpTexto(cx, y, ch, size, 'c');
+function _ccCeldaLimpia(cx, fila, size, ch, rec) {
+  var y = _ccBase(fila[0], fila[1], size);
+  return lcOpBorrar(cx - 10.5, y - size * 0.3, 21, size * 1.15) + lcOpTexto(cx, y, ch, size, 'c', 0, rec);
 }
 
 /* ── III · MODELO ─────────────────────────────────────────────────────────────
@@ -8584,6 +8631,19 @@ function ccFechaProc(c) {
 
 /* ── IV · GENERADORES ─────────────────────────────────────────────────────── */
 
+/* Si algún dato no cupo a 11 pt en su casilla y hubo que reducirlo, se DICE, con
+   el valor y el cuerpo real que le quedó. Un formato judicial que sale con una
+   letra distinta de la pedida sin avisar es la misma familia de defecto que un
+   texto recortado en silencio. */
+function _ccAvisaSz(rec, G, avisos) {
+  if (!rec || !rec.length) return;
+  var esc = lcHojaEscala(G.hoja, G.pagina.w, G.pagina.h);
+  var min = Math.min.apply(null, rec.map(function (r) { return r.sz; })) * esc;
+  avisos.push(rec.length + (rec.length === 1 ? ' dato no cabía' : ' datos no cabían') +
+    ' a ' + LC_PDF_SZ + ' pt en su casilla (' + rec.map(function (r) { return r.t; }).join(', ') +
+    '): se imprimió hasta ' + min.toFixed(1) + ' pt para no salirse del formato');
+}
+
 /* REGISTRO DE CADENA DE CUSTODIA — FPJ-8.
    ⚠️ El reverso (página 2, «REGISTRO DE CONTINUIDAD») se deja ENTERAMENTE en
    blanco, y por eso no se estampa nada en él: lo diligencia a mano quien reciba
@@ -8592,8 +8652,11 @@ function ccFechaProc(c) {
 function buildCustodiaBlob(ctx) {
   try {
     var c = ctx.caso, grupo = ctx.grupo;
-    var cu = ccCustodia(c), G = FPJ8_G, ops = '', avisos = [];
-    ops += _ccCeldas(G.nunc, f6Nunc(c).digitos, G.nuncY, LC_PDF_SZ);
+    var cu = ccCustodia(c), G = FPJ8_G, ops = '', avisos = [], rec = [];
+    /* El cuerpo con el que se ESCRIBE dentro del archivo, para que en la hoja
+       impresa se midan los 11 pt. Ver `_ccSz`. */
+    var SZ = _ccSz(G);
+    ops += _ccCeldas(G.nunc, f6Nunc(c).digitos, G.nuncFila, SZ, rec);
 
     var fecha = ccFechaProc(c);
     var funcs = (cu.funcionarios || []).slice(0, G.filas.length).map(ccFuncDatos)
@@ -8602,12 +8665,12 @@ function buildCustodiaBlob(ctx) {
       avisos.push('El formato tiene ' + G.filas.length + ' filas de funcionario; las demás no se imprimieron');
 
     funcs.forEach(function (f, i) {
-      var F = G.filas[i], base = _ccBase(F.y0, F.y1, LC_PDF_SZ);
-      if (f.h) ops += lcOpTexto(G.hre[0], base, 'X', LC_PDF_SZ, 'c');
-      if (f.r) ops += lcOpTexto(G.hre[1], base, 'X', LC_PDF_SZ, 'c');
-      if (f.e) ops += lcOpTexto(G.hre[2], base, 'X', LC_PDF_SZ, 'c');
+      var F = G.filas[i], base = _ccBase(F.y0, F.y1, SZ);
+      if (f.h) ops += lcOpTexto(G.hre[0], base, 'X', SZ, 'c');
+      if (f.r) ops += lcOpTexto(G.hre[1], base, 'X', SZ, 'c');
+      if (f.e) ops += lcOpTexto(G.hre[2], base, 'X', SZ, 'c');
       [[G.col.nom, f.nombre], [G.col.ced, f.cedula], [G.col.ent, f.entidad]].forEach(function (p) {
-        ops += lcOpTexto((p[0][0] + p[0][1]) / 2, base, p[1], LC_PDF_SZ, 'c', p[0][1] - p[0][0] - 14);
+        ops += lcOpTexto((p[0][0] + p[0][1]) / 2, base, p[1], SZ, 'c', p[0][1] - p[0][0] - 14, rec);
       });
       /* La FIRMA se deja en blanco a propósito: se estampa con bolígrafo sobre
          el papel. Solo se escribe la fecha, y antes se borra la guía gris
@@ -8616,19 +8679,20 @@ function buildCustodiaBlob(ctx) {
       if (fecha) {
         var fm = (F.y0 + F.fy) / 2;
         ops += lcOpBorrar(G.grisFecha.x, fm - G.grisFecha.alto / 2, G.grisFecha.w, G.grisFecha.alto);
-        ops += lcOpTexto((G.col.fir[0] + G.col.fir[1]) / 2, fm - 0.36 * LC_PDF_SZ, fecha, LC_PDF_SZ, 'c');
+        ops += lcOpTexto((G.col.fir[0] + G.col.fir[1]) / 2, fm - 0.36 * SZ, fecha, SZ, 'c', G.grisFecha.w, rec);
       }
     });
 
     var D = G.desc, lineas = [];
-    ccDescLineas(grupo).forEach(function (p) { lineas = lineas.concat(lcPdfWrap(p, D.x1 - D.x0, LC_PDF_SZ)); });
+    ccDescLineas(grupo).forEach(function (p) { lineas = lineas.concat(lcPdfWrap(p, D.x1 - D.x0, SZ)); });
     lineas.slice(0, D.lineas.length).forEach(function (t, i) {
-      ops += lcOpTexto(D.x0, D.lineas[i] + 3.2, t, LC_PDF_SZ, 'l');
+      ops += lcOpTexto(D.x0, D.lineas[i] + 3.2, t, SZ, 'l');
     });
     if (lineas.length > D.lineas.length)
       avisos.push('La descripción no cabe en los ' + D.lineas.length + ' renglones del formato: revísala y acórtala');
+    _ccAvisaSz(rec, G, avisos);
 
-    var bytes = lcPdfEstampar(lcB64Bytes(TPL_FPJ8), { 0: ops });
+    var bytes = lcPdfEstampar(lcB64Bytes(TPL_FPJ8), { 0: ops }, G.hoja);
     var quien = (c.capturados && c.capturados[0] && c.capturados[0].priApe) || 'caso';
     return {
       blob: new Blob([bytes], { type:'application/pdf' }),
@@ -8648,43 +8712,48 @@ function buildCustodiaBlob(ctx) {
    número del elemento y quien lo suscribe. */
 function buildRotuloBlob(ctx) {
   try {
-    var c = ctx.caso, it = ctx.item, G = FPJ7_G, ops = '', avisos = [];
-    var m = rtMapa(c, it);
-    ops += _ccCeldas(G.nunc, m.nunc, G.filaY, LC_PDF_SZ);
+    var c = ctx.caso, it = ctx.item, G = FPJ7_G, ops = '', avisos = [], rec = [];
+    var m = rtMapa(c, it), SZ = _ccSz(G);
+    ops += _ccCeldas(G.nunc, m.nunc, G.fila1, SZ, rec);
 
     var i;
-    if (m.fecha.length === 8) for (i = 0; i < 8; i++) ops += _ccCeldaLimpia(G.fecha[i], G.filaY, LC_PDF_SZ, m.fecha.charAt(i));
-    if (m.hora.length === 4) for (i = 0; i < 4; i++) ops += _ccCeldaLimpia(G.hora[i], G.filaY, LC_PDF_SZ, m.hora.charAt(i));
+    if (m.fecha.length === 8) for (i = 0; i < 8; i++) ops += _ccCeldaLimpia(G.fecha[i], G.fila1, SZ, m.fecha.charAt(i), rec);
+    if (m.hora.length === 4) for (i = 0; i < 4; i++) ops += _ccCeldaLimpia(G.hora[i], G.fila1, SZ, m.hora.charAt(i), rec);
 
-    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.numY, m.numero, LC_PDF_SZ, 'c', G.hallazgo.w);
-    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.cantY, m.cantidad, LC_PDF_SZ, 'c', G.hallazgo.w);
+    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.numY, m.numero, SZ, 'c', G.hallazgo.w, rec);
+    ops += lcOpTexto(G.hallazgo.cx, G.hallazgo.cantY, m.cantidad, SZ, 'c', G.hallazgo.w, rec);
 
     var anchoS = G.sitio.x1 - G.sitio.x0;
-    var ld = lcPdfWrap(m.direccion, anchoS, LC_PDF_SZ), lu = lcPdfWrap(m.ubicacion, anchoS, LC_PDF_SZ);
-    ld.slice(0, G.dirLineas.length).forEach(function (t, k) { ops += lcOpTexto(G.sitio.x0, G.dirLineas[k] + 3.2, t, LC_PDF_SZ, 'l'); });
-    lu.slice(0, G.ubiLineas.length).forEach(function (t, k) { ops += lcOpTexto(G.sitio.x0, G.ubiLineas[k] + 3.2, t, LC_PDF_SZ, 'l'); });
+    var ld = lcPdfWrap(m.direccion, anchoS, SZ), lu = lcPdfWrap(m.ubicacion, anchoS, SZ);
+    ld.slice(0, G.dirLineas.length).forEach(function (t, k) { ops += lcOpTexto(G.sitio.x0, G.dirLineas[k] + 3.2, t, SZ, 'l'); });
+    lu.slice(0, G.ubiLineas.length).forEach(function (t, k) { ops += lcOpTexto(G.sitio.x0, G.ubiLineas[k] + 3.2, t, SZ, 'l'); });
     if (ld.length > G.dirLineas.length) avisos.push('La dirección no cabe en sus ' + G.dirLineas.length + ' renglones');
     if (lu.length > G.ubiLineas.length) avisos.push('La ubicación no cabe en sus ' + G.ubiLineas.length + ' renglones');
 
     var P = G.persona;
-    lcPdfWrap(m.persona, P.x1 - P.x0, LC_PDF_SZ).slice(0, P.filas.length).forEach(function (t, k) {
-      ops += lcOpTexto((P.x0 + P.x1) / 2, _ccBase(P.filas[k][0], P.filas[k][1], LC_PDF_SZ), t, LC_PDF_SZ, 'c');
+    lcPdfWrap(m.persona, P.x1 - P.x0, SZ).slice(0, P.filas.length).forEach(function (t, k) {
+      ops += lcOpTexto((P.x0 + P.x1) / 2, _ccBase(P.filas[k][0], P.filas[k][1], SZ), t, SZ, 'c');
     });
 
-    var D = G.desc, lde = lcPdfWrap(m.desc, D.x1 - D.x0, LC_PDF_SZ);
-    lde.slice(0, D.lineas.length).forEach(function (t, k) { ops += lcOpTexto(D.x0, D.lineas[k] + 3.2, t, LC_PDF_SZ, 'l'); });
+    var D = G.desc, lde = lcPdfWrap(m.desc, D.x1 - D.x0, SZ);
+    lde.slice(0, D.lineas.length).forEach(function (t, k) { ops += lcOpTexto(D.x0, D.lineas[k] + 3.2, t, SZ, 'l'); });
     if (lde.length > D.lineas.length)
       avisos.push('La descripción no cabe en los ' + D.lineas.length + ' renglones del formato');
 
     /* 7. RÓTULO DILIGENCIADO POR — el mismo funcionario que suscribe la cadena
        de custodia de este elemento. La casilla FIRMA queda en blanco: se firma
-       a mano, como la de la cadena. */
-    var C = G.sec7, b7 = _ccBase(C.y0, C.y1, LC_PDF_SZ);
+       a mano, como la de la cadena.
+       ⚠️ Es la fila más estrecha de los dos formatos: en media hoja carta, sus
+       columnas «Entidad» y «Cargo» miden 0,9" y 1,3" de papel. Un valor largo no
+       cabe a 11 pt con ningún espaciado, así que ahí —y solo ahí— el cuerpo se
+       reduce lo justo, y se avisa. */
+    var C = G.sec7, b7 = _ccBase(C.y0, C.y1, SZ);
     [m.dil.nombre, m.dil.cedula, m.dil.entidad, m.dil.cargo].forEach(function (t, k) {
-      ops += lcOpTexto((C.cols[k] + C.cols[k + 1]) / 2, b7, t, LC_PDF_SZ, 'c', C.cols[k + 1] - C.cols[k] - 14);
+      ops += lcOpTexto((C.cols[k] + C.cols[k + 1]) / 2, b7, t, SZ, 'c', C.cols[k + 1] - C.cols[k] - 14, rec);
     });
+    _ccAvisaSz(rec, G, avisos);
 
-    var bytes = lcPdfEstampar(lcB64Bytes(TPL_FPJ7), { 0: ops }, LC_HOJA_MEDIA_CARTA);
+    var bytes = lcPdfEstampar(lcB64Bytes(TPL_FPJ7), { 0: ops }, G.hoja);
     return {
       blob: new Blob([bytes], { type:'application/pdf' }),
       fname: 'FPJ7_Rotulo_EMP_' + (m.numero || '1') + '.pdf',

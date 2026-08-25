@@ -221,7 +221,7 @@ const ov8 = overlay(buf8);
 log(ov8.textos.length > 0, 'La capa estampada se lee sin descomprimir nada', ov8.textos.length + ' textos');
 
 // 1 · NUNC — 16 dígitos en 21 casillas, las 5 del consecutivo en blanco.
-const nunc8 = fila(ov8, 744, 747);
+const nunc8 = fila(ov8, 741, 745);
 log(nunc8.map(t => t.t).join('') === '0500160001202601',
   'El NUNC sale dígito por dígito, uno por casilla', nunc8.map(t => t.t).join(''));
 log(nunc8.length === 16,
@@ -233,15 +233,15 @@ log(nunc8.every((t, i) => Math.abs((t.x + lcAncho8(t)) - centrosNunc[i]) < 0.6 |
 function lcAncho8() { return 0; }
 
 // 4 · Documentación EMP y EF — fila 1
-const f1 = fila(ov8, 600, 612);
+const f1 = fila(ov8, 598, 604);
 log(f1.filter(t => t.t === 'X').length === 3,
   'Se marca con X debajo de H, R y E: el mismo funcionario halló, recolectó y embaló');
 const nom8 = fila(ov8, 600, 612, 200, 560).map(t => t.t).join('');
-log(/NELSON DAVID GOMEZ/.test(fila(ov8, 600, 612).map(t => t.t).join('')),
-  'Nombres y apellidos del funcionario', nom8 || fila(ov8, 600, 612).map(t => t.t).join(' | '));
-log(fila(ov8, 600, 612).some(t => t.t === '1035302775'),
+log(/NELSON DAVID GOMEZ/.test(fila(ov8, 598, 604).map(t => t.t).join('')),
+  'Nombres y apellidos del funcionario', nom8 || fila(ov8, 598, 604).map(t => t.t).join(' | '));
+log(fila(ov8, 598, 604).some(t => t.t === '1035302775'),
   '⚠️ La cédula sale SIN PUNTOS, como en todos los documentos de la app');
-log(fila(ov8, 600, 612).some(t => t.t === 'Institución de prueba'),
+log(fila(ov8, 598, 604).some(t => t.t === 'Institución de prueba'),
   'La entidad sale del perfil: no hay ninguna institución escrita en el código');
 
 // La fecha, en el formato del propio formulario, y sin la guía gris debajo.
@@ -366,36 +366,44 @@ log(!!mCm && Math.abs(+mCm[1] - +mCm[2]) < 1e-6,
 log(!!mCm && +mCm[1] > 0.5,
   'Y se encaja el MARCO del formato, no la hoja vacía que lo rodea: sin eso encogería un 23 % de más',
   mCm && ('escala ' + (+mCm[1]).toFixed(4)));
-/* El FPJ-8, en cambio, NO se reencaja: es el registro que acompaña al elemento
-   y va en su hoja completa, con su reverso. */
-log(!/\/Subtype\s*\/Form/.test(buf8.subarray(origen8.length).toString('latin1')),
-  '⚠️ El FPJ-8 no se reencaja: va en su hoja completa, con su reverso');
+/* El FPJ-8 también se reencaja, pero a CARTA HORIZONTAL: su página tiene
+   exactamente esa relación de aspecto, así que la reducción es la misma que
+   haría la impresora al ajustar a la hoja — y a cambio el documento pasa a tener
+   un tamaño físico conocido, sin el cual «11 pt» no significa nada. */
+const cola8 = buf8.subarray(origen8.length).toString('latin1');
+const mb8 = /\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(cola8);
+log(!!mb8 && +mb8[1] === 792 && +mb8[2] === 612,
+  '⚠️ El registro sale en carta horizontal: 792 × 612 pt (11" × 8,5")',
+  mb8 ? mb8[1] + ' × ' + mb8[2] : 'sin MediaBox');
+log((cola8.match(/\/MediaBox\s*\[\s*0\s+0\s+792\s+612\s*\]/g) || []).length === 2,
+  '⚠️ Y el REVERSO se reencaja también: si no, el documento saldría con dos páginas de tamaño distinto',
+  (cola8.match(/\/MediaBox/g) || []).length + ' páginas reencajadas');
 
 const ov7 = overlay(buf7);
-log(fila(ov7, 707, 709, 80, 780).map(t => t.t).join('') === '0500160001202601',
+log(fila(ov7, 702, 706, 80, 780).map(t => t.t).join('') === '0500160001202601',
   'El NUNC, dígito por dígito');
-const fechaCel = fila(ov7, 707, 709, 780, 1000).map(t => t.t).join('');
-const horaCel = fila(ov7, 707, 709, 1010, 1130).map(t => t.t).join('');
+const fechaCel = fila(ov7, 702, 706, 780, 1000).map(t => t.t).join('');
+const horaCel = fila(ov7, 702, 706, 1010, 1130).map(t => t.t).join('');
 log(fechaCel === '20260820', 'La fecha de recolección, una cifra por casilla', fechaCel);
 log(horaCel === '1730', 'Y la hora', horaCel);
 /* ⚠️ El requerimiento es explícito: la fecha no se tacha encima de las letras
    guía; las letras desaparecen. Son 12 casillas con A/M/D/H/O/R/A impresas. */
-log(ov7.borrados.filter(b => b.y > 700 && b.y < 712).length === 12,
+log(ov7.borrados.filter(b => b.y > 690 && b.y < 706).length === 12,
   '⚠️ Las 12 letras grises de guía (A A A A M M D D / H O R A) se tapan antes de escribir',
-  ov7.borrados.filter(b => b.y > 700 && b.y < 712).length);
+  ov7.borrados.filter(b => b.y > 690 && b.y < 706).length);
 
 log(fila(ov7, 580, 590).map(t => t.t).join('') === '1',
   'NÚMERO DEL EMP Y EF = el que le corresponde dentro de SU cadena de custodia');
 log(fila(ov7, 508, 516).map(t => t.t).join('') === '01', 'CANTIDAD');
 log(/CL 52 # 50-31/.test(textoDe(ov7, 612, 620)), 'DIRECCIÓN, en su renglón');
-log(/pretina del pantalón/.test(textoDe(ov7, 540, 548)), 'UBICACIÓN, en el suyo');
-const perDoc = textoDe(ov7, 555, 590, 780, 1130);
+log(/pretina del pantalón/.test(textoDe(ov7, 540, 550, 290, 745)), 'UBICACIÓN, en el suyo');
+const perDoc = textoDe(ov7, 540, 590, 780, 1130);
 log(perDoc === 'CARLOS ANDRÉS RESTREPO GÓMEZ',
   '⚠️ Los nombres salen en MAYÚSCULAS, como en el FPJ-5 y en el acta: es la convención de los formatos de la Fiscalía', perDoc);
 const desc7 = textoDe(ov7, 435, 445).replace(/\s+/g, ' ');
 log(desc7 === '01 (uno) celular marca Samsung color negro en regular estado',
   '⚠️ La descripción es EXACTAMENTE la de la cadena de custodia, sin el prefijo «EMP N:»', desc7);
-const dil = fila(ov7, 190, 197).map(t => t.t);
+const dil = fila(ov7, 187, 192).map(t => t.t);
 log(dil.join(' ').includes('NELSON DAVID GOMEZ') && dil.join(' ').includes('1035302775'),
   '⚠️ Lo firma quien suscribe la cadena de custodia: mismo nombre y cédula', dil.join(' | '));
 log(dil.join(' ').includes('Comandante de Cuadrante'),
@@ -419,14 +427,43 @@ log(numeros.antes === 1 && numeros.despues === 2,
    garantía estructural con la que se cerraron el acta FPJ-6 y el FPJ-5. */
 console.log('\n── E2 · Un solo cuerpo de letra: Arial 11 pt ──');
 
-const tamanos8 = [...new Set(ov8.textos.map(t => t.size))].sort((a, b) => a - b);
-const tamanos7 = [...new Set(ov7.textos.map(t => t.size))].sort((a, b) => a - b);
-log(tamanos8.length === 1 && tamanos8[0] === 11,
-  '⚠️ Todo lo que rellena la app en el FPJ-8 va a 11 pt — texto, fechas, números y las «X»',
-  tamanos8.join(' / ') + ' pt');
-log(tamanos7.length === 1 && tamanos7[0] === 11,
-  'Y en el FPJ-7 exactamente igual: los dos formatos comparten cuerpo',
-  tamanos7.join(' / ') + ' pt');
+/* ⚠️ Se mide el tamaño SOBRE EL PAPEL, no el declarado dentro del archivo. Es la
+   distinción que costó el reporte: estos formatos vienen en hojas de 17" y la
+   impresión los reduce a la mitad larga, así que «11 pt» escritos dentro de esa
+   página aterrizaban en 6,8 pt reales. El tamaño impreso es
+   `tamaño declarado × escala de la hoja`. */
+const escalas = await page.evaluate(() => ({
+  f8: lcHojaEscala(FPJ8_G.hoja, FPJ8_G.pagina.w, FPJ8_G.pagina.h),
+  f7: lcHojaEscala(FPJ7_G.hoja, FPJ7_G.pagina.w, FPJ7_G.pagina.h)
+}));
+const impreso = (ov, esc) => [...new Set(ov.textos.map(t => +(t.size * esc).toFixed(2)))].sort((a, b) => a - b);
+const pt8 = impreso(ov8, escalas.f8), pt7 = impreso(ov7, escalas.f7);
+log(pt8.length === 1 && Math.abs(pt8[0] - 11) < 0.05,
+  '⚠️ Todo lo que rellena la app en el FPJ-8 mide 11 pt SOBRE EL PAPEL — texto, fechas, números y las «X»',
+  pt8.join(' / ') + ' pt impresos');
+/* ⚠️ En el rótulo hay UNA excepción, medida y no supuesta: en media hoja carta
+   las columnas «Entidad» y «Cargo» del apartado 7 miden 0,9" y 1,3" de papel, y
+   un valor corriente no cabe ahí a 11 pt con ningún espaciado. Solo esos dos se
+   reducen, y la app lo avisa. Todo lo demás del rótulo va a 11 pt. */
+const sec7y = ov7.textos.filter(t => t.y > 187 && t.y < 192);
+const fuera7 = ov7.textos.filter(t => Math.abs(t.size * escalas.f7 - 11) >= 0.05);
+log(fuera7.every(t => sec7y.indexOf(t) >= 0),
+  'Y en el FPJ-7, todo va a 11 pt salvo la fila más estrecha del formato — el apartado 7',
+  fuera7.map(t => t.t + ' ' + (t.size * escalas.f7).toFixed(1) + ' pt').join(' · ') || 'sin excepciones');
+log(fuera7.every(t => t.size * escalas.f7 >= 7),
+  '⚠️ Y esos se reducen lo justo para no salirse de la casilla, con un suelo de 7 pt',
+  fuera7.length + ' de ' + ov7.textos.length + ' datos');
+/* Y la comprobación que faltaba: que el archivo declare una hoja de tamaño
+   conocido. Sin eso «11 pt» no significa nada — es lo que pasaba antes. */
+const hojas = await page.evaluate(() => ({
+  f8: [FPJ8_G.hoja.w, FPJ8_G.hoja.h], f7: [FPJ7_G.hoja.w, FPJ7_G.hoja.h],
+  asp: FPJ8_G.pagina.w / FPJ8_G.pagina.h
+}));
+log(hojas.f8[0] === 792 && hojas.f8[1] === 612,
+  '⚠️ El registro se entrega en carta horizontal (792 × 612 pt), que es EXACTAMENTE su relación de aspecto',
+  hojas.asp.toFixed(4) + ' vs ' + (792 / 612).toFixed(4));
+log(Math.abs(hojas.asp - 792 / 612) < 0.001,
+  'Así que reencajarlo no deforma ni un punto: es la misma reducción que hace la impresora');
 
 /* La fuente: Arial declarada como tal, con SUS anchos, y sin embeber. */
 const fnt = /\/BaseFont\s*\/(\w+)/.exec(cola7);
@@ -443,9 +480,18 @@ log(/\/FontDescriptor\s+\d+\s+0\s+R/.test(cola7) && !/\/FontFile/.test(cola7),
    alto y solo estrecha el glifo, y es la válvula que impide que un nombre largo
    desborde la casilla del formato. Con datos corrientes no debería dispararse. */
 const cond = ov8.textos.concat(ov7.textos).filter(t => t.tz !== 100);
-log(cond.length === 0,
-  'Con datos corrientes nada necesita condensarse: los 11 pt caben en las casillas',
-  cond.length ? cond.map(t => t.t + ' (' + t.tz + '%)').join(' · ') : 'ninguno');
+log(cond.every(t => t.tz >= 88),
+  'La condensación nunca baja del 88 %: por debajo se prefiere reducir el cuerpo, que sí se avisa',
+  cond.length ? cond.map(t => t.t.slice(0, 22) + ' (' + t.tz + '%)').join(' · ') : 'ninguna');
+/* Y que el aviso EXISTE: un dato que sale con otra letra sin decirlo es la
+   misma familia de defecto que un texto recortado en silencio. */
+const avisos7 = await page.evaluate(async id => {
+  const c = DB.getCase(id), it = ccElementos(c)[1];
+  const out = await LC_DOCS.FPJ7.build({ caso: c, item: it });
+  return out.avisos || [];
+}, idCaso);
+log(avisos7.some(a => /no cab/.test(a) && /pt/.test(a)),
+  '⚠️ Y la app lo AVISA, con el dato y el cuerpo que le quedó', avisos7.join(' | ') || 'sin avisos');
 
 /* ══ F · LO QUE NO SE INVENTA ══════════════════════════════════════════════ */
 console.log('\n── F · Lo que se deja en blanco a propósito ──');
@@ -458,11 +504,13 @@ log(ov8.textos.every(t => !(t.y > 740 && t.y < 750 && t.x > 750)),
   '⚠️ «3. No de HISTORIA CLINICA» queda vacío: lo diligencia la entidad prestadora de salud');
 log(ov8.textos.every(t => !(t.y > 780 && t.y < 800)) && ov7.textos.every(t => !(t.y > 780 && t.y < 800)),
   '«2. No. ID» queda vacío: la app no lo conoce y no se inventa');
-log(!/q 0 g 0 G/.test(buf8.subarray(origen8.length).toString('latin1').split('/Contents [16 0 R')[0] || '') || true,
-  'El reverso (página 2, «REGISTRO DE CONTINUIDAD») no recibe una sola instrucción');
-const paginasTocadas = (buf8.subarray(origen8.length).toString('latin1').match(/\/Contents \[/g) || []).length;
-log(paginasTocadas === 1,
-  '⚠️ Solo se estampa la página 1; el reverso sale en blanco y con el formato completo (2 páginas)', paginasTocadas);
+/* El reverso se reencaja para compartir hoja, pero NO recibe una sola
+   instrucción de dibujo: sale en blanco, para que lo diligencie a mano quien
+   reciba el elemento. */
+const flujos8 = cola8.split('0 g 0 G 1 w 0 Tc').slice(1);
+log(flujos8.length === 2, 'Las dos páginas del registro pasan por el motor', flujos8.length);
+log(flujos8[1] && !/\) Tj/.test(flujos8[1].split('endstream')[0]),
+  '⚠️ El reverso («REGISTRO DE CONTINUIDAD») no recibe una sola instrucción de dibujo: sale en blanco');
 
 /* ══ G · COMPAÑERO DE PATRULLA ═════════════════════════════════════════════ */
 console.log('\n── G · Compañero de patrulla y entidad ──');
@@ -502,12 +550,12 @@ const [dl8c] = await Promise.all([
   page.evaluate(async () => { await ccGenerar(1); })
 ]);
 const ov8c = overlay(Buffer.from(await readFile(await dl8c.path())));
-const eq1 = fila(ov8c, 600, 612).filter(t => t.t === 'X').length;
-const eq2 = fila(ov8c, 534, 544).filter(t => t.t === 'X').length;
+const eq1 = fila(ov8c, 598, 604).filter(t => t.t === 'X').length;
+const eq2 = fila(ov8c, 533, 539).filter(t => t.t === 'X').length;
 log(eq1 === 2 && eq2 === 1,
   'Con roles repartidos se marca lo que hizo cada uno: 2 X en la primera fila y 1 en la segunda',
   eq1 + ' / ' + eq2);
-log(fila(ov8c, 534, 544).some(t => /JUAN PABLO MEJIA/.test(t.t)),
+log(fila(ov8c, 533, 539).some(t => /JUAN PABLO MEJIA/.test(t.t)),
   'El segundo funcionario ocupa la segunda fila del formato');
 
 /* ══ H · PERSISTENCIA, IDs, INVITADO Y CONSOLA ═════════════════════════════ */

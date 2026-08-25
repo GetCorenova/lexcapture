@@ -2469,7 +2469,7 @@ contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 Los dos formatos que faltaban del apartado 7 del informe de captura. Pedidos en
 `Documentos/Otro/Funiones Cadena de Custodia y Rotulo.docx` (texto + 9 pantallazos con recuadro rojo
 numerado) sobre `FPJ 8 Registro Cadena De Custodia.pdf` y `FPJ 7 Rotulo Emp Y Ef.pdf`. Verificado con
-`verify_custodia.mjs` (**93 checks**, nuevo) y abriendo los PDF generados en un visor real.
+`verify_custodia.mjs` (**98 checks**, nuevo) y abriendo los PDF generados en un visor real.
 
 ### ⚠️ La decisión de arquitectura: estos formatos son PDF, y NO se convierten — se estampan
 Los tres formatos anteriores (FPJ-5 URI/CESPA, FPJ-6) llegaron como `.docx` y por eso todo el motor
@@ -2522,12 +2522,42 @@ Fiscalía** (sin AcroForm, sin campos). Las salidas posibles eran tres y solo un
   archivo**: `lcBytesStr` convierte por trozos de 8 KB (es el techo que dejaba a la app sin guardar a
   partir de la captura 23, auditoría del 2026-08-22).
 
-### Un solo cuerpo de letra: Arial 11 pt en los dos formatos
+### Un solo cuerpo de letra: Arial 11 pt SOBRE EL PAPEL, en los dos formatos
 Todo lo que rellena la app —texto, fechas, números y las «X» de H/R/E— va a **Arial 11 pt**, igual en
 el FPJ-8 y en el FPJ-7. Antes había **tres** tamaños repartidos (10 en el cuerpo, 11 en las casillas
 del NUNC y la fecha, 12 en el hallazgo) sin que ninguno de los tres lo hubiera pedido nadie: es el
 mismo defecto que ya se corrigió en el acta FPJ-6 y en el FPJ-5, y la misma regla — un formato
 oficial se diligencia en un solo cuerpo de letra. `LC_PDF_SZ` es el único punto que lo decide.
+
+- ⚠️ **Y son 11 pt SOBRE EL PAPEL IMPRESO, no dentro del archivo.** La distinción no es teórica y
+  costó un reporte de campo: unificar el cuerpo a «11» dentro de una página de **17,74" × 13,71"**
+  —que es lo que mide el PDF que publica la Fiscalía, exportado así desde Excel— dejaba el dato en
+  **6,8 pt reales** en el registro y en **5,6 pt** en el rótulo, porque al imprimir todo se reduce a
+  la mitad larga. Un cuerpo de letra solo significa algo si la hoja tiene un tamaño físico conocido.
+- **Cada formato declara su página de origen y su HOJA de destino**, y el cuerpo con el que se
+  escribe se deduce: `LC_PDF_SZ / lcHojaEscala(...)` (17,74 pt dentro del registro; 21,48 dentro del
+  rótulo). `lcHojaEscala` es el **punto único**: lo usan el constructor de operadores —para saber con
+  qué cuerpo escribir— y `lcPdfEstampar` —para dibujar—, así que no pueden discrepar.
+- ⚠️ **El registro se entrega en CARTA HORIZONTAL (792 × 612 pt).** No es una elección estética: su
+  página mide 1277,42 × 987,10, cuya relación de aspecto es **1,2941 — exactamente la de una carta
+  horizontal**. Reencajarla ahí es la misma reducción que hace la impresora al ajustar a la hoja, sin
+  deformar ni un punto. Hay un check que compara las dos relaciones de aspecto.
+- ⚠️ **Se reencajan TODAS las páginas, lleven estampado o no.** Si no, el reverso del registro se
+  quedaría con su hoja original (1320 × 1020) y el documento saldría con dos páginas de tamaño
+  distinto. El **recorte**, en cambio, solo se aplica a la primera: está medido sobre el marco de la
+  cara del formato y no significa nada en las demás.
+- ⚠️ **Las líneas base se calculan desde el ALTO de la fila y el cuerpo real**, no se guardan ya
+  calculadas: una línea base fija solo vale para un tamaño de letra, y al cambiarlo el texto se
+  descentra en su casilla.
+- ⚠️ **Una excepción, medida y no supuesta.** En media hoja carta, las columnas «Entidad» y «Cargo»
+  del apartado 7 del rótulo miden **0,9" y 1,3" de papel**: un valor corriente («Institución de
+  prueba», «Comandante de Cuadrante») no cabe ahí a 11 pt con ningún espaciado. Solo esos dos se
+  reducen —a 7 y 8 pt— y **la app lo avisa** con el dato y el cuerpo que le quedó. Es el mismo
+  criterio con que el acta FPJ-6 dejó «AFROCOLOMBIANO» en 10 pt. Un dato que sale con otra letra sin
+  decirlo es la misma familia de defecto que un texto recortado en silencio.
+- **El orden de las válvulas**: primero se **condensa** (`Tz`, hasta el 88 % — eso no cambia el
+  cuerpo, solo estrecha el glifo) y solo si aun así desborda se **reduce el cuerpo**, lo justo. Antes
+  la condensación bajaba al 82 % y, por debajo, el texto **se salía de la casilla en silencio**.
 - ⚠️ **La fuente es Arial declarada como tal**, no la Helvetica de las 14 fuentes base: va
   **sin embeber** (el visor usa la del sistema) pero con `/FontDescriptor` y `/Widths` propios de 32
   a 255, que es lo que la hace conforme y lo que garantiza que el visor maquete con la misma métrica
@@ -2553,7 +2583,8 @@ tablas de geometría no cambian.
   ese vacío y encogería el formato **un 23 % de más** (escala 0,42 en vez de 0,51) — en una etiqueta
   que ya es pequeña, eso decide si se lee o no. El recorte se **midió** sobre las instrucciones de
   dibujo del propio archivo (el rectángulo del marco exterior), no a ojo, y no recorta nada.
-- ⚠️ **El FPJ-8 NO se reencaja**: es el registro que acompaña al elemento y va en su hoja completa.
+- El FPJ-8 se reencaja a **carta horizontal** (ver la sección del cuerpo de letra); el rótulo, a media
+  carta y además **recortado al marco**, porque es una etiqueta y cada milímetro cuenta.
 
 ### Geometría: medida, no estimada
 `FPJ8_G` y `FPJ7_G` son tablas de coordenadas en puntos, con el origen abajo-izquierda. **No están
@@ -2633,11 +2664,11 @@ blanco.
 - `verify_menu_expediente` [7] daba por hecho que el expediente tiene **2** documentos. Ahora la
   expectativa se **deriva del registro** (`lcEstadoDocs`), así que no vuelve a quedarse obsoleta con
   el siguiente formato. No bajó su cuenta: 16/16.
-- Regresiones en verde: **custodia 93** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
+- Regresiones en verde: **custodia 98** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
   fpj5 tipografía 48 · tipografía OJ 42 · export 74 · editable 28 · firma 62 · envío 39 · almacén 12 ·
   expediente 13 · menú+expediente 16 · personas 25 · invitado 33 · simulador 41 · orden 33 ·
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
-  Anti-caché `?v=72` / `cache-v72`, `_BUILD=72`.
+  Anti-caché `?v=73` / `cache-v73`, `_BUILD=73`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
