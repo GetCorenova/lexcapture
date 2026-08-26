@@ -2469,7 +2469,7 @@ contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 Los dos formatos que faltaban del apartado 7 del informe de captura. Pedidos en
 `Documentos/Otro/Funiones Cadena de Custodia y Rotulo.docx` (texto + 9 pantallazos con recuadro rojo
 numerado) sobre `FPJ 8 Registro Cadena De Custodia.pdf` y `FPJ 7 Rotulo Emp Y Ef.pdf`. Verificado con
-`verify_custodia.mjs` (**98 checks**, nuevo) y abriendo los PDF generados en un visor real.
+`verify_custodia.mjs` (**99 checks**, nuevo) y abriendo los PDF generados en un visor real.
 
 ### ⚠️ La decisión de arquitectura: estos formatos son PDF, y NO se convierten — se estampan
 Los tres formatos anteriores (FPJ-5 URI/CESPA, FPJ-6) llegaron como `.docx` y por eso todo el motor
@@ -2522,22 +2522,37 @@ Fiscalía** (sin AcroForm, sin campos). Las salidas posibles eran tres y solo un
   archivo**: `lcBytesStr` convierte por trozos de 8 KB (es el techo que dejaba a la app sin guardar a
   partir de la captura 23, auditoría del 2026-08-22).
 
-### Un solo cuerpo de letra: Arial 11 pt SOBRE EL PAPEL, en los dos formatos
-Todo lo que rellena la app —texto, fechas, números y las «X» de H/R/E— va a **Arial 11 pt**, igual en
-el FPJ-8 y en el FPJ-7. Antes había **tres** tamaños repartidos (10 en el cuerpo, 11 en las casillas
-del NUNC y la fecha, 12 en el hallazgo) sin que ninguno de los tres lo hubiera pedido nadie: es el
-mismo defecto que ya se corrigió en el acta FPJ-6 y en el FPJ-5, y la misma regla — un formato
-oficial se diligencia en un solo cuerpo de letra. `LC_PDF_SZ` es el único punto que lo decide.
+### Un solo cuerpo de letra: 1,4 × la letra del PROPIO FORMATO
+Todo lo que rellena la app —texto, fechas, números y las «X» de H/R/E— va al mismo cuerpo en Arial, y
+ese cuerpo se dimensiona **contra las etiquetas del propio formulario**: `LC_PDF_FACTOR = 1.4`.
+Medido: **8,7 pt impresos en el registro y 7,1 en el rótulo**, frente a las etiquetas del formato, que
+se imprimen a 6,2 y 5,1 pt.
 
-- ⚠️ **Y son 11 pt SOBRE EL PAPEL IMPRESO, no dentro del archivo.** La distinción no es teórica y
-  costó un reporte de campo: unificar el cuerpo a «11» dentro de una página de **17,74" × 13,71"**
-  —que es lo que mide el PDF que publica la Fiscalía, exportado así desde Excel— dejaba el dato en
-  **6,8 pt reales** en el registro y en **5,6 pt** en el rótulo, porque al imprimir todo se reduce a
-  la mitad larga. Un cuerpo de letra solo significa algo si la hoja tiene un tamaño físico conocido.
-- **Cada formato declara su página de origen y su HOJA de destino**, y el cuerpo con el que se
-  escribe se deduce: `LC_PDF_SZ / lcHojaEscala(...)` (17,74 pt dentro del registro; 21,48 dentro del
-  rótulo). `lcHojaEscala` es el **punto único**: lo usan el constructor de operadores —para saber con
-  qué cuerpo escribir— y `lcPdfEstampar` —para dibujar—, así que no pueden discrepar.
+⚠️ **Se llegó aquí descartando las dos referencias obvias, y las dos costaron un reporte de campo.**
+Conviene que quede escrito, porque las dos parecen razonables:
+
+| Referencia | Registro | Rótulo | vs. la letra del formato | Resultado |
+|---|---|---|---|---|
+| «11 pt» **dentro del archivo** | 6,8 pt | 5,6 pt | 1,09× / 1,10× | *«queda muy pequeño»* |
+| «11 pt» **sobre el papel** | 11,0 pt | 11,0 pt | 1,76× / **2,15×** | *«quedó demasiado grande»* |
+| **1,4 × la etiqueta** (elegido) | 8,7 pt | 7,1 pt | 1,40× / 1,40× | equilibrio |
+
+- ⚠️ **Fijar el cuerpo dentro del archivo no significa nada.** Estos formatos vienen en hojas enormes
+  —el registro mide **17,74" × 13,71"** y el rótulo 16,9" × 13,1", exportados así desde Excel—, así
+  que al imprimirlos todo se reduce a la mitad larga. Un cuerpo de letra solo significa algo si la
+  hoja tiene un tamaño físico conocido.
+- ⚠️ **Fijarlo sobre el papel tampoco.** Como el formato se encoge, sus propias etiquetas quedan en
+  6,2 y 5,1 pt: un dato de 11 pt mide **más del doble** que la letra del formulario en el rótulo, y
+  el apartado 7 deja de caber.
+- **La referencia correcta es EL FORMATO.** Un dato a 1,4× la letra de su formulario se lee
+  claramente por encima de la etiqueta sin dominarla —la proporción de un formato escrito a
+  máquina— y, sobre todo, es **invariante**: sigue siendo correcta si mañana el rótulo se imprime en
+  otra hoja. `_ccSz(G) = G.etiqueta × LC_PDF_FACTOR`; `_ccSzImpreso(G)` es lo mismo ya medido sobre
+  el papel, que es lo que informan los avisos.
+- **Cada formato declara el cuerpo de sus etiquetas** (`etiqueta: 10.06` / `9.97`), medido sobre sus
+  propias instrucciones de dibujo, igual que el resto de la geometría.
+
+**Para que exista un tamaño impreso hay que fijar la hoja**, así que los dos formatos se reencajan:
 - ⚠️ **El registro se entrega en CARTA HORIZONTAL (792 × 612 pt).** No es una elección estética: su
   página mide 1277,42 × 987,10, cuya relación de aspecto es **1,2941 — exactamente la de una carta
   horizontal**. Reencajarla ahí es la misma reducción que hace la impresora al ajustar a la hoja, sin
@@ -2548,27 +2563,22 @@ oficial se diligencia en un solo cuerpo de letra. `LC_PDF_SZ` es el único punto
   cara del formato y no significa nada en las demás.
 - ⚠️ **Las líneas base se calculan desde el ALTO de la fila y el cuerpo real**, no se guardan ya
   calculadas: una línea base fija solo vale para un tamaño de letra, y al cambiarlo el texto se
-  descentra en su casilla.
-- ⚠️ **Una excepción, medida y no supuesta.** En media hoja carta, las columnas «Entidad» y «Cargo»
-  del apartado 7 del rótulo miden **0,9" y 1,3" de papel**: un valor corriente («Institución de
-  prueba», «Comandante de Cuadrante») no cabe ahí a 11 pt con ningún espaciado. Solo esos dos se
-  reducen —a 7 y 8 pt— y **la app lo avisa** con el dato y el cuerpo que le quedó. Es el mismo
-  criterio con que el acta FPJ-6 dejó «AFROCOLOMBIANO» en 10 pt. Un dato que sale con otra letra sin
-  decirlo es la misma familia de defecto que un texto recortado en silencio.
-- **El orden de las válvulas**: primero se **condensa** (`Tz`, hasta el 88 % — eso no cambia el
-  cuerpo, solo estrecha el glifo) y solo si aun así desborda se **reduce el cuerpo**, lo justo. Antes
-  la condensación bajaba al 82 % y, por debajo, el texto **se salía de la casilla en silencio**.
-- ⚠️ **La fuente es Arial declarada como tal**, no la Helvetica de las 14 fuentes base: va
-  **sin embeber** (el visor usa la del sistema) pero con `/FontDescriptor` y `/Widths` propios de 32
-  a 255, que es lo que la hace conforme y lo que garantiza que el visor maquete con la misma métrica
-  con la que la app centró las casillas.
-- ⚠️ **No se reutiliza la `/F2` que el formato ya trae**, que también es ArialMT: su rango
-  `/FirstChar`–`/LastChar` **no cubre las vocales acentuadas ni la ñ** (la del FPJ-7 llega a 243), así
-  que «Medellín» o «pantalón» saldrían con letras de ancho cero encimadas.
-- ⚠️ Las **etiquetas impresas del formato no se tocan**: solo se escribe encima.
-- La condensación (`Tz`, hasta el 82 %) **no es un cambio de cuerpo** —mantiene los 11 pt de alto y
-  solo estrecha el glifo— y es la válvula que impide que un nombre largo desborde la casilla. Con
-  datos corrientes no se dispara; hay un check que lo mide.
+  descentra dentro de su casilla.
+
+**Cuando un dato no cabe**, el orden de las válvulas es: primero **condensar** (`Tz`, hasta el 88 % —
+eso no cambia el cuerpo, solo estrecha el glifo) y solo si aun así desborda, **reducir el cuerpo**, lo
+justo. ⚠️ Antes la condensación bajaba al 82 % y, por debajo, el texto **se salía de la casilla en
+silencio**.
+- **Reducir nunca es silencioso**: la app avisa con el valor y el cuerpo que le quedó. ⚠️ Pero solo si
+  la reducción **se nota** (más del 5 %): un dato que entra rozando y baja dos décimas no es una
+  excepción de la que informar, y un aviso que salta siempre deja de leerse — que es la forma de que
+  el que sí importa pase desapercibido.
+- ⚠️ **Por debajo de 6 pt impresos el aviso cambia de tono**: encoger más no arregla nada porque el
+  dato deja de leerse en el papel. Eso ya no es un problema de maquetación sino un valor demasiado
+  largo para esa casilla, y el aviso lo dice así («acórtalo»). Aun así **nunca se pisa la casilla de
+  al lado**: el formato oficial manda.
+- La regresión fuerza las dos caras —un cargo desmesurado que **tiene** que avisar y los datos
+  corrientes que **no pueden** avisar—, en vez de esperar a que la condición se dé sola.
 
 ### El rótulo se imprime en MEDIA HOJA CARTA (decisión del usuario)
 *«el rótulo debe de imprimirse en la mitad de un papel tamaño carta»*. Es una etiqueta que se ata al
@@ -2664,11 +2674,11 @@ blanco.
 - `verify_menu_expediente` [7] daba por hecho que el expediente tiene **2** documentos. Ahora la
   expectativa se **deriva del registro** (`lcEstadoDocs`), así que no vuelve a quedarse obsoleta con
   el siguiente formato. No bajó su cuenta: 16/16.
-- Regresiones en verde: **custodia 98** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
+- Regresiones en verde: **custodia 99** · OJ 187 · mejora1 153 · mejora2 38 · mejora3 51 · fpj6 140 ·
   fpj5 tipografía 48 · tipografía OJ 42 · export 74 · editable 28 · firma 62 · envío 39 · almacén 12 ·
   expediente 13 · menú+expediente 16 · personas 25 · invitado 33 · simulador 41 · orden 33 ·
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
-  Anti-caché `?v=73` / `cache-v73`, `_BUILD=73`.
+  Anti-caché `?v=74` / `cache-v74`, `_BUILD=74`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

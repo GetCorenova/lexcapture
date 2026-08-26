@@ -2211,7 +2211,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 73;
+var _BUILD = 74;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -8158,6 +8158,11 @@ function lcOpTexto(x, y, s, size, align, maxW, rec) {
     if (w * f > maxW) {                       // condensar no basta: reducir el cuerpo
       sz = size * (maxW / (w * f));
       w = lcPdfAncho(t, sz);
+      /* ⚠️ Solo se avisa de una reducción que se NOTE (más del 5 %). Un dato que
+         entra rozando y baja dos décimas de punto no es una excepción de la que
+         informar, y un aviso que salta siempre deja de leerse — que es la forma
+         de que el que sí importa pase desapercibido. */
+      if (sz > size * 0.95) rec = null;
       if (rec) rec.push({ t: t, sz: sz, de: size });
     }
   }
@@ -8416,6 +8421,7 @@ var FPJ8_G = {
   desc: { lineas:[371.9,345.9,320.0,294.1,268.1,242.2,216.2], x0:95.0, x1:1136.0 },
   grisFecha: { x:1022.0, w:108.0, alto:19.0 },
   pagina: { w:1277.42, h:987.10 },
+  etiqueta: 10.06,                                    // cuerpo de las etiquetas del propio formato
   /* El registro va en CARTA HORIZONTAL. ⚠️ No es una elección estética: la
      página del formato mide 1277,42 × 987,10, cuya relación de aspecto es
      1,2941 — EXACTAMENTE la de una carta horizontal (792 × 612). Reencajarla
@@ -8438,23 +8444,30 @@ var FPJ7_G = {
   desc: { lineas:[440.6,415.4,390.4,365.2,340.1,315.0,289.9,264.8], x0:120.0, x1:1093.0 },
   sec7: { cols:[84.7,425.0,582.9,709.2,889.2,1122.8], y0:179.15, y1:215.70 },
   pagina: { w:1218.46, h:941.54 },
+  etiqueta: 9.97,
   hoja: null                                          // se asigna abajo (media carta)
 };
-/* ⚠️ UN SOLO CUERPO PARA TODO LO QUE RELLENA LA APP: Arial 11 pt. Texto,
-   fechas, números y las «X» de H/R/E — en los DOS formatos.
+/* ⚠️ UN SOLO CUERPO PARA TODO LO QUE RELLENA LA APP, y se dimensiona CONTRA LA
+   LETRA DEL PROPIO FORMATO: 1,4 veces el cuerpo de sus etiquetas.
 
-   ⚠️ Y SON 11 PT SOBRE EL PAPEL IMPRESO, no dentro del archivo. La distinción
-   no es teórica: estos formatos vienen en hojas enormes —el registro mide
-   17,74" × 13,71" y el rótulo 16,9" × 13,1", exportados así desde Excel—, así
-   que al imprimirlos todo se reduce a la mitad larga. Declarar «11 pt» dentro
-   de una página de 17 pulgadas dejaba el dato en 6,8 pt reales en el registro y
-   en 5,6 pt en el rótulo, que es justo lo que se veía pequeño en el papel.
-   Ahora cada formato declara su página de origen y la HOJA en la que se imprime,
-   y el cuerpo con el que se escribe se deduce: `LC_PDF_SZ / escala`. Los 11 pt
-   son medibles con una regla sobre la hoja.
-   ⚠️ Las etiquetas impresas del formato NO se tocan: solo se escribe encima —y
-   por eso el dato sale más grande que ellas, que se imprimen a ~6 pt. */
-var LC_PDF_SZ = 11;
+   Cómo se llegó aquí, porque las dos alternativas obvias están mal y conviene
+   que quede escrito:
+     · Fijar «11 pt» DENTRO del archivo no significa nada. Estos formatos vienen
+       en hojas enormes —el registro mide 17,74" × 13,71" y el rótulo
+       16,9" × 13,1", exportados así desde Excel—, así que al imprimirlos todo se
+       reduce a la mitad larga: esos 11 pt aterrizaban en 6,8 pt reales en el
+       registro y 5,6 en el rótulo. Se veía pequeño en el papel.
+     · Fijar 11 pt SOBRE EL PAPEL tampoco: como el formato se encoge, sus propias
+       etiquetas quedan en 6,2 pt (registro) y 5,1 (rótulo), y un dato de 11 pt
+       mide 1,76× y 2,15× esa letra. Se veía enorme, y el apartado 7 del rótulo
+       dejaba de caber.
+   La referencia correcta no es el archivo ni la hoja: es EL FORMATO. Un dato a
+   1,4× la letra de su formulario se lee claramente por encima de la etiqueta sin
+   dominarla —la proporción de un formato escrito a máquina— y, sobre todo, es
+   INVARIANTE: sigue siendo correcta si mañana el rótulo se imprime en otra hoja.
+   Medido: 8,7 pt impresos en el registro y 7,1 en el rótulo.
+   ⚠️ Las etiquetas impresas del formato NO se tocan: solo se escribe encima. */
+var LC_PDF_FACTOR = 1.4;
 /* ⚠️ EL RÓTULO SE IMPRIME EN MEDIA HOJA CARTA. Es una etiqueta que se ata al
    elemento embalado, no un documento de archivo: en el sitio se imprime media
    carta y se corta. La página se reencaja a 612 × 396 pt —la mitad de una carta,
@@ -8477,9 +8490,13 @@ function lcHojaEscala(hoja, W, H) {
   var r = hoja.recorte || { x0:0, y0:0, x1:W, y1:H }, m = hoja.margen || 0;
   return Math.min((hoja.w - 2 * m) / (r.x1 - r.x0), (hoja.h - 2 * m) / (r.y1 - r.y0));
 }
-/* El cuerpo con el que hay que ESCRIBIR dentro del archivo para que en el papel
-   se midan LC_PDF_SZ puntos. */
-function _ccSz(G) { return LC_PDF_SZ / lcHojaEscala(G.hoja, G.pagina.w, G.pagina.h); }
+/* El cuerpo con el que se escribe dentro del archivo: 1,4 × la letra del propio
+   formato. Va en las coordenadas del formato, así que la hoja de destino no
+   entra en la cuenta — esa es justamente la propiedad que lo hace estable. */
+function _ccSz(G) { return G.etiqueta * LC_PDF_FACTOR; }
+/* El mismo cuerpo, ya medido sobre el papel: es lo que se puede comprobar con
+   una regla, y lo que informan los avisos. */
+function _ccSzImpreso(G) { return _ccSz(G) * lcHojaEscala(G.hoja, G.pagina.w, G.pagina.h); }
 function _ccBase(y0, y1, size) { return (y0 + y1) / 2 - 0.36 * size; }
 function _ccCeldas(centros, txt, fila, size, rec) {
   var s = String(txt || '').replace(/\D/g, ''), out = '', i;
@@ -8640,8 +8657,14 @@ function _ccAvisaSz(rec, G, avisos) {
   var esc = lcHojaEscala(G.hoja, G.pagina.w, G.pagina.h);
   var min = Math.min.apply(null, rec.map(function (r) { return r.sz; })) * esc;
   avisos.push(rec.length + (rec.length === 1 ? ' dato no cabía' : ' datos no cabían') +
-    ' a ' + LC_PDF_SZ + ' pt en su casilla (' + rec.map(function (r) { return r.t; }).join(', ') +
-    '): se imprimió hasta ' + min.toFixed(1) + ' pt para no salirse del formato');
+    ' en su casilla (' + rec.map(function (r) { return r.t; }).join(', ') +
+    '): se imprimió hasta ' + min.toFixed(1) + ' pt en vez de ' + _ccSzImpreso(G).toFixed(1) +
+    ', para no salirse del formato' +
+    /* ⚠️ Encoger es preferible a pisar la casilla de al lado, pero por debajo de
+       6 pt el dato deja de leerse en el papel y encogerlo más no lo arregla: eso
+       ya no es un problema de maquetación sino un valor demasiado largo para esa
+       casilla, y hay que decirlo así. */
+    (min < 6 ? '. A ese tamaño no se lee: acórtalo' : ''));
 }
 
 /* REGISTRO DE CADENA DE CUSTODIA — FPJ-8.

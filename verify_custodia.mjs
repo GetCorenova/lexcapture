@@ -380,10 +380,10 @@ log((cola8.match(/\/MediaBox\s*\[\s*0\s+0\s+792\s+612\s*\]/g) || []).length === 
   (cola8.match(/\/MediaBox/g) || []).length + ' páginas reencajadas');
 
 const ov7 = overlay(buf7);
-log(fila(ov7, 702, 706, 80, 780).map(t => t.t).join('') === '0500160001202601',
+log(fila(ov7, 704, 710, 80, 780).map(t => t.t).join('') === '0500160001202601',
   'El NUNC, dígito por dígito');
-const fechaCel = fila(ov7, 702, 706, 780, 1000).map(t => t.t).join('');
-const horaCel = fila(ov7, 702, 706, 1010, 1130).map(t => t.t).join('');
+const fechaCel = fila(ov7, 704, 710, 780, 1000).map(t => t.t).join('');
+const horaCel = fila(ov7, 704, 710, 1010, 1130).map(t => t.t).join('');
 log(fechaCel === '20260820', 'La fecha de recolección, una cifra por casilla', fechaCel);
 log(horaCel === '1730', 'Y la hora', horaCel);
 /* ⚠️ El requerimiento es explícito: la fecha no se tacha encima de las letras
@@ -403,7 +403,7 @@ log(perDoc === 'CARLOS ANDRÉS RESTREPO GÓMEZ',
 const desc7 = textoDe(ov7, 435, 445).replace(/\s+/g, ' ');
 log(desc7 === '01 (uno) celular marca Samsung color negro en regular estado',
   '⚠️ La descripción es EXACTAMENTE la de la cadena de custodia, sin el prefijo «EMP N:»', desc7);
-const dil = fila(ov7, 187, 192).map(t => t.t);
+const dil = fila(ov7, 190, 195).map(t => t.t);
 log(dil.join(' ').includes('NELSON DAVID GOMEZ') && dil.join(' ').includes('1035302775'),
   '⚠️ Lo firma quien suscribe la cadena de custodia: mismo nombre y cédula', dil.join(' | '));
 log(dil.join(' ').includes('Comandante de Cuadrante'),
@@ -422,39 +422,48 @@ log(numeros.antes === 1 && numeros.despues === 2,
   JSON.stringify(numeros));
 
 /* ══ E2 · TIPOGRAFÍA ═══════════════════════════════════════════════════════
-   Un formato oficial se diligencia en UN solo cuerpo de letra. La comprobación
-   no mira «qué tamaños hay» sino que NO haya ninguno distinto de 11: es la misma
-   garantía estructural con la que se cerraron el acta FPJ-6 y el FPJ-5. */
-console.log('\n── E2 · Un solo cuerpo de letra: Arial 11 pt ──');
+   Un formato oficial se diligencia en UN solo cuerpo de letra, y ese cuerpo se
+   mide CONTRA LA LETRA DEL PROPIO FORMATO. La comprobación no mira «qué tamaños
+   hay» sino que no haya ninguno distinto del que toca: es la misma garantía
+   estructural con la que se cerraron el acta FPJ-6 y el FPJ-5.
 
-/* ⚠️ Se mide el tamaño SOBRE EL PAPEL, no el declarado dentro del archivo. Es la
-   distinción que costó el reporte: estos formatos vienen en hojas de 17" y la
-   impresión los reduce a la mitad larga, así que «11 pt» escritos dentro de esa
-   página aterrizaban en 6,8 pt reales. El tamaño impreso es
-   `tamaño declarado × escala de la hoja`. */
-const escalas = await page.evaluate(() => ({
-  f8: lcHojaEscala(FPJ8_G.hoja, FPJ8_G.pagina.w, FPJ8_G.pagina.h),
-  f7: lcHojaEscala(FPJ7_G.hoja, FPJ7_G.pagina.w, FPJ7_G.pagina.h)
+   ⚠️ Por qué la referencia es el formato y no el papel ni el archivo: estos
+   formatos vienen en hojas de 17" y la impresión los reduce a la mitad larga.
+   Fijar el cuerpo DENTRO del archivo dejaba el dato en 6,8 pt reales (se veía
+   pequeño); fijarlo SOBRE EL PAPEL a 11 pt lo dejaba en 1,76× y 2,15× la letra
+   del propio formulario (se veía enorme). A 1,4× la etiqueta el dato se lee
+   claramente por encima sin dominarla, y la proporción es invariante: sigue
+   siendo correcta si el rótulo se imprime mañana en otra hoja. */
+console.log('\n── E2 · Un solo cuerpo: 1,4 × la letra del propio formato ──');
+
+const tip = await page.evaluate(() => ({
+  factor: LC_PDF_FACTOR,
+  e8: lcHojaEscala(FPJ8_G.hoja, FPJ8_G.pagina.w, FPJ8_G.pagina.h),
+  e7: lcHojaEscala(FPJ7_G.hoja, FPJ7_G.pagina.w, FPJ7_G.pagina.h),
+  lab8: FPJ8_G.etiqueta, lab7: FPJ7_G.etiqueta,
+  sz8: _ccSz(FPJ8_G), sz7: _ccSz(FPJ7_G),
+  imp8: _ccSzImpreso(FPJ8_G), imp7: _ccSzImpreso(FPJ7_G)
 }));
-const impreso = (ov, esc) => [...new Set(ov.textos.map(t => +(t.size * esc).toFixed(2)))].sort((a, b) => a - b);
-const pt8 = impreso(ov8, escalas.f8), pt7 = impreso(ov7, escalas.f7);
-log(pt8.length === 1 && Math.abs(pt8[0] - 11) < 0.05,
-  '⚠️ Todo lo que rellena la app en el FPJ-8 mide 11 pt SOBRE EL PAPEL — texto, fechas, números y las «X»',
-  pt8.join(' / ') + ' pt impresos');
-/* ⚠️ En el rótulo hay UNA excepción, medida y no supuesta: en media hoja carta
-   las columnas «Entidad» y «Cargo» del apartado 7 miden 0,9" y 1,3" de papel, y
-   un valor corriente no cabe ahí a 11 pt con ningún espaciado. Solo esos dos se
-   reducen, y la app lo avisa. Todo lo demás del rótulo va a 11 pt. */
-const sec7y = ov7.textos.filter(t => t.y > 187 && t.y < 192);
-const fuera7 = ov7.textos.filter(t => Math.abs(t.size * escalas.f7 - 11) >= 0.05);
+const escalas = { f8: tip.e8, f7: tip.e7 };
+const razon = (ov, lab) => [...new Set(ov.textos.map(t => +(t.size / lab).toFixed(3)))].sort((a, b) => a - b);
+const r8 = razon(ov8, tip.lab8), r7 = razon(ov7, tip.lab7);
+log(r8.length === 1 && Math.abs(r8[0] - tip.factor) < 0.005,
+  '⚠️ Todo lo que rellena la app en el FPJ-8 va al mismo cuerpo: 1,4 × la letra del formato',
+  r8.map(x => x.toFixed(2) + '×').join(' / ') + ' = ' + tip.imp8.toFixed(1) + ' pt impresos');
+/* ⚠️ En el rótulo puede haber excepción, medida y no supuesta: en media hoja
+   carta las columnas «Entidad» y «Cargo» del apartado 7 miden 0,9" y 1,3" de
+   papel. Si un valor no cabe ahí ni condensado, se reduce SOLO ese y se avisa. */
+const sec7y = ov7.textos.filter(t => t.y > 190 && t.y < 195);
+const fuera7 = ov7.textos.filter(t => Math.abs(t.size / tip.lab7 - tip.factor) >= 0.04);
 log(fuera7.every(t => sec7y.indexOf(t) >= 0),
-  'Y en el FPJ-7, todo va a 11 pt salvo la fila más estrecha del formato — el apartado 7',
-  fuera7.map(t => t.t + ' ' + (t.size * escalas.f7).toFixed(1) + ' pt').join(' · ') || 'sin excepciones');
-log(fuera7.every(t => t.size * escalas.f7 >= 7),
-  '⚠️ Y esos se reducen lo justo para no salirse de la casilla, con un suelo de 7 pt',
-  fuera7.length + ' de ' + ov7.textos.length + ' datos');
-/* Y la comprobación que faltaba: que el archivo declare una hoja de tamaño
-   conocido. Sin eso «11 pt» no significa nada — es lo que pasaba antes. */
+  'Y en el FPJ-7 igual, salvo —si acaso— la fila más estrecha del formato: el apartado 7',
+  fuera7.map(t => t.t + ' ' + (t.size * tip.e7).toFixed(1) + ' pt').join(' · ') || 'sin excepciones');
+log(tip.imp8 > 8 && tip.imp8 < 9.5 && tip.imp7 > 6.5 && tip.imp7 < 8,
+  '⚠️ Medido sobre el papel: el dato queda entre la letra del formato y los 11 pt que se veían enormes',
+  'registro ' + tip.imp8.toFixed(1) + ' pt · rótulo ' + tip.imp7.toFixed(1) + ' pt · etiquetas ' +
+  (tip.lab8 * tip.e8).toFixed(1) + ' / ' + (tip.lab7 * tip.e7).toFixed(1) + ' pt');
+/* Y que el archivo declare una hoja de tamaño conocido: sin eso no se puede
+   afirmar nada sobre el tamaño impreso. */
 const hojas = await page.evaluate(() => ({
   f8: [FPJ8_G.hoja.w, FPJ8_G.hoja.h], f7: [FPJ7_G.hoja.w, FPJ7_G.hoja.h],
   asp: FPJ8_G.pagina.w / FPJ8_G.pagina.h
@@ -483,15 +492,23 @@ const cond = ov8.textos.concat(ov7.textos).filter(t => t.tz !== 100);
 log(cond.every(t => t.tz >= 88),
   'La condensación nunca baja del 88 %: por debajo se prefiere reducir el cuerpo, que sí se avisa',
   cond.length ? cond.map(t => t.t.slice(0, 22) + ' (' + t.tz + '%)').join(' · ') : 'ninguna');
-/* Y que el aviso EXISTE: un dato que sale con otra letra sin decirlo es la
-   misma familia de defecto que un texto recortado en silencio. */
+/* Y las dos caras del aviso, forzando la condición en vez de esperar a que se
+   dé sola: con un cargo desmesuradamente largo TIENE que avisar; con los datos
+   corrientes NO puede avisar. Un aviso que salta siempre deja de leerse — que
+   es la forma de que el que sí importa pase desapercibido. */
 const avisos7 = await page.evaluate(async id => {
   const c = DB.getCase(id), it = ccElementos(c)[1];
-  const out = await LC_DOCS.FPJ7.build({ caso: c, item: it });
-  return out.avisos || [];
+  const normal = await LC_DOCS.FPJ7.build({ caso: c, item: it });
+  const largo = JSON.parse(JSON.stringify(c));
+  largo.custodia.funcionarios[0].cargo = 'Comandante de Cuadrante de la Estación de Policía del Distrito';
+  const forzado = await LC_DOCS.FPJ7.build({ caso: largo, item: it });
+  return { normal: normal.avisos || [], forzado: forzado.avisos || [] };
 }, idCaso);
-log(avisos7.some(a => /no cab/.test(a) && /pt/.test(a)),
-  '⚠️ Y la app lo AVISA, con el dato y el cuerpo que le quedó', avisos7.join(' | ') || 'sin avisos');
+log(avisos7.normal.length === 0,
+  'Con datos corrientes no hay aviso: todo cupo', avisos7.normal.join(' | ') || 'sin avisos');
+log(avisos7.forzado.some(a => /no cab/.test(a) && /pt/.test(a) && /acórtalo/.test(a)),
+  '⚠️ Y con un dato que de verdad no cabe lo AVISA con el valor, el cuerpo que le quedó y, si deja de leerse, que hay que acortarlo',
+  avisos7.forzado.join(' | ') || 'sin avisos');
 
 /* ══ F · LO QUE NO SE INVENTA ══════════════════════════════════════════════ */
 console.log('\n── F · Lo que se deja en blanco a propósito ──');
