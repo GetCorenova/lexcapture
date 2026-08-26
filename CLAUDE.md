@@ -2456,8 +2456,9 @@ orden 33 · ola1 38 · ola3 33 · ola4 22 · multipersona · DS 10.
 contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 
 ### Lo que queda propuesto y NO se ha hecho
-- **Acta de incautación**: sigue sin formato oficial en `Documentos/`. (La cadena de custodia y el
-  rótulo ya están hechos — ver la sección siguiente.)
+- ~~**Acta de incautación**: sigue sin formato oficial en `Documentos/`.~~ **HECHA** (2026-08-25) —
+  ver «Acta de incautación de elementos» al final del archivo. Sigue sin haber formato oficial: la
+  app lo **recompone**, por decisión explícita del usuario.
 - ⚠️ **Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ
   en vez de leer `LC_DOCS`, así que **el acta FPJ-6 no tiene ruta de envío** aunque esté registrada
   como documento. Es el último resto de la cadena de `if (esOJ)` que `LC_DOCS` vino a sustituir.
@@ -2679,6 +2680,161 @@ blanco.
   expediente 13 · menú+expediente 16 · personas 25 · invitado 33 · simulador 41 · orden 33 ·
   multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=74` / `cache-v74`, `_BUILD=74`.
+
+## Acta de incautación de elementos (2026-08-25)
+El tercer formato que sale del numeral 7 del FPJ-5, junto con la cadena de custodia (FPJ-8) y el
+rótulo (FPJ-7). Pedido en campo con la fotografía de un acta diligenciada a mano, más tres
+precisiones del usuario durante el trabajo: **el motivo siempre es «Captura»**, la **fecha de la
+cabecera va en «AAAA-MM-DD»** y **si hay más de un EMP y EF se numeran** («1- 02 cheques…»,
+«2- 01 celular marca…»). Verificado con `verify_incautacion.mjs` (**105 checks**, nuevo), abriendo
+los `.docx` en **Word real** (COM) y mirando el render de la vista de impresión.
+
+### ⚠️ La decisión de arquitectura: es el ÚNICO formato que la app DIBUJA
+Los cuatro formatos anteriores llegaron como ARCHIVO y por eso su maquetación es intocable: el FPJ-5
+y el FPJ-6 como `.docx` que se rellenan por índice de celda sin reconstruir una sola tabla; el FPJ-7
+y el FPJ-8 como PDF que se estampan sin tocar un byte del original. En los cuatro, **el riesgo de
+que se mueva una casilla es CERO porque la maquetación ES el archivo oficial**.
+
+De este formato **no existe el archivo en blanco** — solo la fotografía de uno diligenciado. Se le
+preguntó al usuario antes de escribir una línea, ofreciéndole las dos vías, y **eligió que la app lo
+recompusiera**. Queda escrito aquí porque es la limitación que hay que tener presente:
+**este documento se PARECE mucho al formato, pero no es el archivo oficial.** ⚠️ Si algún día
+aparece el formato en blanco, lo correcto es volver al patrón de los otros cuatro —rellenarlo o
+estamparlo— y **no seguir dibujándolo**.
+
+Lo que sí se respeta, medido sobre la fotografía: las 21 casillas del N° CASO con sus seis rótulos,
+el bloque de título con el escudo y la fila Departamento / Municipio / Fecha / Hora, el recuadro de
+ocho renglones, el motivo, las cuatro líneas de observaciones, el bloque de firmas con su espacio
+para la huella y el pie «Versión 18/11/05 · Hoja No. N de M».
+- ⚠️ **La redacción se conserva LITERAL, erratas incluidas**: el formato dice «Proceder a incautar al
+  señor», que es agramatical. Corregirle la redacción a un formato oficial no es cosa de la app.
+
+### Nada se vuelve a pedir: 17 campos del caso, 1 del usuario
+`aiMapa(c)` es el mapa completo. Nombre, identificación, expedida en, natural de, grado de estudio,
+estado civil, ocupación, padres, dirección, teléfono, NUNC, departamento, municipio, fecha, hora,
+unidad y firmante salen del caso, del capturado y del perfil activo. **Lo único que el acta añade al
+modelo son las observaciones** (`caso.incautacion` = `capIdx` · `obs` · `updated`, tres claves), que
+no existen en ninguna otra parte. El wizard no ganó ni un campo, ni un paso, ni una validación — hay
+un check que lo mide sobre el código fuente de `collectStep`/`wizSave`/`getWizConfig`/`startWizard`.
+- **El motivo no es un campo**: se imprime siempre «Captura», por la regla del usuario.
+- ⚠️ **Leer no muta.** `aiActa` crea la rama en el caso y solo la llaman los dos caminos que
+  ESCRIBEN; todo lo que consulta —el mapeo, los faltantes, la tarjeta del expediente— pasa por
+  `aiActaLeer`. Si consultar creara la rama, el expediente dejaría el caso «sucio» con solo pintarse.
+- **Los elementos se transcriben con `lcEmpLinea`**, la misma primitiva que los imprime en el
+  numeral 7: lo que dice el acta es palabra por palabra lo que dice el informe. La numeración
+  «1- », «2- » solo aparece con **más de un** elemento; con uno solo va la línea a secas.
+- ⚠️ **El recuadro trae los ocho renglones del formato aunque sobren, y REPRODUCE el renglón si hay
+  más de ocho elementos.** La lista no se recorta nunca: un EMP que desaparece de un acta es la misma
+  familia de fallo que los EMP que nunca se imprimían (Mejora 1) y las personas que no se reproducían
+  (FPJ-5 v3). Comprobado con doce.
+- **Con varias personas capturadas se pregunta a nombre de quién sale** —el acta la firma «el
+  propietario o poseedor»—, igual que el rótulo con «a quien se le encontró el EMP».
+- ⚠️ **Terminología**: el renglón impreso dice «identificado con **CC**.», pero se flexiona con el
+  tipo de documento de la persona. A un menor no se le anota su T.I. sobre un renglón rotulado C.C.
+  — mismo criterio con el que el acta de derechos cambia C.C. por T.I.
+
+### Motor: OOXML, y por qué este formato SÍ admite PDF
+El cuerpo se compone con las primitivas del oficio de puesta a disposición (`ojxRun`/`ojxP`), que ya
+conocen el orden de hijos que exige el esquema, con la fuente y el cuerpo del acta pasados
+explícitamente (Arial 10 pt). El paquete es propio (`aiPaquete`): sin encabezado, con `footer1` para
+el pie y **el escudo en el CUERPO**, así que su relación vive en `document.xml.rels` y no en un
+`header*.xml.rels` como en el oficio.
+- ⚠️ **Ni un byte de imagen nuevo entra al repositorio**: el escudo se resuelve por
+  `cfg.ojLogoB64 || OJ_LOGO_B64`, o sea el MISMO que ya usa el oficio, y el que el usuario haya
+  cargado en Ajustes manda también aquí.
+- ⚠️ **Ninguna de las construcciones que rompen el PDF**: cero `w:trHeight`, `w:vMerge`, `w:noWrap`,
+  `w:tblHeader`, `w:numPr` y tabuladores. Por eso —y solo por eso— este formato se ofrece también en
+  PDF, a diferencia del FPJ-5 y del FPJ-6, cuyas plantillas sí las usan («Exportación v2»).
+  **Al tocar `ai*`, no introducir ninguna de ellas: romperían el PDF en silencio.**
+- ⚠️ **Ni un `lineRule="exact"`.** El alto se consigue SIEMPRE con `w:spacing line=… atLeast`: así el
+  renglón crece cuando el funcionario escribe en él, en vez de recortarle el texto («El documento
+  tiene que poder editarse»). Hay un check por parte del paquete.
+- `anchoFijo` en `LC_DOCS`: solo se le ofrecen tamaños de 8,5" (Carta y Oficio). Las 21 casillas del
+  N° CASO y las 4 de la hora son geometría del formulario, y estrecharlas es la lección del FPJ-5
+  v2.2 — recalcular anchos reintroduce cortes de palabra. Cambiar de Carta a Oficio solo cambia el
+  alto de la hoja y no toca una sola tabla.
+
+### Los valores van SOBRE LA LÍNEA, y el renglón no se dobla
+Cada valor es un run **subrayado** cuyo subrayado se prolonga hasta donde llegaba la línea impresa.
+No se usan guiones bajos a propósito: con subrayado, lo que el funcionario teclee dentro del renglón
+continúa subrayado y **la línea crece con el texto**; con guiones bajos, cada letra empuja un guion y
+descuadra el renglón. Es la misma decisión de Mejora 4 en el acta de derechos, y el relleno son
+espacios **duros** (U+00A0) porque Word descarta el espacio en blanco final de un renglón y con él se
+iría el subrayado.
+- ⚠️ **`AI_HOLGURA` (≈2 mm) y redondeo hacia abajo.** El relleno se calcula midiendo el texto con
+  canvas, y esa medida **no coincide al twip con la de Word**: basta que se pase un pelo para que la
+  línea se doble en dos. Medido en Word: **cuatro de los siete renglones se partían en dos líneas**,
+  lo que además de no parecerse al formato costaba 60 pt de alto y mandaba el bloque de firmas a una
+  segunda hoja. Con la holgura, los siete salen en una línea.
+- ⚠️ **`AI_ALTO`: los nueve altos que deciden si el acta cabe en una hoja, EN UN SOLO SITIO.**
+  Repartidos por el módulo como números sueltos, ajustar el documento obliga a cazarlos y el primero
+  que se olvide manda el bloque de firmas a la página 2. **Medido en Word real: las cinco variantes
+  —tres elementos, doce elementos, observación larga, y un caso sin ningún dato opcional— caben en
+  UNA hoja.**
+- ⚠️ **Word no reporta de forma fiable el alto de una fila con celdas centradas**: intentar deducir de
+  ahí dónde rompe la página lleva a conclusiones contradictorias. Lo único que sirve es **contar
+  páginas**, cambiar un valor y volver a contar.
+- ⚠️ **Divergencia medida y deliberada**: con doce elementos, Word maqueta 1 página y la vista de
+  impresión 2 — el caso queda justo en el límite, donde 1-2 pt por fila entre los dos motores deciden
+  el salto. La suite **no le exige 1 página** para no escribir una expectativa a la medida del
+  resultado; le exige lo que importa, que ninguna de las dos pierda texto (`desbordes` en cero). Que
+  un acta larga pase a una segunda hoja es correcto: para eso el pie dice «Hoja No. N de M».
+
+### Lo que se deja en blanco a propósito
+Los dos espacios de firma, la casilla de la huella y el «No. Expediente CAD» (la app no conoce ese
+número). Las **5 casillas del Consecutivo** del N° CASO quedan vacías: ese número lo asigna el SPOA y
+no se conoce en el sitio — misma regla que en el FPJ-6 y en el FPJ-8. Y un dato que el caso no tenga
+deja su renglón **impreso y en blanco**: no se rellena con nada inventado ni se omite el renglón.
+- ⚠️ **La firma manuscrita del perfil NO se estampa aquí**, y el motor ni siquiera la busca. En un
+  acta de incautación firman las DOS partes en el mismo papel, y una firma preimpresa al lado de una
+  manuscrita no es lo que el documento acredita. Solo la lleva el oficio de puesta a disposición.
+- ⚠️ **Detalle inferido, no medido**: en la fotografía la huella está estampada sobre papel y no se
+  distingue si el formato en blanco trae recuadro. Se dibuja uno, porque es la única forma de que se
+  sepa dónde va. Es lo único del acta que no sale de algo visible en el original.
+
+### Dónde vive: el expediente, no el menú
+Entra por `lcEstadoDocs` como quinta tarjeta del expediente. **El menú ⋮ de la captura se queda en
+5 ítems** — es el punto de extensión que dejó abierto la auditoría del módulo Capturas para que el
+menú no crezca un ítem por documento. Además las observaciones son **contenido que se diligencia**, y
+un bottom sheet solo aloja verbos. Sin EMP registrados o sin persona, la tarjeta dice qué falta en
+vez de ofrecer un acta en blanco, y **lo que dice es exactamente lo que bloquea al generar** (hay un
+check que compara las dos listas: si la pantalla usara un criterio propio, mentiría).
+
+### Defecto ANTERIOR corregido de paso: «02 (dos) celulares,es …»
+El render con los datos reales del reporte destapó que `lcPlural` **pluralizaba una palabra que ya
+venía en plural cuando llevaba puntuación detrás**: «celulares,» no termina en «s» para la regla de
+los invariables, así que salía «celulares,es». También «cuchillos.es» y «llaves;es».
+- ⚠️ **Es anterior a este trabajo** —comprobado ejecutando el `lcPlural` del build previo— y **no era
+  solo del acta**: afectaba al **numeral 7 del FPJ-5** y a los dos formatos de cadena de custodia,
+  que usan la misma primitiva. Y no es un caso raro: escribir la descripción de corrido
+  («celulares, características del primero…») es como se diligencia ese apartado, y es literalmente
+  lo que trae la fotografía del reporte.
+- La puntuación final se aparta antes de decidir y se vuelve a pegar después. Comprobado que no
+  cambia nada de lo que ya funcionaba (revólver→revólveres, papel→papeles, lápiz→lápices, «9 mm»
+  intacto, «tórax» invariable). `verify_mejora1.mjs` sube a **156 checks** con los tres casos nuevos.
+
+### Verificación
+- **`verify_incautacion.mjs`, 105 checks**: registro y expediente · el mapeo campo por campo · el
+  `.docx` casilla por casilla · los elementos numerados y reproducidos · editabilidad · el
+  subconjunto del PDF · un solo cuerpo de letra · lo que se deja en blanco · paginación ·
+  persistencia, modo invitado y consola limpia.
+- ⚠️ **Dos comprobaciones son ESTRUCTURALES, no de valor**: cero runs con texto sin `w:sz` propio y
+  cero sin `w:rFonts`. Mirar «qué tamaños hay» no detectaría nada, porque el defecto que se está
+  evitando **es la ausencia** de la declaración — la trampa del acta FPJ-6 y del pie del oficio.
+- **En Word real**: abre sin pedir reparar, 1 página, 4 tablas, el escudo embebido, Carta con
+  márgenes de 2 cm, y todo lo que rellena la app en **Arial 10 pt subrayado** — un solo cuerpo.
+- ⚠️ **Cada corrida escribe sus `.docx` en su PROPIO directorio temporal.** Abrir uno en Word lo deja
+  bloqueado y con nombre fijo la corrida siguiente muere con `EBUSY` antes de comprobar nada — le
+  pasó a `verify_fpj6` y volvió a pasar aquí.
+- ⚠️ **Word COM con `New-Object` puede crear una instancia APARTE de la del usuario**, que se queda
+  como proceso huérfano reteniendo el archivo. Al medir con Word, cerrar el documento en un
+  `finally` (si una medición falla, el archivo queda bloqueado) y no dejar la instancia viva.
+  `ExportAsFixedFormat` en vez de `SaveAs [ref]`, que en PowerShell 5.1 falla.
+- Regresiones en verde (26 suites): **incautación 105** · **mejora1 156** · custodia 99 · fpj6 140 ·
+  OJ 187 · mejora2 38 · mejora3 51 · firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 ·
+  export 74 · envío 39 · almacén 12 · expediente 13 · menú+expediente 16 · personas 25 · invitado 33 ·
+  simulador 41 · orden 33 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
+  Anti-caché `?v=75` / `cache-v75`, `_BUILD=75`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

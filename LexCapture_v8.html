@@ -2211,7 +2211,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 74;
+var _BUILD = 75;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2468,6 +2468,7 @@ function closeModal() {
     // Los dos formatos de cadena de custodia viven también en un modal.
     if (mc && mc.querySelector('#cc-fecha')) ccAutoguardar();
     if (mc && mc.querySelector('#rt-ubic')) rtAutoguardar();
+    if (mc && mc.querySelector('#ai-obs')) aiAutoguardar();
   } catch (e) {}
   document.getElementById('modal').classList.remove('open');
   if (mc) mc.innerHTML = '';
@@ -2559,6 +2560,16 @@ var LC_DOCS = {
   FPJ7: {
     lbl:'Rótulo de EMP y EF (FPJ-7)', esPDF:true,
     build:function(ctx){ return buildRotuloBlob(ctx); }
+  },
+  /* ⚠️ El acta de incautación es el ÚNICO formato oficial que la app DIBUJA en
+     vez de rellenar o estampar: de él no existe el archivo en blanco, solo la
+     fotografía de uno diligenciado. Por eso —y solo por eso— sí admite PDF: lo
+     compone la app y está dentro del subconjunto del traductor por
+     construcción. `anchoFijo` porque sus 21 casillas del N° CASO son geometría
+     del formulario y estrecharlas parte palabras (FPJ-5 v2.2). */
+  INCAU: {
+    lbl:'Acta de incautación de elementos', soloWord:false, anchoFijo:true,
+    build:function(ctx,papel){ return buildActaIncautacionBlob(ctx, papel); }
   }
 };
 function lcDoc(kind){ return LC_DOCS[kind] || LC_DOCS.OJ; }
@@ -4020,13 +4031,20 @@ function lcNumPalabra(n){
    marca es un nombre propio y no se pluraliza. */
 function lcPlural(pal){
   var s=String(pal||''); if(!s) return s;
+  /* ⚠️ La PUNTUACIÓN FINAL se aparta antes de decidir y se vuelve a pegar después.
+     Sin esto, «celulares,» no termina en «s» para la regla de los invariables y
+     el documento imprimía «02 (dos) celulares,es …». Y no es un caso raro:
+     escribir la descripción de corrido —«celulares, características del
+     primero…»— es como se diligencia el numeral 7, y es justo lo que traía el
+     acta que se reportó desde campo. */
+  var fin='', m=/^(.*[^\s.,;:!?)\]}"'…])([.,;:!?)\]}"'…]+)$/.exec(s);
+  if(m){ s=m[1]; fin=m[2]; }
   var base=_noAcc(s).toLowerCase();
-  if(!/[a-z]/.test(base)) return s;                   // «9 mm»: un número no se pluraliza («9es»)
-  if(/[aeiou]$/.test(base)) return s+'s';
-  if(/z$/.test(base)) return s.slice(0,-1)+'ces';
-  if(/[sx]$/.test(base)) return s;                    // "lunes", "tórax": invariables
-  if(/[íú]$/i.test(s)) return s+'es';
-  return s+'es';                                      // revólver→revólveres, papel→papeles
+  if(!/[a-z]/.test(base)) return s+fin;               // «9 mm»: un número no se pluraliza («9es»)
+  if(/[aeiou]$/.test(base)) return s+'s'+fin;
+  if(/z$/.test(base)) return s.slice(0,-1)+'ces'+fin;
+  if(/[sx]$/.test(base)) return s+fin;                // "lunes", "tórax": invariables
+  return s+'es'+fin;                                  // revólver→revólveres, papel→papeles
 }
 /* Lo que puede venir DETRÁS de un número sin que ese número sea la cantidad del
    elemento: otro numeral que lo multiplica («Dos mil pesos» con Cant. 2 no puede
@@ -4627,6 +4645,10 @@ var ACT_IC = {
   custodia:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
   // Etiqueta con su ojal: el rótulo es literalmente la etiqueta que se le ata al elemento.
   rotulo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+  /* Caja con flecha hacia dentro: lo que distingue la incautación es que el
+     elemento PASA a poder de la autoridad; la caja precintada (custodia) es lo
+     que viene después, y la etiqueta (rótulo) es lo que se le ata. */
+  incautacion:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5V19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9.5"/><path d="M2 7.2 3.1 4.6A1.6 1.6 0 0 1 4.6 3.6h14.8a1.6 1.6 0 0 1 1.5 1l1.1 2.6a1 1 0 0 1-.9 1.4H2.9a1 1 0 0 1-.9-1.4z"/><path d="M12 11v5"/><path d="m9.5 13.5 2.5 2.5 2.5-2.5"/></svg>',
   acta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 17c1.2-2.2 2.1-3.3 2.7-3.3.9 0 .6 2.6 1.5 2.6.6 0 1.1-1 1.8-1 .8 0 1.2 1.7 2 1.7"/></svg>'
 };
 // Botón ⋮ de una fila/tarjeta de lista. `fn` recibe el id del registro.
@@ -5984,6 +6006,19 @@ function lcEstadoDocs(c) {
     lbl: 'Rótulo de EMP y EF',
     de: 'FPJ-7 · uno por cada elemento' + (emps.length ? ' (' + emps.length + ')' : ''),
     falta: faltaEmp, accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
+  });
+
+  /* 5 · El acta de incautación. Sale del mismo numeral 7, pero a diferencia de
+     los dos anteriores es UNA por captura —lleva todos los elementos juntos,
+     numerados— y la firma la persona a quien se le incautaron. Por eso además
+     de elementos necesita una persona capturada. */
+  docs.push({
+    lbl: 'Acta de incautación',
+    de: emps.length
+      ? 'Todos los elementos del numeral 7 (' + emps.length + ')'
+      : 'Los elementos del numeral 7',
+    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : (faltaEmp.length ? faltaEmp : ['Ninguna persona registrada']),
+    accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
   });
   return docs;
 }
@@ -8840,8 +8875,9 @@ async function ccPreparar(id) {
 function ccSinElementos(c) {
   openModal('<div class="mh"><h2>Sin elementos recolectados</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
     '<div class="oj-alert info"><b>Esta captura no tiene EMP ni EF</b>' +
-    'La cadena de custodia y el rótulo salen del numeral 7 del informe. Registra allí los elementos materiales ' +
-    'probatorios y la evidencia física recolectada, y los dos formatos quedan listos.</div>' +
+    'El acta de incautación, la cadena de custodia y el rótulo salen del numeral 7 del informe. Registra allí ' +
+    'los elementos materiales ' +
+    'probatorios y la evidencia física recolectada, y los tres formatos quedan listos.</div>' +
     '<button class="btn bp bbl" onclick="closeModal();editCase(\'' + c.id + '\')">Editar la captura</button>');
 }
 
@@ -9177,6 +9213,809 @@ async function rtGenerar() {
   if (!it) { toast('Ese elemento ya no está en la captura'); return; }
   closeModal();
   lcProducirDoc('FPJ7', { caso:c, item:it }, { fmt:'PDF', papel:'' });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ACTA DE INCAUTACIÓN DE ELEMENTOS
+   ═══════════════════════════════════════════════════════════════════════════
+   El tercer formato que sale del numeral 7 del FPJ-5 —«DESCRIPCIÓN DE EMP Y EF
+   RECOLECTADOS»—, junto con la cadena de custodia (FPJ-8) y el rótulo (FPJ-7).
+   Aquí NO se vuelve a pedir un solo elemento: se transcriben con la MISMA
+   primitiva que los imprime en el informe (`lcEmpLinea`), así lo que dice el
+   acta es palabra por palabra lo que dice el numeral 7 — igual que ya se hace
+   con los otros dos formatos.
+
+   ⚠️ LA DECISIÓN DE ARQUITECTURA, Y POR QUÉ ES DISTINTA DE LOS OTROS CUATRO.
+   Los formatos oficiales que la app ya producía llegaron como ARCHIVO: el FPJ-5
+   y el FPJ-6 como .docx (se rellenan por índice de celda, sin reconstruir una
+   sola tabla) y el FPJ-7 y el FPJ-8 como PDF (se estampan encima, sin tocar un
+   byte del original). En los cuatro, la maquetación ES el archivo oficial y el
+   riesgo de que se mueva una casilla es CERO.
+
+   De este formato NO existe el archivo en blanco: lo único disponible es la
+   fotografía de un acta diligenciada a mano. Así que aquí el acta la COMPONE la
+   app en OOXML, como el oficio de puesta a disposición. Se dijo antes de
+   hacerlo y se repite aquí porque es la limitación que hay que tener presente:
+   **este documento se PARECE mucho al formato, pero no es el archivo oficial.**
+   Si algún día aparece el formato en blanco, lo correcto es volver al patrón de
+   los otros cuatro —rellenarlo o estamparlo— y no seguir dibujándolo.
+
+   Lo que sí se respeta del formato, medido sobre la fotografía:
+     · las 21 casillas del N° CASO con sus seis rótulos (Dpto · Mplo · Ent ·
+       U. Receptora · Año · Consecutivo), que son las del NUNC;
+     · el bloque de título con el escudo, y la fila Departamento / Municipio /
+       Fecha / Hora con sus cuatro casillas;
+     · la redacción literal de los renglones («Proceder a incautar al señor…»),
+       que se conserva TAL CUAL está impresa, erratas incluidas: corregirle la
+       redacción a un formato oficial no es cosa de la app;
+     · el recuadro de ocho renglones para los elementos, el motivo, las cuatro
+       líneas de observaciones, el bloque de firmas con su espacio para la
+       huella y el pie «Versión 18/11/05 · Hoja No. N de M».
+
+   ⚠️ NINGUNA CONSTRUCCIÓN DE LAS QUE ROMPEN EL PDF. El acta se ofrece también
+   en PDF, y eso solo es defendible porque está dentro del subconjunto que el
+   traductor OOXML→HTML implementa: cero `w:trHeight`, `w:vMerge`, `w:noWrap`,
+   `w:tblHeader`, `w:numPr` y tabuladores (ver «Exportación v2»). El alto de las
+   filas se consigue SIEMPRE con `w:spacing line=… atLeast`, nunca con
+   `trHeight` ni con `lineRule="exact"` —que además RECORTA en cuanto el
+   funcionario escribe encima («El documento tiene que poder editarse»)—.
+   Al tocar este módulo: no introducir ninguna de esas construcciones.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── I · CONSTANTES DEL FORMATO ─────────────────────────────────────────────
+   El acta es una hoja carta vertical. ⚠️ Solo admite tamaños del MISMO ancho
+   (`anchoFijo` en LC_DOCS): las 21 casillas del N° CASO y las 4 de la hora son
+   geometría del formulario, y estrecharlas es la lección del FPJ-5 v2.2
+   —recalcular anchos reintroduce cortes de palabra—. Cambiar de Carta a Oficio
+   solo cambia el alto de la hoja y no toca una sola tabla. */
+var AI_VERSION_FORMATO = 'Versión 18/11/05';
+/* ⚠️ El motivo de la incautación es SIEMPRE «Captura» — regla del usuario: en
+   este procedimiento no hay otro. Por eso no es un campo del formulario. */
+var AI_MOTIVO = 'Captura';
+/* ⚠️ El relleno del subrayado es un espacio DURO. Se escribe con su escape y no
+   con el carácter literal a propósito: un NBSP es invisible en el editor y el
+   primer 'arreglo de espacios en blanco' lo convierte en espacio normal — que
+   Word descarta al final de un renglón, llevándose el subrayado con él. */
+var AI_NBSP = '\u00A0';
+var AI_RENGLONES = 8;          // renglones del recuadro de elementos, como el formato
+var AI_OBS_LINEAS = 4;         // líneas de «OBSERVACIONES:», como el formato
+
+var AIX_FUENTE = 'Arial';
+var AIX_SZ      = 20;          // 10 pt — TODO lo que rellena la app, un solo cuerpo
+var AIX_SZ_ET   = 20;          // 10 pt — texto impreso de los renglones
+var AIX_SZ_CAB  = 16;          // 8 pt  — etiquetas de las cabeceras (Departamento…)
+var AIX_SZ_MIN  = 12;          // 6 pt  — rótulos bajo las casillas del N° CASO
+var AIX_SZ_TIT  = 22;          // 11 pt — título del formato
+var AIX_SZ_SUB  = 14;          // 7 pt  — subtítulo, pie de página y captions de firma
+
+var AIX_MAR = { top:1134, right:1134, bottom:1134, left:1134, header:709, footer:567 };
+var AIX_W   = 12240 - AIX_MAR.left - AIX_MAR.right;      // 9972 tw de área de contenido
+var AIX_PAPEL = 'CARTA';
+/* Escudo del membrete, en línea dentro de su casilla. Es el MISMO que ya usa el
+   oficio de orden judicial: se resuelve por `cfg.ojLogoB64 || OJ_LOGO_B64`, así
+   que no entra un solo byte de imagen nuevo al repositorio y la unidad que haya
+   cargado el suyo en Ajustes lo ve también aquí. */
+var AIX_ESCUDO_W = 450000, AIX_ESCUDO_H = 437400;        // EMU (≈1,25 × 1,21 cm)
+/* ⚠️ LOS ALTOS DEL FORMATO, EN UN SOLO SITIO. El acta de papel es UNA hoja, y
+   estos nueve valores son lo único que decide si sigue cabiendo en una. Van
+   juntos a propósito: repartidos por el módulo como números sueltos, ajustar el
+   documento obliga a cazarlos uno a uno y el primero que se olvide manda el
+   bloque de firmas a una segunda página.
+   Medido en Word: con tres elementos el acta ocupa 1 página; con doce ocupa 2,
+   que es correcto —para eso el formato trae «Hoja No. N de M» en el pie—.
+   ⚠️ Son alturas MÍNIMAS (`w:spacing line` con `atLeast`), nunca `trHeight` ni
+   `lineRule="exact"`: así el renglón crece cuando el funcionario escribe en él
+   en vez de recortarle el texto. */
+var AI_ALTO = {
+  renglon:   265,   // cada renglón diligenciable del cuerpo
+  elemento:  290,   // cada renglón del recuadro de elementos
+  observ:    285,   // cada línea de OBSERVACIONES
+  firma:     560,   // espacio para firmar, encima de su rótulo
+  huella:    800,   // casilla de la huella
+  aireCab:   110,   // tras el N° Caso
+  aireTit:   130,   // tras el bloque de título
+  aireSec:   110,   // antes de los elementos y antes del motivo
+  aireFirma: 110    // antes del bloque de firmas
+};
+/* ⚠️ HOLGURA DEL RENGLÓN, en twips. El relleno del subrayado se calcula midiendo
+   el texto con canvas, y esa medida NO coincide al twip con la que hace Word:
+   basta que se pase un pelo para que la línea se doble en dos. No es solo feo
+   —un renglón de formulario partido en dos no se parece al formato— sino que
+   costaba 60 pt de alto y mandaba el bloque de firmas a una segunda hoja.
+   Se reserva ~2 mm al final de cada renglón y se redondea SIEMPRE hacia abajo:
+   la línea llega al margen y no lo pasa. */
+var AI_HOLGURA = 120;
+
+function aixSetPapel(id){
+  /* Solo se guarda cuál es: el ancho no cambia (los tamaños admitidos comparten
+     los 8,5"), de modo que ninguna tabla se recalcula. Lo único que varía es el
+     alto del `w:pgSz`. */
+  AIX_PAPEL = (LC_PAPEL[id] && lcPapelSirveFPJ(id)) ? id : 'CARTA';
+}
+
+/* ── II · PRIMITIVAS OOXML ──────────────────────────────────────────────────
+   Se apoyan en `ojxRun`/`ojxP`, que son las que ya conocen el orden de hijos
+   que exige el esquema (rFonts → b → i → caps → color → sz → u en `w:rPr`;
+   pStyle → keepNext → keepLines → pBdr → shd → spacing → ind → jc → rPr en
+   `w:pPr`). Invertirlo hace que Word abra el documento «dañado» — lección ya
+   pagada en el motor del oficio.
+   ⚠️ Aquí SIEMPRE se pasa la fuente y el cuerpo: sin ellos, `ojxRun` pone los
+   del oficio (Tamayo 11 pt). Un run sin `w:sz` propio tampoco hereda el del
+   bloque que lo rodea, sino el del estilo por defecto — que es exactamente lo
+   que sacaba el acta FPJ-6 a tres cuerpos distintos. */
+function _aiOpc(o, extra){
+  var r = {}, k;
+  for (k in (extra || {})) r[k] = extra[k];
+  for (k in (o || {})) if (o[k] !== undefined) r[k] = o[k];
+  if (!r.font) r.font = AIX_FUENTE;
+  return r;
+}
+function aiRun(txt, o){ return ojxRun(txt, _aiOpc(o, { sz:AIX_SZ })); }
+function aiP(runs, o){ return ojxP(runs, _aiOpc(o, {})); }
+/* Cierre del cuerpo: ⚠️ el body NO puede terminar en `<w:tbl>` — Word añade un
+   párrafo implícito de tamaño normal y aparece una página en blanco al final. */
+function aiCierre(){
+  return aiP('', { keepLines:false, before:0, after:0, line:20, lineRule:'atLeast', markSz:2 });
+}
+/* Espaciador. ⚠️ Nunca `lineRule="exact"`: «exacto» fija el alto de la línea y
+   Word RECORTA lo que no quepa, así que en cuanto el funcionario escribe en ese
+   hueco su texto sale cortado por la mitad. Con «mínimo» + una marca de párrafo
+   pequeña, vacío mide lo mismo y con texto CRECE. */
+function aiAire(tw){
+  return aiP('', { keepLines:false, before:0, after:0, line:tw || 120, lineRule:'atLeast', markSz:8 });
+}
+function _aiAncho(txt, sz, bold){ return lcAnchoTexto(txt, sz / 2, !!bold, AIX_FUENTE); }
+
+/* Parte un texto en trozos que caben en `ancho`. Se usa para las observaciones,
+   que el formato escribe sobre renglones y no dentro de una caja. */
+function _aiPartir(txt, ancho, sz){
+  var pal = String(txt || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+  if (!pal.length) return [];
+  var out = [], linea = '';
+  pal.forEach(function (p){
+    var cand = linea ? (linea + ' ' + p) : p;
+    if (linea && _aiAncho(cand, sz, false) > ancho) { out.push(linea); linea = p; }
+    else linea = cand;
+  });
+  if (linea) out.push(linea);
+  return out;
+}
+
+/* Un renglón del formulario: texto impreso + valores SOBRE LA LÍNEA.
+   ⚠️ El valor va SUBRAYADO y el subrayado se prolonga hasta donde llegaba la
+   línea impresa. No se usan guiones bajos a propósito: con subrayado, lo que el
+   funcionario teclee dentro del renglón continúa subrayado y la línea CRECE con
+   el texto; con guiones bajos, cada letra empuja un guion y descuadra el
+   renglón. Es la misma decisión de Mejora 4 en el acta de derechos.
+   ⚠️ El relleno son espacios DUROS (U+00A0): Word descarta el espacio en blanco
+   final de un renglón al maquetarlo, y con él se iría el subrayado — la línea
+   terminaría justo donde acaba el texto.
+   ⚠️ Lo que sobra de ancho se lo lleva el ÚLTIMO valor, así el renglón llega
+   siempre al margen derecho igual que la línea impresa del formato. */
+function aiRenglon(items, o){
+  o = o || {};
+  var ancho = o.ancho || AIX_W, sz = o.sz || AIX_SZ, et = o.szEt || AIX_SZ_ET;
+  var min = o.min == null ? 700 : o.min, usado = 0, slots = [];
+  items.forEach(function (it, i){
+    if (it.t != null) { usado += _aiAncho(it.t, et, !!it.b); return; }
+    var w = Math.max(min, _aiAncho(String(it.v == null ? '' : it.v), sz, false) + 140);
+    slots.push({ i:i, w:w }); usado += w;
+  });
+  if (slots.length){
+    var sobra = ancho - usado - AI_HOLGURA;
+    if (sobra > 0) slots[slots.length - 1].w += sobra;
+  }
+  var anchoDe = {}; slots.forEach(function (s){ anchoDe[s.i] = s.w; });
+  var esp = _aiAncho(AI_NBSP, sz, false) || 1;
+  var runs = items.map(function (it, i){
+    if (it.t != null) return aiRun(it.t, { sz:et, b:!!it.b });
+    var val = String(it.v == null ? '' : it.v);
+    var n = Math.max(0, Math.floor((anchoDe[i] - _aiAncho(val, sz, false)) / esp));
+    return aiRun(val + new Array(n + 1).join(AI_NBSP), { sz:sz, u:true });
+  });
+  return aiP(runs, { keepLines:false, after:o.after == null ? 40 : o.after,
+                     line:o.line || AI_ALTO.renglon, lineRule:'atLeast' });
+}
+
+/* ── Tablas. Bordes SIEMPRE por celda (`w:tcBorders`), nunca por tabla: así
+   cada trazo del formato se dibuja donde el formato lo tiene y las filas sin
+   recuadro —los dos rótulos de encima del N° CASO— no arrastran ninguno. ── */
+function _aiBordes(spec){
+  spec = spec == null ? 'tlbr' : spec;
+  var m = { t:'top', l:'left', b:'bottom', r:'right' };
+  return '<w:tcBorders>' + ['t','l','b','r'].map(function (k){
+    return '<w:' + m[k] + ' w:val="' + (spec.indexOf(k) >= 0 ? 'single' : 'nil') +
+      '" w:sz="6" w:space="0" w:color="000000"/>';
+  }).join('') + '</w:tcBorders>';
+}
+// ⚠️ Orden de hijos de w:tcPr que fija el esquema: tcW → gridSpan → tcBorders → shd → vAlign.
+function _aiTc(w, contenido, o){
+  o = o || {};
+  return '<w:tc><w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>' +
+    (o.span > 1 ? '<w:gridSpan w:val="' + o.span + '"/>' : '') +
+    _aiBordes(o.b) +
+    (o.shd ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.shd + '"/>' : '') +
+    '<w:vAlign w:val="' + (o.va || 'center') + '"/></w:tcPr>' +
+    (contenido || aiP('', { after:0, keepLines:false })) + '</w:tc>';
+}
+function _aiTr(celdas){ return '<w:tr><w:trPr><w:cantSplit/></w:trPr>' + celdas + '</w:tr>'; }
+// ⚠️ Orden de hijos de w:tblPr: tblW → tblInd → tblBorders → tblCellMar → tblLook.
+function _aiTbl(cols, filas, mar){
+  mar = mar || { v:10, h:57 };
+  return '<w:tbl><w:tblPr><w:tblW w:w="' + AIX_W + '" w:type="dxa"/>' +
+    '<w:tblInd w:w="0" w:type="dxa"/>' +
+    '<w:tblBorders>' + ['top','left','bottom','right','insideH','insideV'].map(function (x){
+      return '<w:' + x + ' w:val="nil" w:sz="0" w:space="0" w:color="auto"/>';
+    }).join('') + '</w:tblBorders>' +
+    '<w:tblCellMar><w:top w:w="' + mar.v + '" w:type="dxa"/><w:left w:w="' + mar.h + '" w:type="dxa"/>' +
+    '<w:bottom w:w="' + mar.v + '" w:type="dxa"/><w:right w:w="' + mar.h + '" w:type="dxa"/></w:tblCellMar>' +
+    '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+    '</w:tblPr><w:tblGrid>' + cols.map(function (w){ return '<w:gridCol w:w="' + w + '"/>'; }).join('') +
+    '</w:tblGrid>' + filas + '</w:tbl>';
+}
+
+/* ── III · BLOQUES DEL FORMATO ───────────────────────────────────────────── */
+
+/* N° CASO. Las 21 casillas son las del NUNC —Dpto(2) Mplo(3) Ent(2)
+   U. Receptora(5) Año(4) Consecutivo(5)—, las mismas que ya llenan el acta de
+   derechos y los dos formatos de cadena de custodia, así que se leen con la
+   MISMA función (`f6Nunc`) y no con un criterio propio.
+   ⚠️ Las 5 del Consecutivo quedan EN BLANCO: ese número lo asigna el SPOA y no
+   se conoce en el sitio de la captura. Es la regla que ya rige en el FPJ-6 y en
+   el FPJ-8; no se fabrica un dígito.
+   La casilla de «No. Expediente CAD» se deja vacía: la app no conoce ese
+   número. */
+var AI_NUNC_GRUPOS = [[2,'Dpto.'],[3,'Mplo'],[2,'Ent'],[5,'U. Receptora'],[4,'Año'],[5,'Consecutivo']];
+function aiTablaCaso(nunc){
+  var EXP = 2475, CAS = 357;                       // 2475 + 21×357 = 9972
+  var cols = [EXP]; for (var i = 0; i < 21; i++) cols.push(CAS);
+  var digitos = String(nunc || '').replace(/\D/g, '').slice(0, 21);
+
+  function rotulo(txt, tam, jc){
+    return aiP(aiRun(txt, { sz:tam, b:true }), { after:0, keepLines:false, jc:jc, line:200, lineRule:'atLeast' });
+  }
+  // Los dos rótulos de encima van dentro de la misma tabla, con los bordes en
+  // «nil»: es la única forma de que «Nº CASO» quede centrado SOBRE las casillas
+  // y no sobre la página, y de que se mueva con ellas si el formato cambia.
+  var fila1 = _aiTr(_aiTc(EXP, '', { b:'' }) +
+    _aiTc(AIX_W - EXP, rotulo('USO EXCLUSIVO POLICIA JUDICIAL', AIX_SZ_SUB, 'right'), { span:21, b:'' }));
+  var fila2 = _aiTr(_aiTc(EXP, '', { b:'' }) +
+    _aiTc(AIX_W - EXP, rotulo('Nº CASO', AIX_SZ_CAB, 'center'), { span:21, b:'' }));
+
+  var casillas = '';
+  for (i = 0; i < 21; i++){
+    casillas += _aiTc(CAS, aiP(aiRun(digitos.charAt(i) || '', { sz:AIX_SZ }),
+      { after:0, keepLines:false, jc:'center', line:300, lineRule:'atLeast' }), {});
+  }
+  var fila3 = _aiTr(_aiTc(EXP, aiP('', { after:0, keepLines:false, line:300, lineRule:'atLeast', markSz:8 }), {}) + casillas);
+
+  var etiquetas = AI_NUNC_GRUPOS.map(function (g){
+    return _aiTc(CAS * g[0], rotulo(g[1], AIX_SZ_MIN, 'center'), { span:g[0] });
+  }).join('');
+  var fila4 = _aiTr(_aiTc(EXP, rotulo('No. Expediente CAD', AIX_SZ_MIN, 'center'), {}) + etiquetas);
+
+  return _aiTbl(cols, fila1 + fila2 + fila3 + fila4, { v:20, h:28 });
+}
+
+/* Título con el escudo, y la fila Departamento / Municipio / Fecha / Hora.
+   ⚠️ La casilla del escudo se mantiene aunque no haya escudo cargado: así el
+   título ocupa exactamente la misma posición con y sin él. */
+function aiTablaTitulo(cfg, m){
+  var cols = [1500, 1750, 1200, 1750, 700, 1472, 600, 250, 250, 250, 250];   // = 9972
+  var esc = aiEscudoXml(cfg);
+  var titulo =
+    aiP(aiRun('ACTA DE INCAUTACION DE ELEMENTOS', { sz:AIX_SZ_TIT, b:true }),
+      { after:0, keepLines:false, jc:'center', line:280, lineRule:'atLeast' }) +
+    aiP(aiRun('Este formato será utilizado por Policía Judicial', { sz:AIX_SZ_SUB, i:true }),
+      { after:0, keepLines:false, jc:'center', line:200, lineRule:'atLeast' });
+
+  var fila1 = _aiTr(
+    _aiTc(1500, aiP(esc, { after:0, keepLines:false, jc:'center', line:esc ? 200 : 700, lineRule:'atLeast', markSz:8 }), {}) +
+    _aiTc(AIX_W - 1500, titulo, { span:10 }));
+
+  function et(w, txt){
+    return _aiTc(w, aiP(aiRun(txt, { sz:AIX_SZ_CAB, b:true }),
+      { after:0, keepLines:false, line:300, lineRule:'atLeast' }), {});
+  }
+  function val(w, txt, jc){
+    return _aiTc(w, aiP(aiRun(txt || '', { sz:AIX_SZ }),
+      { after:0, keepLines:false, jc:jc, line:300, lineRule:'atLeast' }), {});
+  }
+  var hora = String(m.horaCasillas || '').replace(/\D/g, '').slice(0, 4), casillasHora = '';
+  for (var i = 0; i < 4; i++) casillasHora += val(250, hora.charAt(i) || '', 'center');
+
+  var fila2 = _aiTr(
+    et(1500, 'Departamento') + val(1750, m.depto, 'center') +
+    et(1200, 'Municipio')    + val(1750, m.muni, 'center') +
+    et(700,  'Fecha')        + val(1472, m.fechaCab, 'center') +
+    et(600,  'Hora')         + casillasHora);
+
+  return _aiTbl(cols, fila1 + fila2, { v:20, h:57 });
+}
+
+function aiEscudoXml(cfg){
+  if (!cfg.ojLogoB64) return '';
+  var A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+  return '<w:r><w:rPr><w:noProof/></w:rPr><w:drawing>' +
+    '<wp:inline distT="0" distB="0" distL="0" distR="0">' +
+    '<wp:extent cx="' + AIX_ESCUDO_W + '" cy="' + AIX_ESCUDO_H + '"/>' +
+    '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
+    '<wp:docPr id="11" name="Escudo"/><wp:cNvGraphicFramePr>' +
+    '<a:graphicFrameLocks xmlns:a="' + A + '" noChangeAspect="1"/></wp:cNvGraphicFramePr>' +
+    '<a:graphic xmlns:a="' + A + '">' +
+    '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+    '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+    '<pic:nvPicPr><pic:cNvPr id="0" name=""/><pic:cNvPicPr>' +
+    '<a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr></pic:nvPicPr>' +
+    '<pic:blipFill><a:blip r:embed="rId5"/><a:srcRect/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>' +
+    '<pic:spPr bwMode="auto"><a:xfrm><a:off x="0" y="0"/>' +
+    '<a:ext cx="' + AIX_ESCUDO_W + '" cy="' + AIX_ESCUDO_H + '"/></a:xfrm>' +
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic>' +
+    '</a:graphicData></a:graphic></wp:inline></w:drawing></w:r>';
+}
+
+/* Recuadro de los elementos: un renglón por EMP o EF, con el recuadro y las
+   líneas interiores del formato. ⚠️ El formato trae OCHO renglones; si hay más
+   elementos se REPRODUCE el renglón, que es lo mismo que la app ya hace con las
+   filas de vehículo del FPJ-5 y con los apartados repetibles. Nunca se recorta
+   la lista: un elemento material probatorio que desaparece de un acta es el
+   peor resultado posible. */
+function aiTablaElementos(lineas){
+  var n = Math.max(AI_RENGLONES, lineas.length), filas = '';
+  for (var i = 0; i < n; i++){
+    filas += _aiTr(_aiTc(AIX_W, aiP(aiRun(lineas[i] || '', { sz:AIX_SZ }),
+      { after:0, keepLines:false, line:AI_ALTO.elemento, lineRule:'atLeast', markSz:AIX_SZ }), { va:'center' }));
+  }
+  return _aiTbl([AIX_W], filas, { v:20, h:85 });
+}
+
+/* Bloque de firmas. ⚠️ Los espacios de firma quedan EN BLANCO: el acta se
+   imprime para firmarse y estamparse a mano, y escribir algo sobre esas líneas
+   le quitaría el sitio a la firma. Es la misma regla del acta de derechos.
+   ⚠️ Tampoco se estampa aquí la firma manuscrita del perfil, que solo lleva el
+   oficio de puesta a disposición: en un acta de incautación firman las DOS
+   partes en el mismo papel, y una firma preimpresa al lado de una manuscrita no
+   es lo que el documento acredita. */
+function aiTablaFirmas(m){
+  var IZQ = 3400, HUE = 1580, DER = 4992;          // = 9972
+  var cols = [IZQ, HUE, DER];
+  var wIzq = IZQ + HUE - 114, wDer = DER - 114, wCed = IZQ - 114;
+
+  function cap(txt){
+    return aiP(aiRun(txt, { sz:AIX_SZ_SUB }), { after:0, keepLines:false, line:200, lineRule:'atLeast' });
+  }
+  function vacio(alto){
+    return aiP('', { after:0, keepLines:false, line:alto, lineRule:'atLeast', markSz:AIX_SZ });
+  }
+  // Espacio para firmar: alto por interlineado mínimo, nunca por trHeight.
+  var fEspacio = _aiTr(
+    _aiTc(IZQ + HUE, vacio(AI_ALTO.firma), { span:2, b:'' }) +
+    _aiTc(DER, vacio(AI_ALTO.firma), { b:'' }));
+  var fCaption = _aiTr(
+    _aiTc(IZQ + HUE, cap('Firma propietario o poseedor'), { span:2, b:'', va:'top' }) +
+    _aiTc(DER, cap('Firma Policía'), { b:'', va:'top' }));
+  var fNombre = _aiTr(
+    _aiTc(IZQ + HUE, aiRenglon([{ t:'NOMBRE: ' }, { v:m.capNombre }], { ancho:wIzq, after:0 }), { span:2, b:'', va:'top' }) +
+    _aiTc(DER, aiRenglon([{ t:'NOMBRE: ' }, { v:m.funNombre }], { ancho:wDer, after:0 }), { b:'', va:'top' }));
+  /* La casilla de la huella es lo único de esta fila que lleva recuadro. Su alto
+     lo fija el interlineado mínimo del párrafo que hay dentro, así que crece si
+     alguien escribe ahí y nunca recorta. */
+  var fPie = _aiTr(
+    _aiTc(IZQ, aiRenglon([{ t:'CEDULA: ' }, { v:m.capDoc }], { ancho:wCed, after:0 }), { b:'', va:'bottom' }) +
+    _aiTc(HUE, vacio(AI_ALTO.huella), { va:'center' }) +
+    _aiTc(DER, aiRenglon([{ t:'CARGO: ' }, { v:m.funCargo }], { ancho:wDer, after:0 }), { b:'', va:'bottom' }));
+
+  return _aiTbl(cols, fEspacio + fCaption + fNombre + fPie, { v:20, h:57 });
+}
+
+/* Pie de página: «Versión 18/11/05» a la izquierda y «Hoja No. N de M» a la
+   derecha. ⚠️ Sin tabuladores —una tabla de dos celdas—: con un tabulador, en
+   hoja angosta el texto de la izquierda desborda y se pega al número. Es la
+   misma lección del pie del oficio de puesta a disposición. */
+function aiPieXml(){
+  var o = { font:AIX_FUENTE, sz:AIX_SZ_SUB };
+  var izq = aiP(aiRun(AI_VERSION_FORMATO, { sz:AIX_SZ_SUB, i:true }),
+    { after:0, keepLines:false, line:200, lineRule:'atLeast' });
+  var der = aiP(aiRun('Hoja No. ', o) + ojxCampoNum(o) + aiRun(' de ', o) + ojxCampoTot(o),
+    { after:0, keepLines:false, jc:'right', line:200, lineRule:'atLeast' });
+  var mitad = Math.round(AIX_W / 2);
+  return _aiTbl([mitad, AIX_W - mitad],
+    _aiTr(_aiTc(mitad, izq, { b:'', va:'bottom' }) + _aiTc(AIX_W - mitad, der, { b:'', va:'bottom' })),
+    { v:0, h:0 });
+}
+
+/* ── IV · MAPEO CASO → DOCUMENTO ─────────────────────────────────────────────
+   Funciones puras: quien quiera saber de dónde sale un campo del acta lo lee
+   aquí. ⚠️ Ni un solo dato se vuelve a pedir: los 17 campos del formato salen
+   del caso, del capturado y del perfil. Lo único que el acta añade son las
+   observaciones, que no existen en ninguna otra parte. */
+function aiEstructura(){ return { capIdx:0, obs:'', updated:0 }; }
+/* ⚠️ LEER NO MUTA. `aiActa` crea la rama en el caso y solo la llaman los dos
+   caminos que ESCRIBEN (abrir el formulario y guardarlo); todo lo que solo
+   consulta —el mapeo, los faltantes, la tarjeta del expediente— pasa por
+   `aiActaLeer`, que no toca el caso. Si consultar creara la rama, el expediente
+   dejaría el caso «sucio» con solo pintarse. */
+function aiActaLeer(c){ return (c && c.incautacion) || aiEstructura(); }
+function aiActa(c){
+  if (!c.incautacion) c.incautacion = aiEstructura();
+  if (!(c.incautacion.capIdx >= 0)) c.incautacion.capIdx = 0;
+  return c.incautacion;
+}
+function aiCapturado(c){
+  var caps = (c && c.capturados) || [], i = aiActaLeer(c).capIdx | 0;
+  return caps[i] || caps[0] || {};
+}
+/* La unidad a la que está adscrito quien practica la incautación. Sale del
+   punto único de resolución del nombre de la unidad, el mismo del que beben el
+   membrete del oficio, la constancia de custodia y el encabezado del dossier —
+   así los tres documentos no pueden nombrar tres unidades distintas.
+   ⚠️ Ninguna institución está escrita en el código: es un campo del usuario. */
+function aiUnidad(cfg){
+  var p = ccPerfilActivo();
+  return ojEstacionLabel(lcUnidadNombre(cfg) || (p && p.entidad) || '');
+}
+/* Los elementos, numerados. ⚠️ Se transcriben con `lcEmpLinea`, la MISMA
+   primitiva que los imprime en el numeral 7 del informe: lo que dice el acta es
+   palabra por palabra lo que dice el FPJ-5.
+   La numeración «1- », «2- » solo aparece si hay MÁS DE UN elemento, que es
+   como lo pidió el requerimiento; con uno solo va la línea a secas. */
+function aiElementosLineas(c){
+  var lineas = lcEmpLineas(ccElementos(c));
+  if (lineas.length < 2) return lineas;
+  return lineas.map(function (l, i){ return (i + 1) + '- ' + l; });
+}
+function aiMapa(c){
+  var cfg = {}; try { cfg = DB.getConfig() || {}; } catch (e) {}
+  var cap = aiCapturado(c), m = f6Momento(c), acta = aiActaLeer(c);
+  var lug = (c && c.lugar) || {}, g = (c && c.oj && c.oj.diligencia) || {};
+  var p = ccPerfilActivo() || {};
+  /* El tipo de documento va en el texto impreso («identificado con CC.»), y se
+     flexiona igual que ya hace el acta de derechos: a un menor no se le puede
+     anotar el número de su T.I. sobre un renglón rotulado C.C. */
+  var tipo = String(cap.tipoDoc || 'CC').replace(/\.+$/, '') || 'CC';
+  return {
+    nunc: f6Nunc(c).digitos,
+    depto: lug.depto || g.lugarDepartamento || '',
+    muni: lug.muni || g.lugarMunicipio || '',
+    // ⚠️ «AAAA-MM-DD» en la cabecera, por instrucción del usuario. Es además el
+    // formato que el FPJ-8 ya imprime, así que los dos documentos concuerdan.
+    fechaCab: (m.a && m.m && m.d) ? (m.a + '-' + m.m + '-' + m.d) : '',
+    horaCasillas: (m.h && m.mi) ? (m.h + m.mi) : '',
+    ciudad: f6Municipio(c),
+    dia: m.d || '', mes: m.m ? (F6_MES[parseInt(m.m, 10) - 1] || '') : '', ano: m.a || '',
+    hora: (m.h && m.mi) ? (m.h + ':' + m.mi) : '',
+    unidad: aiUnidad(cfg),
+    tipoDoc: tipo,
+    capNombre: mayus(fullName(cap)),
+    capDoc: sinPuntos(cap.numDoc),
+    expEn: cap.expEn || '',
+    lugNac: cap.lugNac || '',
+    escol: cap.escol || '',
+    ecivil: cap.ecivil || '',
+    ocup: cap.ocup || '',
+    padres: cap.padres || '',
+    dirRes: cap.dirRes || '',
+    tel: cap.tel || '',
+    elementos: aiElementosLineas(c),
+    motivo: AI_MOTIVO,
+    obs: acta.obs || '',
+    funNombre: mayus(p.nombre || ''),
+    funCargo: p.cargo || ''
+  };
+}
+/* Lo que el acta necesita y el caso puede no tener. Se comprueba ANTES de
+   generar: es mejor decir qué falta que entregar un acta que el capturado va a
+   firmar con su identificación o la fecha en blanco. */
+function aiFaltantes(c){
+  var f = [], cap = aiCapturado(c), m = f6Momento(c);
+  if (!fullName(cap)) f.push('Nombres y apellidos del capturado');
+  if (!sinPuntos(cap.numDoc)) f.push('Número de identificación');
+  if (!(m.d && m.m && m.a)) f.push('Fecha de la captura');
+  if (!(m.h && m.mi)) f.push('Hora de la captura');
+  if (!f6Municipio(c)) f.push('Municipio de la captura');
+  if (!ccElementos(c).length) f.push('Al menos un EMP o EF en el numeral 7');
+  return f;
+}
+function aiNombreArchivo(m){
+  var quien = (m.capNombre || 'capturado').split(/\s+/).slice(0, 2).join('_');
+  return ('Acta_incautacion_' + quien).replace(/[^\w\-]+/g, '_') + '.docx';
+}
+
+/* ── V · CUERPO Y PAQUETE ──────────────────────────────────────────────────
+   ⚠️ TODOS los renglones se imprimen SIEMPRE. Un dato que el usuario no
+   registró queda EN BLANCO sobre su línea, nunca se rellena con algo inventado
+   ni se omite el renglón: es la regla «condicional = excluido» que ya rige el
+   oficio de puesta a disposición y las 23 filas de sus tablas. */
+function aiDocCuerpo(m, cfg){
+  var out = '';
+  out += aiTablaCaso(m.nunc);
+  out += aiAire(AI_ALTO.aireCab);
+  out += aiTablaTitulo(cfg, m);
+  out += aiAire(AI_ALTO.aireTit);
+
+  /* La redacción es la del formato, LITERAL. «Proceder a incautar al señor» es
+     como está impreso; no se le corrige la redacción a un formato oficial desde
+     la app. */
+  out += aiRenglon([{ t:'En la ciudad de ' }, { v:m.ciudad }, { t:' a los ' }, { v:m.dia },
+                    { t:' del mes de ' }, { v:m.mes }, { t:' del ' }, { v:m.ano }]);
+  out += aiRenglon([{ t:'Siendo las ' }, { v:m.hora }, { t:' horas el suscrito funcionario adscrito a ' },
+                    { v:m.unidad }, { t:' Proceder a' }]);
+  out += aiRenglon([{ t:'incautar al señor ' }, { v:m.capNombre },
+                    { t:' identificado con ' + m.tipoDoc + '. ' }, { v:m.capDoc }]);
+  out += aiRenglon([{ t:'De ' }, { v:m.expEn }, { t:' Natural de ' }, { v:m.lugNac },
+                    { t:' Grado de estudio ' }, { v:m.escol }]);
+  out += aiRenglon([{ t:'Estado civil ' }, { v:m.ecivil }, { t:' ocupación ' }, { v:m.ocup },
+                    { t:' Hijo de ' }, { v:m.padres }]);
+  out += aiRenglon([{ t:'Residente en dirección ' }, { v:m.dirRes }]);
+  out += aiRenglon([{ t:'Teléfono ' }, { v:m.tel }, { t:'.' }]);
+
+  out += aiAire(AI_ALTO.aireSec);
+  out += aiP(aiRun('LOS ELEMENTOS DE LAS SIGUIENTES CARACTERISTICAS ASI:', { sz:AIX_SZ, b:true }),
+    { keepNext:true, after:60, keepLines:false, line:280, lineRule:'atLeast' });
+  out += aiTablaElementos(m.elementos);
+
+  out += aiAire(AI_ALTO.aireSec);
+  out += aiRenglon([{ t:'MOTIVO DE LA INCAUTACION ', b:true }, { v:m.motivo }], { after:60 });
+
+  /* Las observaciones se escriben SOBRE los renglones del formato, y si ocupan
+     más de uno se añaden los que hagan falta —cada uno con su línea—. ⚠️ Lo que
+     no cabe NO se descarta: un acta que pierde texto sin avisar es la misma
+     familia de fallo que los EMP que nunca se imprimían. */
+  var anchoObs = AIX_W - _aiAncho('OBSERVACIONES: ', AIX_SZ, true) - 200;
+  var trozos = _aiPartir(m.obs, anchoObs, AIX_SZ);
+  out += aiRenglon([{ t:'OBSERVACIONES: ', b:true }, { v:trozos[0] || '' }], { after:40, line:AI_ALTO.observ });
+  for (var i = 1; i < Math.max(AI_OBS_LINEAS, trozos.length); i++){
+    out += aiRenglon([{ v:trozos[i] || '' }], { after:40, line:AI_ALTO.observ });
+  }
+
+  out += aiAire(AI_ALTO.aireFirma);
+  out += aiP(aiRun('Firmas:', { sz:AIX_SZ, b:true }),
+    { keepNext:true, after:60, keepLines:false, line:280, lineRule:'atLeast' });
+  out += aiTablaFirmas(m);
+  out += aiCierre();
+  return out;
+}
+
+/* Configuración efectiva del documento. El escudo se pone solo, igual que en el
+   oficio: lo que el usuario haya cargado en Ajustes manda sobre el embebido. */
+function aiCfgDoc(){
+  var cfg = {}; try { cfg = DB.getConfig() || {}; } catch (e) {}
+  var out = {}; for (var k in cfg) out[k] = cfg[k];
+  if (!out.ojLogoB64){ out.ojLogoB64 = OJ_LOGO_B64; out.ojLogoMime = OJ_LOGO_MIME; }
+  return out;
+}
+function aiSectPr(){
+  var p = lcPapel(AIX_PAPEL);
+  return '<w:sectPr>' +
+    '<w:footerReference w:type="default" r:id="rId3"/>' +
+    '<w:pgSz w:w="' + p.w + '" w:h="' + p.h + '"/>' +
+    '<w:pgMar w:top="' + AIX_MAR.top + '" w:right="' + AIX_MAR.right + '" w:bottom="' + AIX_MAR.bottom +
+      '" w:left="' + AIX_MAR.left + '" w:header="' + AIX_MAR.header + '" w:footer="' + AIX_MAR.footer + '" w:gutter="0"/>' +
+    '<w:cols w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr>';
+}
+function aiPaquete(cfg){
+  var f = {}, ext = cfg.ojLogoB64 ? ojLogoExt(cfg) : '';
+  f['[Content_Types].xml'] = ojBytes(OJ_XMLDECL +
+    '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+    '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+    '<Default Extension="xml" ContentType="application/xml"/>' +
+    (ext ? '<Default Extension="' + ext + '" ContentType="image/' + ext + '"/>' : '') +
+    '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+    '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+    '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>' +
+    '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+    '<Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>' +
+    '</Types>');
+  f['_rels/.rels'] = ojBytes(OJ_XMLDECL +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+    '</Relationships>');
+  /* ⚠️ El escudo va en el CUERPO (la casilla del título), no en un encabezado:
+     por eso su relación vive en document.xml.rels y no en un header*.xml.rels
+     —que es donde la tiene el oficio de puesta a disposición—. */
+  f['word/_rels/document.xml.rels'] = ojBytes(OJ_XMLDECL +
+    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+    '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>' +
+    '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>' +
+    (ext ? '<Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/escudo.' + ext + '"/>' : '') +
+    '</Relationships>');
+  f['word/fontTable.xml'] = ojBytes(OJ_XMLDECL +
+    '<w:fonts ' + OJ_NS_W + '>' +
+    '<w:font w:name="' + AIX_FUENTE + '"><w:panose1 w:val="020B0604020202020204"/><w:charset w:val="00"/>' +
+    '<w:family w:val="swiss"/><w:pitch w:val="variable"/>' +
+    '<w:sig w:usb0="E0002EFF" w:usb1="C000785B" w:usb2="00000009" w:usb3="00000000" w:csb0="000001FF" w:csb1="00000000"/></w:font>' +
+    '</w:fonts>');
+  f['word/styles.xml'] = ojBytes(OJ_XMLDECL +
+    '<w:styles ' + OJ_NS_W + '><w:docDefaults><w:rPrDefault><w:rPr>' +
+    '<w:rFonts w:ascii="' + AIX_FUENTE + '" w:hAnsi="' + AIX_FUENTE + '" w:eastAsia="' + AIX_FUENTE + '" w:cs="' + AIX_FUENTE + '"/>' +
+    '<w:color w:val="000000"/><w:sz w:val="' + AIX_SZ + '"/><w:szCs w:val="' + AIX_SZ + '"/>' +
+    '<w:lang w:val="es-CO" w:eastAsia="es-CO" w:bidi="ar-SA"/>' +
+    '</w:rPr></w:rPrDefault><w:pPrDefault><w:pPr>' +
+    '<w:spacing w:after="60" w:line="240" w:lineRule="atLeast"/></w:pPr></w:pPrDefault></w:docDefaults>' +
+    '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
+    '<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>' +
+    '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/>' +
+    '<w:tblPr><w:tblInd w:w="0" w:type="dxa"/><w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/>' +
+    '<w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>' +
+    '<w:style w:type="numbering" w:default="1" w:styleId="NoList"><w:name w:val="No List"/><w:uiPriority w:val="99"/><w:semiHidden/><w:unhideWhenUsed/></w:style>' +
+    '</w:styles>');
+  f['word/settings.xml'] = ojBytes(OJ_XMLDECL +
+    '<w:settings ' + OJ_NS_W + '><w:zoom w:percent="100"/><w:defaultTabStop w:val="708"/>' +
+    '<w:characterSpacingControl w:val="doNotCompress"/>' +
+    '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
+    '</w:settings>');
+  f['word/footer1.xml'] = ojBytes(OJ_XMLDECL + '<w:ftr ' + OJ_NS_W + '>' + aiPieXml() + '</w:ftr>');
+  if (ext) f['word/media/escudo.' + ext] = ojB64Bytes(cfg.ojLogoB64);
+  return f;
+}
+
+function buildActaIncautacionBlob(ctx, papel){
+  try {
+    var c = ctx && ctx.caso;
+    if (!c) { toast('Caso no encontrado'); return null; }
+    aixSetPapel(papel || 'CARTA');
+    var cfg = aiCfgDoc();
+    var m = aiMapa(c);
+    var files = aiPaquete(cfg);
+    var docXml = OJ_XMLDECL + '<w:document ' + OJ_NS_W + '><w:body>' +
+      aiDocCuerpo(m, cfg) + aiSectPr() + '</w:body></w:document>';
+    files['word/document.xml'] = ojBytes(docXml);
+    var lista = Object.keys(files).map(function (n){ return { name:n, data:files[n] }; });
+    var blob = new Blob([_buildZip(lista)],
+      { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    /* `files` viaja con el resultado: es la misma fuente de la que se arma la
+       vista de impresión, para que el .docx y el PDF no puedan divergir. */
+    return { blob:blob, fname:aiNombreArchivo(m), label:'Acta de incautación de elementos',
+             files:files, papel:AIX_PAPEL };
+  } catch (e){
+    console.error('[LexCapture] generando acta de incautación', e);
+    toast('Error generando el acta de incautación: ' + e.message);
+    return null;
+  }
+}
+
+/* ── VI · INTERFAZ ─────────────────────────────────────────────────────────
+   Se entra por el EXPEDIENTE del caso, no por el menú ⋮ de la captura: es el
+   punto de extensión que dejó abierto la auditoría del módulo Capturas para que
+   el menú no vuelva a crecer un ítem por documento. */
+var _aiCtx = null;
+
+async function abrirActaIncautacion(id){
+  var c = await ccPreparar(id); if (!c) return;
+  if (!ccElementos(c).length){ ccSinElementos(c); return; }
+  var caps = c.capturados || [];
+  if (!caps.length){ toast('Esta captura no tiene ninguna persona registrada'); return; }
+  if (caps.length === 1){ aiAbrir(id, 0); return; }
+  /* Con varias personas capturadas hay que decir a nombre de quién sale: el
+     acta la firma «el propietario o poseedor» de los elementos, y no se puede
+     elegir por la app. Mismo criterio que el rótulo con «a quien se le encontró
+     el EMP». */
+  openModal(
+    '<div class="mh"><h2>¿A nombre de quién es el acta?</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="oj-hint">El acta la firma quien tenía los elementos: es quien aparece como ' +
+    '«propietario o poseedor».</p>' +
+    caps.map(function (p, i){
+      return '<button class="exp-opt" style="width:100%;margin-bottom:8px" onclick="aiAbrir(\'' + id + '\',' + i + ')">' +
+        '<span class="exp-opt-lbl">' + escHtml(fullName(p) || 'Sin nombre') + '</span>' +
+        '<span class="exp-opt-sub">' + escHtml(((p.tipoDoc || '') + ' ' + (p.numDoc || '')).trim() || 'Sin documento') +
+        '</span></button>';
+    }).join('')
+  );
+}
+
+function aiAbrir(id, idx){
+  var c = DB.getCase(id); if (!c){ toast('Caso no encontrado'); return; }
+  var acta = aiActa(c);
+  acta.capIdx = idx | 0;
+  _aiCtx = { id:id };
+  var m = aiMapa(c), faltan = aiFaltantes(c);
+
+  function kv(k, v){
+    return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>';
+  }
+  var yaTiene =
+    kv('N° Caso (NUNC)', m.nunc) +
+    kv('Departamento y municipio', [m.depto, m.muni].filter(Boolean).join(' · ')) +
+    kv('Fecha y hora', [m.fechaCab, m.hora].filter(Boolean).join(' · ')) +
+    kv('Unidad del funcionario', m.unidad) +
+    kv('Nombres y apellidos', m.capNombre) +
+    kv('Identificación', [m.tipoDoc, m.capDoc, m.expEn ? 'de ' + m.expEn : ''].filter(Boolean).join(' ')) +
+    kv('Natural de', m.lugNac) +
+    kv('Grado de estudio', m.escol) +
+    kv('Estado civil', m.ecivil) +
+    kv('Ocupación', m.ocup) +
+    kv('Hijo de', m.padres) +
+    kv('Residencia y teléfono', [m.dirRes, m.tel ? 'Tel: ' + m.tel : ''].filter(Boolean).join(' — ')) +
+    kv('Motivo de la incautación', m.motivo) +
+    kv('Firma Policía', [m.funNombre, m.funCargo].filter(Boolean).join(' — '));
+
+  openModal(
+    '<div class="mh"><h2>Acta de incautación de elementos</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="oj-hint" style="margin-top:0">' + escHtml(m.capNombre || 'Sin nombre') +
+    ' · ' + m.elementos.length + (m.elementos.length === 1 ? ' elemento' : ' elementos') +
+    ' del numeral 7</p>' +
+
+    (faltan.length
+      ? '<div class="oj-alert dura"><b>Faltan datos de la captura</b>' +
+        'El acta los imprime y no se pueden inventar: ' + escHtml(faltan.join(' · ')) + '.</div>' +
+        '<button class="btn bs bbl" style="margin-bottom:14px" onclick="closeModal();editCase(\'' + id + '\')">Editar la captura</button>'
+      : '') +
+
+    '<div class="st">Elementos incautados</div>' +
+    '<p class="oj-hint" style="margin-top:0">Son los del numeral 7 del informe, con la misma redacción. ' +
+    'Para cambiarlos se editan allí.</p>' +
+    '<div class="lc-emp-prev">' + (m.elementos.length
+      ? m.elementos.map(function (l){ return '<div class="lc-emp-l">' + escHtml(l) + '</div>'; }).join('')
+      : '<div class="lc-emp-l">Sin elementos registrados</div>') + '</div>' +
+
+    '<details class="oj-mas" style="margin-top:14px"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
+    yaTiene + '</details>' +
+
+    '<div class="st">Observaciones</div>' +
+    '<div class="fg"><textarea class="ft" id="ai-obs" placeholder="Opcional. Se escribe sobre los renglones del formato.">' +
+    escHtml(acta.obs) + '</textarea></div>' +
+
+    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
+    '<span>El motivo de la incautación sale siempre como «' + escHtml(AI_MOTIVO) + '». Las dos firmas, ' +
+    'la huella y el «No. Expediente CAD» se dejan en blanco: el acta se imprime para firmarse a mano.</span></p>' +
+
+    '<button class="btn bp bbl" style="margin-top:6px" onclick="aiGenerar()">Generar acta</button>' +
+    '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
+  );
+}
+
+/* Lee el formulario. Devuelve null si el modal ya no está en pantalla — mismo
+   criterio que `f6Leer` y `ojCollect*`: un formulario que no se ve no dicta el
+   modelo. */
+function aiLeer(){
+  var el = document.getElementById('ai-obs');
+  if (!el) return null;
+  return { obs: el.value.trim() };
+}
+async function aiGuardar(){
+  var ctx = _aiCtx, datos = aiLeer();
+  if (!ctx || !datos) return null;
+  var c = DB.getCase(ctx.id); if (!c) return null;
+  var acta = aiActa(c);
+  acta.obs = datos.obs; acta.updated = Date.now();
+  c.incautacion = acta;
+  try { await DB.saveCase(c); }
+  catch (e){
+    console.error('[LexCapture] error guardando el acta de incautación', e);
+    toast(_lcMsgGuardado(e, 'el acta de incautación'), 6000);
+    return null;
+  }
+  return DB.getCase(ctx.id) || c;
+}
+// Lo llama `closeModal()`: lo que se acaba de escribir no se pierde por cerrar.
+function aiAutoguardar(){
+  if (!_aiCtx || !document.getElementById('ai-obs')) return;
+  aiGuardar();
+  _aiCtx = null;
+}
+async function aiGenerar(){
+  var ctx = _aiCtx;
+  var c = await aiGuardar();
+  _aiCtx = null;                        // ya se guardó: closeModal no repite la escritura
+  if (!c){ if (ctx) toast('No se pudo guardar el acta de incautación'); return; }
+  var faltan = aiFaltantes(c);
+  if (faltan.length){
+    openModal(
+      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+      '<div class="oj-alert dura"><b>No se puede generar todavía</b>' +
+      'El acta la firma el capturado: no puede salir con la fecha, la hora o su identificación en blanco.</div>' +
+      faltan.map(function (x){ return '<div class="oj-kv"><span>Falta</span><span>' + escHtml(x) + '</span></div>'; }).join('') +
+      '<button class="btn bp bbl" style="margin-top:16px" onclick="closeModal();editCase(\'' + c.id + '\')">Editar la captura</button>');
+    return;
+  }
+  closeModal();
+  var m = aiMapa(c);
+  lcPedirExport('INCAU', 'Acta de incautación — ' + m.capNombre, function (sel){
+    lcProducirDoc('INCAU', { caso:c }, sel);
+  });
 }
 
 async function simShowDossier(){

@@ -331,6 +331,24 @@ log(await page.evaluate(() => lcEmpLineas([{ cant: 2, desc: 'celular marca Samsu
   '«02 (dos) celulares …», tal como pedía el documento');
 log(await page.evaluate(() => lcEmpLineas([{ cant: 3, desc: 'revólver calibre 38' }])[0]) === '03 (tres) revólveres calibre 38',
   'El plural respeta el español (revólver → revólveres)');
+
+/* ⚠️ La PUNTUACIÓN al final de la primera palabra no puede colarse dentro de la
+   comprobación del plural. Con «celulares, características…» —que es como se
+   escribe una descripción de corrido— la palabra ya viene en plural, pero la
+   coma impedía ver la «s» final y el documento salía con «celulares,es».
+   Defecto anterior a la incorporación del acta de incautación; se destapó al
+   renderizarla con los datos reales del reporte de campo. */
+const puntuados = await page.evaluate(() => [
+  lcEmpLineas([{ cant: 2, desc: 'celulares, características celular 1 marca Samsung' }])[0],
+  lcEmpLineas([{ cant: 3, desc: 'cuchillos. tipo carnicero' }])[0],
+  lcEmpLineas([{ cant: 2, desc: 'llave; de bronce' }])[0]
+]);
+log(puntuados[0] === '02 (dos) celulares, características celular 1 marca Samsung',
+  '⚠️ Una palabra ya plural con coma detrás no se vuelve a pluralizar', puntuados[0]);
+log(puntuados[1] === '03 (tres) cuchillos. tipo carnicero',
+  'Ni con punto detrás', puntuados[1]);
+log(puntuados[2] === '02 (dos) llaves; de bronce',
+  'Y la que sí hay que pluralizar conserva su signo al final', puntuados[2]);
 log(/01 \(uno\)/.test(await page.textContent('#w-emp-prev')), 'La numeración se ve antes de generar el documento');
 
 /* ═══════════ OBSERVACIÓN 8 · fecha y hora ═══════════ */
