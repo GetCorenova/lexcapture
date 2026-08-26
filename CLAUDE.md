@@ -2774,11 +2774,48 @@ iría el subrayado.
 - ⚠️ **Word no reporta de forma fiable el alto de una fila con celdas centradas**: intentar deducir de
   ahí dónde rompe la página lleva a conclusiones contradictorias. Lo único que sirve es **contar
   páginas**, cambiar un valor y volver a contar.
-- ⚠️ **Divergencia medida y deliberada**: con doce elementos, Word maqueta 1 página y la vista de
-  impresión 2 — el caso queda justo en el límite, donde 1-2 pt por fila entre los dos motores deciden
-  el salto. La suite **no le exige 1 página** para no escribir una expectativa a la medida del
-  resultado; le exige lo que importa, que ninguna de las dos pierda texto (`desbordes` en cero). Que
-  un acta larga pase a una segunda hoja es correcto: para eso el pie dice «Hoja No. N de M».
+- Con doce elementos el acta pasa a **dos hojas**, y Word y la vista de impresión **coinciden**. Es
+  correcto y el formato lo contempla: para eso el pie dice «Hoja No. N de M».
+
+### Segundo pase (mismo día): el recuadro y el escudo
+Reportado con los dos documentos lado a lado —el original escaneado y el que generaba la app—:
+*«la diferencia es enorme»*. Lo era, y por dos cosas concretas.
+
+- ⚠️ **Faltaba el RECUADRO que encierra todo el formato.** Es lo que hace que el acta se lea como un
+  formulario y no como una carta de Word, y era la diferencia que salta a la vista al ponerlos juntos.
+  Se dibuja con `w:pgBorders` —la construcción que significa exactamente «borde de página»— en vez de
+  envolver el cuerpo en una tabla de una celda, que obligaría a anidar las cuatro tablas dentro de
+  otra. ⚠️ **Los cuatro lados NO llevan la misma separación**: 12 pt arriba y a los lados, que es lo
+  medido en el original, y **31 pt abajo**, que es lo que hace falta para que el pie del formato
+  («Versión 18/11/05 · Hoja No. N de M») quede DENTRO del recuadro. Con 12 pt la línea inferior cae
+  por encima del pie y lo deja fuera. `w:space` admite 31 pt como máximo, así que no hay margen para
+  más. La cuenta, en distancias al borde de la hoja: el texto acaba a 1134 tw, el pie se apoya a
+  567 tw y el marco queda a 514 tw — por debajo del pie.
+- ⚠️ **Y el recuadro tenía que salir también en el PDF**, o el `.docx` y la vista de impresión se
+  verían distintos — la divergencia que la regla de exportación prohíbe. `lcPrintDoc` lee ahora el
+  `w:pgBorders` del documento y lo devuelve resuelto a píxeles en `plan.marco`; `lcPrintCss` lo pinta
+  con un `::before` sobre la caja de página, así **`lcPaginar` no se entera de que existe** y no hubo
+  que tocar la paginación. Solo se admite `offsetFrom="text"`, que es como lo emite este formato, el
+  único de la app que usa la construcción.
+- ⚠️ **EL ESCUDO ES EL DE COLOMBIA, NO EL DE LA POLICÍA.** El primer intento reutilizó `OJ_LOGO_B64`
+  como «el escudo que la app ya tiene», sin comprobar cuál es: resulta que es el de la **Policía
+  Nacional**, el del membrete del oficio de puesta a disposición. Este es un formato de Policía
+  Judicial y lleva el **escudo nacional**, igual que los formatos de la Fiscalía — se ve en la
+  fotografía del original. **La lección no es que el escudo estuviera mal: es que reutilizar un
+  recurso por su nombre, sin mirar qué contiene, es lo mismo que inventárselo.**
+- **No se añadió ni un byte de imagen al repositorio.** El escudo se saca del `word/media/` de
+  `TPL_FPJ6`, la plantilla oficial del acta de derechos que la app ya embebe (JPEG 99×100, 4,7 KB),
+  así que es **por construcción** el mismo que imprime un formato oficial. La regresión lo comprueba
+  por identidad byte a byte contra esa plantilla, y comprueba además que **no** es `OJ_LOGO_B64`.
+- ⚠️ **Vive en una clave propia (`cfg._escudoB64`), no en `ojLogoB64`**, y el logo de unidad que el
+  usuario cargue en Ajustes **no lo sustituye**: el escudo es parte del FORMATO, no del equipo. Es la
+  distinción contraria a la del oficio, donde el logo sí es de la unidad.
+- **Y el acta ahora LLENA la hoja.** Al ajustar los altos para que cupiera en una página me pasé de
+  ceñido: el formato ocupaba dos tercios del papel con el resto en blanco, mientras el original lo
+  llena de arriba abajo. Medido el hueco sobrante sobre el render (≈1080 tw) y repartido entre los
+  nueve valores de `AI_ALTO`. Efecto colateral bueno: **Word y la vista de impresión ya coinciden**
+  también en el caso de doce elementos, que antes discrepaban por quedar justo en el límite.
+- `verify_incautacion.mjs` sube a **113 checks**. Anti-caché `?v=76` / `cache-v76`, `_BUILD=76`.
 
 ### Lo que se deja en blanco a propósito
 Los dos espacios de firma, la casilla de la huella y el «No. Expediente CAD» (la app no conoce ese
@@ -2814,7 +2851,7 @@ los invariables, así que salía «celulares,es». También «cuchillos.es» y �
   intacto, «tórax» invariable). `verify_mejora1.mjs` sube a **156 checks** con los tres casos nuevos.
 
 ### Verificación
-- **`verify_incautacion.mjs`, 105 checks**: registro y expediente · el mapeo campo por campo · el
+- **`verify_incautacion.mjs`, 113 checks**: registro y expediente · el mapeo campo por campo · el
   `.docx` casilla por casilla · los elementos numerados y reproducidos · editabilidad · el
   subconjunto del PDF · un solo cuerpo de letra · lo que se deja en blanco · paginación ·
   persistencia, modo invitado y consola limpia.
@@ -2830,11 +2867,11 @@ los invariables, así que salía «celulares,es». También «cuchillos.es» y �
   como proceso huérfano reteniendo el archivo. Al medir con Word, cerrar el documento en un
   `finally` (si una medición falla, el archivo queda bloqueado) y no dejar la instancia viva.
   `ExportAsFixedFormat` en vez de `SaveAs [ref]`, que en PowerShell 5.1 falla.
-- Regresiones en verde (26 suites): **incautación 105** · **mejora1 156** · custodia 99 · fpj6 140 ·
+- Regresiones en verde (26 suites): **incautación 113** · **mejora1 156** · custodia 99 · fpj6 140 ·
   OJ 187 · mejora2 38 · mejora3 51 · firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 ·
   export 74 · envío 39 · almacén 12 · expediente 13 · menú+expediente 16 · personas 25 · invitado 33 ·
   simulador 41 · orden 33 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
-  Anti-caché `?v=75` / `cache-v75`, `_BUILD=75`.
+  Anti-caché `?v=76` / `cache-v76`, `_BUILD=76`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

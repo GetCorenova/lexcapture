@@ -245,10 +245,59 @@ log(!!escudoParte && /rId5"[^>]*image/.test(rels) && new RegExp('r:embed="rId5"'
   'El escudo se embebe, se declara y se referencia — sin relación rota', escudoParte);
 log(/<Default Extension="jpeg"/.test(doc.partes['[Content_Types].xml'].toString('utf8')),
   'Su extensión está declarada en [Content_Types].xml, una sola vez');
-/* ⚠️ Ni un byte de imagen nuevo entra al repositorio: es el MISMO escudo que ya
-   usa el oficio de puesta a disposición. */
-log(await page.evaluate(() => aiCfgDoc().ojLogoB64 === OJ_LOGO_B64),
-  '⚠️ Reutiliza el escudo del oficio: no se añade ninguna imagen al código');
+
+/* ⚠️ EL ESCUDO ES EL DE COLOMBIA, NO EL DE LA POLICÍA. Este es un formato de
+   Policía Judicial y lleva el escudo nacional, igual que los de la Fiscalía. Se
+   comprueba por IDENTIDAD, no de vista: tiene que ser byte a byte el mismo que
+   trae `TPL_FPJ6` —la plantilla oficial del acta de derechos que la app ya
+   embebe— y NO el `OJ_LOGO_B64`, que es el escudo de la Policía Nacional del
+   membrete del oficio. Así no se añade una sola imagen al repositorio. */
+const escudo = await page.evaluate(() => {
+  const partes = unzipDocx(TPL_FPJ6);
+  let dela = '';
+  for (const k in partes) if (/^word\/media\//.test(k)) { dela = _b64FromBytes(partes[k]); break; }
+  return { acta: aiCfgDoc()._escudoB64, plantilla: dela, policia: OJ_LOGO_B64 };
+});
+log(!!escudo.acta && escudo.acta === escudo.plantilla,
+  '⚠️ Es byte a byte el escudo de Colombia de la plantilla oficial del FPJ-6',
+  escudo.acta.length + ' car. de base64');
+log(escudo.acta !== escudo.policia,
+  '⚠️ Y NO es OJ_LOGO_B64, que es el escudo de la POLICÍA del membrete del oficio');
+log(Buffer.from(escudo.acta, 'base64').equals(doc.partes[escudoParte]),
+  'El que viaja dentro del .docx es exactamente ese');
+/* Y el logo de unidad que el usuario haya cargado en Ajustes NO lo sustituye:
+   el escudo es del FORMATO, no del equipo. */
+const noPisa = await page.evaluate(() => {
+  const cfg = DB.getConfig(); cfg.ojLogoB64 = 'AAAA'; cfg.ojLogoMime = 'image/png'; DB.saveConfig(cfg);
+  const r = aiCfgDoc()._escudoB64;
+  delete cfg.ojLogoB64; delete cfg.ojLogoMime; DB.saveConfig(cfg);
+  return r;
+});
+log(noPisa === escudo.plantilla,
+  '⚠️ El logo de la unidad (Ajustes) no lo pisa: el escudo es del formato, no del equipo');
+
+/* ── El recuadro que encierra el formato ── */
+const sectPr = dx.slice(dx.lastIndexOf('<w:sectPr>'));
+log(/<w:pgBorders w:offsetFrom="text">/.test(sectPr),
+  '⚠️ El formato va encerrado en un RECUADRO — es lo que lo hace un formulario y no una carta');
+log(['top', 'left', 'bottom', 'right'].every(l => new RegExp('<w:' + l + ' w:val="single"').test(sectPr)),
+  'Los cuatro lados', (sectPr.match(/w:space="(\d+)"/g) || []).join(' '));
+/* ⚠️ El lado inferior lleva MÁS separación que los otros tres, y no es un
+   descuido: es lo que deja el pie del formato DENTRO del recuadro. La cuenta se
+   hace con los valores REALES del documento, en distancias al borde de la hoja:
+     · el texto acaba a `pgMar/bottom`
+     · la línea del marco cae a `pgMar/bottom − space` (space va en puntos)
+     · el pie se apoya a `pgMar/footer`
+   Para que el pie quede dentro, la línea tiene que caer POR DEBAJO de él, o sea
+   más cerca del borde: `pgMar/bottom − space·20 < footer`. */
+const espAbajo = +(/<w:bottom w:val="single"[^>]*w:space="(\d+)"/.exec(sectPr) || [])[1];
+const espLado = +(/<w:left w:val="single"[^>]*w:space="(\d+)"/.exec(sectPr) || [])[1];
+const marBot = +(/w:bottom="(\d+)"/.exec(sectPr) || [])[1];
+const marFoot = +(/w:footer="(\d+)"/.exec(sectPr) || [])[1];
+const lineaMarco = marBot - espAbajo * 20;
+log(espAbajo > espLado && lineaMarco < marFoot,
+  '⚠️ El lado de abajo se separa lo justo para que el pie quede DENTRO del recuadro',
+  `marco a ${lineaMarco} tw del borde · pie a ${marFoot} tw · lados ${espLado} pt`);
 
 const tablas = (dx.match(/<w:tbl>/g) || []).length;
 log(tablas === 4, 'Cuatro tablas: N° Caso, título, recuadro de elementos y firmas', String(tablas));
@@ -384,6 +433,20 @@ const plan = await page.evaluate(async id => {
 }, idCaso);
 log(plan.ok, 'La vista de impresión traduce el mismo document.xml del .docx');
 
+/* ⚠️ El recuadro tiene que salir TAMBIÉN en el PDF. Si el .docx lo llevara y la
+   vista no, los dos formatos del mismo documento se verían distintos — que es
+   exactamente la divergencia que la regla de exportación prohíbe. */
+const marcoPdf = await page.evaluate(id => {
+  const out = buildActaIncautacionBlob({ caso: DB.getCase(id) }, 'CARTA');
+  const p = lcPrintDoc(out);
+  return { marco: p.marco, css: lcPrintCss(p.papel, p.M, p.marco).indexOf('.pg::before') >= 0 };
+}, idCaso);
+log(!!marcoPdf.marco && marcoPdf.css,
+  '⚠️ Y el recuadro también se dibuja en la vista de impresión: .docx y PDF no divergen',
+  marcoPdf.marco ? `${marcoPdf.marco.grosor}px · top ${Math.round(marcoPdf.marco.top)}px · bottom ${Math.round(marcoPdf.marco.bottom)}px` : 'sin marco');
+log(!!marcoPdf.marco && marcoPdf.marco.bottom < marcoPdf.marco.top,
+  'Con el mismo criterio del .docx: la línea de abajo cae más cerca del borde, para dejar el pie dentro');
+
 /* La vista no puede perder una palabra: es la regla del recorte silencioso. */
 const cotejo = await page.evaluate(async id => {
   const out = buildActaIncautacionBlob({ caso: DB.getCase(id) }, 'CARTA');
@@ -414,7 +477,7 @@ await page.evaluate(() => {
     document.body.appendChild(f);
     var d = f.contentDocument;
     d.open();
-    d.write('<!doctype html><html><head><meta charset="utf-8"><style>' + lcPrintCss(plan.papel, plan.M) +
+    d.write('<!doctype html><html><head><meta charset="utf-8"><style>' + lcPrintCss(plan.papel, plan.M, plan.marco) +
       '</style></head><body><div id="medidor" style="position:absolute;left:-99999px;top:0;visibility:hidden"></div>' +
       '<div id="hojas"></div></body></html>');
     d.close();
@@ -430,14 +493,10 @@ async function paginas(id, etiqueta, tope) {
     r ? `${r.paginas} pág · ${r.desbordes} desbordes` : 'sin plan');
 }
 await paginas(idCaso, 'tres elementos');
-/* ⚠️ DIVERGENCIA MEDIDA Y DELIBERADA. Con doce elementos, Word maqueta el acta
-   en 1 página y esta vista en 2: el recuadro crece cuatro renglones y el caso
-   queda justo en el límite de la hoja, donde 1-2 pt por fila de diferencia
-   entre los dos motores deciden el salto. NO se le exige aquí 1 página para no
-   escribir una expectativa a la medida del resultado. Lo que sí se exige —y es
-   lo que de verdad importa— es que NINGUNA de las dos pierda texto: `desbordes`
-   en cero. Que un acta larga pase a una segunda hoja es correcto y el formato
-   lo contempla: por eso su pie dice «Hoja No. N de M». */
+/* ⚠️ Con doce elementos el recuadro crece cuatro renglones y el acta pasa a DOS
+   hojas — medido en Word real y en esta vista, que ahora coinciden. Es correcto
+   y el formato lo contempla: por eso su pie dice «Hoja No. N de M». Lo que se
+   exige es que ninguna de las dos pierda texto (`desbordes` en cero). */
 await paginas(doce, 'doce elementos', 2);
 
 /* ══ G · UN SOLO CUERPO DE LETRA ═══════════════════════════════════════════ */

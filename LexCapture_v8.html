@@ -2211,7 +2211,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 75;
+var _BUILD = 76;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -9295,7 +9295,33 @@ var AIX_PAPEL = 'CARTA';
    oficio de orden judicial: se resuelve por `cfg.ojLogoB64 || OJ_LOGO_B64`, así
    que no entra un solo byte de imagen nuevo al repositorio y la unidad que haya
    cargado el suyo en Ajustes lo ve también aquí. */
-var AIX_ESCUDO_W = 450000, AIX_ESCUDO_H = 437400;        // EMU (≈1,25 × 1,21 cm)
+var AIX_ESCUDO_W = 450000, AIX_ESCUDO_H = 454500;        // EMU (≈1,25 cm; el JPEG es 99×100)
+/* ⚠️ EL ESCUDO DE ESTE FORMATO ES EL DE COLOMBIA (armas de la República), NO el
+   de la Policía. Es un formato de Policía Judicial y lleva el escudo nacional,
+   igual que los formatos de la Fiscalía — se ve en la fotografía del original.
+   Un primer intento reutilizó `OJ_LOGO_B64`, que es el escudo de la POLICÍA
+   NACIONAL: ese es el del membrete del oficio de puesta a disposición y aquí no
+   corresponde.
+   ⚠️ NO se añade ni un byte de imagen al repositorio ni se dibuja nada: se saca
+   del `word/media/` de `TPL_FPJ6`, la plantilla oficial del acta de derechos
+   que la app ya embebe. Así el escudo del acta de incautación es, por
+   construcción, exactamente el mismo que imprime un formato oficial.
+   ⚠️ Y NO lo sustituye `cfg.ojLogoB64`: ese campo es el logo de la UNIDAD para
+   el membrete del oficio. Aquí el escudo es parte del FORMATO, no del equipo. */
+var _aiEscudo = null;
+function aiEscudoB64(){
+  if(_aiEscudo !== null) return _aiEscudo;
+  _aiEscudo = '';
+  try{
+    var partes = unzipDocx(TPL_FPJ6), k;
+    for(k in partes){
+      if(!/^word\/media\//.test(k)) continue;
+      _aiEscudo = _b64FromBytes(partes[k]);
+      break;
+    }
+  }catch(e){ console.error('[LexCapture] escudo del acta de incautación', e); }
+  return _aiEscudo;
+}
 /* ⚠️ LOS ALTOS DEL FORMATO, EN UN SOLO SITIO. El acta de papel es UNA hoja, y
    estos nueve valores son lo único que decide si sigue cabiendo en una. Van
    juntos a propósito: repartidos por el módulo como números sueltos, ajustar el
@@ -9307,15 +9333,15 @@ var AIX_ESCUDO_W = 450000, AIX_ESCUDO_H = 437400;        // EMU (≈1,25 × 1,21
    `lineRule="exact"`: así el renglón crece cuando el funcionario escribe en él
    en vez de recortarle el texto. */
 var AI_ALTO = {
-  renglon:   265,   // cada renglón diligenciable del cuerpo
-  elemento:  290,   // cada renglón del recuadro de elementos
-  observ:    285,   // cada línea de OBSERVACIONES
-  firma:     560,   // espacio para firmar, encima de su rótulo
-  huella:    800,   // casilla de la huella
-  aireCab:   110,   // tras el N° Caso
-  aireTit:   130,   // tras el bloque de título
-  aireSec:   110,   // antes de los elementos y antes del motivo
-  aireFirma: 110    // antes del bloque de firmas
+  renglon:   275,   // cada renglón diligenciable del cuerpo
+  elemento:  320,   // cada renglón del recuadro de elementos
+  observ:    305,   // cada línea de OBSERVACIONES
+  firma:     660,   // espacio para firmar, encima de su rótulo
+  huella:    880,   // casilla de la huella
+  aireCab:   125,   // tras el N° Caso
+  aireTit:   155,   // tras el bloque de título
+  aireSec:   135,   // antes de los elementos y antes del motivo
+  aireFirma: 140    // antes del bloque de firmas
 };
 /* ⚠️ HOLGURA DEL RENGLÓN, en twips. El relleno del subrayado se calcula midiendo
    el texto con canvas, y esa medida NO coincide al twip con la que hace Word:
@@ -9534,7 +9560,7 @@ function aiTablaTitulo(cfg, m){
 }
 
 function aiEscudoXml(cfg){
-  if (!cfg.ojLogoB64) return '';
+  if (!cfg._escudoB64) return '';
   var A = 'http://schemas.openxmlformats.org/drawingml/2006/main';
   return '<w:r><w:rPr><w:noProof/></w:rPr><w:drawing>' +
     '<wp:inline distT="0" distB="0" distL="0" distR="0">' +
@@ -9781,8 +9807,34 @@ function aiDocCuerpo(m, cfg){
 function aiCfgDoc(){
   var cfg = {}; try { cfg = DB.getConfig() || {}; } catch (e) {}
   var out = {}; for (var k in cfg) out[k] = cfg[k];
-  if (!out.ojLogoB64){ out.ojLogoB64 = OJ_LOGO_B64; out.ojLogoMime = OJ_LOGO_MIME; }
+  /* En una clave PROPIA, no en `ojLogoB64`: el escudo del formato y el logo de
+     la unidad son dos cosas distintas y no pueden pisarse. */
+  out._escudoB64 = aiEscudoB64();
   return out;
+}
+/* ⚠️ EL RECUADRO QUE ENCIERRA TODO EL FORMATO. Es lo que hace que el acta se
+   lea como un formulario y no como una carta de Word, y era la diferencia más
+   visible con el original. Se dibuja con `w:pgBorders`, que es la construcción
+   que significa exactamente eso —un borde de página— en vez de envolver el
+   cuerpo en una tabla de una celda, que obligaría a anidar las cuatro tablas.
+   ⚠️ Los cuatro lados NO llevan la misma separación, y no es un descuido:
+     · 12 pt arriba y a los lados, que es la separación medida en el original;
+     · 31 pt abajo, que es lo que hace falta para que el PIE del formato
+       («Versión 18/11/05 · Hoja No. N de M») quede DENTRO del recuadro. Con
+       12 pt, la línea inferior cae por encima del pie y lo deja fuera — en el
+       original el pie va dentro. Las cuentas, desde el borde inferior de la
+       hoja: el texto acaba a 56,7 pt, el pie ocupa de 28,3 a ~37,3 pt, y el
+       marco a 31 pt de separación queda a 25,7 pt, por debajo del pie.
+   ⚠️ `w:space` admite como máximo 31 pt: no se puede alejar más. */
+var AI_MARCO = { sz:6, color:'000000', arriba:12, lado:12, abajo:31 };
+function aiMarcoXml(){
+  var m = AI_MARCO;
+  function b(lado, esp){
+    return '<w:' + lado + ' w:val="single" w:sz="' + m.sz + '" w:space="' + esp + '" w:color="' + m.color + '"/>';
+  }
+  return '<w:pgBorders w:offsetFrom="text">' +
+    b('top', m.arriba) + b('left', m.lado) + b('bottom', m.abajo) + b('right', m.lado) +
+    '</w:pgBorders>';
 }
 function aiSectPr(){
   var p = lcPapel(AIX_PAPEL);
@@ -9791,10 +9843,11 @@ function aiSectPr(){
     '<w:pgSz w:w="' + p.w + '" w:h="' + p.h + '"/>' +
     '<w:pgMar w:top="' + AIX_MAR.top + '" w:right="' + AIX_MAR.right + '" w:bottom="' + AIX_MAR.bottom +
       '" w:left="' + AIX_MAR.left + '" w:header="' + AIX_MAR.header + '" w:footer="' + AIX_MAR.footer + '" w:gutter="0"/>' +
+    aiMarcoXml() +
     '<w:cols w:space="720"/><w:docGrid w:linePitch="360"/></w:sectPr>';
 }
 function aiPaquete(cfg){
-  var f = {}, ext = cfg.ojLogoB64 ? ojLogoExt(cfg) : '';
+  var f = {}, ext = cfg._escudoB64 ? 'jpeg' : '';
   f['[Content_Types].xml'] = ojBytes(OJ_XMLDECL +
     '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
@@ -9847,7 +9900,7 @@ function aiPaquete(cfg){
     '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
     '</w:settings>');
   f['word/footer1.xml'] = ojBytes(OJ_XMLDECL + '<w:ftr ' + OJ_NS_W + '>' + aiPieXml() + '</w:ftr>');
-  if (ext) f['word/media/escudo.' + ext] = ojB64Bytes(cfg.ojLogoB64);
+  if (ext) f['word/media/escudo.' + ext] = ojB64Bytes(cfg._escudoB64);
   return f;
 }
 
@@ -15073,6 +15126,27 @@ function lcPrintDoc(out){
     return byType;
   }
   var hdrs=parte('header')||{}, ftrs=parte('footer')||{};
+  /* Recuadro de página (`w:pgBorders`), si el documento lo declara. Solo se
+     admite `offsetFrom="text"`, que es como lo emite el acta de incautación —el
+     único formato que lo usa—: cada lado se separa del área de texto los puntos
+     que diga su `w:space`. Se devuelve ya en píxeles, medido desde el borde de
+     la hoja, para que el CSS de impresión no tenga que saber de twips. */
+  var marco=null, pb=sect?lcHijo(sect,'pgBorders'):null;
+  if(pb && (lcAttr(pb,'offsetFrom')||'text')==='text'){
+    var lado=function(n,base){
+      var b=lcHijo(pb,n);
+      if(!b || (lcAttr(b,'val')||'none')==='none') return null;
+      return Math.max(0, base-(Number(lcAttr(b,'space'))||0)*(96/72));
+    };
+    var t=lado('top',M.top), l=lado('left',M.left), b2=lado('bottom',M.bottom), r=lado('right',M.right);
+    if(t!==null&&l!==null&&b2!==null&&r!==null){
+      var g=lcHijo(pb,'top');
+      marco={ top:t, left:l, bottom:b2, right:r,
+              // w:sz va en octavos de punto; el trazo más fino visible es 1 px.
+              grosor:Math.max(1,Math.round((Number(lcAttr(g,'sz'))||6)/8*(96/72))),
+              color:'#'+((lcAttr(g,'color')||'000000').replace(/^auto$/,'000000')) };
+    }
+  }
   function render(path){
     if(!path||!files[path]) return {html:'',rels:{}};
     var nombre=path.replace(/^word\//,'');
@@ -15085,15 +15159,23 @@ function lcPrintDoc(out){
   var ftrFirst=render(ftrs.first||ftrs.default), ftrDef=render(ftrs.default||ftrs.first);
   var bloques=lcBloques(body,files,relsDoc);
   return {
-    papel:papel, M:M, bloques:bloques,
+    papel:papel, M:M, bloques:bloques, marco:marco,
     hdrFirst:hdrFirst.html, hdrDef:hdrDef.html,
     ftrFirst:ftrFirst.html, ftrDef:ftrDef.html,
     titulo:out.label||'Documento'
   };
 }
-function lcPrintCss(papel,M){
+/* ⚠️ `marco` = el `w:pgBorders` del documento, ya resuelto a píxeles. Sin esto,
+   el .docx saldría con el recuadro del formato y el PDF sin él: exactamente la
+   divergencia entre los dos motores que la regla de exportación prohíbe.
+   Se dibuja con un ::before sobre la caja de página, así la paginación no se
+   entera de que existe y no hay que tocar `lcPaginar`. */
+function lcPrintCss(papel,M,marco){
   var wPx=lcPx(papel.w), hPx=lcPx(papel.h);
   return '@page{size:'+papel.cssW+' '+papel.cssH+';margin:0}'+
+    (marco?'.pg::before{content:"";position:absolute;pointer-events:none;'+
+      'left:'+marco.left+'px;top:'+marco.top+'px;right:'+marco.right+'px;bottom:'+marco.bottom+'px;'+
+      'border:'+marco.grosor+'px solid '+marco.color+'}':'')+
     'html,body{margin:0;padding:0;background:#525659}'+
     /* ⚠️ Chrome NO imprime fondos por defecto («Gráficos de fondo» viene
        desmarcado en su diálogo). Sin esto, al exportar a PDF se perdía la trama
@@ -15248,7 +15330,7 @@ function lcImprimir(out){
   var d=f.contentDocument;
   d.open();
   d.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escHtml(plan.titulo)+'</title>'+
-    '<style>'+lcPrintCss(plan.papel,plan.M)+'</style></head><body>'+
+    '<style>'+lcPrintCss(plan.papel,plan.M,plan.marco)+'</style></head><body>'+
     '<div id="medidor" style="position:absolute;left:-99999px;top:0;visibility:hidden"></div>'+
     // Precarga: el membrete se escribe ya aquí para que sus imágenes estén
     // decodificadas ANTES de medir alturas. Si no, el logo mide 0 px al paginar
