@@ -1981,7 +1981,10 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
       <input class="desp-search" id="p-search" type="search" placeholder="Buscar por nombre o cédula…" oninput="renderPersonas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-p-search-nofill" data-form-type="other" data-lpignore="true">
-      <div class="ord" hidden><button class="ord-btn" id="ord-personas" onclick="lcAbrirOrden('personas')"></button></div>
+      <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:8px;flex-wrap:wrap">
+        <button class="ord-btn" id="ord-personas" onclick="lcAbrirOrden('personas')" style="flex-shrink:0" title="Ordenar"></button>
+        <button class="ord-btn" id="f-calidad" onclick="lcAbrirCalidad('personas')" style="flex-shrink:0" title="Filtrar por calidad"></button>
+      </div>
       <div id="pl"></div>
     </div>
   </section>
@@ -3285,6 +3288,63 @@ var LC_ORD_IC = {
   za: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v14"/><path d="m3 15 3 3 3-3"/><path d="M13 4h5M13 9h5M14.5 4 13 9M16.5 4 18 9"/><path d="M13 15h5l-5 5h5"/></svg>',
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
 };
+
+/* Filtro de calidad procesal: Capturados, Víctimas, Testigos, o Todos */
+var LC_CAL = {
+  personas: { key:'filtroCalidadPersonas', def:'todos', titulo:'Personas' }
+};
+var LC_CAL_OPC = [
+  { id:'todos',    corto:'Todos',      lbl:'Mostrar todos',     de:'Capturados, víctimas y testigos',     rol:null },
+  { id:'capturado', corto:'Capturados', lbl:'Solo capturados',   de:'Personas capturadas en flagrancia',   rol:'Capturado' },
+  { id:'victima',  corto:'Víctimas',   lbl:'Solo víctimas',     de:'Personas víctimas del delito',        rol:'Víctima' },
+  { id:'testigo',  corto:'Testigos',   lbl:'Solo testigos',     de:'Personas que presenciaron hechos',    rol:'Testigo' }
+];
+var LC_CAL_IC = {
+  todos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>',
+  capturado:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8a3.5 3.5 0 0 1 3.5-3.5A3.5 3.5 0 0 1 12 4.5 3.5 3.5 0 0 1 15 8v3h1.5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H3.5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2H5v-3z"/><path d="M9 13v2M15 13v2"/></svg>',
+  victima:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c6.627 0 12 5.373 12 12s-5.373 12-12 12S0 20.627 0 14 5.373 2 12 2z"/><path d="M12 7v8M9 10h6"/></svg>',
+  testigo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><path d="M12 5C7 5 3 8 3 12s4 7 9 7 9-3 9-7-4-7-9-7z"/><path d="M12 9v6M15 12H9"/></svg>'
+};
+function lcCalidadOpc(id) {
+  for (var i=0;i<LC_CAL_OPC.length;i++) if (LC_CAL_OPC[i].id===id) return LC_CAL_OPC[i];
+  return null;
+}
+function lcCalidad(lista) {
+  var d = LC_CAL[lista]; if (!d) return 'todos';
+  try { var v = DB.getConfig()[d.key]; return lcCalidadOpc(v) ? v : d.def; } catch(e) { return d.def; }
+}
+function lcGuardarCalidad(lista, val) {
+  var d = LC_CAL[lista];
+  if (!d || !lcCalidadOpc(val)) return false;
+  try { var cfg = DB.getConfig(); cfg[d.key] = val; DB.saveConfig(cfg); return true; } catch(e) { return false; }
+}
+function renderCalidadBtn(lista, n) {
+  var b = document.getElementById('f-calidad'); if (!b) return;
+  var c = lcCalidadOpc(lcCalidad(lista)) || LC_CAL_OPC[0];
+  b.innerHTML = LC_CAL_IC[c.id] + '<span>' + c.corto + '</span>' +
+    '<svg class="ord-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  b.title = 'Filtrar por: ' + c.lbl + ' — toca para cambiarlo';
+  b.setAttribute('aria-label', b.title);
+  b.hidden = !n;
+}
+function lcAbrirCalidad(lista) {
+  var d = LC_CAL[lista]; if (!d) return;
+  var act = lcCalidad(lista);
+  var head = '<div class="prow-body"><div class="prow-name">Filtrar ' + d.titulo.toLowerCase() + '</div>' +
+    '<div class="prow-meta"><span class="prow-doc">Filtro por calidad procesal</span></div></div>';
+  openActionSheet(head, LC_CAL_OPC.map(function(c){
+    var on = c.id===act;
+    return actItem('lcAplicarCalidad', lista+':'+c.id, on?LC_ORD_IC.ok:LC_CAL_IC[c.id],
+      c.lbl, on ? 'Es el filtro actual' : c.de, '', on?ACT_ACC:'');
+  }).join(''));
+}
+function lcAplicarCalidad(arg) {
+  var p = String(arg).split(':'), lista = p[0], val = p[1];
+  var d = LC_CAL[lista], c = lcCalidadOpc(val);
+  if (!d || !c) return;
+  if (!lcGuardarCalidad(lista, val)) { toast('No se pudo guardar el filtro'); return; }
+  if (lista==='personas') renderPersonas();
+}
 function lcOrdenOpc(id) {
   for (var i=0;i<LC_ORD_OPC.length;i++) if (LC_ORD_OPC[i].id===id) return LC_ORD_OPC[i];
   return null;
@@ -4661,9 +4721,13 @@ function renderPersonas() {
   var all = DB.getPersons();
   var pp = all;
   if (q) { var ql = q.toLowerCase(); pp = all.filter(function(p) { return ((p.priNom||'')+' '+(p.segNom||'')+' '+(p.priApe||'')+' '+(p.segApe||'')+' '+(p.numDoc||'')).toLowerCase().indexOf(ql) >= 0; }); }
+  // Filtro por calidad procesal
+  var cal = lcCalidadOpc(lcCalidad('personas'));
+  if (cal && cal.rol) { pp = pp.filter(function(p) { return p.rol === cal.rol; }); }
   // Antes del early-return de la lista vacía: con el buscador filtrando, el
   // control sigue haciendo falta.
   renderOrdenBtn('personas', all.length);
+  renderCalidadBtn('personas', all.length);
   // Sin `fecha`: las personas no llevan marca de alta y no se les añade ninguna
   // — su posición en el arreglo ya es el orden en que se registraron.
   pp = lcOrdenar(pp, 'personas', { nombre: fullName });
