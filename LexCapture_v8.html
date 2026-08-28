@@ -47,7 +47,7 @@
   /* — Texto: 15.2:1 / 7.8:1 / 5.1:1 sobre --bg — */
   --text:#E7EAF2;
   --text-2:#9BA3B5;
-  --text-3:#7B8499;
+  --text-3:#838B9F;
 
   /* — Acento índigo (7:1 sobre --bg) — */
   --acc:#8A94F8;
@@ -64,6 +64,15 @@
   --ok:#5BC98C;      --ok-bg:rgba(91,201,140,.12);
   --danger:#F27078;  --err:var(--danger); --errB:rgba(242,112,120,.10);
   --warn:#E8A54F;    --warn-bg:rgba(232,165,79,.12);
+  /* Informativo: reutiliza el azul que ya tiene el canal de correo — no se
+     introduce un matiz nuevo en el sistema, solo se le da nombre semántico. */
+  --info:#6FA9F2;    --info-bg:rgba(111,169,242,.12);
+
+  /* — Superficies de estado. Antes cada componente resolvía «seleccionado» y
+     «deshabilitado» por su cuenta; ahora tienen token, como --hover y --pressed. — */
+  --surface-selected:rgba(138,148,248,.14);
+  --surface-disabled:rgba(163,174,199,.05);
+  --text-disabled:var(--text-3);
 
   /* — Semánticos legales (hue reconocible en campo, contraste ≥7:1) — */
   --flag:#D98E35;  --flag-2:#E8A54F;  --flag-bg:rgba(232,165,79,.12);
@@ -121,7 +130,7 @@
 
   --text:#181C25;
   --text-2:#4E5666;
-  --text-3:#6C7488;
+  --text-3:#636B7D;
 
   --acc:#4E5BD8;
   --acc-hover:#4351CE;
@@ -135,6 +144,10 @@
   --ok:#0C7A4F;      --ok-bg:rgba(12,122,79,.10);
   --danger:#C7222F;  --errB:rgba(199,34,47,.07);
   --warn:#A85A12;    --warn-bg:rgba(168,90,18,.10);
+  --info:#1663C7;    --info-bg:rgba(22,99,199,.09);
+
+  --surface-selected:rgba(78,91,216,.10);
+  --surface-disabled:rgba(24,28,38,.04);
 
   --flag:#B45309;  --flag-2:#9A4E06;  --flag-bg:rgba(180,83,9,.10);
   --oj:#6D3FD4;    --oj-2:#6D3FD4;    --oj-bg:rgba(109,63,212,.09);
@@ -258,14 +271,15 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #guest-bar{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1400;
   align-items:center;gap:12px;padding:8px 14px;
-  background:var(--flag-2);color:#0E1020;
+  background:var(--flag-2);color:var(--acc-fg);
   font-size:12.5px;line-height:1.35;
 }
 #guest-bar.on{display:flex}
 #guest-bar .gb-txt{flex:1;min-width:0}
 #guest-bar .gb-btn{
-  flex:0 0 auto;padding:6px 14px;border-radius:8px;border:1px solid rgba(14,16,32,.35);
-  background:transparent;color:#0E1020;font-size:12px;font-weight:600;cursor:pointer;
+  flex:0 0 auto;padding:6px 14px;border-radius:8px;
+  border:1px solid color-mix(in srgb,var(--acc-fg) 35%,transparent);
+  background:transparent;color:var(--acc-fg);font-size:12px;font-weight:600;cursor:pointer;
 }
 body.guest{padding-top:38px}
 
@@ -1087,7 +1101,10 @@ body.guest{padding-top:38px}
 }
 .fw-ph{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  color:#8A93A6;font-size:12.5px;text-align:center;padding:0 18px;pointer-events:none;
+  /* ⚠️ Literal a propósito: el lienzo de firma tiene fondo BLANCO FIJO en los dos
+     temas (la firma es un PNG de trazo negro), así que este texto no puede usar un
+     token que se invierta. #6E7685 da 4,57:1 sobre blanco — el anterior, 3,09:1. */
+  color:#6E7685;font-size:12.5px;text-align:center;padding:0 18px;pointer-events:none;
 }
 .fw-pad.inked .fw-ph,.fw-pad.inked .fw-base{opacity:0}
 .fw-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -1199,6 +1216,9 @@ body.guest{padding-top:38px}
 .rp-btn:active{border-color:var(--acc)}
 
 /* ═══ SELECTOR DE TEMA (segmented control) ═══ */
+/* Pista bajo un campo de grado: enseña la abreviatura que se va a derivar. */
+.lc-ab{font-size:11.5px;line-height:1.3;color:var(--text-3);margin-top:5px;min-height:15px}
+.lc-ab.ok{color:var(--ok);font-weight:550}
 .theme-seg{display:flex;gap:0;background:var(--field);border:1px solid var(--border);border-radius:10px;padding:3px}
 .theme-seg button{
   flex:1;padding:10px;min-height:42px;border-radius:8px;border:none;
@@ -1463,7 +1483,15 @@ body.guest{padding-top:38px}
   .wpn{padding-bottom:24px}
 }
 </style>
-<script>try{if(localStorage.getItem('lc_theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
+<script>/* Anti-parpadeo: corre ANTES de pintar. Resuelve las tres preferencias
+   ('dark' | 'light' | 'system') a los dos únicos estados que el CSS conoce, así
+   que la hoja de estilos NO cambia: el documento sigue llevando data-theme="light"
+   o nada. ⚠️ Sin clave guardada se resuelve OSCURO, que es el comportamiento que
+   la app ya tenía — un equipo que nunca abrió Ajustes no puede cambiar de aspecto
+   al actualizar. Sistema es una elección explícita, no el nuevo defecto. */
+try{var _t=localStorage.getItem('lc_theme')||'dark';
+if(_t==='system')_t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';
+if(_t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
 </head>
 <body>
 
@@ -1731,10 +1759,11 @@ body.guest{padding-top:38px}
         </div>
         <div class="aj-sec-body" id="aj-body-apariencia-sec" style="padding-top:12px">
           <div class="theme-seg" role="group" aria-label="Tema de la interfaz">
-            <button type="button" id="th-dark" class="on" onclick="setTheme('dark')">Oscuro</button>
-            <button type="button" id="th-light" onclick="setTheme('light')">Claro</button>
+            <button type="button" id="th-dark" class="on" aria-pressed="true" onclick="setTheme('dark')">Oscuro</button>
+            <button type="button" id="th-light" aria-pressed="false" onclick="setTheme('light')">Claro</button>
+            <button type="button" id="th-system" aria-pressed="false" onclick="setTheme('system')">Sistema</button>
           </div>
-          <p style="font-size:.72rem;color:var(--txM);margin-top:8px">El cambio se aplica de inmediato y se recuerda en este dispositivo.</p>
+          <p id="th-nota" style="font-size:.72rem;color:var(--txM);margin-top:8px">El cambio se aplica de inmediato y se recuerda en este dispositivo.</p>
         </div>
       </div>
 
@@ -1788,8 +1817,10 @@ body.guest{padding-top:38px}
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Dossier</span><span class="aj-sec-arr" id="aj-arr-dossier-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-dossier-sec" style="display:none;padding-top:12px">
-          <div class="fg"><label class="fl">VERDE 3 — Grado y nombre completo del oficial</label><input class="fi" id="aj-verde3" placeholder="Ej: Subteniente Juan Martínez López"></div>
-          <div class="fg"><label class="fl">DIAMANTE 3 — Grado y nombre completo del oficial</label><input class="fi" id="aj-diamante3" placeholder="Ej: Teniente Laura Gómez Ríos"></div>
+          <!-- VERDE 3 y DIAMANTE 3 son funcionarios, igual que «Conocieron el caso»:
+               se eligen de los perfiles registrados y solo se teclean si no lo están. -->
+          <div class="fg"><label class="fl">VERDE 3 — oficial</label><div id="aj-verde3-box"></div></div>
+          <div class="fg"><label class="fl">DIAMANTE 3 — oficial</label><div id="aj-diamante3-box"></div></div>
           <div class="fr">
             <div class="fg"><label class="fl">Patrulla</label><input class="fi" id="aj-patrulla" placeholder="Ej: 32"></div>
             <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-unidad" placeholder="Ej: CAI Parque Bolívar"></div>
@@ -2106,6 +2137,9 @@ body.guest{padding-top:38px}
 <!-- Municipios: base embebida + los que el usuario haya diligenciado en su zona.
      Lo pinta lcGeoPintarDatalist() en cada render del wizard. -->
 <datalist id="dl-muni"></datalist>
+<!-- Grados: lo pinta lcGradoPintarDatalist() al arrancar. La escritura libre se
+     conserva a propósito — un datalist sugiere, no restringe. -->
+<datalist id="dl-grado"></datalist>
 <datalist id="dl-barrio">
   <option value="La Candelaria"><option value="Villanueva"><option value="San Benito"><option value="Guayaquil">
   <option value="Boston"><option value="Buenos Aires"><option value="El Chagualo"><option value="Jesús Nazareno">
@@ -2164,25 +2198,67 @@ function markActive(name) {
   });
 }
 
-/* ═══ TEMA CLARO / OSCURO ═══ */
+/* ═══ TEMA CLARO / OSCURO / SISTEMA ═══
+   Hay TRES preferencias ('dark' | 'light' | 'system') y solo DOS aspectos. La
+   preferencia vive en localStorage; lo que llega al DOM es siempre el aspecto ya
+   resuelto — data-theme="light" o ningún atributo—, que es exactamente lo que el
+   CSS entendía antes. Por eso el modo Sistema no cambió una sola regla de estilo.
+
+   ⚠️ La clave 'lc_theme' se guarda en localStorage PLANO, no cifrada: tiene que
+   poder aplicarse antes de desbloquear el PIN. Decisión anterior, se mantiene.
+   ⚠️ Sin clave guardada se resuelve OSCURO. Sistema no es el nuevo defecto: un
+   equipo que nunca tocó Ajustes conserva el aspecto que ya tenía. */
 function getTheme() {
-  try { return localStorage.getItem('lc_theme') === 'light' ? 'light' : 'dark'; } catch (e) { return 'dark'; }
+  try {
+    var t = localStorage.getItem('lc_theme');
+    return (t === 'light' || t === 'system') ? t : 'dark';
+  } catch (e) { return 'dark'; }
 }
-function applyTheme(t) {
-  if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+/* Lo que pide el sistema operativo ahora mismo. */
+function lcThemeSistema() {
+  try { return (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark'; }
+  catch (e) { return 'dark'; }
+}
+/* Preferencia → aspecto. Punto único: nadie más decide esto. */
+function lcThemeResuelto(pref) {
+  pref = pref || getTheme();
+  return pref === 'system' ? lcThemeSistema() : (pref === 'light' ? 'light' : 'dark');
+}
+function applyTheme(pref) {
+  var real = lcThemeResuelto(pref);
+  if (real === 'light') document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');
   var meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', t === 'light' ? '#F4F5F8' : '#0C0E13');
-  var bd = document.getElementById('th-dark'), bl = document.getElementById('th-light');
-  if (bd && bl) {
-    bd.classList.toggle('on', t !== 'light');
-    bl.classList.toggle('on', t === 'light');
-  }
+  if (meta) meta.setAttribute('content', real === 'light' ? '#F4F5F8' : '#0C0E13');
+  /* Los botones marcan la PREFERENCIA, no el aspecto: con Sistema activo el
+     marcado sigue siendo «Sistema» aunque se esté viendo claro. Marcar el
+     aspecto haría que la elección del usuario pareciera haberse perdido. */
+  var p = (pref === 'light' || pref === 'system') ? pref : 'dark';
+  [['th-dark','dark'],['th-light','light'],['th-system','system']].forEach(function (b) {
+    var el = document.getElementById(b[0]);
+    if (el) { el.classList.toggle('on', p === b[1]); el.setAttribute('aria-pressed', p === b[1] ? 'true' : 'false'); }
+  });
+  var nota = document.getElementById('th-nota');
+  if (nota) nota.textContent = p === 'system'
+    ? 'Sigue la apariencia del dispositivo — ahora mismo, ' + (real === 'light' ? 'claro' : 'oscuro') + '.'
+    : 'El cambio se aplica de inmediato y se recuerda en este dispositivo.';
 }
-function setTheme(t) {
-  try { localStorage.setItem('lc_theme', t); } catch (e) {}
-  applyTheme(t);
+function setTheme(pref) {
+  try { localStorage.setItem('lc_theme', pref); } catch (e) {}
+  applyTheme(pref);
 }
+/* El sistema puede cambiar mientras la app está abierta (al anochecer, o al
+   activar el ahorro de batería). Solo se repinta si la preferencia es Sistema.
+   ⚠️ addEventListener('change') no existe en WebKit antiguo, de ahí el respaldo. */
+(function () {
+  try {
+    if (!window.matchMedia) return;
+    var mq = matchMedia('(prefers-color-scheme: light)');
+    var alCambiar = function () { if (getTheme() === 'system') applyTheme('system'); };
+    if (mq.addEventListener) mq.addEventListener('change', alCambiar);
+    else if (mq.addListener) mq.addListener(alCambiar);
+  } catch (e) {}
+})();
 
 function showToast(msg, dur) {
   if (!dur) dur = 2500;
@@ -2211,7 +2287,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 77;
+var _BUILD = 80;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3749,6 +3825,10 @@ async function wizSave() {
   lcLimpiarListas(wc);      // fuera las filas que quedaron en blanco
   if (wc.tipo==='OJ'){wc.sinVictima=true;wc.sinTestigo=true;wc.victimas=[];wc.testigos=[];}
   var saved=wc;
+  /* ⚠️ FASE F — la foto del dossier se congela AQUÍ, con la configuración del
+     momento en que el procedimiento se guarda. lcCongelarDossier no la pisa si
+     el caso ya la tiene: editar una captura vieja no reescribe su historia. */
+  lcCongelarDossier(saved);
   try {
     await DB.saveCase(saved);
     var jobs=(saved.capturados||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Capturado'}));});
@@ -5216,7 +5296,7 @@ function rStep7(){
   return '<div class="st" style="margin-top:0">Servidor que efectúa la captura</div>'+
     (hasPerfiles?'<button class="btn bs bsm mb16" onclick="loadPerfilServ()">Cargar perfil activo</button>':
      (cfg.servidor&&cfg.servidor.nombre?'<button class="btn bs bsm mb16" onclick="loadDefServ()">Usar datos guardados</button>':''))+
-    '<div class="fr"><div class="fg"><label class="fl">Grado</label><input class="fi" id="w-sGrado" value="'+(s.grado||'')+'"></div>'+
+    '<div class="fr"><div class="fg"><label class="fl">Grado</label>'+lcGradoInput('w-sGrado',s.grado)+'</div>'+
     '<div class="fg"><label class="fl">Identificación</label><input class="fi mono" id="w-sId" value="'+(s.ident||'')+'"></div></div>'+
     '<div class="fg"><label class="fl">Nombres y apellidos</label><input class="fi" id="w-sNombre" value="'+(s.nombre||'')+'"></div>'+
     '<div class="fg"><label class="fl">Entidad</label><input class="fi" id="w-sEntidad" placeholder="Nombre de la institución" value="'+(s.entidad||'')+'"></div>'+
@@ -5826,12 +5906,157 @@ function saveDosierSecciones(secs) {
   var cfg=DB.getConfig(); cfg.dossierSecciones=secs; DB.saveConfig(cfg);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE F · EL DOSSIER DEJA DE REESCRIBIR EL PASADO
+
+   El defecto que corrige, medido en la auditoría del 2026-08-28: la sección
+   «Conocieron el caso», la patrulla, VERDE 3 y DIAMANTE 3 se resolvían LEYENDO
+   `cfg` en el momento de imprimir, y el caso no guardaba nunca esa foto. Un
+   funcionario que ascendía de Subintendente a Intendente y actualizaba su
+   perfil cambiaba, retroactivamente y sin avisar, el dossier de TODAS sus
+   capturas anteriores. Un dossier reimpreso meses después ya no coincidía con
+   el que se envió.
+
+   ⚠️ LA CORRECCIÓN TIENE DOS MITADES Y SON INSEPARABLES:
+     1. La CONFIGURACIÓN guarda REFERENCIAS a los perfiles (vivas): así el dato
+        se captura una vez y actualizar un perfil actualiza lo que se propondrá
+        en las capturas siguientes.
+     2. El CASO guarda los valores ya RESUELTOS (congelados) al guardarse: así
+        lo que se emitió queda como se emitió.
+   Hacer solo la primera —«que el dossier lea el perfil»— AGRAVA el problema,
+   porque ata todavía más salidas a un dato vivo. Es el error que la auditoría
+   dejó advertido por escrito.
+
+   ⚠️ NADA SE MIGRA A LA FUERZA. Una captura guardada antes de esto no tiene
+   foto; se sigue proyectando desde `cfg` al leer, exactamente como hasta ahora.
+   Es el mismo criterio con el que `genDossier` trata las capturas OJ anteriores
+   a Mejora 3: la proyección se hace al leer, sobre una copia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Un funcionario del dossier puede venir de tres sitios:
+     · {pid:'…'}  → referencia a un perfil registrado (lo nuevo)
+     · 'SI Nelson David' → texto libre, que es lo que había antes y lo que se
+       sigue usando para alguien que no tiene perfil en este equipo
+     · {txt:'…'}  → texto libre escrito en esta pantalla
+   `lcRefTexto` es el ÚNICO punto que los resuelve, para que la pantalla de
+   Ajustes, la foto que se congela y el dossier no puedan discrepar. */
+function lcRefTexto(cfg, ref) {
+  if (!ref) return '';
+  if (typeof ref === 'string') return ref.trim();
+  if (ref.txt) return String(ref.txt).trim();
+  if (ref.pid) {
+    var p = null;
+    (cfg && cfg.perfiles || []).forEach(function (x) { if (x.id === ref.pid) p = x; });
+    /* ⚠️ Un perfil borrado deja la referencia colgando. Se devuelve el nombre que
+       la referencia guardó como respaldo, si lo tiene; si no, cadena vacía y la
+       sección simplemente no lo imprime. Inventar un nombre sería peor. */
+    if (!p) return ref.nom ? String(ref.nom).trim() : '';
+    return lcGradoNombre(p.grado, p.nombre);
+  }
+  return '';
+}
+
+/* La foto que se congela en el caso. Se toma de la configuración VIVA en el
+   momento de guardar, que es cuando el procedimiento ocurrió. */
+function lcDossierSnap(cfg) {
+  cfg = cfg || DB.getConfig();
+  return {
+    patrulla: patrullaLabel(cfg),
+    conocieron: getConocieronList(cfg),
+    verde3: lcRefTexto(cfg, cfg.dosVerde3),
+    diamante3: lcRefTexto(cfg, cfg.dosDiamante3),
+    ts: Date.now()
+  };
+}
+
+/* Se escribe UNA sola vez, la primera que se guarda el caso.
+   ⚠️ Editar una captura vieja NO reescribe su foto: la patrulla que conoció el
+   caso no cambia porque hoy se corrija un dato del capturado. Si el caso no
+   tiene foto (es anterior a esta fase) se le pone la de hoy, que es exactamente
+   lo que ese dossier venía imprimiendo — no se le cambia nada. */
+function lcCongelarDossier(caso, cfg) {
+  if (!caso || caso.dossierSnap) return caso;
+  caso.dossierSnap = lcDossierSnap(cfg);
+  return caso;
+}
+
+/* Lo que el dossier debe usar: la foto del caso si la tiene, y si no la
+   configuración de hoy — que es el comportamiento anterior, intacto. */
+function lcDossierDe(caso, cfg) {
+  var s = caso && caso.dossierSnap;
+  if (s) return s;
+  cfg = cfg || DB.getConfig();
+  return {
+    patrulla: patrullaLabel(cfg),
+    conocieron: getConocieronList(cfg),
+    verde3: lcRefTexto(cfg, cfg.dosVerde3),
+    diamante3: lcRefTexto(cfg, cfg.dosDiamante3),
+    ts: 0
+  };
+}
+
+/* ── Interfaz: elegir de los perfiles registrados en vez de teclear ────────── */
+
+/* Opciones del selector: los perfiles del equipo + «Otro». El valor es el id del
+   perfil, o la cadena vacía para texto libre. */
+function lcRefOpciones(cfg, ref) {
+  var sel = (ref && typeof ref === 'object' && ref.pid) ? ref.pid : '';
+  var html = (cfg.perfiles || []).map(function (p) {
+    return '<option value="' + escAttr(p.id) + '"' + (sel === p.id ? ' selected' : '') + '>' +
+      escHtml(lcGradoNombre(p.grado, p.nombre) || p.nombre || '(sin nombre)') + '</option>';
+  }).join('');
+  return html + '<option value=""' + (sel ? '' : ' selected') + '>Otro — escribir a mano</option>';
+}
+
+/* Lee una fila: perfil elegido → referencia; «Otro» → el texto escrito. */
+function lcRefLeer(selEl, inpEl) {
+  var pid = selEl ? selEl.value : '';
+  if (pid) {
+    var cfg = DB.getConfig(), nom = '';
+    (cfg.perfiles || []).forEach(function (p) { if (p.id === pid) nom = lcGradoNombre(p.grado, p.nombre); });
+    /* Se guarda también el nombre resuelto como respaldo: si el perfil se borra,
+       la configuración no se queda muda. */
+    return { pid: pid, nom: nom };
+  }
+  return inpEl ? String(inpEl.value || '').trim() : '';
+}
+
+/* Muestra/oculta el campo de texto según si se eligió un perfil o «Otro». */
+function lcRefToggle(selEl) {
+  if (!selEl) return;
+  var row = selEl.closest('.aj-con-row') || selEl.parentNode;
+  var inp = row ? row.querySelector('.aj-con-inp') : null;
+  if (inp) inp.hidden = !!selEl.value;
+}
+
+
+/* VERDE 3 y DIAMANTE 3 son un solo funcionario cada uno, así que reutilizan las
+   mismas primitivas que las filas de «Conocieron el caso» en vez de estrenar un
+   segundo mecanismo — que es la duplicación que esta auditoría vino a quitar. */
+function lcRenderRef(boxId, ref) {
+  var box = document.getElementById(boxId); if (!box) return;
+  var cfg = DB.getConfig();
+  var esRef = ref && typeof ref === "object" && ref.pid;
+  var txt = esRef ? "" : lcRefTexto(cfg, ref);
+  box.innerHTML = '<div class="flx g8 aj-con-row" style="align-items:center;flex-wrap:wrap">' +
+    '<select class="fi aj-con-sel" style="flex:1;min-width:150px" onchange="lcRefToggle(this)">' + lcRefOpciones(cfg, ref) + '</select>' +
+    '<input class="fi aj-con-inp" style="flex:1;min-width:150px" value="' + escAttr(txt) + '" placeholder="Ej: Subteniente Juan Martínez López"' + (esRef ? " hidden" : "") + '>' +
+    '</div>';
+}
+function lcLeerRef(boxId) {
+  var box = document.getElementById(boxId); if (!box) return "";
+  return lcRefLeer(box.querySelector(".aj-con-sel"), box.querySelector(".aj-con-inp"));
+}
+
 /* Funcionarios que conocieron el caso. Fallback al campo legado (string único). */
 function getConocieronList(cfg) {
   cfg=cfg||DB.getConfig();
   var arr=cfg.conocieronFuncionarios;
   if(Array.isArray(arr)) {
-    arr=arr.map(function(f){return String(f||'').trim();}).filter(Boolean);
+    /* Cada entrada puede ser una cadena (lo de siempre) o {pid} (referencia a un
+       perfil registrado). lcRefTexto resuelve las dos, así una configuración
+       guardada antes de la Fase F sigue imprimiendo exactamente lo mismo. */
+    arr=arr.map(function(f){return lcRefTexto(cfg,f);}).filter(Boolean);
     if(arr.length) return arr;
   }
   var legacy=(cfg.conocieronCaso||'').trim();
@@ -5891,15 +6116,20 @@ function genSeccionContent(sec, caso, cfg) {
          los funcionarios de la propia captura entran solo si Ajustes está en
          blanco — así un equipo sin configurar deja de imprimir la sección vacía
          en vez de no imprimirla, y uno configurado no cambia una coma. */
-      var partes=[], pat=patrullaLabel(cfg), func=getConocieronList(cfg);
+      /* ⚠️ FASE F — se lee la foto que el caso congeló al guardarse; solo si no
+         la tiene (captura anterior a la Fase F) se cae a la configuración de
+         hoy, que es el comportamiento que esa captura ya venía teniendo. Así un
+         ascenso de grado deja de reescribir el dossier del mes pasado. */
+      var _snap=lcDossierDe(caso,cfg);
+      var partes=[], pat=_snap.patrulla, func=_snap.conocieron||[];
       var dil=(caso&&caso.ojv===2&&caso.oj)?caso.oj.diligencia:null;
       if(!pat&&dil) pat=[dil.patrulla?(/patrulla/i.test(dil.patrulla)?dil.patrulla:'PATRULLA '+dil.patrulla):'',dil.unidad||''].filter(Boolean).join(' ');
       if(!func.length&&dil) func=(dil.funcionarios||[]).map(function(f){return [f.grado,f.nombre].filter(Boolean).join(' ');}).filter(Boolean);
       if(pat) partes.push(pat);
       if(func.length) partes.push(func.join(' / '));
       return partes.join(' — ');
-    case 'verde3':     return cfg.dosVerde3||'';
-    case 'diamante3':  return cfg.dosDiamante3||'';
+    case 'verde3':     return lcDossierDe(caso,cfg).verde3||'';
+    case 'diamante3':  return lcDossierDe(caso,cfg).diamante3||'';
     case 'texto_fijo': return sec.textoFijo||'';
     default: return sec.textoFijo||'';
   }
@@ -10159,7 +10389,7 @@ function renderPerfilScreen() {
       '<div class="pf-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>'+
       '<div class="pf-body">'+
         '<div class="pf-name">'+p.nombre+'</div>'+
-        '<div class="pf-grado">'+p.grado+(p.cargo?' · '+p.cargo:'')+'</div>'+
+        '<div class="pf-grado">'+escHtml(p.grado||'')+(lcAbrevGrado(p.grado)?' ('+lcAbrevGrado(p.grado)+')':'')+(p.cargo?' · '+escHtml(p.cargo):'')+'</div>'+
         (p.cedula?'<div class="pf-cargo">CC: '+p.cedula+'</div>':'')+
         (isAct?'<span class="pf-badge">✓ ACTIVO</span>':'')+
         /* Vista previa de la firma guardada: es la única señal de que este
@@ -10200,21 +10430,26 @@ function openPerfilForm(id) {
   openModal(
     '<div class="mh"><h2>'+(id?'Editar perfil':'Nuevo perfil')+'</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<div class="st" style="margin-top:0">Datos del funcionario</div>'+
-    '<div class="fg"><label class="fl">Grado (ej: Patrullero, Subteniente)</label><input class="fi" id="pfm-grado" value="'+(p.grado||'')+'"></div>'+
-    '<div class="fg"><label class="fl">Nombres y apellidos completos</label><input class="fi" id="pfm-nombre" value="'+(p.nombre||'')+'"></div>'+
+    /* ⚠️ FASE G — esta pantalla usa ya la primitiva común lcCampo/lcInput en vez
+       de escribir el bloque a mano. Además de unificar el asterisco, la pista y
+       el foco, corrige un defecto real: `pfm-nombre`, `pfm-cedula` y `pfm-tel`
+       interpolaban el valor SIN escAttr, así que un nombre con comillas rompía
+       el campo (issue S2). lcInput escapa siempre. */
+    lcCampo('Grado',lcGradoInput('pfm-grado',p.grado))+
+    lcCampo('Nombres y apellidos completos',lcInput('pfm-nombre',p.nombre))+
     '<div class="fr">'+
-      '<div class="fg"><label class="fl">Cédula</label><input class="fi mono" id="pfm-cedula" value="'+(p.cedula||'')+'" inputmode="numeric"></div>'+
-      '<div class="fg"><label class="fl">Teléfono</label><input class="fi" id="pfm-tel" value="'+(p.telefono||'')+'" inputmode="tel"></div>'+
+      lcCampo('Cédula',lcInput('pfm-cedula',p.cedula,'',{mono:true,extra:' inputmode="numeric"'}))+
+      lcCampo('Teléfono',lcInput('pfm-tel',p.telefono,'',{extra:' inputmode="tel"'}))+
     '</div>'+
-    '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="pfm-cargo" value="'+escAttr(p.cargo)+'" placeholder="Ej: Comandante de Cuadrante"></div>'+
+    lcCampo('Cargo',lcInput('pfm-cargo',p.cargo,'Ej: Comandante de Cuadrante'))+
     /* Entidad por defecto (observación 10). El paso «Servidor» ya sabía leerla
        del perfil activo, pero el formulario del perfil NUNCA la pedía: por eso
        salía siempre vacía y había que reescribirla en cada captura.
        ⚠️ Sigue siendo un campo del usuario, sin ninguna institución escrita en
        el código — es la regla del filtro de Play Store. */
-    '<div class="fg"><label class="fl">Entidad</label><input class="fi" id="pfm-entidad" value="'+escAttr(p.entidad)+'" placeholder="Nombre de la institución">'+
-      '<p style="font-size:.72rem;color:var(--txD);margin:6px 0 0">Se carga sola en cada captura nueva; se puede cambiar en el paso «Servidor».</p></div>'+
-    '<div class="fg"><label class="fl">Correo institucional</label><input class="fi" id="pfm-correo" value="'+escAttr(p.correo)+'" inputmode="email"></div>'+
+    lcCampo('Entidad',lcInput('pfm-entidad',p.entidad,'Nombre de la institución'),
+      'Se carga sola en cada captura nueva; se puede cambiar en el paso «Servidor».')+
+    lcCampo('Correo institucional',lcInput('pfm-correo',p.correo,'',{extra:' inputmode="email"'}))+
     /* Compañero de patrulla. Un procedimiento lo hace una patrulla de dos, y la
        cadena de custodia pregunta cuál de los dos halló, recolectó y embaló el
        elemento. Se registra UNA vez aquí y desde ahí se ofrece en cada
@@ -10224,11 +10459,11 @@ function openPerfilForm(id) {
     '<div class="st">Compañero de patrulla</div>'+
     '<p style="font-size:.72rem;color:var(--txD);margin:-6px 0 10px">Se ofrece en la cadena de custodia (FPJ-8) y en el rótulo (FPJ-7). Se puede dejar vacío.</p>'+
     '<div class="fr">'+
-      '<div class="fg"><label class="fl">Grado</label><input class="fi" id="pfm-cgrado" value="'+escAttr(co.grado)+'"></div>'+
-      '<div class="fg"><label class="fl">Cédula</label><input class="fi mono" id="pfm-ccedula" value="'+escAttr(co.cedula)+'" inputmode="numeric"></div>'+
+      lcCampo('Grado',lcGradoInput('pfm-cgrado',co.grado))+
+      lcCampo('Cédula',lcInput('pfm-ccedula',co.cedula,'',{mono:true,extra:' inputmode="numeric"'}))+
     '</div>'+
-    '<div class="fg"><label class="fl">Nombres y apellidos</label><input class="fi" id="pfm-cnombre" value="'+escAttr(co.nombre)+'"></div>'+
-    '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="pfm-ccargo" value="'+escAttr(co.cargo)+'"></div>'+
+    lcCampo('Nombres y apellidos',lcInput('pfm-cnombre',co.nombre))+
+    lcCampo('Cargo',lcInput('pfm-ccargo',co.cargo))+
     '<button class="btn bp bbl" onclick="savePerfilForm(\''+  (id||'')+'\' )" style="margin-top:16px">Guardar perfil</button>'
   );
 }
@@ -10480,6 +10715,155 @@ function lcFirmaResuelta(nombre,cfg){
 function lcNormNom(s){
   return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
     .toUpperCase().replace(/[^A-Z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FASE E · CATÁLOGO DE GRADOS — el grado deja de ser texto libre y la
+   abreviatura deja de teclearse
+
+   El problema que resuelve: el grado se pedía como <input> libre en CUATRO
+   formularios (perfil, servidor del FPJ-5, firmante del oficio y funcionarios de
+   la diligencia) y la abreviatura —«SI», «PT»— NO se derivaba en ningún punto:
+   el usuario la escribía a mano dentro de las cadenas del dossier. Dos personas
+   quedaban registradas como «Subintendente» y «SUBINTENDENTE», y el dossier
+   imprimía «SI» o «S.I.» según quién lo hubiera escrito.
+
+   ⚠️ FUENTE Y VIGENCIA. Los NOMBRES de los grados salen de la estructura de la
+   carrera policial (Decreto 1791 de 2000, que creó el Nivel Ejecutivo en
+   reemplazo del escalafón de Suboficiales y del de Agentes). Las ABREVIATURAS
+   son uso institucional y NO están fijadas en esa norma — por eso no se pueden
+   «buscar en el decreto». Aquí van corroboradas y, sobre todo, **en un solo
+   sitio**: si alguna no coincide con la que usa la unidad, se corrige en esta
+   tabla y queda corregida en toda la app. Cada entrada declara de dónde viene.
+
+   ⚠️ NUNCA SE INVENTA UNA ABREVIATURA. `lcAbrevGrado` devuelve cadena vacía si
+   el grado no está en el catálogo, y quien la consume imprime entonces el grado
+   completo. Un grado abreviado mal en un documento judicial es peor que un grado
+   escrito entero.
+
+   ⚠️ LA ESCRITURA LIBRE SE CONSERVA. El catálogo alimenta un <datalist>, así que
+   los cuatro campos siguen siendo <input> con su mismo id: `collectStep`,
+   `savePersonModal` y `ojCollect` no se enteran de que esto existe. Es el mismo
+   criterio con el que se integraron `dl-cond`, `dl-muni` y el widget de
+   direcciones — el modelo no cambia.
+   ═══════════════════════════════════════════════════════════════════════════ */
+var LC_GRADOS = [
+  /* Oficiales — Decreto 1791/2000, jerarquía de Oficiales. */
+  { g:'General',              ab:'GR',  cat:'Oficiales' },
+  { g:'Mayor General',        ab:'MG',  cat:'Oficiales' },
+  { g:'Brigadier General',    ab:'BG',  cat:'Oficiales' },
+  { g:'Coronel',              ab:'CR',  cat:'Oficiales' },
+  { g:'Teniente Coronel',     ab:'TC',  cat:'Oficiales' },
+  { g:'Mayor',                ab:'MY',  cat:'Oficiales' },
+  { g:'Capitán',              ab:'CT',  cat:'Oficiales' },
+  { g:'Teniente',             ab:'TE',  cat:'Oficiales' },
+  { g:'Subteniente',          ab:'ST',  cat:'Oficiales' },
+  /* Nivel Ejecutivo — el escalafón que creó el Decreto 1791/2000. Es donde está
+     la inmensa mayoría del personal que diligencia estos formatos. */
+  { g:'Comisario',            ab:'CM',  cat:'Nivel Ejecutivo' },
+  { g:'Subcomisario',         ab:'SC',  cat:'Nivel Ejecutivo' },
+  { g:'Intendente Jefe',      ab:'IJ',  cat:'Nivel Ejecutivo' },
+  { g:'Intendente',           ab:'IT',  cat:'Nivel Ejecutivo' },
+  { g:'Subintendente',        ab:'SI',  cat:'Nivel Ejecutivo' },
+  { g:'Patrullero',           ab:'PT',  cat:'Nivel Ejecutivo' },
+  { g:'Patrullero de Policía',ab:'PP',  cat:'Nivel Ejecutivo' },
+  /* Suboficiales y Agentes: escalafones EN EXTINCIÓN desde el Decreto 1791/2000
+     (no se ingresa a ellos, pero queda personal que los ostenta). Se incluyen
+     porque un funcionario con ese grado tiene que poder registrarse. */
+  { g:'Sargento Mayor',       ab:'SM',  cat:'Suboficiales', est:'extincion' },
+  { g:'Sargento Primero',     ab:'SP',  cat:'Suboficiales', est:'extincion' },
+  { g:'Sargento Viceprimero', ab:'SV',  cat:'Suboficiales', est:'extincion' },
+  { g:'Sargento Segundo',     ab:'SS',  cat:'Suboficiales', est:'extincion' },
+  { g:'Cabo Primero',         ab:'CP',  cat:'Suboficiales', est:'extincion' },
+  { g:'Cabo Segundo',         ab:'CS',  cat:'Suboficiales', est:'extincion' },
+  { g:'Agente',               ab:'AG',  cat:'Agentes',      est:'extincion' },
+  /* Personal en formación y auxiliares. */
+  { g:'Alférez',              ab:'AF',  cat:'Formación' },
+  { g:'Cadete',               ab:'CD',  cat:'Formación' },
+  { g:'Auxiliar de Policía',  ab:'AXP', cat:'Auxiliares' }
+];
+
+/* ⚠️ La comparación reutiliza lcNormNom(), que ya existe para casar el nombre
+   del firmante en lcFirmaDe: quita tildes, pasa a mayúscula y colapsa espacios.
+   Escribir aquí un segundo normalizador sería crear justo la duplicación que
+   esta auditoría vino a quitar — y dos normalizadores que divergen dan un grado
+   que casa en un formulario y no en otro. */
+
+/* Grado (o abreviatura) escrito → entrada del catálogo, o null si no está.
+   ⚠️ Acepta también la abreviatura como entrada: hay configuraciones antiguas
+   donde el usuario escribió «SI» en el campo de grado. */
+function lcGradoBuscar(txt) {
+  var n = lcNormNom(txt);
+  if (!n) return null;
+  var i, x;
+  for (i = 0; i < LC_GRADOS.length; i++) {
+    x = LC_GRADOS[i];
+    if (lcNormNom(x.g) === n || lcNormNom(x.ab) === n) return x;
+  }
+  return null;
+}
+
+/* La abreviatura, DERIVADA — nunca tecleada. Cadena vacía si el grado no está en
+   el catálogo: quien la use imprime entonces el grado completo. */
+function lcAbrevGrado(txt) {
+  var x = lcGradoBuscar(txt);
+  return x ? x.ab : '';
+}
+
+/* «Subintendente» + «Nelson David» → «SI Nelson David». Si el grado no está en
+   el catálogo se antepone el grado tal cual se escribió, que es lo que la app
+   hacía antes: se degrada, no se rompe. */
+function lcGradoNombre(grado, nombre) {
+  var g = String(grado || '').trim(), n = String(nombre || '').trim();
+  if (!g) return n;
+  if (!n) return g;
+  return (lcAbrevGrado(g) || g) + ' ' + n;
+}
+
+/* Rellena el <datalist> compartido por los cuatro campos de grado. Se llama una
+   vez al arrancar; el catálogo es estático, no depende de la configuración. */
+function lcGradoPintarDatalist() {
+  var el = document.getElementById('dl-grado');
+  if (!el) return;
+  el.innerHTML = LC_GRADOS.map(function (x) {
+    return '<option value="' + escAttr(x.g) + '">';
+  }).join('');
+}
+
+/* Pista bajo el campo: enseña la abreviatura que se va a derivar, o avisa de que
+   ese grado no está en el catálogo. ⚠️ Que la derivación sea VISIBLE no es
+   cosmético: una abreviatura que se pone sola y no se ve es indistinguible de
+   una que no se puso — la misma lección que la miniatura de la firma. */
+function lcGradoPistaTxt(v) {
+  v = String(v || '').trim();
+  if (!v) return { t: '', ok: false };
+  var x = lcGradoBuscar(v);
+  return x ? { t: 'Se abrevia ' + x.ab, ok: true }
+           : { t: 'Sin abreviatura conocida — se imprimirá el grado completo', ok: false };
+}
+function lcGradoPista(inp) {
+  if (!inp) return;
+  var box = document.getElementById(inp.id + '-ab');
+  if (!box) return;
+  var p = lcGradoPistaTxt(inp.value);
+  box.textContent = p.t;
+  box.className = 'lc-ab' + (p.ok ? ' ok' : '');
+}
+
+/* Campo de grado: <input> con el mismo id de siempre + datalist + pista. Es el
+   único sitio donde se construye, así que los cuatro formularios no pueden
+   quedar distintos. */
+function lcGradoInput(id, val, ph, extra) {
+  /* ⚠️ La pista se pinta YA, con el valor que trae el campo. Dejarla vacía y
+     rellenarla después obligaría a llamar a algo tras cada render (el formulario
+     del perfil, el paso del servidor y el bloque del firmante se pintan por
+     caminos distintos) y el primero que se olvidara enseñaría un campo con grado
+     y sin abreviatura, que es indistinguible de un grado sin abreviar. */
+  var p = lcGradoPistaTxt(val);
+  return '<input class="fi" id="' + id + '" list="dl-grado" value="' + escAttr(val || '') + '"' +
+    ' placeholder="' + escAttr(ph || 'Ej: Subintendente') + '"' +
+    ' oninput="lcGradoPista(this)"' + (extra || '') + '>' +
+    '<div class="lc-ab' + (p.ok ? ' ok' : '') + '" id="' + id + '-ab">' + escHtml(p.t) + '</div>';
 }
 
 /* Datos del servidor con los que NACE una captura nueva: perfil activo primero
@@ -10939,7 +11323,6 @@ function loadAjustesFields() {
     'aj-dir':cfg.ojCustDireccion||cfg.dosDir||'',
     'aj-bar':cfg.ojCustBarrio,'aj-ciu':lcUnidadCiudad(cfg),
     'aj-tel':cfg.ojCustTelefono||cfg.dosTel||'','aj-cor':cfg.ojCustCorreo,'aj-web':cfg.ojPieWeb,
-    'aj-verde3':cfg.dosVerde3,'aj-diamante3':cfg.dosDiamante3,
     'aj-patrulla':cfg.patrullaNum,'aj-unidad':cfg.patrullaUnidad,
     'aj-nuncUri':cfg.nuncUri,'aj-nuncCespa':cfg.nuncCespa,
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
@@ -10954,7 +11337,9 @@ function loadAjustesFields() {
   renderLogoOJ(cfg);
   renderPapelAj(cfg);
   renderAjDerivados();
-  renderConocieronRows(getConocieronList(cfg));
+  renderConocieronRows(cfg.conocieronFuncionarios&&cfg.conocieronFuncionarios.length?cfg.conocieronFuncionarios:getConocieronList(cfg));
+  lcRenderRef('aj-verde3-box',cfg.dosVerde3);
+  lcRenderRef('aj-diamante3-box',cfg.dosDiamante3);
 }
 /* Los dos datos que la sección del oficio dejó de pedir porque ya se escriben en
    Estación. No son campos: son el ESPEJO de lo que se va a imprimir, para que el
@@ -11063,9 +11448,17 @@ function ojCompletarEstacion(el,caps){
 function renderConocieronRows(list) {
   var wrap=document.getElementById('aj-con-list'); if(!wrap) return;
   if(!list||!list.length) list=[''];
+  var cfg=DB.getConfig();
+  /* Cada fila: un selector de los perfiles ya registrados —para no volver a
+     teclear un funcionario que el equipo ya conoce— y, si se elige «Otro», el
+     campo de texto de siempre. El texto libre NO desaparece: hay funcionarios de
+     otra unidad que no tienen perfil aquí. */
   wrap.innerHTML=list.map(function(f){
-    return '<div class="flx g8 aj-con-row" style="margin-bottom:8px;align-items:center">'+
-      '<input class="fi aj-con-inp" style="flex:1" value="'+escAttr(f)+'" placeholder="Ej: SI Nelson David">'+
+    var esRef=f&&typeof f==='object'&&f.pid;
+    var txt=esRef?'':lcRefTexto(cfg,f);
+    return '<div class="flx g8 aj-con-row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap">'+
+      '<select class="fi aj-con-sel" style="flex:1;min-width:150px" onchange="lcRefToggle(this)">'+lcRefOpciones(cfg,f)+'</select>'+
+      '<input class="fi aj-con-inp" style="flex:1;min-width:150px" value="'+escAttr(txt)+'" placeholder="Ej: SI Nelson David"'+(esRef?' hidden':'')+'>'+
       '<button class="btn bs bsm" style="flex:0 0 auto;padding:0 12px;color:var(--err)" onclick="delConocieronRow(this)" title="Quitar funcionario">✕</button>'+
       '</div>';
   }).join('');
@@ -11073,11 +11466,17 @@ function renderConocieronRows(list) {
 
 function readConocieronRows() {
   var out=[];
-  document.querySelectorAll('#aj-con-list .aj-con-inp').forEach(function(el){ out.push(el.value); });
+  /* Se lee por FILA, no por campo suelto: cada fila aporta o una referencia a un
+     perfil o su texto libre, nunca las dos cosas. */
+  document.querySelectorAll('#aj-con-list .aj-con-row').forEach(function(row){
+    out.push(lcRefLeer(row.querySelector('.aj-con-sel'), row.querySelector('.aj-con-inp')));
+  });
   return out;
 }
 
 function addConocieronRow() {
+  /* Se lee el DOM ANTES de crecer, igual que las demás listas repetibles de la
+     app: si no, la fila nueva se llevaría por delante lo ya escrito. */
   var list=readConocieronRows(); list.push('');
   renderConocieronRows(list);
   var inputs=document.querySelectorAll('#aj-con-list .aj-con-inp');
@@ -11086,7 +11485,7 @@ function addConocieronRow() {
 
 function delConocieronRow(btn) {
   var row=btn.parentNode; if(row&&row.parentNode) row.parentNode.removeChild(row);
-  if(!document.querySelectorAll('#aj-con-list .aj-con-inp').length) renderConocieronRows(['']);
+  if(!document.querySelectorAll('#aj-con-list .aj-con-row').length) renderConocieronRows(['']);
 }
 
 function saveAjustes() {
@@ -11122,12 +11521,21 @@ function saveAjustes() {
   cfg.ojCustCiudad=ciuNueva;
   cfg.ojCustTelefono=v('aj-tel'); cfg.ojCustCorreo=v('aj-cor'); cfg.ojPieWeb=v('aj-web');
   cfg.dosDir=cfg.ojCustDireccion; cfg.dosTel=cfg.ojCustTelefono;
-  cfg.dosVerde3=v('aj-verde3'); cfg.dosDiamante3=v('aj-diamante3');
+  /* ⚠️ Solo se escriben si su contenedor está en pantalla — la sección puede no
+     haberse pintado, y v() devuelve '' para un elemento que no existe, así que
+     escribir a ciegas borraría lo que el equipo ya tenía configurado. Es la
+     misma trampa que ya protege al bloque del oficio de orden judicial. */
+  if(document.getElementById('aj-verde3-box')) cfg.dosVerde3=lcLeerRef('aj-verde3-box');
+  if(document.getElementById('aj-diamante3-box')) cfg.dosDiamante3=lcLeerRef('aj-diamante3-box');
   cfg.patrullaNum=v('aj-patrulla').trim(); cfg.patrullaUnidad=v('aj-unidad').trim();
   // Si la lista nunca se pintó (pantalla no cargada), no borrar lo guardado.
-  if(document.querySelectorAll('#aj-con-list .aj-con-inp').length) {
-    cfg.conocieronFuncionarios=readConocieronRows().map(function(f){return f.trim();}).filter(Boolean);
-    cfg.conocieronCaso=cfg.conocieronFuncionarios.join(', ');
+  if(document.querySelectorAll('#aj-con-list .aj-con-row').length) {
+    cfg.conocieronFuncionarios=readConocieronRows().filter(function(f){
+      return typeof f==='string' ? !!f.trim() : !!(f&&f.pid);
+    });
+    /* `conocieronCaso` se mantiene sincronizado en TEXTO por compatibilidad hacia
+       atrás: hay configuraciones exportadas que solo tienen ese campo. */
+    cfg.conocieronCaso=getConocieronList(cfg).join(', ');
   }
   cfg.nuncUri=v('aj-nuncUri'); cfg.nuncCespa=v('aj-nuncCespa');
   cfg.localidadDefault=v('aj-localidad'); cfg.zonaDefault=v('aj-zona'); cfg.veredaDefault=v('aj-vereda');
@@ -12159,15 +12567,41 @@ function ojPost(fn){ setTimeout(fn,0); }
    1-6: el funcionario descubría lo que faltaba al final del paso 7, tras ocho
    pantallas de scroll. El asterisco y el contador de los puntos del progreso
    son la misma información, adelantada al momento en que sirve. */
-function ojwF(label,inner,hint,req){
+/* ═══ FASE G · LA PRIMITIVA DE CAMPO, NEUTRA ═══════════════════════════════
+   Esta pareja existía desde la Fase I pero se llamaba ojwF/ojwIn y solo la usaba
+   el módulo de orden judicial: 81 usos frente a 150 bloques
+   <div class="fg"><label class="fl"><input class="fi"> escritos a mano en el
+   resto de la app. Es la única duplicación de COMPONENTE que encontró la
+   auditoría del 2026-08-28 — todo lo demás (botones, modales, sheets) ya estaba
+   unificado en un solo sitio.
+
+   ⚠️ El nombre pasa a ser neutro (lcCampo/lcInput) y ojwF/ojwIn se conservan
+   como ALIAS: así el módulo de orden judicial y sus cinco suites de regresión no
+   cambian ni una línea. Renombrar 81 llamadas para no ganar un píxel sería
+   justo el trabajo que esta auditoría recomendó no hacer.
+
+   ⚠️ La clase del hint conserva su nombre oj-hint. Es un nombre, no una
+   dependencia: renombrarla obligaría a tocar su CSS y todos sus usos, otra vez
+   sin ganar nada. Lo que importa es que haya UN punto que construya el campo.
+
+   Quien escriba una pantalla nueva debe usar lcCampo/lcInput: así el asterisco
+   de obligatorio, la pista y el foco se comportan igual en toda la app sin tener
+   que tocar 150 sitios uno por uno. */
+function lcCampo(label,inner,hint,req,reqTitle){
   return '<div class="fg"><label class="fl">'+escHtml(label)+
-    (req?'<span class="req" title="Obligatorio: sin este dato no se genera el oficio">*</span>':'')+
+    (req?'<span class="req" title="'+escAttr(reqTitle||'Obligatorio: sin este dato no se genera el documento')+'">*</span>':'')+
     '</label>'+inner+
     (hint?'<div class="oj-hint" style="margin:5px 0 0">'+escHtml(hint)+'</div>':'')+'</div>';
 }
-function ojwIn(id,val,ph,attrs){
+function lcInput(id,val,ph,attrs){
   return '<input class="fi'+(attrs&&attrs.mono?' mono':'')+'" id="'+id+'" value="'+escAttr(val||'')+'" placeholder="'+escAttr(ph||'')+'"'+((attrs&&attrs.extra)||'')+'>';
 }
+/* Alias del módulo de orden judicial. El asterisco conserva ahí su texto propio
+   («…no se genera el oficio»), que es el que sus regresiones comprueban. */
+function ojwF(label,inner,hint,req){
+  return lcCampo(label,inner,hint,req,'Obligatorio: sin este dato no se genera el oficio');
+}
+function ojwIn(id,val,ph,attrs){ return lcInput(id,val,ph,attrs); }
 /* Campo de municipio: lista de sugerencias + completado del departamento
    contiguo al salir del campo. Los cinco pares municipio/departamento del
    módulo usan este widget, así que la inferencia es una sola. */
@@ -12223,7 +12657,7 @@ var OJ_LISTS={
      exactamente la vigencia con la que se emitió. */
   funcionarios:{ path:'diligencia.funcionarios', et:'Funcionario', vacio:'Sin funcionarios registrados.',
     campos:[
-      {k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a'},
+      {k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a',lista:'dl-grado'},
       {k:'cedula',l:'Cédula',ph:'Sin puntos',mono:true,par:'b'},
       {k:'nombre',l:'Nombres y apellidos',ph:'Nombre completo'},
       {k:'placa',l:'Placa institucional',ph:'Opcional',mono:true}
@@ -13058,7 +13492,7 @@ function ojStep7(){
         'equipo. Diligencia aquí quién firma: se imprime al pie del oficio y no se guarda en ningún perfil.</div>')+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar datos del perfil activo</button>'+
       ojwR(
-        ojwF('Grado',ojwIn('oj-f-gra',fi.grado,'Ej: Subintendente')),
+        ojwF('Grado',lcGradoInput('oj-f-gra',fi.grado)),
         /* onblur: si cambia el nombre impreso, cambia la firma que le corresponde
            — y se ve al instante, sin esperar a abrir el .docx. */
         ojwF('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo',{extra:' onblur="ojRefrescarFirmaWiz()"'}),'',!fi.nombre)
@@ -14740,6 +15174,9 @@ function ojPersonaEspejo(c){
    simulador, que arma el caso entero sin pasar por el formulario. */
 function ojEspejar(c){
   c.oj.orden.vigenciaHasta=ojVigencia(c.oj.orden).hasta;
+  /* Los dos caminos que crean un caso OJ —el wizard y el simulador— pasan por
+     aquí, así que es el punto donde congelar la foto del dossier. */
+  lcCongelarDossier(c);
   var plazo=ojPlazo36(c);
   c.oj.destino.plazoVence=plazo.venceISO?plazo.venceISO+' '+plazo.venceHora:'';
   var persona=ojPersonaEspejo(c);
@@ -15365,6 +15802,7 @@ function lcImprimir(out){
 
 document.addEventListener('DOMContentLoaded', function() {
   applyTheme(getTheme());
+  lcGradoPintarDatalist();
   _lcPurgarPlantillas();
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);

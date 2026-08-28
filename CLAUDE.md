@@ -3042,3 +3042,184 @@ firmas **11 pt en Tahoma**, que es la letra que el formato usa ahí.
 | A2 | NUNC con prefijo Medellín hardcodeado — configurar por regional | MEDIA |
 | S2 | innerHTML con datos de usuario sin escapar en atributos `value=""` (perfiles, secciones del dossier). Los 4 `<textarea>` del wizard ya se escapan (Fase H) | BAJA |
 | S3 | Backup de capturas (`exportarCapturas`) se exporta en JSON plano sin cifrar — ya muestra advertencia explícita al usuario (Fase H), pero no cifra el archivo | BAJA |
+
+## Auditoría integral y apariencia (2026-08-28) — modo Sistema, tokens de estado y dos fugas de color
+Auditoría de arquitectura, UX, redundancia de datos y sistema visual, **medida sobre el código** (no
+sobre esta documentación) y entregada en seis informes antes de tocar una línea. El diagnóstico del
+encargo no se confirmó en tres de sus premisas y eso cambió el orden del trabajo; se ejecutaron las
+tres fases de riesgo bajo. Verificado con `verify_tema.mjs` (**39 checks**, nuevo) y las 22 suites
+previas en verde. Anti-caché `?v=78` / `cache-v78`, `_BUILD=78`.
+
+### Lo que la medición desmintió — y por qué importa para el próximo que audite
+- ⚠️ **El sistema visual NO estaba por centralizar: ya lo estaba.** En 13 324 líneas de JavaScript hay
+  **8 colores literales**, y 61 de los 65 hex del CSS viven dentro de `:root`. Existen las escalas de
+  espaciado, radios, tipografía y *motion*, y los componentes las usan. Una «Fase de Design Tokens»
+  habría reescrito un sistema que funciona.
+- ⚠️ **Los componentes tampoco estaban duplicados**: una sola clase `.btn`, un solo par
+  `openModal`/`closeModal`, un solo `openSheet`. Las clases con sufijo `-btn` (`topbar`, `pin`, `pf`,
+  `ord`) son controles de propósito específico, no variantes del botón.
+- ⚠️ **NO renombrar los tokens a `--color-*`.** Los alias legados (`--acc`, `--bg2`, `--tx`, `--rs`,
+  `--uriT`…) no son deuda: son el **contrato con el JS**, que genera HTML con `var(--tx)` incrustado
+  en atributos `style`. Renombrarlos obliga a tocar cientos de plantillas de cadena y no mejora un
+  píxel. Los tokens nuevos se añaden con la nomenclatura que el sistema ya usa.
+- **La duplicación real está en los DATOS del funcionario, no en el CSS**: nueve almacenes con cuatro
+  formas distintas. Siete se prellenan del perfil; los tres del dossier, no. Ver «lo que queda».
+
+### Modo Sistema — el CSS no cambió ni una regla
+Había **cero** reglas `prefers-color-scheme` en 1 449 líneas de CSS: `getTheme()` devolvía
+`'light'|'dark'` y nada más. Era la única de las 24 áreas del encargo que de verdad no existía.
+- **Hay TRES preferencias y solo DOS aspectos.** La preferencia (`'dark'|'light'|'system'`) vive en
+  `lc_theme`; lo que llega al DOM es siempre el aspecto **ya resuelto** — `data-theme="light"` o
+  ningún atributo—, que es exactamente lo que el CSS entendía antes. ⚠️ **Por eso la hoja de estilos
+  no cambió**, y por eso `verify_tema` [36] exige que siga sin ninguna `prefers-color-scheme`: si
+  alguien «mejora» esto metiendo una media query de color, el aspecto pasaría a decidirse en **dos
+  sitios** que pueden discrepar. El punto único es `lcThemeResuelto()`.
+- ⚠️ **Sin clave guardada se resuelve OSCURO, no Sistema.** Sistema es una elección explícita, no el
+  nuevo defecto: un equipo que nunca abrió Ajustes no puede cambiar de aspecto al actualizar. Es la
+  misma regla con la que se eligieron los defectos del orden de las listas (2026-08-14): *el defecto
+  de cada pantalla es el comportamiento que ya tenía*.
+- ⚠️ **Los botones marcan la PREFERENCIA, no el aspecto.** Con Sistema activo sobre un teléfono en
+  claro, lo marcado sigue siendo «Sistema»; marcar «Claro» haría parecer que la elección se perdió.
+  La nota bajo el control dice qué está siguiendo y cómo se ve ahora mismo.
+- **El anti-parpadeo resuelve las tres preferencias** en el `<head>`, antes de pintar. ⚠️ Sigue
+  leyendo `lc_theme` **en claro** (sin cifrar) a propósito: tiene que aplicarse antes del PIN — se ve
+  en la pantalla de desbloqueo, que ya sale con el tema correcto.
+- **`matchMedia` con listener** para que la app siga al sistema en caliente (al anochecer, o con el
+  ahorro de batería), y solo si la preferencia es Sistema. ⚠️ Con respaldo a `addListener`, que es lo
+  único que existe en WebKit antiguo.
+
+### Tokens de estado y contraste
+- **Nuevos**: `--info` / `--info-bg` (reutiliza el azul que ya tenía el canal de correo — **no se
+  introduce un matiz nuevo**, solo se le da nombre semántico), `--surface-selected`,
+  `--surface-disabled`, `--text-disabled`. Antes cada componente resolvía «seleccionado» y
+  «deshabilitado» por su cuenta, mientras `--hover` y `--pressed` sí tenían nombre.
+- ⚠️ **`--text-3` no llegaba a AA para texto normal en cuatro combinaciones** — y se usa en pistas y
+  leyendas a 11–12 px, que es texto normal (4,5:1), no texto grande (3:1). Sobre `--surface-3` fallaba
+  en los **dos** temas. Corregido a `#838B9F` (oscuro) y `#636B7D` (claro): 4,56 y 4,60 sobre
+  surface-3. **Dos valores en `:root`, cero componentes tocados** — que es la prueba de que la
+  arquitectura de tokens estaba bien planteada.
+- Los otros 42 pares de tokens medidos ya cumplían AA en ambos temas.
+
+### Las dos fugas de color, y las tres que NO lo eran
+- ⚠️ **`#guest-bar` congelaba el `--acc-fg` del modo oscuro**: `color:#0E1020` escrito a pelo sobre
+  `var(--flag-2)`. En oscuro daba 8,91:1 —por eso nunca se detectó—; en claro, con `--flag-2` en
+  `#9A4E06`, daba **3,11:1**. Es la advertencia permanente de que nada se está guardando, así que era
+  justo el texto que no podía costar esfuerzo leer. Con `var(--acc-fg)`: 6,06:1. El borde de su botón
+  (`rgba(14,16,32,.35)`) tenía el mismo defecto y ahora es
+  `color-mix(in srgb,var(--acc-fg) 35%,transparent)`.
+- **`.fw-ph`** (texto guía del lienzo de firma) pasa de 3,09:1 a **4,57:1**. ⚠️ Su color **sigue
+  siendo un literal a propósito**: el lienzo tiene fondo **blanco fijo en los dos temas** (la firma es
+  un PNG de trazo negro), así que un token que se invierta lo rompería.
+- ⚠️ **Tres literales que parecían fugas y se dejaron intactos tras comprobarlos**: `.fw-pad`,
+  `.fw-prev` y `.pf-firma` usan `background:#fff` porque es el fondo con el que la firma se ve y se
+  imprime; `.sec-tog::after` es la perilla de un interruptor y `.cam-ov` el visor de cámara.
+
+### Lo que queda propuesto y NO se ha hecho
+Las tres fases de riesgo bajo están ejecutadas. Lo que la auditoría dejó medido y sin tocar:
+- ⚠️ **El dossier de una captura pasada se reescribe cuando cambian los Ajustes.** `genSeccionContent`
+  resuelve patrulla, «Conocieron el caso», VERDE 3 y DIAMANTE 3 leyendo `cfg` **en el momento de
+  imprimir**; el caso **nunca guarda esa foto**. Un ascenso de grado cambia retroactivamente el
+  dossier de todas las capturas anteriores. El caso **sí** congela el servidor del FPJ-5, el firmante
+  del oficio, el membrete y la custodia: el patrón correcto ya existe, solo está aplicado a medias.
+  ⚠️ **La corrección tiene dos mitades inseparables**: referenciar el perfil al diligenciar **y**
+  congelar la foto al guardar. Hacer solo la primera —«que el dossier lea el perfil»— *agrava* el
+  problema, porque ata más salidas a un dato vivo. Y las capturas ya guardadas deben seguir
+  proyectando desde `cfg` al leer, sin migración forzada.
+- ⚠️ **No existe catálogo de grados.** La única lista del archivo vive dentro del simulador
+  (`SIM.GRADOS`, seis grados, para inventar datos de prueba). Los tres formularios que piden grado lo
+  piden como texto libre y **la abreviatura no se deriva en ningún punto**: el usuario la escribe a
+  mano dentro de las cadenas del dossier. Al crearlo, **verificar las abreviaturas contra fuente
+  institucional antes de escribirlas** — inventarlas es peor que no tenerlas.
+- **`conocieronFuncionarios[]`, `dosVerde3` y `dosDiamante3` son cadenas de texto libre** y son los
+  únicos tres de los nueve almacenes de funcionario que no conocen `cfg.perfiles[]`.
+- **La primitiva de campo solo la usa el módulo OJ**: `ojwF`/`ojwIn` × 81, frente a 150 bloques
+  `<div class="fg"><label class="fl"><input class="fi">` escritos a mano en el resto de la app.
+  Extenderla es incremental **por pantalla**, y es la única fase que puede pararse a medias sin dejar
+  nada roto.
+
+### Fases E, F y G de la auditoría (2026-08-28) — grados, integridad histórica y la primitiva de campo
+Ejecutadas a continuación de B/C/D. Verificado con `verify_grados.mjs` (**31 checks**, nuevo) y
+`verify_dossier_historico.mjs` (**29 checks**, nuevo); las 22 suites previas siguen en verde sin
+tocar sus expectativas. Anti-caché `?v=80` / `cache-v80`, `_BUILD=80`.
+
+#### E · Catálogo de grados — el grado deja de ser texto libre
+El grado se pedía como `<input>` libre en **cinco** formularios (perfil, **compañero de patrulla**,
+servidor del FPJ-5, firmante del oficio y funcionarios de la diligencia) y la abreviatura —«SI»,
+«PT»— **no se derivaba en ningún punto**: el usuario la escribía a mano dentro de las cadenas del
+dossier. La única lista de grados del archivo vivía dentro del simulador (`SIM.GRADOS`, seis grados,
+para inventar datos de prueba).
+- ⚠️ **Sobre la fuente**: los NOMBRES de los grados salen de la estructura de la carrera policial
+  (Decreto 1791 de 2000, que creó el Nivel Ejecutivo en reemplazo de Suboficiales y Agentes). Las
+  **abreviaturas son uso institucional y NO están fijadas en esa norma** — por eso no se pueden
+  «buscar en el decreto», y por eso lo que importa es que estén **en un solo sitio**: corregir una es
+  editar una línea de `LC_GRADOS` y queda corregida en toda la app.
+- ⚠️ **Nunca se inventa una abreviatura.** `lcAbrevGrado` devuelve cadena vacía si el grado no está
+  en el catálogo, y `lcGradoNombre` imprime entonces el grado completo: se degrada, no se rompe. Un
+  grado mal abreviado en un documento judicial es peor que uno sin abreviar.
+- ⚠️ **La escritura libre se conserva** (requisito): el catálogo alimenta un `<datalist>`, así que
+  los cinco campos siguen siendo `<input>` **con su mismo id**. `collectStep`, `savePersonModal` y
+  `ojCollect` no se enteran de que esto existe — mismo criterio que `dl-cond`, `dl-muni` y el widget
+  de direcciones. Hay un check que exige que ninguno se haya convertido en `<select>`.
+- ⚠️ **Lo que se GUARDA es el grado completo, nunca la abreviatura.** Si se guardara la abreviatura,
+  corregir la tabla dejaría de corregir los datos ya guardados — que es justo lo que hace valiosa una
+  tabla central.
+- **La derivación es visible**: pista bajo el campo («Se abrevia SI» / «Sin abreviatura conocida — se
+  imprimirá el grado completo») y la abreviatura en la tarjeta del perfil. ⚠️ La pista **se pinta ya
+  al construir el campo**, no después: los tres formularios se pintan por caminos distintos y el
+  primero que se olvidara de refrescarla enseñaría un grado sin abreviatura, indistinguible de un
+  grado no reconocido.
+- ⚠️ **Se reutiliza `lcNormNom()`** para comparar (quita tildes, mayúsculas, colapsa espacios) en vez
+  de escribir un segundo normalizador: dos normalizadores que divergen dan un grado que casa en un
+  formulario y no en otro. Hay un check que exige que no exista `lcNormGrado`.
+- ⚠️ **El compañero de patrulla (`pfm-cgrado`) es el quinto campo y se pasa por alto con facilidad**
+  porque vive plegado dentro del formulario del perfil — y es el que alimenta la cadena de custodia.
+
+#### F · El dossier deja de reescribir el pasado
+**El hallazgo más grave de la auditoría, y no era de diseño.** «Conocieron el caso», la patrulla,
+VERDE 3 y DIAMANTE 3 se resolvían leyendo `cfg` **en el momento de imprimir**, y el caso no guardaba
+nunca esa foto: un funcionario que ascendía y actualizaba su perfil cambiaba, retroactivamente y sin
+avisar, el dossier de **todas** sus capturas anteriores.
+- ⚠️ **La corrección tiene DOS mitades y son inseparables**: la **configuración guarda referencias**
+  a los perfiles (vivas, para capturar una vez) y **el caso guarda los valores resueltos** al
+  guardarse (congelados, para que lo emitido quede como se emitió). Hacer solo la primera —«que el
+  dossier lea el perfil»— *agrava* el problema, porque ata más salidas a un dato vivo.
+- **Modelo**: `cfg.conocieronFuncionarios[]` admite `{pid}` (referencia) o cadena (texto libre, lo de
+  siempre); igual `dosVerde3`/`dosDiamante3`. `caso.dossierSnap = {patrulla, conocieron[], verde3,
+  diamante3, ts}`. `lcRefTexto` es el **único** punto que resuelve una referencia, para que Ajustes,
+  la foto y el dossier no puedan discrepar.
+- ⚠️ **`lcCongelarDossier` NO sobrescribe una foto que ya existe**: editar una captura vieja no
+  reescribe su historia — la patrulla que conoció el caso no cambia porque hoy se corrija un dato del
+  capturado. Se llama desde `wizSave` y desde `ojEspejar`, que son los dos caminos que crean un caso.
+- ⚠️ **Nada se migra a la fuerza.** Una captura anterior a esta fase no tiene foto y sigue
+  proyectando desde `cfg` al leer, exactamente como venía haciendo. Mismo criterio con el que
+  `genDossier` trata las capturas OJ anteriores a Mejora 3.
+- ⚠️ **Un perfil borrado** usa el `nom` de respaldo que la referencia guardó; sin respaldo, la
+  sección no lo imprime. No se inventa un nombre.
+- **La prueba que pedía el encargo (§39)** es un check: crear caso → ascender el perfil de
+  Subintendente a Intendente y cambiar la patrulla → el dossier del caso viejo **no cambia ni un
+  carácter** (sigue diciendo `SI` y `PATRULLA 32`) y el de una captura nueva **sí** recoge el cambio
+  (`IT`, `PATRULLA 47`).
+- ⚠️ En `saveAjustes`, VERDE 3 y DIAMANTE 3 **solo se escriben si su contenedor está en pantalla**:
+  `v()` devuelve `''` para un elemento inexistente, así que escribir a ciegas habría borrado la
+  configuración del equipo. Es la misma trampa que ya protegía al bloque del oficio de orden judicial.
+- `conocieronCaso` se mantiene sincronizado en **texto** por compatibilidad con configuraciones ya
+  exportadas.
+
+#### G · La primitiva de campo, neutra
+Era la **única duplicación de componente** que encontró la auditoría: `ojwF`/`ojwIn` existían desde la
+Fase I y solo las usaba el módulo de orden judicial (81 usos), frente a **150 bloques
+`<div class="fg"><label class="fl"><input class="fi">` escritos a mano** en el resto de la app.
+- Se neutralizan a **`lcCampo`/`lcInput`** y ⚠️ **`ojwF`/`ojwIn` se conservan como ALIAS**: el módulo
+  de orden judicial y sus cinco suites no cambian una línea. El asterisco conserva ahí su texto
+  propio («…no se genera el oficio»), que es el que sus regresiones comprueban.
+- ⚠️ La clase `oj-hint` **conserva su nombre**: es un nombre, no una dependencia, y renombrarla
+  obligaría a tocar su CSS y todos sus usos sin ganar nada.
+- **Convertido el formulario de perfil** como primera pantalla. Eso corrigió de paso un defecto real
+  del **issue S2**: `pfm-nombre`, `pfm-cedula` y `pfm-tel` interpolaban el valor **sin `escAttr`**,
+  así que un nombre con comillas rompía el campo. `lcInput` escapa siempre.
+- ⚠️ **El resto de pantallas NO se convirtió**, a propósito: son ~140 bloques repartidos por
+  funciones de render con estructuras distintas (unos dentro de `.fr`, otros con pista o atributos
+  propios), y reescribirlos en masa es churn con riesgo de regresión visual y **cero beneficio
+  visible** para el usuario. La auditoría ya lo planteó como incremental **por pantalla**: es la
+  única fase que puede pararse a medias sin dejar nada roto. Lo que queda hecho es lo que importa —
+  **existe un punto único y documentado** para que una pantalla nueva no vuelva a crear otro campo.
