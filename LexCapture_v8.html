@@ -3434,10 +3434,8 @@ function lcPlazo36(c, now) {
   now = now || Date.now();
   var hrs = (now - (c && c.created || 0)) / 3600000;
   if (!c || c.isTest) return { hrs: hrs, estado: 'demo', restan: null, badge: '' };
-  if (hrs >= 36) return { hrs: hrs, estado: 'vencido', restan: 0,
-    badge: '<span class="badge b-venc">VENCIDO &gt;36H</span>' };
-  if (hrs >= 24) return { hrs: hrs, estado: 'urgente', restan: 36 - hrs,
-    badge: '<span class="badge b-urg">URGENTE</span>' };
+  if (hrs >= 36) return { hrs: hrs, estado: 'vencido', restan: 0, badge: '' };
+  if (hrs >= 24) return { hrs: hrs, estado: 'urgente', restan: 36 - hrs, badge: '' };
   return { hrs: hrs, estado: 'ok', restan: 36 - hrs, badge: '' };
 }
 
