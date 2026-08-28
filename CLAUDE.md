@@ -3427,3 +3427,130 @@ escrito a mano · sin municipio todavía.
   ⚠️ Siguen fallando, **igual que contra el build anterior** (comprobado): `verify_menu_expediente`
   [9] («un único `lcPlazo36`») y `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08). Anti-caché `?v=82` / `cache-v82`, `_BUILD=82`.
+
+## Mejora 5 (2026-08-28) — el dato ya estaba, el documento no lo enseñaba
+Siete observaciones de campo sobre el FPJ-5 y el acta de derechos
+(`Documentos/Otro/Mejora 5.docx`: texto + 7 pantallazos con recuadro rojo numerado). Verificado con
+`verify_mejora5.mjs` (**78 checks**, nuevo) y abriendo los `.docx` en **Word real** (COM). Anti-caché
+`?v=83` / `cache-v83`, `_BUILD=83`.
+
+⚠️ **El hilo que une las siete**: en ninguna la app carecía del dato. O lo tenía y no lo imprimía
+(el artículo del C.P., la dirección del despacho), o lo imprimía **en la casilla equivocada** (el
+lugar de nacimiento entero dentro de «País»), o lo enseñaba con un formato que no es el del
+formulario (las señas en negrita y sin renglón). No hubo que pedirle nada nuevo al funcionario salvo
+lo de la observación 7, que el formato sí pide y nadie preguntaba.
+
+### Obs. 1 · «1. DESTINO DEL INFORME» sale con la dirección del despacho
+El numeral imprimía `c.destino` a secas —«Fiscalía URI»— mientras el paso 1 del wizard ya enseña la
+tarjeta con la dirección registrada. Nuevo `lcDestinoInforme(c)`, que compone nombre + dirección
+usando `lcDespDireccion` (el mismo compositor del oficio OJ, para no tener dos criterios).
+- ⚠️ **La ciudad no puede salir dos veces.** El nombre registrado suele terminar en ella («Fiscalía
+  URI Medellín») y la dirección la lleva al final: `_lcSinCola` la quita **del nombre**, y solo
+  cuando es **palabra completa al final** y el nombre no se queda vacío — «Medellín» a secas y
+  «Fiscalía Medellinense» no se tocan. Sin esas dos guardas, el numeral 1 podría quedarse sin
+  despacho.
+- ⚠️ **Un destino escrito a mano (`destinoManual`) se imprime tal cual**, y una captura que ya no
+  apunta a ningún despacho del registro, también: la app no tiene esa dirección y no se la inventa.
+
+### Obs. 2 · el artículo del Código Penal llega al numeral 2
+`articulosCP[]` existe desde la Fase D (issue M2) y **se quedaba en el modelo**: el numeral 2
+imprimía solo el nombre del delito. Ahora sale «1. Hurto — Art. 239 C.P.».
+- **`lcArtCP` normaliza en un solo punto**: el campo es texto libre con autocompletado, así que llega
+  como «239», «Art. 239», «artículo 239» o «239 del Código Penal» — las cuatro se leen igual.
+- ⚠️ **Sin artículo registrado el renglón sale exactamente como salía antes**, con el delito a secas.
+- ⚠️ **Las conductas se compactan por PAREJA**: el artículo viaja con su delito, así que un hueco en
+  medio del arreglo no corre los artículos de renglón. (La compactación ya existía; ahora tiene que
+  arrastrar dos arreglos en paralelo.)
+
+### Obs. 3 · una dirección sin placa es un CRUCE, y se escribe en palabras
+«CL 52A # 50-46» (completa) no cambia. Pero sin placa —lo más común cuando la captura es en vía
+pública— lo que se nombra no es un inmueble sino una intersección, y «CL 49 # 54» se lee como una
+dirección a la que le falta el final. Ahora `lcDirComponer` produce «Calle 49 con carrera 54».
+- ⚠️ **La vía que cruza se DERIVA de la nomenclatura, no se adivina** (`LC_VIA_CRUCE`): calle⇄carrera,
+  diagonal⇄transversal. Donde ese par no existe (avenida, circular, kilómetro…) se dice «con» y el
+  número: **no se le pone un tipo de vía que nadie registró**.
+- ⚠️ `lcDirParsear` ya entendía «Calle 52 con carrera 50», así que el dato **va y vuelve** del
+  formulario sin perder nada, y la vista previa del widget enseña lo que se va a imprimir.
+
+### Obs. 4 · el lugar de nacimiento, en sus tres casillas
+El formulario pedía UN campo cerrado y `_fpjFillVicTest` volcaba ese texto en la casilla **País** de
+los apartados 5 y 6, dejando Departamento y Municipio en blanco: el dato salía donde no va y dos
+casillas del formato quedaban vacías.
+- **El formulario de personas pide las tres** (`lcNacCampos`, mismo bloque en el wizard y en el
+  registro): municipio o ciudad · departamento o estado · país. Con un municipio de Colombia el
+  departamento **y el país** se completan solos, reutilizando `lcGeoDepto` (Ola 2 + catálogo del país
+  entero). Para una persona extranjera los tres se escriben a mano.
+- ⚠️ **La inferencia se dispara en el `input` del municipio, nunca en su blur** — en el blur el foco
+  todavía no ha llegado al destino y lo tecleado se concatena con la sugerencia (lección de la
+  Ola 2) — y solo pisa lo que puso la propia app (`data-lc-auto`).
+- **El modelo gana campos, no los pierde**: `nacMuni`/`nacDepto`/`nacPais` **y** `lugNac` compuesto,
+  que es lo que imprime el apartado 4 en una sola línea y lo que leen el acta, el dossier y el
+  módulo OJ. `ojPersonaEspejo` guarda ahora los tres y `ojUsarPersona` los relee: el viaje de vuelta
+  sigue siendo simétrico.
+- ⚠️ **«Colombia» NO se escribe en la línea de una sola casilla** —es lo que hay que suponer para un
+  colombiano, y así lo pidió el usuario—; en la **casilla País** del formato sí, porque esa casilla
+  existe para eso.
+- ⚠️ **Migración AL LEER, sin tocar lo guardado** (`lcNacPartes`): una persona registrada antes se
+  interpreta «Municipio, Departamento[, País]», que es como lo compone la propia app. **Se parte solo
+  por COMAS**: con guiones, un «Venezuela- la guaira» se leería como municipio y departamento e
+  inventaría una jurisdicción que nadie escribió. Lo que no encaja se deja entero en el campo más
+  específico.
+- El municipio usa el datalist del país entero, y `openPersonModal` **llama ahora a
+  `lcGeoPintarDatalist()`**: solo lo pintaba `renderWiz`, así que en la pantalla de Personas el campo
+  se quedaba sin sugerencias.
+
+### Obs. 5 · «Señales particulares visibles» — sin negrita y sobre línea continua
+Era el único renglón del apartado 4 que se leía distinto del resto del formulario: la etiqueta en
+negrita (las dos plantillas la traen así) y la descripción flotando sin renglón.
+- **La etiqueta deja de ir en negrita** y la descripción se escribe **encima de una línea continua**:
+  un subrayado sencillo, el mismo trazo que dibuja el resto del documento, prolongado hasta el margen
+  con espacios duros (`_DOC_DURO`, el mecanismo que ya conserva los renglones del acta de derechos).
+- ⚠️ **El relleno se calcula HACIA ABAJO y con colchón** (`FPJ_SENAS_AIRE`, 60 tw): este párrafo
+  ocupa el ancho de la página y salta de línea solo, así que pasarse un pelo haría que Word envolviera
+  el relleno y dibujara **un segundo renglón subrayado en blanco**. Medido en Word sobre 112
+  descripciones de longitud creciente: **40 llevan relleno y ninguna se va a dos líneas**, ninguna
+  rebasa el margen, y la línea termina entre 4,1 y 6,5 pt del borde (1,5–2,3 mm).
+- ⚠️ **Con una descripción larga NO se pone relleno**: el subrayado sigue siendo continuo bajo todo el
+  texto y la línea no se prolonga a un renglón que ya llega al margen.
+- Vale para el apartado original y para cada copia (4.1, 4.2 …): las copias pasan por `_fpjSenas`
+  desde `_fpjRepetir`. ⚠️ **`verify_multipersona` cambió de expectativa** —exigía la etiqueta en
+  negrita— porque la regla la revisó el usuario; no bajó su cuenta y gana la comprobación del
+  subrayado.
+
+### Obs. 6 · el acta de derechos deja de hacer ruido
+Nombre identitario, LGBTI, pertenencia étnica, comunidad y redes sociales ocupaban media pantalla en
+**toda** acta, y lo corriente es un procedimiento con una persona que no encaja en ninguna de esas
+categorías. El bloque **se conserva entero** —hay casos especiales y el formato los pide— pero viaja
+**plegado** (`<details class="oj-mas">`), y se abre solo si la persona ya trae alguno de esos datos
+(`f6TieneIdentidad`): un bloque cerrado que esconde algo diligenciado es un dato invisible.
+- ⚠️ **La ÚNICA excepción, marcada por el usuario, es «¿presentó su documento de identificación
+  físico?»**: se responde en todos los procedimientos y sigue a la vista.
+- ⚠️ **Plegar no es borrar**: los campos siguen en el DOM y `f6Leer` los sigue recolectando con el
+  bloque cerrado. Hay un check dedicado. (`verify_fpj6` abre el bloque antes de escribir en él.)
+
+### Obs. 7 · quién es quién en «la persona a quien se comunica la captura»
+El formato imprime cuatro renglones y dos salían incompletos: el nombre, sin decir **qué es** esa
+persona del capturado, y la identificación, un número **sin decir de qué documento se trata**.
+- **`comunica` gana cuatro campos**: parentesco (catálogo de los 14 vínculos que dictó el usuario —
+  madre, padre, hermano/a, tío/a, primo/a, hijo/a, esposo/a, compañero/a sentimental— más «Otro» con
+  campo libre, porque la ley no cierra la lista), tipo de documento y lugar de expedición.
+- Salida: «NATALIA ARDILA RAMÍREZ — Madre» y «CC No 1214853698 de Medellín». ⚠️ **El nombre va en
+  MAYÚSCULAS y el parentesco no**: es una palabra corriente, no un dato de identificación — así lo
+  escribió el usuario sobre el acta. El número sigue saliendo **sin puntos**.
+- ⚠️ **Cada parte es opcional**: sin lugar de expedición no queda un «de» suelto, y sin número no se
+  imprime nada. Los cuatro ejemplos que dictó el usuario (CC/TI/CE/DE) tienen su check.
+- ⚠️ **Viven en `caso.actas[]`, NO en la persona capturada**: a quién se avisó y con qué documento se
+  identificó es un hecho de ESTE procedimiento — mismo criterio que `presentoDoc`.
+
+### Regresiones
+En verde: **mejora5 78** · mejora1 157 · multipersona · fpj6 140 · fpj5 tipografía 48 · export 74 ·
+incautación 141 · custodia 99 · despachos 53 · jurisdicción 67 · personas 25 · simulador 41 ·
+invitado 34 · mejora2 38 · mejora3 51 · firma 62 · editable 28 · tipografía OJ 42 · envío 39 ·
+almacén 12 · expediente 13 · orden 33 · ola1 38 · ola3 33 · ola4 22 · tema 39 · grados 31 ·
+dossier histórico 29.
+⚠️ **Cuatro fallos PREEXISTENTES, no de este trabajo**: `verify_oj` [18] y `verify_ola2` [12]
+(«el destinatario se sigue proponiendo» / «condena ⇒ R4-A») — **comprobado ejecutando la suite contra
+el build de HEAD: falla idéntico**. `ojResolverDestino` funciona bien: fuera de la jornada hábil no
+hay juzgado disponible y enruta a **R4-B** (juez de turno, C-042/2018); lo que está mal es que las
+suites dan por hecho un día y una hora hábiles. `verify_menu_expediente` [9] y `verify_ds`
+(«favorito con estrella SVG») ya estaban documentados.

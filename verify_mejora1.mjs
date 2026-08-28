@@ -444,12 +444,12 @@ function celdas(xml) {
 function textoCelda(seg) { let t = ''; for (const x of seg.matchAll(/<w:t(?:\s[^>\/]*)?>([\s\S]*?)<\/w:t>/g)) t += x[1]; return t; }
 /* Un caso por tipo: URI y CESPA comparten el layout de celdas pero NO el XML de
    esa casilla (en CESPA su run viene vacío y sin tamaño de letra declarado). */
-async function num2De(tipo, conductas, tag) {
-  const id = await page.evaluate(async ([tp, cds]) => {
+async function num2De(tipo, conductas, tag, arts) {
+  const id = await page.evaluate(async ([tp, cds, ar]) => {
     const c = {
       id: 'N2' + Date.now() + Math.random().toString(36).slice(2, 6), tipo: tp, estado: 'Registrado',
       nunc: '0500160002062026', fechaProc: '2026-07-30', destino: 'Fiscalía',
-      conductas: cds, articulosCP: cds.map(() => '239'),
+      conductas: cds, articulosCP: ar || cds.map(() => ''),
       capturados: [{ nombre1: 'JUAN', apellido1: 'PÉREZ', tipoDoc: 'C.C.', doc: '1017' }],
       victimas: [], testigos: [], sinVictima: true, sinTestigo: true,
       lugar: { dir: 'CL 52 # 50-31', barrio: 'Colón', zona: 'Urbana', depto: 'Antioquia', muni: 'Medellín' },
@@ -457,7 +457,7 @@ async function num2De(tipo, conductas, tag) {
       hayVehiculos: false, vehiculos: []
     };
     await DB.saveCase(c); return c.id;
-  }, [tipo, conductas]);
+  }, [tipo, conductas, arts]);
   const x = await docXmlDe(id, 'CARTA', tag);
   if (!x) return null;
   const cs = celdas(x);

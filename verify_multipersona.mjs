@@ -100,11 +100,22 @@ async function inspect(tipo, caps, vics, tests) {
       cur.text += t + '\n';
       if (k.localName === 'tbl') { cur.tbl++; cur.geo.push(geo(k)); }
     });
-    // "Señales particulares visibles:" — etiqueta en negrita, valor en texto normal.
+    /* «Señales particulares visibles:» — Mejora 5, obs. 5: NI la etiqueta ni el
+       valor van en negrita, y la descripción se escribe encima de una línea
+       continua (subrayado sencillo, igual que las demás líneas del documento). */
     const senas = kids.filter(k => k.localName === 'p' && /ales particulares visibles/.test(txt(k))).map(p => {
       const rs = Array.from(p.getElementsByTagNameNS(W, 'r')).filter(r => r.getElementsByTagNameNS(W, 't').length);
       const neg = r => r.getElementsByTagNameNS(W, 'b').length > 0;
-      return { runs: rs.length, etiquetaNegrita: rs[0] ? neg(rs[0]) : null, valorNegrita: rs[1] ? neg(rs[1]) : null, txt: txt(p).slice(0, 45) };
+      const sub = r => Array.from(r.getElementsByTagNameNS(W, 'u'))
+        .some(u => (u.getAttribute('w:val') || 'single') !== 'none');
+      return {
+        runs: rs.length,
+        etiquetaNegrita: rs[0] ? neg(rs[0]) : null,
+        valorNegrita: rs[1] ? neg(rs[1]) : null,
+        etiquetaSubrayada: rs[0] ? sub(rs[0]) : null,
+        valorSubrayado: rs[1] ? sub(rs[1]) : null,
+        txt: txt(p).slice(0, 45)
+      };
     });
     // Word exige identificadores únicos: los clones no pueden repetir marcadores ni paraId.
     const bmk = Array.from(body.getElementsByTagNameNS(W, 'bookmarkStart')).map(b => b.getAttribute('w:name'));
@@ -186,8 +197,11 @@ else {
   // negro grueso, como si el renglón de arriba estuviera tachado (pasaba en 6.1 y 6.2).
   const pegados = uri.secs.filter(s => s.previo === 'tbl').map(s => s.head.split(' ')[0]);
   log(pegados.length === 0, '[URI] ninguna barra de título queda pegada al borde de una tabla', pegados.join(',') || 'todas con aire');
-  log(uri.senas.length === 3 && uri.senas.every(s => s.runs >= 2 && s.etiquetaNegrita && !s.valorNegrita),
-    '[URI] "Señales particulares": etiqueta en negrita y señas en texto normal', JSON.stringify(uri.senas.map(s => s.runs + 'runs')));
+  log(uri.senas.length === 3 && uri.senas.every(s => s.runs >= 2 && !s.etiquetaNegrita && !s.valorNegrita),
+    '[URI] "Señales particulares": ni la etiqueta ni las señas van en negrita (Mejora 5, obs. 5)', JSON.stringify(uri.senas.map(s => s.runs + 'runs')));
+  log(uri.senas.length === 3 && uri.senas.every(s => s.valorSubrayado && !s.etiquetaSubrayada),
+    '[URI] las señas se escriben encima de una línea continua, y la etiqueta no',
+    JSON.stringify(uri.senas.map(s => (s.valorSubrayado ? 'valor✓' : 'valor✗') + '/' + (s.etiquetaSubrayada ? 'et✗' : 'et✓'))));
 }
 
 // ============ 2) CESPA (menores) con 2 aprehendidos y 2 testigos, sin víctima ============
@@ -213,9 +227,12 @@ else {
   noFiltra(cespa.full, ['DANIEL', 'ROMAN', 'GIRALDO', 'Daniel.romang@correo.policia.gov.co'], '[CESPA]');
   const pegadosC = cespa.secs.filter(s => s.previo === 'tbl').map(s => s.head.split(' ')[0]);
   log(pegadosC.length === 0, '[CESPA] ninguna barra de título queda pegada al borde de una tabla', pegadosC.join(',') || 'todas con aire');
-  // La plantilla CESPA trae la etiqueta en un solo run: hay que añadir el run del valor sin negrita.
-  log(cespa.senas.length === 2 && cespa.senas.every(s => s.runs >= 2 && s.etiquetaNegrita && !s.valorNegrita),
-    '[CESPA] "Señales particulares": las señas NO salen resaltadas en negrita', JSON.stringify(cespa.senas.map(s => s.runs + 'runs')));
+  // La plantilla CESPA trae la etiqueta en un SOLO run y en negrita: hay que quitarle el
+  // resaltado y añadir el run del valor, también sin negrita.
+  log(cespa.senas.length === 2 && cespa.senas.every(s => s.runs >= 2 && !s.etiquetaNegrita && !s.valorNegrita),
+    '[CESPA] "Señales particulares": ni la etiqueta ni las señas salen resaltadas', JSON.stringify(cespa.senas.map(s => s.runs + 'runs')));
+  log(cespa.senas.length === 2 && cespa.senas.every(s => s.valorSubrayado && !s.etiquetaSubrayada),
+    '[CESPA] y las señas van encima de la línea continua, también en las copias');
 }
 
 // ============ 3) Una sola persona por rol: el documento no cambia de forma ============

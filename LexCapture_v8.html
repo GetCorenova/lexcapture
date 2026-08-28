@@ -2219,6 +2219,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <datalist id="dl-muni"></datalist>
 <!-- Los 33 departamentos: campo contiguo al municipio y resolución de homónimos. -->
 <datalist id="dl-depto"></datalist>
+<!-- Países del lugar de nacimiento (Mejora 5, obs. 4). Sugiere, no restringe:
+     el campo sigue siendo de escritura libre para cualquier nacionalidad. -->
+<datalist id="dl-pais"></datalist>
 <!-- Grados: lo pinta lcGradoPintarDatalist() al arrancar. La escritura libre se
      conserva a propósito — un datalist sugiere, no restringe. -->
 <datalist id="dl-grado"></datalist>
@@ -2369,7 +2372,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 82;
+var _BUILD = 83;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -4199,7 +4202,22 @@ var LC_VIA_ALIAS={CLL:'CL',CLE:'CL',CA:'CL',CRA:'KR',CR:'KR',KRA:'KR',CARR:'KR',
 function lcViaNombre(ab){
   var r=ab||''; LC_VIA.forEach(function(v){ if(v.ab===ab) r=v.nom; }); return r;
 }
-/* Compone la dirección en el formato uniforme: "CL 52 # 50-31 APTO 301". */
+/* Mejora 5, obs. 3 — LA DIRECCIÓN INCOMPLETA SE ESCRIBE EN PALABRAS.
+   Una dirección completa lleva placa («CL 52A # 50-46») y se imprime abreviada,
+   como hasta ahora. Pero cuando no hay placa —lo más común cuando la captura es
+   en vía pública— lo que se está nombrando no es un inmueble sino un CRUCE, y
+   «CL 49 # 54» se lee como una dirección a la que le falta el final. En ese caso
+   el informe dice «Calle 49 con carrera 54», que es como se escribe una
+   intersección.
+   ⚠️ La vía que cruza se deriva de la nomenclatura, no se adivina: una calle
+   cruza con carrera y una carrera con calle (igual diagonal/transversal). Para
+   las vías en que ese par no existe —avenida, circular, kilómetro…— se dice
+   «con» y el número, sin ponerle un tipo de vía que nadie registró.
+   ⚠️ `lcDirParsear` ya entiende «Calle 52 con carrera 50», así que el dato va y
+   vuelve del formulario sin perder nada. */
+var LC_VIA_CRUCE={CL:'KR',AC:'KR',KR:'CL',AK:'CL',DG:'TV',TV:'DG'};
+/* Compone la dirección en el formato uniforme: "CL 52 # 50-31 APTO 301", o en
+   palabras cuando es un cruce sin placa: "Calle 49 con carrera 54". */
 function lcDirComponer(o){
   o=o||{};
   var via=String(o.via||'').trim();
@@ -4208,9 +4226,15 @@ function lcDirComponer(o){
   var placa=String(o.placa||'').trim().toUpperCase().replace(/\s+/g,'');
   var comp=String(o.comp||'').trim().replace(/\s+/g,' ');
   if(!via&&!num) return '';
-  var s=(via?via+' ':'')+num;
-  if(cruce) s+=' # '+cruce+(placa?'-'+placa:'');
-  else if(placa) s+=' # '+placa;
+  var s;
+  if(via&&num&&cruce&&!placa){
+    var otra=LC_VIA_CRUCE[via];
+    s=lcViaNombre(via)+' '+num+' con '+(otra?lcViaNombre(otra).toLowerCase()+' ':'')+cruce;
+  }else{
+    s=(via?via+' ':'')+num;
+    if(cruce) s+=' # '+cruce+(placa?'-'+placa:'');
+    else if(placa) s+=' # '+placa;
+  }
   if(comp) s+=' '+comp.toUpperCase();
   return s.replace(/\s+/g,' ').trim();
 }
@@ -5052,7 +5076,11 @@ function openPersonModal(key,idx,p,showSenas,showRole){
     '<div class="fg"><label class="fl">Género</label><select class="fs" id="pm-sexo">'+
     lcSexoOpciones(p.sexo)+'</select></div></div>'+
     '<p style="font-size:.72rem;color:var(--txD);margin:-4px 0 10px">El formato solo trae casillas M y F: con «Intersexual / no informa» o sin dato, las dos quedan en blanco para diligenciarlas a mano.</p>'+
-    '<div class="fg"><label class="fl">Lugar nacimiento</label><input class="fi" id="pm-lugNac" value="'+(p.lugNac||'')+'"></div>'+
+    /* Lugar de nacimiento (Mejora 5, obs. 4): tres casillas, como las pide el
+       formato en los apartados 5 y 6. Con un municipio de Colombia el
+       departamento y el país se completan solos; para una persona extranjera se
+       escriben ciudad, estado o provincia y país. */
+    lcNacCampos('pm',p)+
     '<div class="fr"><div class="fg"><label class="fl">Estado civil</label><select class="fs" id="pm-ecivil">'+
     '<option value="">—</option><option '+(p.ecivil==='Soltero/a'?'selected':'')+'>Soltero/a</option><option '+(p.ecivil==='Casado/a'?'selected':'')+'>Casado/a</option>'+
     '<option '+(p.ecivil==='Unión libre'?'selected':'')+'>Unión libre</option><option '+(p.ecivil==='Separado/a'?'selected':'')+'>Separado/a</option>'+
@@ -5075,11 +5103,15 @@ function openPersonModal(key,idx,p,showSenas,showRole){
     '<div class="fg"><label class="fl">Nombres padres</label><input class="fi" id="pm-padres" value="'+(p.padres||'')+'"></div>'+
     senasB+
     '<button class="btn bp bbl mt16" onclick="savePersonModal(\''+key+'\','+idx+','+showSenas+')">Guardar</button>');
+  /* El municipio de nacimiento usa el mismo datalist del país entero que el
+     lugar de los hechos, y hasta ahora solo lo pintaba `renderWiz`: en la
+     pantalla de Personas el campo se quedaba sin sugerencias. */
+  lcGeoPintarDatalist();
 }
 
 function savePersonModal(key,idx,showSenas){
   function v(id){var el=document.getElementById('pm-'+id);return el?el.value:'';}
-  var p={id:uid(),tipoDoc:v('tipoDoc'),numDoc:sinPuntos(v('numDoc')),expEn:v('expEn'),priNom:v('priNom'),segNom:v('segNom'),priApe:v('priApe'),segApe:v('segApe'),alias:v('alias')||'N/A',fn:v('fn'),edad:v('edad'),sexo:lcSexo(v('sexo')),lugNac:v('lugNac'),ecivil:v('ecivil'),escol:v('escol'),ocup:v('ocup'),dirRes:v('dirRes'),tel:v('tel'),correo:v('correo'),padres:v('padres'),senas:showSenas?v('senas'):''};
+  var p=Object.assign({id:uid(),tipoDoc:v('tipoDoc'),numDoc:sinPuntos(v('numDoc')),expEn:v('expEn'),priNom:v('priNom'),segNom:v('segNom'),priApe:v('priApe'),segApe:v('segApe'),alias:v('alias')||'N/A',fn:v('fn'),edad:v('edad'),sexo:lcSexo(v('sexo')),ecivil:v('ecivil'),escol:v('escol'),ocup:v('ocup'),dirRes:v('dirRes'),tel:v('tel'),correo:v('correo'),padres:v('padres'),senas:showSenas?v('senas'):''},lcNacLeer('pm'));
   /* ⚠️ Se FUSIONA sobre la persona que ya estaba, no se reemplaza. Este
      formulario se reconstruye desde cero en cada guardado, así que sustituir el
      objeto borraba en silencio todo campo que el modal no pinta — y desde el
@@ -5492,15 +5524,15 @@ function openPersonForm(person) {
   if (h2) h2.textContent = (existingId ? 'Editar ' : 'Registrar ') + (p.rol || 'persona');
   document.querySelector('#modal-c .btn.bp.bbl').onclick = function() {
     function v(id) { var el = document.getElementById('pm-'+id); return el ? el.value : ''; }
-    var np = {
+    var np = Object.assign({
       id: existingId || uid(),
       tipoDoc:v('tipoDoc'), numDoc:sinPuntos(v('numDoc')), expEn:v('expEn'),
       priNom:v('priNom'), segNom:v('segNom'), priApe:v('priApe'), segApe:v('segApe'),
-      alias:v('alias')||'N/A', fn:v('fn'), edad:v('edad'), sexo:lcSexo(v('sexo')), lugNac:v('lugNac'),
+      alias:v('alias')||'N/A', fn:v('fn'), edad:v('edad'), sexo:lcSexo(v('sexo')),
       ecivil:v('ecivil'), escol:v('escol'), ocup:v('ocup'),
       dirRes:v('dirRes'), tel:v('tel'), correo:v('correo'), padres:v('padres'),
       senas:v('senas'), rol:v('rol')||p.rol||'Capturado'
-    };
+    }, lcNacLeer('pm'));
     // Mismo criterio que savePersonModal: se fusiona sobre la persona guardada
     // para no borrar los campos que este formulario no pinta (los del FPJ-6).
     DB.savePerson(Object.assign({}, p, np)); closeModal(); renderPersonas(); toast('Persona guardada ✓');
@@ -5890,6 +5922,7 @@ var SIM={
     var edad=opts.edad!==undefined?opts.edad:(opts.menor?this.ri(14,17):this.ri(18,62));
     var fn=this.fNacPara('',edad);
     var pri=this.r(this.N),ape=this.r(this.A);
+    var muniNac=this.r(this.MUNI);
     return {id:uid(),
       tipoDoc:opts.menor?'TI':'CC',numDoc:this.rDoc(),expEn:this.r(this.MUNI),
       priNom:pri,segNom:this.rb(.6)?this.r(this.N):'',
@@ -5897,7 +5930,10 @@ var SIM={
       alias:this.rb(.4)?this.r(this.ALIAS):'N/A',
       fn:fn,edad:String(calcAgeVal(fn)),
       sexo:this.r(['M','F']),                    // el FPJ-5 marca con X la casilla M o F
-      lugNac:this.r(this.MUNI)+', Antioquia',
+      // Lugar de nacimiento estructurado: el FPJ-5 lo imprime en tres casillas
+      // en los apartados 5 y 6, y el caso de demostración tiene que enseñarlas.
+      nacMuni:muniNac,nacDepto:'Antioquia',nacPais:'Colombia',
+      lugNac:muniNac+', Antioquia',
       ecivil:opts.menor?'Soltero/a':this.r(this.EC),
       escol:opts.menor?this.r(['Primaria','Bachiller']):this.r(this.ES),
       ocup:opts.menor?'Estudiante':this.r(this.O),
@@ -7093,6 +7129,22 @@ function _fpjEmp(body,lineas){
   _fpjKeepNext(blk.titulo);
   return slots.length>=lineas.length;
 }
+/* Mejora 5, obs. 2 — el artículo del Código Penal que el funcionario registró
+   en el paso «Datos del caso» NO llegaba al informe: el numeral 2 imprimía solo
+   el nombre del delito y `articulosCP[]` se quedaba en el modelo.
+   ⚠️ Se normaliza en un solo punto para que el renglón se lea igual escriba el
+   usuario «239», «Art. 239», «artículo 239 C.P.» o «239 del Código Penal» — el
+   campo es texto libre con autocompletado, así que llega de las cuatro formas.
+   ⚠️ Sin artículo registrado NO se inventa nada: el renglón sale exactamente
+   como salía antes, con el delito a secas. */
+function lcArtCP(a){
+  var s=String(a==null?"":a).trim();
+  if(!s) return "";
+  s=s.replace(/^(?:art[íi]culos?|arts?)\.?\s*/i,"")
+     .replace(/\s*(?:del\s+)?(?:c\.?\s*p\.?|c[óo]digo\s+penal)\.?\s*$/i,"")
+     .replace(/[.,;\s]+$/,"").trim();
+  return s?("Art. "+s+" C.P."):"";
+}
 /* ── Numeral 2: presunta conducta punible — numeración de la app ──────────
    La plantilla NO numera igual sus cuatro casillas: la primera lleva una lista
    automática de Word (w:numPr → numId 2), que imprime «1.» seguido de la
@@ -7113,9 +7165,15 @@ function _fpjEmp(body,lineas){
    ⚠️ El apartado 2 NO es repetible: a diferencia de los apartados 4/5/6 y del 7,
    el formato no trae al pie la nota que autoriza reproducir las casillas. Son
    cuatro y son cuatro; lo que no quepa se avisa, no se inventa una fila. */
-function _fpjConductas(tcs,conds){
+function _fpjConductas(tcs,conds,arts){
   var W=FPJ_W,celdas=[58,59,60,61];
-  var lista=(conds||[]).map(function(x){return String(x==null?"":x).trim();}).filter(Boolean);
+  var lista=[];
+  (conds||[]).forEach(function(x,k){
+    var d=String(x==null?"":x).trim();
+    if(!d) return;                                  // se compacta ANTES de numerar
+    var a=lcArtCP((arts||[])[k]);
+    lista.push(a?(d+" — "+a):d);
+  });
   for(var i=0;i<celdas.length;i++){
     var tc=tcs[celdas[i]];
     if(tc){
@@ -7228,36 +7286,69 @@ function _fpjBase(tcs,blk,pordefecto){
   }
   return pordefecto;
 }
-// "Señales particulares visibles:" no es una celda sino un párrafo suelto del apartado 4.
-// En la plantilla URI la etiqueta va en negrita y el valor en texto normal (dos runs): se escribe
-// cada uno en el suyo para no volver negrita toda la línea.
+/* «Señales particulares visibles:» no es una celda sino un párrafo suelto del
+   apartado 4, así que no tiene el renglón que el formato dibuja en las casillas.
+
+   Mejora 5, obs. 5 — DOS CORRECCIONES SOBRE ESE RENGLÓN:
+   · La ETIQUETA deja de ir en negrita. Las dos plantillas la traen resaltada
+     (en URI en su propio run, en CESPA en el único que hay) y era la única
+     etiqueta del apartado que se leía distinta de las demás.
+   · La DESCRIPCIÓN se escribe encima de una línea continua, y la línea es la
+     misma que dibuja el resto del documento: un subrayado sencillo, ni más
+     grueso ni resaltado. La línea se prolonga hasta el margen con espacios
+     duros —el mismo mecanismo de `_docRelleno` que ya conserva los renglones
+     del acta de derechos—, para que se vea como los demás renglones del
+     formulario y no como un subrayado que termina donde acaba el texto.
+
+   ⚠️ El relleno solo se pone cuando la descripción CABE en un renglón. Este
+   párrafo ocupa el ancho de la página y salta de línea solo: prolongar una
+   descripción que ya llega al margen empujaría un renglón más, en blanco. Con
+   una descripción larga la línea sigue siendo continua bajo todo el texto.
+   ⚠️ Vale para el apartado original y para cada copia (4.1, 4.2 …): las copias
+   pasan por aquí desde `_fpjRepetir`. */
+var FPJ_ANCHO=10631;                 // ancho útil del formato, en twips (v2.3)
+var FPJ_SENAS_AIRE=60;               // colchón antes del margen derecho (3 pt ≈ 1 mm)
+function _fpjSinNegrita(r){
+  var pr=r&&r.getElementsByTagNameNS(FPJ_W,"rPr")[0];
+  if(!pr)return;
+  ["b","bCs"].forEach(function(tag){
+    var e=pr.getElementsByTagNameNS(FPJ_W,tag);
+    while(e.length)e[0].parentNode.removeChild(e[0]);
+  });
+}
 function _fpjSenas(nodes,p){
+  var W=FPJ_W,ET="Señales particulares visibles: ";
   for(var i=0;i<nodes.length;i++){
     if(nodes[i].localName!=="p")continue;
-    if(!/senales particulares/i.test(_noAcc(_getElText(nodes[i],FPJ_W))))continue;
-    var ts=nodes[i].getElementsByTagNameNS(FPJ_W,"t");
-    if(!ts.length)return false;
+    if(!/senales particulares/i.test(_noAcc(_getElText(nodes[i],W))))continue;
+    var par=nodes[i],rs=par.getElementsByTagNameNS(W,"r");
+    if(!rs.length)return false;
     var val=(p&&p.senas)||"No refiere";
-    if(ts.length>1){ts[1].textContent=val;for(var j=2;j<ts.length;j++)ts[j].textContent="";}
-    else{
-      // La plantilla CESPA trae la etiqueta en un único run en negrita; si el valor se escribiera
-      // ahí, las señas del aprehendido saldrían resaltadas. Se añade un segundo run —copia del
-      // primero pero sin negrita— para que el valor quede en texto normal, como en URI.
-      var r0=ts[0].parentNode,r1=r0.cloneNode(true);
-      var pr=r1.getElementsByTagNameNS(FPJ_W,"rPr")[0];
-      if(pr)["b","bCs"].forEach(function(tag){var e=pr.getElementsByTagNameNS(FPJ_W,tag);while(e.length)e[0].parentNode.removeChild(e[0]);});
-      var t1=r1.getElementsByTagNameNS(FPJ_W,"t")[0];
-      t1.textContent=val;t1.setAttribute("xml:space","preserve");
-      r0.parentNode.insertBefore(r1,r0.nextSibling);
+    var base=rs[0].cloneNode(true);
+    _fpjSinNegrita(base);                                  // la etiqueta tampoco va resaltada
+    var pt=_docSzDe(rs[0],22)/2;
+    while(rs.length)rs[0].parentNode.removeChild(rs[0]);
+    function pon(txt,subrayar){
+      var r=_docRunSobre(base,txt,subrayar);
+      par.appendChild(r);
+      return r;
     }
-    ts[0].textContent="Señales particulares visibles: ";
-    ts[0].setAttribute("xml:space","preserve");
-    /* Las señas no son una celda sino un párrafo suelto, así que no pasan por
-       `setTc`: se anota aquí para que el valor entre en la pasada de 11 pt.
-       Se anota el párrafo entero y no solo el run del valor porque la etiqueta
-       la reescribe también la app y ya está a 11 pt en las dos plantillas
-       (medido) — sobre ella la pasada es un no-op. */
-    _fpjAnota(nodes[i],val);
+    pon(ET,false);
+    pon(val,true);
+    /* ⚠️ El relleno se calcula HACIA ABAJO y con un margen de seguridad: el
+       canvas y Word no miden igual (medido: ~3 pt de diferencia a lo ancho de
+       la página), y pasarse aunque sea un pelo hace que Word envuelva el
+       relleno y dibuje un segundo renglón subrayado en blanco. `FPJ_SENAS_AIRE`
+       es ese colchón, en twips. */
+    var ancho=FPJ_ANCHO-FPJ_SENAS_AIRE;
+    var usado=lcAnchoTexto(ET,pt)+lcAnchoTexto(val,pt);
+    var unidad=lcAnchoTexto(new Array(11).join(_DOC_DURO),pt)/10;
+    var cuantos=unidad?Math.floor((ancho-usado)/unidad):0;
+    if(cuantos>0)pon(new Array(cuantos+1).join(_DOC_DURO),true);
+    /* Las señas no son una celda y no pasan por `setTc`: se anota el párrafo
+       para que entre en la pasada de 11 pt (sobre la etiqueta, que ya está a
+       11 pt en las dos plantillas, es un no-op). */
+    _fpjAnota(par,val);
     return true;
   }
   return false;
@@ -7408,7 +7499,8 @@ function fpjFillCapturado(tcs,b,p,tf){
   _fpjEdad(tcs,b+20,p.edad);
   _fpjGenero(tcs,b+25,b+27,p);                          // Género: X en la casilla M o F
   _fpjFecha(tcs,[b+30,b+31],[b+33,b+34],[b+36,b+37,b+38,b+39],p.fn);
-  setTc(tcs,b+41,p.lugNac||"");setTc(tcs,b+43,p.ecivil||"");
+  // El apartado 4 pide el lugar de nacimiento en UNA sola línea (obs. 4).
+  setTc(tcs,b+41,lcNacTexto(lcNacPartes(p)));setTc(tcs,b+43,p.ecivil||"");
   setTc(tcs,b+45,p.escol||"");setTc(tcs,b+47,p.ocup||"");
   setTc(tcs,b+49,p.correo||"");
   setTc(tcs,b+52,p.padres||"");
@@ -7424,7 +7516,12 @@ function _fpjFillVicTest(tcs,b,p,conRelacion){
   _fpjEdad(tcs,b+18,p.edad);
   _fpjGenero(tcs,b+23,b+25,p);                          // Género: X en la casilla M o F
   _fpjFecha(tcs,[b+28,b+29],[b+31,b+32],[b+34,b+35,b+36,b+37],p.fn);
-  setTc(tcs,b+40,p.lugNac||"");setTc(tcs,b+42,"");setTc(tcs,b+44,""); // País / Depto / Municipio
+  /* Lugar de nacimiento — Mejora 5, obs. 4. El formato lo pide en TRES casillas
+     y la app volcaba el texto entero en la de **País**, dejando Departamento y
+     Municipio en blanco: el dato salía donde no va. Ahora cada parte va en la
+     suya, y la que no se conozca queda vacía en vez de llevar un dato ajeno. */
+  var nac=lcNacPartes(p);
+  setTc(tcs,b+40,nac.pais);setTc(tcs,b+42,nac.depto);setTc(tcs,b+44,nac.muni); // País / Depto / Municipio
   setTc(tcs,b+46,p.ocup||"");setTc(tcs,b+48,p.ecivil||"");
   setTc(tcs,b+50,p.dirRes||"");setTc(tcs,b+52,p.tel||"");
   setTc(tcs,b+53,"Correo electrónico y redes sociales: "+(p.correo||""));
@@ -7515,7 +7612,7 @@ function buildFPJBlob(c,papel){
     // Fecha procedimiento
     if(c.fechaProc){var fp=c.fechaProc.split("-");if(fp.length===3){setTc(tcs,54,fp[0]);setTc(tcs,55,fp[1]);setTc(tcs,56,fp[2]);}}
     // 2. Presunta conducta punible — numeradas y en orden por la app (celdas 58-61)
-    var condFuera=_fpjConductas(tcs,c.conductas||[]);
+    var condFuera=_fpjConductas(tcs,c.conductas||[],c.articulosCP||[]);
     if(condFuera>0)
       toast("Atención: "+condFuera+" conducta(s) punible(s) no caben en el formato, que imprime cuatro. Revisa el documento antes de enviarlo.");
     // Lugar
@@ -7573,7 +7670,7 @@ function buildFPJBlob(c,papel){
     setTc(tcs,297,(s.grado||"")+" "+(s.nombre||""));setTc(tcs,298,sinPuntos(s.ident));setTc(tcs,299,s.entidad||"");
     setTc(tcs,304,s.cargo||"");setTc(tcs,305,s.tel||"");setTc(tcs,306,s.correo||"");
     // 1. Destino del informe y zona del lugar (reemplazan los valores de referencia de la plantilla)
-    setTc(tcs,57,c.destino||"");setTc(tcs,66,"Zona: "+((c.lugar&&c.lugar.zona)||"Urbana"));
+    setTc(tcs,57,lcDestinoInforme(c));setTc(tcs,66,"Zona: "+((c.lugar&&c.lugar.zona)||"Urbana"));
     // 8. Vehículos implicados — sin tope: las filas se reproducen (observación 7)
     var vehs=c.hayVehiculos?(c.vehiculos||[]):[];
     var vExtra=_fpjVehiculos(tcs,vehs);
@@ -7655,7 +7752,37 @@ function buildFPJBlob(c,papel){
 
    Nada se duplica: ni un solo campo que el caso ya tenga se guarda aquí. */
 function f6Estructura(personaId) {
-  return { personaId: personaId || '', comunica: { nombre:'', numDoc:'', tel:'', hora:'' }, presentoDoc:'', obs:'', updated:0 };
+  /* `comunica` — Mejora 5, obs. 7. El formato imprime cuatro renglones y dos
+     salían incompletos: el nombre, sin decir QUÉ es esa persona del capturado, y
+     la identificación, sin decir qué documento es ni dónde se expidió. Los
+     cuatro datos nuevos (parentesco, tipo de documento y lugar de expedición)
+     son del PROCEDIMIENTO y viven aquí, no en la persona capturada. */
+  return { personaId: personaId || '',
+    comunica: { nombre:'', parentesco:'', parentescoOtro:'', tipoDoc:'CC', numDoc:'', expEn:'', tel:'', hora:'' },
+    presentoDoc:'', obs:'', updated:0 };
+}
+/* Catálogo de parentesco del art. 303.1 del C.P.P., el que dictó el usuario. La
+   última opción abre un campo libre: la ley no cierra la lista y hay vínculos
+   que no encajan en ninguna de estas (un amigo, un vecino, un abogado). */
+var F6_PARENTESCO = ['Madre','Padre','Hermano','Hermana','Tío','Tía','Primo','Prima',
+  'Hijo','Hija','Esposa','Esposo','Compañera sentimental','Compañero sentimental'];
+// El vínculo que se imprime: el del catálogo, o el que se haya escrito a mano.
+function f6ParentescoTexto(com) {
+  com = com || {};
+  var p = String(com.parentesco || '').trim();
+  if (p === 'OTRO') return String(com.parentescoOtro || '').trim();
+  return p;
+}
+/* «CC No 1214853698 de Medellín» — el renglón IDENTIFICACION del formato, tal
+   como lo pidió el usuario. Cada parte es opcional: sin tipo o sin lugar de
+   expedición no quedan palabras sueltas, y sin número no se imprime nada. */
+function f6IdentificacionTexto(com) {
+  com = com || {};
+  var num = sinPuntos(com.numDoc);
+  if (!num) return '';
+  var tipo = String(com.tipoDoc || '').trim();
+  var exp = String(com.expEn || '').trim();
+  return (tipo ? tipo + ' No ' : '') + num + (exp ? ' de ' + exp : '');
 }
 function f6Acta(c, personaId) {
   var a = (c && c.actas) || [];
@@ -7807,7 +7934,11 @@ function f6Mapa(c, cap, acta) {
     redes: cap.redes || '',
     lgbti: cap.lgbti || '', lgbtiCual: cap.lgbtiCual || '',
     etnia: cap.etnia || '', comunidad: cap.comunidadEtnica || '',
-    comunica: { nombre: com.nombre || '', doc: sinPuntos(com.numDoc), tel: com.tel || '', hora: com.hora || '' },
+    /* Obs. 7 — el nombre viaja con el parentesco («NATALIA ARDILA RAMÍREZ —
+       Madre») y la identificación, con su tipo y su lugar de expedición
+       («CC No 1214853698 de Medellín»). */
+    comunica: { nombre: com.nombre || '', parentesco: f6ParentescoTexto(com),
+                doc: f6IdentificacionTexto(com), tel: com.tel || '', hora: com.hora || '' },
     obs: acta.obs || '',
     // Constancia de buen trato
     municipio: f6Municipio(c),
@@ -8482,8 +8613,12 @@ function buildActaBlob(ctx, papel) {
        quedan pegados al borde de arriba. */
     F6_APOYADAS.forEach(function(x) { _docApoyarEnLinea(tcs[x]); });
 
-    // 3. La persona a quien deseo se le comunique mi captura
-    setTc(tcs, F6_C.COM_NOM, mayus(m.comunica.nombre));
+    /* 3. La persona a quien deseo se le comunique mi captura.
+       ⚠️ El nombre va en MAYÚSCULAS (concordancia con la cédula, como en todo el
+       formato) pero el parentesco NO: es una palabra corriente, no un dato de
+       identificación — así lo escribió el usuario sobre el acta. */
+    setTc(tcs, F6_C.COM_NOM, mayus(m.comunica.nombre) +
+          (m.comunica.parentesco ? ' — ' + m.comunica.parentesco : ''));
     setTc(tcs, F6_C.COM_DOC, m.comunica.doc);
     setTc(tcs, F6_C.COM_TEL, m.comunica.tel);
     setTc(tcs, F6_C.COM_HORA, m.comunica.hora);
@@ -8610,7 +8745,18 @@ function f6Abrir(id, idx) {
     }).join('') + '</select></div>' +
     '<p class="oj-hint">Se imprime junto a la identificación, en la casilla «Identificación» del acta.</p>' +
 
-    '<div class="st">Identidad</div>' +
+    /* Obs. 6 — POBLACIONES ESPECIALES, PLEGADAS.
+       Nombre identitario, LGBTI, pertenencia étnica, comunidad y redes sociales
+       ocupaban media pantalla en TODA acta, y lo corriente es un procedimiento
+       con una persona que no encaja en ninguna de esas categorías. El bloque se
+       conserva entero —hay casos especiales y el formato los pide— pero viaja
+       plegado: divulgación progresiva, el mismo patrón de la Ola 4.
+       ⚠️ La pregunta del documento físico NO se pliega: es la excepción que
+       marcó el usuario, y se responde en todos los procedimientos.
+       ⚠️ Se abre solo si la persona ya trae alguno de esos datos: un bloque
+       cerrado que esconde algo diligenciado es un dato invisible. */
+    '<details class="oj-mas"' + (f6TieneIdentidad(cap) ? ' open' : '') + '>' +
+    '<summary>Identidad y poblaciones especiales — nombre identitario, LGBTI, pertenencia étnica, redes</summary>' +
     '<div class="fg"><label class="fl">Nombre identitario (personas trans)</label>' +
     '<input class="fi" id="f6-identitario" value="' + escAttr(cap.nombreIdentitario) + '"></div>' +
     '<p class="oj-hint">Nombre con el que se autoidentifica, independiente de su nombre legal. Se deja vacío si no aplica.</p>' +
@@ -8638,14 +8784,38 @@ function f6Abrir(id, idx) {
 
     '<div class="fg"><label class="fl">Redes sociales</label>' +
     '<input class="fi" id="f6-redes" value="' + escAttr(cap.redes) + '"></div>' +
+    '</details>' +
 
     '<div class="st">Persona a quien se comunica ' + (menor ? 'la aprehensión' : 'la captura') + '</div>' +
     '<p class="oj-hint" style="margin-top:-2px">Derecho del art. 303.1 del C.P.P.</p>' +
-    '<div class="fg"><label class="fl">Nombres y apellidos</label>' +
+    /* Obs. 7 — el acta imprime el vínculo junto al nombre y el documento con su
+       tipo y lugar de expedición. Antes salía el nombre a secas y un número sin
+       decir de qué documento se trataba. */
+    '<div class="fr"><div class="fg"><label class="fl">Nombres y apellidos</label>' +
     '<input class="fi" id="f6-com-nombre" value="' + escAttr(acta.comunica.nombre) + '"></div>' +
-    '<div class="fr3"><div class="fg"><label class="fl">Identificación</label>' +
+    '<div class="fg"><label class="fl">Parentesco con ' + (menor ? 'el aprehendido' : 'el capturado') + '</label>' +
+    '<select class="fs" id="f6-com-parentesco" onchange="f6RefrescarParentesco()">' +
+    '<option value="">—</option>' +
+    F6_PARENTESCO.map(function(o) {
+      return '<option value="' + escAttr(o) + '"' + (acta.comunica.parentesco === o ? ' selected' : '') + '>' + escHtml(o) + '</option>';
+    }).join('') +
+    '<option value="OTRO"' + (acta.comunica.parentesco === 'OTRO' ? ' selected' : '') + '>Otro — lo escribo</option>' +
+    '</select></div></div>' +
+    '<div class="fg" id="f6-par-otro-wrap"' + (acta.comunica.parentesco === 'OTRO' ? '' : ' style="display:none"') + '>' +
+    '<label class="fl">¿Cuál es el vínculo?</label>' +
+    '<input class="fi" id="f6-com-parentescoOtro" value="' + escAttr(acta.comunica.parentescoOtro) + '" placeholder="Ej: amigo, vecina, abogado"></div>' +
+    '<p class="oj-hint">Se imprime junto al nombre: «' + escHtml(mayus(acta.comunica.nombre) || 'NOMBRE APELLIDO') +
+    ' — ' + escHtml(f6ParentescoTexto(acta.comunica) || 'Madre') + '».</p>' +
+    '<div class="fr3"><div class="fg"><label class="fl">Tipo doc</label>' +
+    '<select class="fs" id="f6-com-tipoDoc">' +
+    ['CC','TI','CE','DE','Pasaporte'].map(function(o) {
+      return '<option value="' + o + '"' + ((acta.comunica.tipoDoc || 'CC') === o ? ' selected' : '') + '>' + o + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="fg"><label class="fl">Número</label>' +
     '<input class="fi mono" id="f6-com-doc" inputmode="numeric" value="' + escAttr(acta.comunica.numDoc) + '"></div>' +
-    '<div class="fg"><label class="fl">Teléfono</label>' +
+    '<div class="fg"><label class="fl">Expedido en</label>' +
+    '<input class="fi" id="f6-com-expEn" list="dl-muni" value="' + escAttr(acta.comunica.expEn) + '" placeholder="Medellín"></div></div>' +
+    '<div class="fr"><div class="fg"><label class="fl">Teléfono</label>' +
     '<input class="fi" id="f6-com-tel" inputmode="tel" value="' + escAttr(acta.comunica.tel) + '"></div>' +
     '<div class="fg"><label class="fl">Hora de la comunicación</label>' +
     '<input type="time" class="fi" id="f6-com-hora" value="' + escAttr(acta.comunica.hora || m.hora) + '"></div></div>' +
@@ -8667,6 +8837,16 @@ function f6RefrescarLgbti() {
   var s = document.getElementById('f6-lgbti'), w = document.getElementById('f6-cual-wrap');
   if (s && w) w.style.display = s.value === 'SI' ? '' : 'none';
 }
+function f6RefrescarParentesco() {
+  var s = document.getElementById('f6-com-parentesco'), w = document.getElementById('f6-par-otro-wrap');
+  if (s && w) w.style.display = s.value === 'OTRO' ? '' : 'none';
+}
+/* ¿La persona ya trae algún dato del bloque de poblaciones especiales? Si lo
+   trae, el bloque se abre solo: plegado escondería algo diligenciado. */
+function f6TieneIdentidad(cap) {
+  cap = cap || {};
+  return !!(cap.nombreIdentitario || cap.lgbti || cap.lgbtiCual || cap.etnia || cap.comunidadEtnica || cap.redes);
+}
 /* Lee el formulario. Devuelve null si el modal ya no está en pantalla —igual
    criterio que `ojCollect*`: un formulario que no se ve no dicta el modelo. */
 function f6Leer() {
@@ -8677,7 +8857,10 @@ function f6Leer() {
       nombreIdentitario: v('identitario'), lgbti: v('lgbti'), lgbtiCual: v('lgbti') === 'SI' ? v('lgbtiCual') : '',
       etnia: v('etnia'), comunidadEtnica: v('comunidad'), redes: v('redes')
     },
-    comunica: { nombre: v('com-nombre'), numDoc: sinPuntos(v('com-doc')), tel: v('com-tel'), hora: v('com-hora') },
+    comunica: { nombre: v('com-nombre'), parentesco: v('com-parentesco'),
+                parentescoOtro: v('com-parentesco') === 'OTRO' ? v('com-parentescoOtro') : '',
+                tipoDoc: v('com-tipoDoc'), numDoc: sinPuntos(v('com-doc')), expEn: v('com-expEn'),
+                tel: v('com-tel'), hora: v('com-hora') },
     presentoDoc: v('presento'),
     obs: v('obs')
   };
@@ -11539,6 +11722,96 @@ function lcGeoPintarDatalist(){
   var dd=document.getElementById('dl-depto');
   if(dd&&!dd.childElementCount)
     dd.innerHTML=lcGeoDeptoLista().map(function(d){ return '<option value="'+escAttr(d)+'">'; }).join('');
+  var dp=document.getElementById('dl-pais');
+  if(dp&&!dp.childElementCount)
+    dp.innerHTML=LC_PAISES.map(function(x){ return '<option value="'+escAttr(x)+'">'; }).join('');
+}
+
+/* ═══ LUGAR DE NACIMIENTO — Mejora 5, obs. 4 ═══════════════════════════════
+   El formulario de personas pedía UN campo cerrado, «Lugar nacimiento», y el
+   FPJ-5 volcaba ese texto en la casilla **País** de los apartados 5 (víctimas)
+   y 6 (testigos), dejando Departamento y Municipio en blanco: el dato salía
+   donde no va y dos casillas del formato quedaban vacías.
+
+   El formato pide las tres por separado, así que la app las pide por separado:
+   municipio o ciudad · departamento o estado · país. Con un municipio de
+   Colombia el departamento y el país se completan solos —el mismo motor
+   `lcGeoDepto` de la Ola 2—, y para una persona extranjera los tres campos se
+   escriben a mano (ciudad, estado o provincia, y su país).
+
+   ⚠️ El texto compuesto se sigue guardando en `lugNac`: el apartado 4 del
+   FPJ-5 lo imprime en UNA sola línea, y lo leen el acta de derechos, el dossier
+   y el módulo de orden judicial. El modelo gana campos, no los pierde.
+   ⚠️ «Colombia» NO se escribe en la línea compuesta: es lo que hay que suponer
+   para un colombiano y así lo pidió el usuario. En la casilla País del formato
+   sí se imprime, porque esa casilla existe para eso. */
+var LC_PAISES=['Colombia','Venezuela','Ecuador','Perú','Panamá','Brasil','Argentina','Chile',
+  'Bolivia','México','Cuba','Haití','República Dominicana','Estados Unidos','España','Otro'];
+function lcNacPartes(p){
+  p=p||{};
+  var muni=String(p.nacMuni||'').trim(), depto=String(p.nacDepto||'').trim(), pais=String(p.nacPais||'').trim();
+  if(!muni&&!depto&&!pais){
+    /* Migración AL LEER, sin tocar lo guardado: una persona registrada antes de
+       esta mejora solo tiene el texto suelto. Se interpreta «Municipio,
+       Departamento[, País]», que es como lo compone la propia app desde que
+       existe el widget (`ojPersonaEspejo` lo une con comas).
+       ⚠️ Se parte SOLO por comas. Con guiones, un «Venezuela- la guaira» se
+       leería como municipio y departamento e inventaría una jurisdicción que
+       nadie escribió: lo que no encaja se deja entero en el campo más
+       específico, que es donde está el lugar en casi todos los registros. */
+    var q=String(p.lugNac||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    muni=q[0]||''; depto=q[1]||''; pais=q[2]||'';
+  }
+  if(muni&&!depto) depto=lcGeoDepto(muni)||'';
+  if(!pais&&depto&&lcGeoDeptoLista().some(function(d){return lcGeoNorm(d)===lcGeoNorm(depto);})) pais='Colombia';
+  return {muni:muni,depto:depto,pais:pais};
+}
+// La línea de una sola casilla (apartado 4 del FPJ-5, acta, dossier).
+function lcNacTexto(o){
+  o=o||{};
+  var partes=[String(o.nacMuni||o.muni||'').trim(),String(o.nacDepto||o.depto||'').trim()];
+  var pais=String(o.nacPais||o.pais||'').trim();
+  if(pais&&lcGeoNorm(pais)!=='colombia') partes.push(pais);
+  return partes.filter(Boolean).join(', ');
+}
+/* Los tres campos, con el mismo aspecto en el wizard y en el registro de
+   Personas. `pre` es el prefijo de los ids del formulario que los aloja. */
+function lcNacCampos(pre,p){
+  var n=lcNacPartes(p);
+  var auto=(n.muni&&lcGeoDepto(n.muni)===n.depto)?' data-lc-auto="1"':'';
+  var jm="'"+pre+"'";
+  return '<div class="fg"><label class="fl">Lugar de nacimiento</label>'+
+    '<div class="fr3">'+
+      '<div class="fg"><input class="fi" id="'+pre+'-nacMuni" list="dl-muni" value="'+escAttr(n.muni)+'" '+
+        'placeholder="Municipio o ciudad" aria-label="Municipio o ciudad de nacimiento" '+
+        'oninput="lcNacAuto('+jm+')" onblur="lcNacAprender('+jm+')"></div>'+
+      '<div class="fg"><input class="fi" id="'+pre+'-nacDepto" list="dl-depto" value="'+escAttr(n.depto)+'"'+auto+' '+
+        'placeholder="Departamento o estado" aria-label="Departamento o estado de nacimiento"></div>'+
+      '<div class="fg"><input class="fi" id="'+pre+'-nacPais" list="dl-pais" value="'+escAttr(n.pais)+'" '+
+        'placeholder="País" aria-label="País de nacimiento"></div>'+
+    '</div>'+
+    '<p class="oj-hint">Con un municipio de Colombia, el departamento y el país se completan solos. '+
+    'Para una persona extranjera se escriben la ciudad, el estado o provincia y su país.</p>'+
+  '</div>';
+}
+/* ⚠️ La inferencia se dispara en el `input` del MUNICIPIO, nunca en su blur: en
+   el blur el foco todavía no ha llegado al destino y lo que se teclee se
+   concatenaría con la sugerencia (lección de la Ola 2). Y solo se pisa lo que
+   puso la propia app (`data-lc-auto`). */
+function lcNacAuto(pre){
+  var el=document.getElementById(pre+'-nacMuni'); if(!el) return;
+  var muni=(el.value||'').trim(); if(!muni) return;
+  var dep=lcGeoDepto(muni);
+  lcAutoRellenar(document.getElementById(pre+'-nacDepto'),dep);
+  if(dep) lcAutoRellenar(document.getElementById(pre+'-nacPais'),'Colombia');
+}
+function lcNacAprender(pre){ lcGeoAprender(document.getElementById(pre+'-nacMuni'),pre+'-nacDepto'); }
+// Lee los tres campos y compone además la línea de una sola casilla.
+function lcNacLeer(pre){
+  function g(id){ var el=document.getElementById(pre+'-'+id); return el?el.value.trim():''; }
+  var o={nacMuni:g('nacMuni'),nacDepto:g('nacDepto'),nacPais:g('nacPais')};
+  o.lugNac=lcNacTexto(o);
+  return o;
 }
 
 /* ═══════════════════════════════════════════
@@ -11607,6 +11880,42 @@ function lcDespClase(d){
 function lcDespDireccion(d){
   d=d||{};
   return ojCustodiaDireccion({direccion:d.direccion,barrio:d.barrio,ciudad:d.municipio});
+}
+/* Quita del final de un texto una palabra que ya viene dicha más adelante.
+   ⚠️ Solo COLA y solo palabra completa: «Fiscalía URI Medellín» pierde la
+   ciudad, pero «Medellín» a secas se queda como está (el nombre ES la ciudad) y
+   «Fiscalía Medellinense» no se toca. Sin esa doble guarda, el numeral 1 podría
+   quedarse sin nombre de despacho. */
+function _lcSinCola(txt,cola){
+  var t=String(txt==null?'':txt).trim(), c=String(cola==null?'':cola).trim();
+  if(!t||!c) return t;
+  var nt=_noAcc(t).toUpperCase(), nc=_noAcc(c).toUpperCase();
+  if(nt.length<=nc.length) return t;
+  if(nt.slice(-nc.length)!==nc) return t;
+  if(!/[\s,;.\-–]/.test(nt.charAt(nt.length-nc.length-1))) return t;
+  return t.slice(0,t.length-c.length).replace(/[\s,;.\-–]+$/,'').trim()||t;
+}
+/* Mejora 5, obs. 1 — «1. DESTINO DEL INFORME» del FPJ-5.
+   Imprimía SOLO el nombre («Fiscalía URI»), mientras la app ya tiene registrada
+   la dirección del despacho y la enseña en el paso 1. Ahora sale el despacho
+   entero, tal como se ve en pantalla: «Fiscalía URI KR 64C # 67-300, barrio
+   Caribe, Medellín».
+   ⚠️ La ciudad NO se repite. El nombre registrado suele terminar en ella
+   («Fiscalía URI Medellín») y `lcDespDireccion` la pone al final de la
+   dirección: sin quitarla del nombre saldría dos veces en el mismo renglón.
+   ⚠️ Un destino escrito a mano (`destinoManual`) se imprime tal cual: la app no
+   tiene su dirección y no se la inventa. Lo mismo con una captura guardada que
+   ya no apunta a ningún despacho del registro. */
+function lcDestinoInforme(c,cfg){
+  c=c||{};
+  var nom=String(c.destino||'').trim();
+  if(c.destinoManual) return nom;
+  var d=lcDespachoPorId(c.despachoId,cfg);
+  if(!d) return nom;
+  var dir=lcDespDireccion(d);
+  if(!nom) nom=String(d.nombre||'').trim();
+  if(!dir) return nom;
+  return [_lcSinCola(nom,d.municipio),dir].filter(Boolean).join(' ');
 }
 
 /* ── Lectura ──────────────────────────────────────────────────────────────── */
@@ -14254,11 +14563,14 @@ function ojUsarPersona(id){
   if(p.ecivil && !r.estadoCivil){
     (OJ_CAT.estadoCivil||[]).forEach(function(o){ if(o[1]===p.ecivil) r.estadoCivil=o[0]; });
   }
-  // Lugar de nacimiento: el registro lo guarda como «Municipio, Departamento».
-  if(p.lugNac && !r.nacMunicipio){
-    var partes=String(p.lugNac).split(',');
-    r.nacMunicipio=(partes[0]||'').trim();
-    r.nacDepartamento=(partes[1]||'').trim()||lcGeoDepto(r.nacMunicipio)||'';
+  /* Lugar de nacimiento: el registro lo guarda estructurado desde la Mejora 5, y
+     `lcNacPartes` interpreta el texto suelto de una persona registrada antes. */
+  if(!r.nacMunicipio){
+    var nac=lcNacPartes(p);
+    if(nac.muni||nac.depto||nac.pais){
+      r.nacMunicipio=nac.muni; r.nacDepartamento=nac.depto;
+      if(nac.pais&&!r.nacPais) r.nacPais=nac.pais;
+    }
   }
   if(p.dirRes && !r.resDireccion) r.resDireccion=p.dirRes;
   if(p.tel && !r.resTelefono) r.resTelefono=p.tel;
@@ -16159,7 +16471,11 @@ function ojPersonaEspejo(c){
     tipoDoc:r.tipoDoc==='SIN_DOC'?'':r.tipoDoc, numDoc:sinPuntos(r.numDoc), expEn:r.expedidoEn||'',
     priNom:r.priNom||'', segNom:r.segNom||'', priApe:r.priApe||'', segApe:r.segApe||'',
     alias:r.alias||'N/A', fn:r.fechaNac||'', edad:r.edad||'', sexo:lcSexo(r.sexo),
-    lugNac:[r.nacMunicipio,r.nacDepartamento].filter(Boolean).join(', '),
+    /* Lugar de nacimiento: se guarda estructurado además de compuesto, para que
+       el viaje de vuelta (`ojUsarPersona`) y el FPJ-5 no tengan que volver a
+       interpretar el texto (Mejora 5, obs. 4). */
+    nacMuni:r.nacMunicipio||'', nacDepto:r.nacDepartamento||'', nacPais:r.nacPais||'',
+    lugNac:lcNacTexto({nacMuni:r.nacMunicipio,nacDepto:r.nacDepartamento,nacPais:r.nacPais}),
     ecivil:ojLbl('estadoCivil',r.estadoCivil), escol:'', ocup:r.profesion||'',
     dirRes:r.resDireccion||'', tel:r.resTelefono||'', correo:'',
     padres:[r.madre,r.padre].filter(Boolean).join(' y '),

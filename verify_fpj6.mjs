@@ -152,7 +152,15 @@ const yaTiene = await page.$eval('#modal-c details', d => d.textContent);
 log(/Restrepo/i.test(yaTiene) && /71234567/.test(yaTiene) && /03\/08\/2026/.test(yaTiene) && /Hurto/i.test(yaTiene),
   'El acta enseña lo que ya trae del caso: nombre, documento, fecha y delito');
 
-// Diligenciar SOLO lo que falta.
+/* Diligenciar SOLO lo que falta.
+   ⚠️ Desde la Mejora 5 (obs. 6) el bloque de poblaciones especiales viaja
+   PLEGADO: lo corriente es un procedimiento con una persona que no encaja en
+   ninguna de esas categorías. Los campos siguen en el DOM —plegar no es
+   borrar— pero hay que abrirlo para escribir en ellos. */
+await page.evaluate(() => {
+  document.querySelectorAll('#modal-c details').forEach(d => { d.open = true; });
+});
+await page.waitForTimeout(80);
 await page.fill('#f6-identitario', 'Camila Restrepo');
 await page.selectOption('#f6-presento', 'NO');
 await page.selectOption('#f6-lgbti', 'SI');
@@ -224,7 +232,9 @@ log(cUri[102] === 'Consejo Comunitario San José', '¿A qué comunidad pertenece
 
 // 3. Persona a quien se comunica la captura
 log(cUri[106] === 'LUZ MARINA GÓMEZ', 'Persona a quien se comunica la captura');
-log(cUri[108] === '43111222', 'Su identificación, sin puntos');
+/* Mejora 5, obs. 7 — la identificación dice QUÉ documento es. Sin lugar de
+   expedición no queda un «de» suelto, y el número sigue saliendo sin puntos. */
+log(cUri[108] === 'CC No 43111222', 'Su identificación, con el tipo de documento y sin puntos', cUri[108]);
 log(cUri[110] === '3109998877' && cUri[112] === '14:50', 'Su teléfono y la hora de la comunicación');
 
 // Observaciones y constancia de buen trato
