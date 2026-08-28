@@ -1176,6 +1176,49 @@ body.guest{padding-top:38px}
   mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M18 6 6 18M6 6l12 12' stroke='black' stroke-width='2.5' stroke-linecap='round' fill='none'/></svg>") center/contain no-repeat}
 .desp-search::-webkit-search-cancel-button:hover{opacity:1}
 
+/* ⚠️ display de AUTOR gana sobre el display:none que el navegador aplica a
+   [hidden] — sin estas reglas, ocultar el buscador o las pestañas no las
+   oculta (misma lección de los <details> plegables de la Ola 3). */
+.tabs[hidden]{display:none}
+.topbar-btn[hidden]{display:none}
+.desp-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+.desp-def{
+  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;
+  padding:2px 7px;border-radius:6px;text-transform:uppercase;
+  background:var(--accG);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent);
+}
+.desp-nunc{
+  display:flex;align-items:center;gap:7px;margin-top:8px;
+  font-size:12px;color:var(--text-2);
+}
+.desp-nunc span{
+  font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--text-3);
+}
+.desp-nunc b{font-family:var(--m);font-size:12.5px;font-weight:600;color:var(--text);letter-spacing:.02em}
+.desp-nunc.falta{color:var(--text-3);font-style:italic}
+.desp-act{
+  padding:8px 12px;min-height:38px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
+  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:background var(--d1) var(--ease),color var(--d1) var(--ease),border-color var(--d1) var(--ease);
+}
+.desp-act svg{width:14px;height:14px;flex:none}
+.desp-act:hover{background:var(--hover);color:var(--text);border-color:var(--border-strong)}
+.desp-act:active{background:var(--pressed)}
+.desp-act.del{color:var(--danger)}
+.desp-act.del:hover{background:var(--errB);border-color:color-mix(in srgb,var(--danger) 34%,transparent)}
+.desp-acts{flex-wrap:wrap}
+.desp-vacio{
+  text-align:center;padding:36px 20px 28px;border:1px dashed var(--border-strong);
+  border-radius:14px;background:var(--surface-1);
+}
+.desp-vacio svg{width:40px;height:40px;color:var(--text-3);margin-bottom:12px}
+.desp-vacio h3{font-size:16px;font-weight:650;color:var(--text);margin:0 0 8px}
+.desp-vacio p{font-size:13px;color:var(--text-2);line-height:1.5;margin:0 auto 10px;max-width:34em}
+.desp-vacio .desp-vacio-nunc{color:var(--text-3);font-size:12.5px}
+.desp-vacio .btn{margin-top:6px}
+
 /* ═══ AJUSTES ═══ */
 .aj-section{margin-bottom:0}
 .aj-sec-hdr{
@@ -1727,16 +1770,19 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <header class="topbar">
       <div class="ttl">
         <h1>Despachos</h1>
-        <span class="sub" id="desp-header-sub">Fiscalías y juzgados de Medellín</span>
+        <span class="sub" id="desp-header-sub">Aún no has registrado ningún despacho</span>
       </div>
+      <button class="topbar-btn" id="desp-add" onclick="lcDespForm()" title="Agregar despacho" aria-label="Agregar despacho" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
     </header>
     <div class="pane">
-      <input class="desp-search" id="desp-search" placeholder="Buscar por nombre o dirección…" oninput="renderDespachos(_despachoTab)" autocomplete="off">
-      <div class="tabs" id="desp-tabs">
-        <button class="tab on" id="tab-fiscalia" onclick="switchDespTab('fiscalia')">Fiscalías</button>
-        <button class="tab" id="tab-cespa" onclick="switchDespTab('cespa')">CESPA</button>
-        <button class="tab" id="tab-juzgado" onclick="switchDespTab('juzgado')">Juzgados</button>
-        <button class="tab" id="tab-favoritos" onclick="switchDespTab('favoritos')">Favoritos</button>
+      <input class="desp-search" id="desp-search" placeholder="Buscar por nombre, dirección o NUNC…" oninput="renderDespachos(_despachoTab)" autocomplete="off" hidden>
+      <div class="tabs" id="desp-tabs" hidden>
+        <button class="tab on" id="tab-todos" onclick="switchDespTab('todos')">Todos</button>
+        <button class="tab" id="tab-FISCALIA" onclick="switchDespTab('FISCALIA')">Fiscalías</button>
+        <button class="tab" id="tab-CESPA" onclick="switchDespTab('CESPA')">CESPA</button>
+        <button class="tab" id="tab-JUZGADO" onclick="switchDespTab('JUZGADO')">Juzgados</button>
       </div>
       <div id="desp-list" style="margin-top:14px"></div>
     </div>
@@ -1831,8 +1877,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
             <button class="btn bs bsm" onclick="addConocieronRow()" style="margin-top:8px">+ Agregar funcionario</button>
           </div>
           <div class="fr">
-            <div class="fg"><label class="fl">Destino URI (Fiscalía)</label><input class="fi" id="aj-destUri" placeholder="Fiscalía URI"></div>
-            <div class="fg"><label class="fl">Destino CESPA</label><input class="fi" id="aj-destCespa" placeholder="CESPA"></div>
+            <p class="oj-auto" id="aj-dest-auto"></p>
           </div>
         </div>
       </div>
@@ -1898,10 +1943,8 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Valores por defecto</span><span class="aj-sec-arr" id="aj-arr-defaults-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-defaults-sec" style="display:none;padding-top:12px">
-          <div class="fr">
-            <div class="fg"><label class="fl">NUNC URI</label><input class="fi mono" id="aj-nuncUri" placeholder="16 dígitos" maxlength="16" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-            <div class="fg"><label class="fl">NUNC CESPA</label><input class="fi mono" id="aj-nuncCespa" placeholder="16 dígitos" maxlength="16" inputmode="numeric" oninput="this.value=this.value.replace(/\D/g,'')"></div>
-          </div>
+          <p class="oj-auto" id="aj-nunc-auto"></p>
+          <button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="go('despachos')">Administrar mis despachos</button>
           <div class="fr">
             <div class="fg"><label class="fl">Localidad por defecto</label><input class="fi mono" id="aj-localidad" placeholder="10" inputmode="numeric" maxlength="4"></div>
             <div class="fg"><label class="fl">Zona por defecto</label><select class="fs" id="aj-zona"><option value="Urbana">Urbana</option><option value="Rural">Rural</option></select></div>
@@ -2051,7 +2094,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
-    <div class="body"><div class="ti">Despachos</div><div class="de">Fiscalías y juzgados</div></div>
+    <div class="body"><div class="ti">Despachos</div><div class="de">Tus fiscalías, CESPA y juzgados</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('ajustes')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg></div>
@@ -2171,7 +2214,7 @@ function go(name) {
   if (name === 'dossier') renderDossier();
   if (name === 'ajustes') { loadAjustesFields(); renderPerfilesRegionales(); }
   if (name === 'perfil') renderPerfilScreen();
-  if (name === 'despachos') { _despachoTab = _despachoTab||'fiscalia'; renderDespachos(_despachoTab); }
+  if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
   // El navegador puede autocompletar o restaurar el buscador con un valor viejo
   // (p.ej. un NUNC de 16 dígitos escrito en el wizard). Si eso pasa, el filtro
   // deja la lista vacía y parece que no hay personas. Se limpia al entrar.
@@ -2290,7 +2333,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 80;
+var _BUILD = 81;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3153,7 +3196,8 @@ function _lcPurgarPlantillas() {
 /* Claves de formatos que la app ya no produce. Se retiran de la configuración
    para que dejen de viajar en cada guardado y en cada «Exportar config»: no las
    lee ni las escribe nadie (comprobado clave por clave sobre todo el archivo). */
-var _CFG_MUERTAS=['ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasificacion',
+var _CFG_MUERTAS=['despachosFavoritos',
+  'ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasificacion',
                   'ojUbicacionTRD','ojReviso'];
 function _cfgConDefaults(stored) {
     stored=stored||{};
@@ -3166,7 +3210,12 @@ function _cfgConDefaults(stored) {
        desactivado la validación dura V29 (lección del 2026-07-30). Sin default,
        el nombre de la unidad es UN dato del usuario y lo pueden leer los tres
        documentos que lo imprimen — ver lcUnidadNombre(). */
-    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,despachosFavoritos:[],perfilesRegionales:[],perfilRegionalActivo:null,
+    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,perfilesRegionales:[],perfilRegionalActivo:null,
+      /* Registro ÚNICO de despachos (ver el módulo Despachos).
+         `despachoDefecto` guarda el id del que se propone como destino de cada
+         tipo de captura, y con él viaja el NUNC: los dígitos de unidad
+         receptora cambian con la fiscalía que recibe. */
+      despachoDefecto:{},despachosMigrados:false,
       /* Fiscalía destinataria del oficio de orden judicial. Es propiedad del
          EQUIPO (siempre se remite a la misma URI), así que se pregunta UNA vez
          en Ajustes y el encabezado del destinatario se arma solo — el
@@ -3216,6 +3265,39 @@ function _cfgConDefaults(stored) {
     /* Misma idea con la ciudad: «Ciudad del oficio» y la ciudad de la unidad son
        el mismo dato (el oficio se fecha donde está la unidad que lo suscribe). */
     if(!out.ojCustCiudad) out.ojCustCiudad=out.ojCiudad||'';
+    /* ── Semilla del registro de despachos ────────────────────────────────
+       El destino y el NUNC vivían sueltos en Ajustes, uno por tipo de captura.
+       Al estrenar el registro se convierten en despachos reales, para que un
+       equipo ya configurado los encuentre en la pantalla en vez de una lista
+       vacía y no los vuelva a teclear.
+       ⚠️ Solo se siembra lo que el usuario ESCRIBIÓ. `destUri`/`destCespa`
+       nacen con un valor por defecto ('Fiscalía URI', 'CESPA'), así que sembrar
+       por su mera presencia le crearía dos despachos inventados a un equipo
+       recién instalado — el mismo error que 'CANDELARIA' en `nombreEstacion`
+       (2026-08-13). Un NUNC, en cambio, nunca viene de fábrica.
+       ⚠️ Se hace UNA sola vez (`despachosMigrados`) y no «cuando la lista está
+       vacía»: si no, borrar todos los despachos los resucitaría en la lectura
+       siguiente. Y no se toca nada si el equipo ya tiene registro. */
+    if(!out.despachosMigrados){
+      out.despachosMigrados=true;
+      if(!(out.despachosPropios||[]).length){
+        var _sem=[], _dig=function(x){ return String(x||'').replace(/[^0-9]/g,''); };
+        var _semilla=function(slot,clase,ojTipo,nombre,defNom,nunc){
+          nombre=String(nombre||'').trim(); nunc=_dig(nunc);
+          if(!nunc && (!nombre || nombre===defNom)) return;   // nada que el usuario haya puesto
+          _sem.push({id:'seed-'+slot.toLowerCase(),clase:clase,tipo:ojTipo,
+            nombre:nombre||defNom,direccion:'',barrio:'',municipio:'',departamento:'',
+            telefono:'',correo:'',nunc:nunc,_slot:slot});
+        };
+        _semilla('URI','FISCALIA','FISCALIA',out.destUri,'Fiscalía URI',out.nuncUri);
+        _semilla('CESPA','CESPA','ADOLESCENTES',out.destCespa,'CESPA',out.nuncCespa);
+        if(_sem.length){
+          out.despachoDefecto=Object.assign({},out.despachoDefecto||{});
+          _sem.forEach(function(x){ out.despachoDefecto[x._slot]=x.id; delete x._slot; });
+          out.despachosPropios=_sem;
+        }
+      }
+    }
     return out;
 }
 /* ── ÚNICO punto donde se resuelve el nombre de la unidad ──────────────────
@@ -3532,14 +3614,17 @@ function startWizard(tipo) {
   var t = nowParts();
   wc = {
     id:uid(), tipo:tipo,
-    nunc: tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''),
+    /* Destino y NUNC del despacho predeterminado de este tipo de captura
+       (punto único: lcDespDestino/lcDespNunc). Antes se leían dos claves
+       sueltas de Ajustes, y el NUNC no cambiaba al cambiar de fiscalía. */
+    nunc: lcDespNunc(tipo,cfg),
     spoa:'', fechaProc:t.yy+'-'+t.mm+'-'+t.dd,
     /* Una sola conducta de entrada; las demás se agregan si el caso las tiene
        (observación 2). */
     conductas:[''],
     articulosCP:[''],
     elementos:[],
-    destino: tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI'),
+    destino: lcDespDestino(tipo,cfg),
     numIncidente:'', recibe:'',
     autoridadSolicita:'', destinoOJ:'FISCALIA_URI',
     numOrden:'', delitoOrden:'', juzgadoOrden:'', fechaOrden:'',
@@ -4417,12 +4502,12 @@ function rStep1(){
     '<div class="fg"><label class="fl">Autoridad que solicita</label><input class="fi" id="w-autoridad" value="'+(c.autoridadSolicita||c.juzgadoOrden||'')+'" placeholder="Se auto-completa desde el juzgado"></div>'+
     '</div>'):('');
   /* El tipo de captura y el destino del informe decían lo mismo dos veces
-     ("URI (Adulto)" arriba y "URI Centro — Sede Caribe" cinco campos más
-     abajo), cada uno en su propio renglón. Ahora son UN control: el selector
+     (el tipo arriba y el nombre de la fiscalía cinco campos más abajo), cada
+     uno en su propio renglón. Ahora son UN control: el selector
      nombra el destino que le corresponde y el destino se edita ahí mismo, solo
      cuando hay que cambiarlo (observación 3). */
   var cfgD=DB.getConfig();
-  var destDe=function(t){ return t==='CESPA'?(cfgD.destCespa||'CESPA'):(cfgD.destUri||'Fiscalía URI'); };
+  var destDe=function(t){ return lcDespDestino(t,cfgD); };
   var destAct=c.destino||destDe(c.tipo);
   var opt=function(val,txt){
     var d=val==='OJ'?'':destDe(val);
@@ -4434,7 +4519,8 @@ function rStep1(){
         '<input class="fi" id="w-dest" value="'+escAttr(destAct)+'" style="flex:1">'+
         '<button class="btn bs" style="white-space:nowrap" onclick="abrirSelectorDespacho()">Lista</button>'+
       '</div>'+
-      '<div class="lc-dir-prev"><button type="button" class="lc-dir-link" onclick="lcDestEditar(false)">Listo</button></div></div>'
+      '<div class="lc-dir-prev"><span>El NUNC cambia con el despacho que recibe la captura.</span>'+
+      '<button type="button" class="lc-dir-link" onclick="lcDestEditar(false)">Listo</button></div></div>'
     : '<div class="lc-dir-prev" style="margin:-8px 0 14px">'+
         '<span>Destino del informe:</span><b>'+escHtml(destAct||'—')+'</b>'+
         '<button type="button" class="lc-dir-link" onclick="lcDestEditar(true)">Cambiar</button>'+
@@ -4550,9 +4636,9 @@ function onTipoChg(){
   var dest=document.getElementById('w-dest'); var nunc=document.getElementById('w-nunc');
   /* El destino va DENTRO del selector de tipo: al cambiar de tipo cambia con
      él, esté o no abierto el editor (observación 3). */
-  var d=tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI');
+  var d=lcDespDestino(tipo,cfg);
   if(tipo!=='OJ'){ wc.destino=d; if(dest) dest.value=d; }
-  if(nunc) nunc.value=(tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''));
+  if(nunc) nunc.value=lcDespNunc(tipo,cfg);
   wc.nunc=nunc?nunc.value:wc.nunc;
   wc.tipo=tipo; renderWiz();
 }
@@ -4560,7 +4646,7 @@ function onDestinoOJChg(){
   var sel=document.getElementById('w-destinoOJ');if(!sel)return;
   var dest=document.getElementById('w-dest');if(!dest)return;
   var cfg=DB.getConfig();
-  if(sel.value==='FISCALIA_URI') dest.value=cfg.destUri||'Fiscalía URI';
+  if(sel.value==='FISCALIA_URI') dest.value=lcDespDestino('URI',cfg);
   else{var aut=document.getElementById('w-autoridad');dest.value=aut?aut.value:'Juzgado solicitante';}
 }
 
@@ -5578,13 +5664,13 @@ var SIM={
       return 'un vehículo clase '+v.clase.toLowerCase()+' marca '+v.marca+' color '+v.color+' de placas '+v.placas;
     }).join(' y ')+'.';
     return {id:uid(),tipo:tipo,
-      nunc:this.rNunc(isMn?cfg.nuncCespa:cfg.nuncUri),
+      nunc:this.rNunc(lcDespNunc(isMn?'CESPA':'URI',cfg)),
       spoa:this.rRadicado(),
       fechaProc:fecha,conductas:conductas,articulosCP:arts,
       /* El caso de demostración estrena el paso «EMP y EF»: los elementos van
          estructurados, no en una línea corrida (observación 9). */
       elementos:lcEmpParsear(emp),
-      destino:isMn?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI'),
+      destino:lcDespDestino(isMn?'CESPA':'URI',cfg),
       numIncidente:String(this.ri(100000,999999)),recibe:this.r(this.F),
       lugar:{depto:'Antioquia',muni:muni,dir:dir,barrio:barr,
         caract:'Vía pública, sector '+this.r(['comercial','residencial','mixto'])+', con iluminación '+this.r(['artificial','natural']),
@@ -7390,7 +7476,7 @@ function f6Nunc(c) {
     return { digitos: String(rad).replace(/\D/g,''), fuente: 'RADICADO' };
   }
   var n = String((c && c.nunc) || '').replace(/\D/g,'');
-  if (n.length !== 16) n = String(((c && c.tipo === 'CESPA') ? cfg.nuncCespa : cfg.nuncUri) || '').replace(/\D/g,'');
+  if (n.length !== 16) n = String(lcDespNunc((c && c.tipo === 'CESPA') ? 'CESPA' : 'URI', cfg) || '').replace(/\D/g,'');
   return { digitos: n.length === 16 ? n : '', fuente: 'NUNC' };
 }
 
@@ -11084,106 +11170,421 @@ function lcGeoPintarDatalist(){
 }
 
 /* ═══════════════════════════════════════════
-   FASE D — MÓDULO DESPACHOS
+   MÓDULO DESPACHOS — el registro del usuario
+
+   ⚠️ Esta pantalla traía `DESPACHOS_MEDELLIN`: quince fiscalías y juzgados de
+   Medellín con su dirección ESCRITA EN EL CÓDIGO. La app no consulta ningún
+   directorio judicial ni puede verificar una dirección, así que ese listado era
+   un dato presentado como comprobado sin que nadie lo hubiera comprobado —y que
+   además solo servía en una ciudad (issues A1/A2)—. Ahora el registro es del
+   usuario: él agrega sus despachos, los edita y los elimina.
+
+   ⚠️ REGISTRO ÚNICO. Vive en `cfg.despachosPropios[]`, que ya era el registro
+   del módulo de orden judicial: un despacho agregado aquí alimenta a la vez el
+   destino del informe de flagrancia (URI/CESPA) y la autoridad solicitante y el
+   destinatario del oficio de orden judicial. Antes eran dos listas que no se
+   hablaban.
+
+   ⚠️ EL NUNC VIVE EN EL DESPACHO. Los dígitos 8-12 del NUNC identifican la
+   UNIDAD RECEPTORA, así que cambiar de URI cambia el número: atarlo al «tipo de
+   captura» (como se hacía) obligaba a corregirlo a mano cada vez que la captura
+   no iba a la fiscalía de siempre. Un juzgado NO recibe noticia criminal y por
+   eso no se le pide NUNC — pedirlo invitaría a inventar un número que ese
+   despacho no asigna.
+   `cfg.nuncUri`/`cfg.nuncCespa` y `cfg.destUri`/`cfg.destCespa` se conservan
+   como RESPALDO (configuraciones y capturas anteriores a esta pantalla), pero ya
+   no tienen campo propio: `lcDespNunc`/`lcDespDestino` son el punto único.
 ═══════════════════════════════════════════ */
-var DESPACHOS_MEDELLIN=[
-  {id:'f1',tipo:'Fiscalía',nombre:'URI Centro — Sede Caribe',dir:'Cra 56 #42-70, Medellín',tel:'(604) 444 0000'},
-  {id:'f2',tipo:'Fiscalía',nombre:'URI Robledo',dir:'Cll 69 #90-30, Medellín',tel:''},
-  {id:'f3',tipo:'Fiscalía',nombre:'URI La Candelaria',dir:'Cll 44 #52-165, Medellín',tel:''},
-  {id:'c1',tipo:'CESPA',nombre:'Centro de Servicios Judiciales para Adolescentes',dir:'Cra 55 #41-73, Medellín',tel:''},
-  {id:'j1',tipo:'Juzgado',nombre:'Juzgado Primero Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j3',tipo:'Juzgado',nombre:'Juzgado Tercero Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j5',tipo:'Juzgado',nombre:'Juzgado Quinto Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j10',tipo:'Juzgado',nombre:'Juzgado Décimo Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j15',tipo:'Juzgado',nombre:'Juzgado Décimo Quinto Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j20',tipo:'Juzgado',nombre:'Juzgado Vigésimo Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j25',tipo:'Juzgado',nombre:'Juzgado Vigésimo Quinto Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j29',tipo:'Juzgado',nombre:'Juzgado Vigésimo Noveno Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'j30',tipo:'Juzgado',nombre:'Juzgado Trigésimo Penal Municipal con F.C.G. de Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'gn1',tipo:'Guardia',nombre:'Juzgado de Guardia — Turno Nocturno Medellín',dir:'Palacio de Justicia, Cll 44 #52-165',tel:''},
-  {id:'custom',tipo:'Otro',nombre:'Otro (escribir manualmente)',dir:'',tel:''}
+
+/* Las cuatro clases que la app distingue. `slot` = para qué tipo de captura
+   sirve como destino; `nunc` = si esa autoridad asigna NUNC; `ojTipo` = el valor
+   equivalente del catálogo del módulo de orden judicial, que se sincroniza solo
+   cuando la equivalencia es inequívoca. */
+var LC_DESP_CLASES=[
+  {id:'FISCALIA',lbl:'Fiscalía / URI',       corto:'FISCALÍA',css:'fiscalia',nunc:true, slot:'URI',  ojTipo:'FISCALIA'},
+  {id:'CESPA',   lbl:'CESPA (adolescentes)', corto:'CESPA',   css:'cespa',   nunc:true, slot:'CESPA',ojTipo:'ADOLESCENTES'},
+  {id:'JUZGADO', lbl:'Juzgado',              corto:'JUZGADO', css:'juzgado', nunc:false,slot:'',     ojTipo:''},
+  {id:'OTRO',    lbl:'Otra autoridad',       corto:'OTRA',    css:'guardia', nunc:false,slot:'',     ojTipo:'OTRO'}
 ];
+function lcDespClaseDef(id){
+  for(var i=0;i<LC_DESP_CLASES.length;i++) if(LC_DESP_CLASES[i].id===id) return LC_DESP_CLASES[i];
+  return null;
+}
+/* ⚠️ La clase se DERIVA y no se impone: los despachos que el módulo de orden
+   judicial ya tenía guardados traen `tipo` de su propio catálogo (JCG, JEPMS,
+   CONOCIMIENTO…), que se sigue usando para resolver el destinatario y NO se
+   pisa. Si no hay ni clase ni tipo se infiere del nombre antes que rendirse a
+   «Otra autoridad»: un registro viejo aparece en su pestaña sin tocar nada. */
+var LC_DESP_OJ2CLASE={JCG:'JUZGADO',CONOCIMIENTO:'JUZGADO',JEPMS:'JUZGADO',
+  FISCALIA:'FISCALIA',ADOLESCENTES:'CESPA',OTRO:'OTRO'};
+function lcDespClase(d){
+  if(!d) return 'OTRO';
+  if(d.clase&&lcDespClaseDef(d.clase)) return d.clase;
+  var t=String(d.tipo||'').toUpperCase();
+  if(LC_DESP_OJ2CLASE[t]) return LC_DESP_OJ2CLASE[t];
+  var n=(typeof lcGeoNorm==='function')?lcGeoNorm(d.nombre||''):String(d.nombre||'').toLowerCase();
+  if(/cespa|adolescent/.test(n)) return 'CESPA';
+  if(/fiscal|uri/.test(n))       return 'FISCALIA';
+  if(/juzgado|juez/.test(n))     return 'JUZGADO';
+  return 'OTRO';
+}
+/* Dirección completa del despacho. Reutiliza el compositor del oficio para no
+   tener dos criterios: cada parte es opcional y no se repite lo que la dirección
+   ya diga (una escrita como «Cll 44 #52-165, Medellín» no sale con la ciudad
+   dos veces). */
+function lcDespDireccion(d){
+  d=d||{};
+  return ojCustodiaDireccion({direccion:d.direccion,barrio:d.barrio,ciudad:d.municipio});
+}
 
-var _despachoTab='fiscalia';
-var _despachoSelectorMode=false;
+/* ── Lectura ──────────────────────────────────────────────────────────────── */
+function lcDespachos(cfg){ cfg=cfg||DB.getConfig(); return cfg.despachosPropios||[]; }
+function lcDespachoPorId(id,cfg){
+  if(!id) return null;
+  var l=lcDespachos(cfg);
+  for(var i=0;i<l.length;i++) if(l[i].id===id) return l[i];
+  return null;
+}
+/* El despacho predeterminado de un tipo de captura. Sin marca explícita se toma
+   el primero de esa clase: en un equipo con una sola URI no hay nada que elegir
+   y obligar a marcarla sería una pregunta sin alternativa. */
+function lcDespachoDefecto(tipo,cfg){
+  cfg=cfg||DB.getConfig();
+  var slot=tipo==='CESPA'?'CESPA':'URI';
+  var marcado=lcDespachoPorId((cfg.despachoDefecto||{})[slot],cfg);
+  if(marcado){
+    var dm=lcDespClaseDef(lcDespClase(marcado));
+    if(dm&&dm.slot===slot) return marcado;
+  }
+  var l=lcDespachos(cfg);
+  for(var i=0;i<l.length;i++){
+    var def=lcDespClaseDef(lcDespClase(l[i]));
+    if(def&&def.slot===slot) return l[i];
+  }
+  return null;
+}
+function lcDespachoEsDefecto(d,cfg){
+  if(!d) return false;
+  var def=lcDespClaseDef(lcDespClase(d));
+  if(!def||!def.slot) return false;
+  var act=lcDespachoDefecto(def.slot==='CESPA'?'CESPA':'URI',cfg);
+  return !!(act&&act.id===d.id);
+}
+/* ⚠️ PUNTO ÚNICO del destino y del NUNC de una captura de flagrancia. Antes la
+   expresión `tipo==='CESPA'?cfg.destCespa:cfg.destUri` estaba escrita en cinco
+   sitios que podían discrepar (el arranque del wizard, el selector de tipo, el
+   render del paso 1, el destinatario OJ y el simulador). Las claves de
+   configuración quedan como RESPALDO: un equipo que no ha registrado despachos
+   sigue viendo exactamente lo que veía. */
+function lcDespDestino(tipo,cfg){
+  cfg=cfg||DB.getConfig();
+  var d=lcDespachoDefecto(tipo,cfg);
+  if(d&&d.nombre) return d.nombre;
+  return tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI');
+}
+function lcDespNunc(tipo,cfg){
+  cfg=cfg||DB.getConfig();
+  var d=lcDespachoDefecto(tipo,cfg);
+  if(d&&d.nunc) return d.nunc;
+  return (tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''));
+}
 
-function switchDespTab(tab) {
+/* ── Escritura ────────────────────────────────────────────────────────────── */
+/* Alta y edición pasan por aquí, y por aquí pasa también `ojGuardarDespacho`:
+   el despacho que se diligencia dentro del wizard de orden judicial es el mismo
+   que aparece en esta pantalla, con los mismos campos. */
+function lcDespGuardar(reg,cfg){
+  var propio=!cfg; cfg=cfg||DB.getConfig();
+  var lista=(cfg.despachosPropios||[]).slice();
+  if(!reg.id) reg.id=uid();
+  var i=-1;
+  lista.forEach(function(x,ix){ if(x.id===reg.id) i=ix; });
+  if(i>=0) lista[i]=Object.assign({},lista[i],reg); else lista.push(reg);
+  cfg.despachosPropios=lista;
+  if(propio) DB.saveConfig(cfg);
+  return reg;
+}
+function lcDespMarcarDefecto(id,cfg){
+  var propio=!cfg; cfg=cfg||DB.getConfig();
+  var d=lcDespachoPorId(id,cfg); if(!d) return false;
+  var def=lcDespClaseDef(lcDespClase(d));
+  if(!def||!def.slot) return false;
+  cfg.despachoDefecto=Object.assign({},cfg.despachoDefecto||{});
+  cfg.despachoDefecto[def.slot]=id;
+  if(propio) DB.saveConfig(cfg);
+  return true;
+}
+
+/* ── Pantalla ─────────────────────────────────────────────────────────────── */
+var _despachoTab='todos';
+var _despSelCb=null;          // callback del modo selector (wizard)
+
+function switchDespTab(tab){
   _despachoTab=tab;
   document.querySelectorAll('#desp-tabs .tab').forEach(function(t){t.classList.remove('on');});
   var el=document.getElementById('tab-'+tab); if(el) el.classList.add('on');
   renderDespachos(tab);
 }
 
-function renderDespachos(tab) {
-  tab=tab||_despachoTab||'fiscalia'; _despachoTab=tab;
-  var cfg=DB.getConfig(); var favs=cfg.despachosFavoritos||[];
-  var query=(document.getElementById('desp-search')||{}).value||'';
+function renderDespachos(tab){
+  tab=tab||_despachoTab||'todos'; _despachoTab=tab;
   var list=document.getElementById('desp-list'); if(!list) return;
+  var cfg=DB.getConfig(), todos=lcDespachos(cfg);
+  var query=((document.getElementById('desp-search')||{}).value||'').trim().toLowerCase();
   var sub=document.getElementById('desp-header-sub');
-  if(sub) sub.textContent=_despachoSelectorMode?'Selecciona el despacho destino':'Fiscalías y juzgados de Medellín';
-  var tipoClass={Fiscalía:'fiscalia',CESPA:'cespa',Juzgado:'juzgado',Guardia:'guardia',Otro:'fiscalia'};
-  var filtered=DESPACHOS_MEDELLIN.filter(function(d){
-    if(query){var q=query.toLowerCase();if(d.nombre.toLowerCase().indexOf(q)<0&&d.dir.toLowerCase().indexOf(q)<0)return false;}
-    if(tab==='fiscalia') return d.tipo==='Fiscalía'||d.tipo==='Otro';
-    if(tab==='cespa') return d.tipo==='CESPA';
-    if(tab==='juzgado') return d.tipo==='Juzgado'||d.tipo==='Guardia';
-    if(tab==='favoritos') return favs.indexOf(d.id)>=0;
-    return true;
-  });
-  if(!filtered.length){
-    list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--txD);font-size:.83rem">'+
-      (tab==='favoritos'?'Sin favoritos aún. Toca la estrella en cualquier despacho.':'Sin resultados para «'+query+'»')+'</div>';
+  if(sub) sub.textContent=todos.length
+    ? (todos.length===1?'1 despacho registrado':todos.length+' despachos registrados')
+    : 'Aún no has registrado ningún despacho';
+  /* Sin nada registrado no hay nada que buscar ni que filtrar: el buscador y las
+     pestañas se ocultan en vez de quedarse pidiendo una consulta imposible. */
+  var buscador=document.getElementById('desp-search');
+  var tabs=document.getElementById('desp-tabs');
+  var addBtn=document.getElementById('desp-add');
+  if(buscador) buscador.hidden=!todos.length;
+  if(tabs) tabs.hidden=!todos.length;
+  if(addBtn) addBtn.hidden=!todos.length;
+
+  if(!todos.length){
+    list.innerHTML='<div class="desp-vacio">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V8l6-4 6 4v13M10 21v-5h4v5M10 11h4"/></svg>'+
+      '<h3>Tus despachos</h3>'+
+      '<p>Registra las fiscalías, URI, CESPA y juzgados con los que trabajas: nombre, dirección, barrio y ciudad. Se usan como destino del informe de captura y del oficio de orden judicial, y no hay que volver a escribirlos.</p>'+
+      '<p class="desp-vacio-nunc">Cada fiscalía y cada CESPA guarda además su <b>NUNC de 16 dígitos</b>, porque ese número cambia con la unidad que recibe la captura.</p>'+
+      '<button class="btn bp" onclick="lcDespForm()">Agregar el primero</button>'+
+    '</div>';
     return;
   }
-  list.innerHTML=filtered.map(function(d){
-    var isFav=favs.indexOf(d.id)>=0;
-    var tc=tipoClass[d.tipo]||'fiscalia';
-    var nomEsc=d.nombre.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  /* Alfabético: la lista es corta y no tiene marca de alta que ordenar. Se usa
+     el mismo comparador en español que Capturas y Personas — «Álvaro» va con la
+     A y la Ñ entre la N y la O. */
+  var filtrados=todos.filter(function(d){
+    if(query){
+      var txt=((d.nombre||'')+' '+lcDespDireccion(d)+' '+(d.nunc||'')).toLowerCase();
+      if(txt.indexOf(query)<0) return false;
+    }
+    if(tab==='todos') return true;
+    return lcDespClase(d)===tab;
+  }).sort(function(a,b){ return lcCmpTxt(a.nombre,b.nombre); });
+
+  if(!filtrados.length){
+    list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:.83rem">'+
+      (query?'Sin resultados para «'+escHtml(query)+'»':'No tienes despachos de este tipo todavía.')+'</div>';
+    return;
+  }
+  list.innerHTML=filtrados.map(function(d){
+    var cl=lcDespClase(d), def=lcDespClaseDef(cl)||LC_DESP_CLASES[3];
+    var dir=lcDespDireccion(d), esDef=lcDespachoEsDefecto(d,cfg);
+    var j="'"+d.id+"'";
     return '<div class="desp-card">'+
-      '<span class="desp-tipo '+tc+'">'+d.tipo+'</span>'+
-      '<div class="desp-nombre">'+d.nombre+'</div>'+
-      (d.dir?'<div class="desp-dir">'+d.dir+'</div>':'')+
-      (d.tel?'<div class="desp-dir">Tel. '+d.tel+'</div>':'')+
+      '<div class="desp-head">'+
+        '<span class="desp-tipo '+def.css+'">'+def.corto+'</span>'+
+        (esDef?'<span class="desp-def">PREDETERMINADO</span>':'')+
+      '</div>'+
+      '<div class="desp-nombre">'+escHtml(d.nombre||'(sin nombre)')+'</div>'+
+      (dir?'<div class="desp-dir">'+escHtml(dir)+'</div>':'')+
+      (d.telefono?'<div class="desp-dir">Tel. '+escHtml(d.telefono)+'</div>':'')+
+      (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+escHtml(d.nunc)+'</b></div>'
+             :(def.nunc?'<div class="desp-nunc falta">Sin NUNC registrado</div>':''))+
       '<div class="desp-acts">'+
-        '<button class="desp-usar" onclick="usarDespacho(\''+nomEsc+'\')">'+
-          (_despachoSelectorMode?'Seleccionar':'Usar este despacho')+
-        '</button>'+
-        '<button class="desp-fav'+(isFav?' on':'')+'" onclick="toggleFavorito(\''+d.id+'\')" title="'+(isFav?'Quitar favorito':'Favorito')+'">'+
-          '<svg viewBox="0 0 24 24" fill="'+(isFav?'currentColor':'none')+'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'+
-        '</button>'+
+        (def.slot&&!esDef
+          ? '<button class="desp-usar" onclick="lcDespPredet('+j+')">Usar por defecto</button>'
+          : '')+
+        '<button class="desp-act" onclick="lcDespForm('+j+')">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar</button>'+
+        '<button class="desp-act del" onclick="lcDespEliminar('+j+')">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>Eliminar</button>'+
       '</div>'+
     '</div>';
   }).join('');
 }
 
-function toggleFavorito(id) {
-  var cfg=DB.getConfig(); var favs=cfg.despachosFavoritos||[];
-  var idx=favs.indexOf(id);
-  if(idx>=0) favs.splice(idx,1); else favs.push(id);
-  cfg.despachosFavoritos=favs; DB.saveConfig(cfg);
+function lcDespPredet(id){
+  if(!lcDespMarcarDefecto(id)){ toast('Ese tipo de despacho no es destino de una captura'); return; }
+  var d=lcDespachoPorId(id);
   renderDespachos(_despachoTab);
-  toast(idx>=0?'Eliminado de favoritos':'Agregado a favoritos');
+  toast('Predeterminado: '+String(d&&d.nombre||'').substring(0,32)+(d&&d.nunc?' · NUNC '+d.nunc:''));
 }
 
-function usarDespacho(nombre) {
-  if(_despachoSelectorMode){
-    var el=document.getElementById('w-dest'); if(el) el.value=nombre;
-    _despachoSelectorMode=false;
-    go('wizard'); toast('Despacho seleccionado ✓');
-  } else {
-    if(navigator.clipboard) navigator.clipboard.writeText(nombre).catch(function(){});
-    toast('Copiado: '+nombre.substring(0,40)+'…');
+function lcDespEliminar(id){
+  var d=lcDespachoPorId(id); if(!d) return;
+  if(!confirm('¿Eliminar «'+(d.nombre||'este despacho')+'»?\n\nLas capturas ya guardadas conservan el destino con el que se emitieron.')) return;
+  var cfg=DB.getConfig();
+  cfg.despachosPropios=(cfg.despachosPropios||[]).filter(function(x){ return x.id!==id; });
+  /* La marca de predeterminado apunta a un id: al borrar el despacho hay que
+     soltarla, o seguiría apuntando a un registro que ya no existe. */
+  if(cfg.despachoDefecto){
+    ['URI','CESPA'].forEach(function(k){ if(cfg.despachoDefecto[k]===id) cfg.despachoDefecto[k]=''; });
   }
+  DB.saveConfig(cfg);
+  renderDespachos(_despachoTab);
+  toast('Despacho eliminado');
 }
 
-function abrirSelectorDespacho() {
-  if(!wc){toast('Inicia el wizard primero');return;}
-  _despachoSelectorMode=true;
+/* ── Alta y edición ───────────────────────────────────────────────────────── */
+/* El formulario se pinta en un modal. La dirección usa el MISMO widget guiado
+   que el lugar de los hechos y el registro de Personas (Mejora 1) y la ciudad el
+   mismo campo con inferencia de departamento que el módulo de orden judicial
+   (Ola 2): un despacho no se diligencia con otro criterio que una persona. */
+function lcDespForm(id){
+  var d=id?lcDespachoPorId(id):null;
+  var nuevo=!d;
+  d=d?Object.assign({},d):{id:'',clase:'FISCALIA',nombre:'',direccion:'',barrio:'',
+    municipio:lcUnidadCiudad()||'',departamento:'',telefono:'',correo:'',nunc:'',tipo:''};
+  var cl=lcDespClase(d);
+  window._lcDespEdit={id:d.id,clase:cl,tipo:d.tipo||''};
+  openModal(
+    '<div class="mh"><h2>'+(nuevo?'Nuevo despacho':'Editar despacho')+'</h2>'+
+      '<button class="mx" onclick="closeModal()">✕</button></div>'+
+    lcCampo('Tipo de despacho',
+      '<select class="fs" id="dp-clase" onchange="lcDespClaseChg()">'+
+      LC_DESP_CLASES.map(function(c){
+        return '<option value="'+c.id+'"'+(c.id===cl?' selected':'')+'>'+escHtml(c.lbl)+'</option>';
+      }).join('')+'</select>')+
+    lcCampo('Nombre del despacho',lcInput('dp-nom',d.nombre,'Nombre completo del despacho'),
+      'Escríbelo como quieres que salga impreso en el informe.',true,
+      'Obligatorio: sin nombre el despacho no se puede guardar')+
+    lcDirWidget('dp-dir',d.direccion,'Dirección','Dirección del despacho')+
+    '<div class="fr">'+
+      lcCampo('Barrio',lcInput('dp-bar',d.barrio,'Barrio'))+
+      lcCampo('Ciudad','<input class="fi" id="dp-mun" list="dl-muni" value="'+escAttr(d.municipio||'')+'" '+
+        'placeholder="Municipio" oninput="lcGeoCompletar(this,\'dp-dep\')" onblur="lcGeoAprender(this,\'dp-dep\')">')+
+    '</div>'+
+    '<div class="fr">'+
+      lcCampo('Departamento',lcInput('dp-dep',d.departamento,'Se completa solo'))+
+      lcCampo('Teléfono',lcInput('dp-tel',d.telefono,'Teléfono'))+
+    '</div>'+
+    lcCampo('Correo',lcInput('dp-cor',d.correo,'opcional'))+
+    '<div id="dp-nunc-box">'+lcDespNuncHtml(cl,d.nunc)+'</div>'+
+    '<div class="mb"><button class="btn bs" onclick="closeModal()">Cancelar</button>'+
+      '<button class="btn bp" onclick="lcDespGuardarForm()">Guardar despacho</button></div>'
+  );
+}
+/* ⚠️ El NUNC solo se pide a las autoridades que lo asignan. Un juzgado no recibe
+   noticia criminal: ofrecerle la casilla invitaría a escribir ahí un número que
+   ese despacho nunca emitió, y ese número acabaría impreso en un FPJ-5. */
+function lcDespNuncHtml(clase,val){
+  var def=lcDespClaseDef(clase);
+  if(!def||!def.nunc){
+    return '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+      'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'+
+      'Un juzgado no asigna NUNC, así que no se pide.</p>';
+  }
+  return lcCampo('NUNC de esta unidad',
+    '<input class="fi mono" id="dp-nunc" value="'+escAttr(val||'')+'" maxlength="16" inputmode="numeric" '+
+      'placeholder="16 dígitos" oninput="validateNunc(this)">'+
+    '<div class="nunc-err" id="nunc-err"></div>',
+    'Los 16 dígitos fijos de esta unidad receptora. Al elegir este despacho en una captura, el NUNC se rellena solo.');
+}
+function lcDespClaseChg(){
+  var cl=(document.getElementById('dp-clase')||{}).value||'FISCALIA';
+  var caja=document.getElementById('dp-nunc-box'); if(!caja) return;
+  var actual=(document.getElementById('dp-nunc')||{}).value||'';
+  window._lcDespEdit.clase=cl;
+  /* ⚠️ Se repinta SOLO la casilla del NUNC: volver a pintar el modal entero
+     borraría el nombre y la dirección que se estén escribiendo. */
+  caja.innerHTML=lcDespNuncHtml(cl,actual);
+}
+function lcDespGuardarForm(){
+  var g=function(id){ var el=document.getElementById(id); return el?String(el.value||'').trim():''; };
+  var st=window._lcDespEdit||{};
+  var nombre=g('dp-nom');
+  if(!nombre){ toast('Escribe el nombre del despacho'); var e=document.getElementById('dp-nom'); if(e) e.focus(); return; }
+  var cl=(document.getElementById('dp-clase')||{}).value||st.clase||'OTRO';
+  var def=lcDespClaseDef(cl)||LC_DESP_CLASES[3];
+  var nunc=def.nunc?g('dp-nunc').replace(/\D/g,''):'';
+  if(nunc&&nunc.length!==16){ toast('El NUNC debe tener exactamente 16 dígitos'); return; }
+  var reg={
+    id:st.id||'', clase:cl, nombre:nombre,
+    direccion:lcDirValor('dp-dir'), barrio:g('dp-bar'),
+    municipio:g('dp-mun'), departamento:g('dp-dep'),
+    telefono:g('dp-tel'), correo:g('dp-cor'), nunc:nunc,
+    /* ⚠️ `tipo` es del catálogo del módulo de orden judicial y decide el
+       destinatario (JEPMS vs. conocimiento). Solo se escribe cuando la
+       equivalencia es inequívoca; si el despacho ya traía uno, se respeta. */
+    tipo:st.tipo||def.ojTipo||''
+  };
+  var cfg=DB.getConfig();
+  var esNuevo=!reg.id;
+  lcDespGuardar(reg,cfg);
+  // El primero de su clase queda predeterminado: si es el único, no hay elección.
+  if(def.slot&&esNuevo&&!(cfg.despachoDefecto||{})[def.slot]) lcDespMarcarDefecto(reg.id,cfg);
+  DB.saveConfig(cfg);
+  var cb=_despSelCb;
+  closeModal();
+  if(cb){ _despSelCb=cb; lcDespElegir(reg.id); return; }
+  renderDespachos(_despachoTab);
+  toast('Despacho guardado ✓');
+}
+
+/* ── Selector para el wizard ──────────────────────────────────────────────── */
+/* ⚠️ Antes «Cambiar el destino» NAVEGABA a la pantalla de despachos y volvía al
+   wizard: sacaba al funcionario de la captura a media diligencia. Ahora es un
+   modal sobre el paso, con el buscador y el botón de agregar dentro — un
+   despacho nuevo se registra sin abandonar el procedimiento. */
+function lcSelectorDespacho(slot,cb){
+  _despSelCb=cb||null;
+  var lista=lcDespachos().filter(function(d){
+    if(!slot) return true;
+    var def=lcDespClaseDef(lcDespClase(d));
+    return def&&def.slot===slot;
+  });
+  openModal(
+    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="lcCerrarSelDesp()">✕</button></div>'+
+    (lista.length
+      ? '<input class="fi" id="dp-q" placeholder="Buscar por nombre, dirección o NUNC…" oninput="lcDespSelFiltrar()" style="margin-bottom:12px">'+
+        '<div id="dp-res"></div>'
+      : '<p class="oj-vacio">Todavía no has registrado un despacho de este tipo.</p>')+
+    '<button class="btn bs bbl bsm" style="margin-top:12px" onclick="lcDespForm()">+ Agregar un despacho</button>'
+  );
+  window._lcDespSelLista=lista;
+  if(lista.length) lcDespSelFiltrar();
+}
+function lcCerrarSelDesp(){ _despSelCb=null; closeModal(); }
+function lcDespSelFiltrar(){
+  var q=((document.getElementById('dp-q')||{}).value||'').trim().toLowerCase();
+  var lista=(window._lcDespSelLista||[]).filter(function(d){
+    if(!q) return true;
+    return ((d.nombre||'')+' '+lcDespDireccion(d)+' '+(d.nunc||'')).toLowerCase().indexOf(q)>=0;
+  });
+  var el=document.getElementById('dp-res'); if(!el) return;
+  if(!lista.length){ el.innerHTML='<p class="oj-vacio">Sin resultados.</p>'; return; }
+  el.innerHTML=lista.slice(0,40).map(function(d){
+    var dir=lcDespDireccion(d);
+    return '<div class="oj-row" style="cursor:pointer" onclick="lcDespElegir(\''+d.id+'\')">'+
+      '<div style="font-size:13.5px;font-weight:600;color:var(--text)">'+escHtml(d.nombre||'')+'</div>'+
+      (dir?'<div class="oj-hint" style="margin:3px 0 0">'+escHtml(dir)+'</div>':'')+
+      (d.nunc?'<div class="oj-hint mono" style="margin:2px 0 0">NUNC '+escHtml(d.nunc)+'</div>':'')+
+    '</div>';
+  }).join('');
+}
+function lcDespElegir(id){
+  var d=lcDespachoPorId(id); if(!d) return;
+  var cb=_despSelCb; _despSelCb=null;
+  closeModal();
+  if(cb) cb(d);
+}
+
+/* Botón «Lista» del paso 1 del wizard de flagrancia. ⚠️ Conserva el nombre
+   porque el paso lo trae cableado (y `verify_mejora1` lo comprueba). */
+function abrirSelectorDespacho(){
+  if(!wc){ toast('Inicia el wizard primero'); return; }
   collectStep();
-  _despachoTab='fiscalia';
-  go('despachos');
-  document.querySelectorAll('#desp-tabs .tab').forEach(function(t){t.classList.remove('on');});
-  var ft=document.getElementById('tab-fiscalia'); if(ft) ft.classList.add('on');
+  lcSelectorDespacho(wc.tipo==='CESPA'?'CESPA':'URI',lcUsarDespachoEnCaso);
+}
+/* ⚠️ El NUNC viaja CON el despacho, que es justo lo que el funcionario está
+   cambiando: llevar la captura a otra URI cambia los dígitos de unidad
+   receptora. Si el despacho elegido no tiene NUNC registrado NO se borra el que
+   hubiera —perder un número ya tecleado sería peor que dejarlo desactualizado—:
+   se avisa y queda a la vista para corregirlo. */
+function lcUsarDespachoEnCaso(d){
+  if(!wc) return;
+  wc.destino=d.nombre||'';
+  var aviso='Destino: '+String(d.nombre||'').substring(0,32);
+  if(d.nunc){ wc.nunc=d.nunc; aviso+=' · NUNC '+d.nunc; }
+  else aviso+=' — sin NUNC registrado, revísalo';
+  _lcDestEdit=false;
+  renderWiz();
+  toast(aviso);
 }
 
 /* ═══════════════════════════════════════════
@@ -11294,9 +11695,31 @@ function activarPerfilRegional(id) {
   if(p.zonaDefault) cfg.zonaDefault=p.zonaDefault;
   if(p.uriDestino) cfg.destUri=p.uriDestino;
   if(p.cespaDestino) cfg.destCespa=p.cespaDestino;
+  lcDespDesdeRegional(p,cfg);
   if(p.unidad) cfg.ojUnidad=p.unidad;      // línea 3 del membrete de esa zona
   DB.saveConfig(cfg); loadAjustesFields(); renderPerfilesRegionales();
   toast('Perfil '+p.nombre+' activado — datos de '+p.departamento+' aplicados.');
+}
+
+/* Crea o actualiza el despacho de la zona y lo deja predeterminado. Se busca
+   POR NOMBRE antes de crear: reactivar un perfil no debe sembrar un duplicado
+   cada vez. Solo actúa sobre lo que el perfil trae escrito. */
+function lcDespDesdeRegional(p,cfg){
+  [{slot:'URI',clase:'FISCALIA',ojTipo:'FISCALIA',nom:p.uriDestino,nunc:p.nuncUri},
+   {slot:'CESPA',clase:'CESPA',ojTipo:'ADOLESCENTES',nom:p.cespaDestino,nunc:p.nuncCespa}
+  ].forEach(function(z){
+    var nom=String(z.nom||'').trim(), nunc=String(z.nunc||'').replace(/[^0-9]/g,'');
+    if(!nom&&!nunc) return;
+    var previo=null;
+    (cfg.despachosPropios||[]).forEach(function(x){
+      if(nom&&x.nombre===nom&&lcDespClase(x)===z.clase) previo=x;
+    });
+    var reg={id:(previo&&previo.id)||'',clase:z.clase,tipo:(previo&&previo.tipo)||z.ojTipo,
+      nombre:nom||(previo&&previo.nombre)||''};
+    if(nunc) reg.nunc=nunc;
+    lcDespGuardar(reg,cfg);
+    lcDespMarcarDefecto(reg.id,cfg);
+  });
 }
 
 function delPerfilRegional(id) {
@@ -11386,9 +11809,7 @@ function loadAjustesFields() {
     'aj-bar':cfg.ojCustBarrio,'aj-ciu':lcUnidadCiudad(cfg),
     'aj-tel':cfg.ojCustTelefono||cfg.dosTel||'','aj-cor':cfg.ojCustCorreo,'aj-web':cfg.ojPieWeb,
     'aj-patrulla':cfg.patrullaNum,'aj-unidad':cfg.patrullaUnidad,
-    'aj-nuncUri':cfg.nuncUri,'aj-nuncCespa':cfg.nuncCespa,
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
-    'aj-destUri':cfg.destUri,'aj-destCespa':cfg.destCespa,
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,
     'aj-oj-asunto':cfg.ojAsunto,
     'aj-oj-fnom':cfg.ojFiscaliaNombre,'aj-oj-fdir':cfg.ojFiscaliaDireccion,
@@ -11396,6 +11817,7 @@ function loadAjustesFields() {
     'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
+  renderAjDespachos(cfg);
   renderLogoOJ(cfg);
   renderPapelAj(cfg);
   renderAjDerivados();
@@ -11550,6 +11972,27 @@ function delConocieronRow(btn) {
   if(!document.querySelectorAll('#aj-con-list .aj-con-row').length) renderConocieronRows(['']);
 }
 
+/* Las dos líneas derivadas de la sección «Valores por defecto»: qué despacho
+   recibe cada tipo de captura y con qué NUNC. Se pintan resueltas, con su
+   procedencia, en lugar de los cuatro campos que se retiraron. */
+function renderAjDespachos(cfg){
+  cfg=cfg||DB.getConfig();
+  var chk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  var linea=function(id,txt){
+    var el=document.getElementById(id); if(el) el.innerHTML=chk+escHtml(txt);
+  };
+  var d=function(t){
+    var x=lcDespachoDefecto(t,cfg);
+    return x?(x.nombre||'(sin nombre)'):lcDespDestino(t,cfg);
+  };
+  linea('aj-dest-auto','Destino del informe: '+d('URI')+' (adultos) · '+d('CESPA')+' (menores). '+
+    'Se toman del despacho predeterminado de cada tipo.');
+  var n=function(t){ var v=lcDespNunc(t,cfg); return v||'sin registrar'; };
+  linea('aj-nunc-auto','NUNC: '+n('URI')+' (URI) · '+n('CESPA')+' (CESPA). '+
+    'Cada despacho guarda el suyo, porque el número cambia con la unidad que recibe la captura.');
+}
+
 function saveAjustes() {
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
   var cfg=DB.getConfig();
@@ -11599,9 +12042,12 @@ function saveAjustes() {
        atrás: hay configuraciones exportadas que solo tienen ese campo. */
     cfg.conocieronCaso=getConocieronList(cfg).join(', ');
   }
-  cfg.nuncUri=v('aj-nuncUri'); cfg.nuncCespa=v('aj-nuncCespa');
+  /* ⚠️ `nuncUri`, `nuncCespa`, `destUri` y `destCespa` NO se escriben aquí: sus
+     campos se retiraron (el destino y el NUNC viven en el despacho). Escribirlos
+     con `v()` los habría BORRADO, porque `v()` devuelve '' cuando el elemento no
+     existe — la misma trampa que ya protegía a `ojDependencia`. Las claves se
+     conservan intactas como respaldo de configuraciones anteriores. */
   cfg.localidadDefault=v('aj-localidad'); cfg.zonaDefault=v('aj-zona'); cfg.veredaDefault=v('aj-vereda');
-  cfg.destUri=v('aj-destUri'); cfg.destCespa=v('aj-destCespa');
   // Oficio de orden judicial (la sección puede no estar en el DOM: solo se
   // escribe lo que exista, para no borrar configuración ya guardada).
   if(document.getElementById('aj-oj-min')){
@@ -12973,16 +13419,16 @@ function ojDespachosGuardados(){
 }
 function ojSelectorDespacho(modoDestino){
   window._ojDestinoMode=!!modoDestino;
-  var propios=ojDespachosGuardados();
-  var base=(typeof DESPACHOS_MEDELLIN!=='undefined'?DESPACHOS_MEDELLIN:[]).filter(function(d){
-    return d.tipo==='Juzgado'||d.tipo==='Fiscalía'||d.tipo==='Guardia';
-  }).map(function(d){ return {id:'base-'+d.id,nombre:d.nombre,direccion:d.dir,telefono:d.tel,municipio:'',departamento:'',base:true}; });
-  var todos=propios.concat(base);
+  /* ⚠️ Antes esta lista concatenaba `DESPACHOS_MEDELLIN`, quince despachos con
+     dirección escrita en el código. El registro es ahora UNO solo y es del
+     usuario: lo que agregue en la pantalla Despachos aparece aquí, y lo que
+     diligencie aquí aparece allá. */
+  var todos=ojDespachosGuardados();
   openModal(
     '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<input class="fi" id="oj-desp-q" placeholder="Buscar por nombre o municipio…" oninput="ojSelectorDespachoFiltrar()" style="margin-bottom:12px">'+
     '<div id="oj-desp-res"></div>'+
-    '<p class="oj-hint" style="margin-top:10px">Los despachos que diligencies a mano quedan guardados para reutilizarlos en próximas actuaciones.</p>'
+    '<p class="oj-hint" style="margin-top:10px">Los despachos que diligencies a mano quedan guardados para reutilizarlos en próximas actuaciones. Se administran en <b>Despachos</b>.</p>'
   );
   window._ojDespCache=todos;
   ojSelectorDespachoFiltrar();
@@ -13033,13 +13479,22 @@ function ojGuardarDespacho(){
   ojCollect();
   var d=wc.oj.despacho;
   if(!d.nombre){ toast('Escribe primero el nombre del despacho'); return; }
-  var cfg=DB.getConfig(); var lista=cfg.despachosPropios||[];
-  var reg={id:d.despachoId&&d.despachoId.indexOf('base-')!==0?d.despachoId:uid(),
-    nombre:d.nombre,tipo:d.tipo,especialidad:'',municipio:d.municipio,departamento:d.departamento,
-    direccion:d.direccion,telefono:d.telefono,correo:d.correo,identificacion:''};
-  var i=-1; lista.forEach(function(x,ix){ if(x.id===reg.id||x.nombre===reg.nombre) i=ix; });
-  if(i>=0) lista[i]=reg; else lista.push(reg);
-  cfg.despachosPropios=lista; DB.saveConfig(cfg);
+  var cfg=DB.getConfig();
+  /* Reaprovecha el registro que ya exista con ese nombre, para no duplicarlo al
+     volver a guardarlo desde otra captura. */
+  var previo=null;
+  (cfg.despachosPropios||[]).forEach(function(x){
+    if(x.id===d.despachoId||(x.nombre&&x.nombre===d.nombre)) previo=x;
+  });
+  var reg={id:(previo&&previo.id)||d.despachoId||'',
+    clase:(previo?lcDespClase(previo):lcDespClase({nombre:d.nombre,tipo:d.tipo})),
+    nombre:d.nombre,tipo:d.tipo||(previo&&previo.tipo)||'',
+    municipio:d.municipio,departamento:d.departamento,
+    direccion:d.direccion,telefono:d.telefono,correo:d.correo};
+  /* ⚠️ El barrio y el NUNC NO se pisan: el formulario de orden judicial no los
+     pide, y `lcDespGuardar` fusiona sobre lo que ya hubiera. Un despacho al que
+     se le registró su NUNC en la pantalla no lo pierde por pasar por aquí. */
+  lcDespGuardar(reg,cfg); DB.saveConfig(cfg);
   wc.oj.despacho.despachoId=reg.id;
   toast('Despacho guardado para reutilizarlo ✓');
 }

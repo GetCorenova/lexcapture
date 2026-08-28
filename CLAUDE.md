@@ -3034,12 +3034,104 @@ firmas **11 pt en Tahoma**, que es la letra que el formato usa ahí.
   simulador 41 · orden 33 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22 · DS 10.
   Anti-caché `?v=77` / `cache-v77`, `_BUILD=77`.
 
+## Despachos: el registro es del usuario, y el NUNC viaja con él (2026-08-28)
+Reportado en campo con el pantallazo de la pantalla: *«es ilógico que se tenga este espacio para que
+una aplicación que no cuenta con capacidad de IA o de búsqueda sea quien busque la dirección de los
+despachos»*. Y con la pieza que faltaba: *«cada despacho hace que cambie el número de SPOA de 16
+dígitos»*. Verificado con `verify_despachos.mjs` (**53 checks**, nuevo). Las 12 suites previas siguen
+en verde sin tocar sus expectativas.
+
+- ⚠️ **La pantalla presentaba como comprobado un dato que nadie comprobó.** `DESPACHOS_MEDELLIN` eran
+  quince fiscalías y juzgados **con su dirección escrita en el código**, presentados con buscador y
+  pestañas como si la app consultara un directorio judicial. No consulta ninguno: son quince cadenas
+  fijas, solo válidas en una ciudad (issues A1/A2) y que nada puede mantener al día. Un funcionario
+  que llevara una captura a la dirección equivocada la habría leído de ahí.
+- ⚠️ **Y había DOS registros de despachos que no se hablaban**: esa lista, y `cfg.despachosPropios[]`
+  —el del módulo de orden judicial, que sí es del usuario, sí guarda y sí reutiliza, pero **no tenía
+  pantalla**—. Se unificó en el segundo: lo que se agrega en Despachos alimenta el destino del informe
+  de flagrancia **y** la autoridad solicitante y el destinatario del oficio de orden judicial; lo que
+  se diligencia dentro del wizard de orden judicial aparece en la pantalla. Hay checks de los dos
+  sentidos.
+
+### El NUNC deja de colgar del tipo de captura
+Los dígitos 8-12 del NUNC identifican la **unidad receptora**, así que el número cambia con la
+fiscalía que recibe la captura — que es exactamente lo que reportó el usuario. La app lo tenía atado
+al **tipo** (`cfg.nuncUri` / `cfg.nuncCespa`), o sea que llevar una captura a otra URI obligaba a
+corregirlo a mano, sin que nada avisara de que había que hacerlo.
+- **Ahora cada despacho guarda el suyo** y viaja con él: elegir otro destino en el paso 1 cambia el
+  destino **y** el NUNC, y el paso lo anuncia («El NUNC cambia con el despacho que recibe la
+  captura») — sin esa línea, ver cambiar solo el número se lee como un fallo de la app.
+- ⚠️ **Un juzgado no recibe noticia criminal y no se le pide NUNC.** La casilla aparece solo en
+  Fiscalía/URI y CESPA; en un juzgado se dice por qué no está. Ofrecerla invitaría a escribir ahí un
+  número que ese despacho nunca emitió, y ese número acabaría impreso en un FPJ-5.
+- ⚠️ **Un despacho sin NUNC registrado NO borra el que ya hubiera**: se avisa y queda a la vista para
+  corregirlo. Perder un número ya tecleado es peor que dejarlo desactualizado.
+- **`lcDespDestino(tipo)` / `lcDespNunc(tipo)` son el punto único.** La expresión
+  `tipo==='CESPA'?cfg.destCespa:cfg.destUri` estaba escrita en **cinco** sitios que podían discrepar
+  (arranque del wizard, selector de tipo, render del paso 1, destinatario OJ y simulador), más el
+  respaldo del acta FPJ-6.
+
+### La pantalla
+CRUD completo: **agregar · editar · eliminar**, con tipo, nombre, dirección, barrio, ciudad,
+departamento, teléfono, correo y NUNC. Estado vacío que explica para qué sirve; buscador y pestañas
+**ocultos mientras no haya nada** que buscar ni filtrar; lista alfabetizada con el mismo comparador en
+español que Capturas y Personas. La dirección usa el **widget guiado** de Mejora 1 (CL/KR/AV…) y la
+ciudad el campo con **inferencia de departamento** de la Ola 2: un despacho no se diligencia con otro
+criterio que una persona.
+- **«Favoritos» se sustituyó por «Predeterminado»**, que además decide el NUNC. El primero de su
+  clase queda marcado solo: si es el único, no hay elección que hacer.
+- ⚠️ **El selector del wizard es un MODAL, no una navegación.** Antes «Cambiar el destino» llevaba a
+  la pantalla de despachos y volvía: sacaba al funcionario de la captura a media diligencia. Ahora se
+  elige encima del paso, y desde ahí se puede **registrar un despacho nuevo sin abandonar el
+  procedimiento** — con el buscador filtrando **solo** los que reciben ese tipo de captura.
+- ⚠️ **Los ejemplos de los campos también eran datos reales** de una URI concreta, heredados de la
+  lista retirada. Un `placeholder` no se guarda ni se imprime, pero es un despacho escrito en el
+  código: es justo lo que este trabajo vino a quitar. Hay un check que lo mide sobre el archivo.
+
+### Ajustes: cuatro campos menos, y la trampa de siempre
+«NUNC URI», «NUNC CESPA», «Destino URI» y «Destino CESPA» se retiraron: el dato vive en el despacho.
+En su lugar quedan **dos líneas derivadas** que muestran el destino y el NUNC **resueltos, con su
+procedencia**, y un botón a la pantalla — un dato que se hereda en silencio es indistinguible de un
+dato que falta (lección de la auditoría de Ajustes → Estación).
+- ⚠️ **Las cuatro claves NO se escriben en `saveAjustes`.** `v()` devuelve `''` cuando el elemento no
+  existe, así que dejar las asignaciones habría **borrado** la configuración del usuario en el primer
+  guardado — la misma trampa que ya protegía a `ojDependencia`. Se conservan intactas como respaldo.
+- **`despachosFavoritos` pasa a `_CFG_MUERTAS`**: guardaba ids de la lista retirada, así que sin ella
+  es basura que viajaba en cada guardado y en cada «Exportar config».
+
+### Migración
+`_cfgConDefaults` convierte el destino y el NUNC sueltos en despachos reales, al leer, una sola vez.
+- ⚠️ **Solo se siembra lo que el usuario ESCRIBIÓ.** `destUri`/`destCespa` nacen con un valor de
+  fábrica (`'Fiscalía URI'`, `'CESPA'`), así que sembrar por su mera presencia le habría creado dos
+  despachos inventados a un equipo recién instalado — el error de `'CANDELARIA'` en `nombreEstacion`
+  (2026-08-13). Un NUNC, en cambio, nunca viene de fábrica. Hay un check por cada mitad.
+- ⚠️ **Se hace UNA vez (`despachosMigrados`), no «cuando la lista está vacía»**: si no, borrar todos
+  los despachos los resucitaría en la lectura siguiente.
+- **Un perfil regional pone SUS despachos** (`lcDespDesdeRegional`): guardaba destino y NUNC de URI y
+  CESPA, que es exactamente un par de despachos. Sin esto, activar una zona escribía las claves de
+  respaldo y **no cambiaba nada visible**, porque el despacho predeterminado seguía mandando. Se busca
+  por nombre antes de crear, así que reactivar un perfil no siembra duplicados.
+- ⚠️ **Guardar un despacho desde el wizard de orden judicial no le borra el NUNC ni el barrio**: ese
+  formulario no los pide, y `lcDespGuardar` **fusiona** sobre lo que ya hubiera. Lo que un formulario
+  no pregunta, no lo pisa.
+- ⚠️ **La `clase` se DERIVA y el `tipo` del módulo de orden judicial NO se pisa**: los despachos ya
+  guardados traen `tipo` de su catálogo propio (JCG, JEPMS, CONOCIMIENTO…), que es el que decide el
+  destinatario del oficio. Sin clase ni tipo se infiere del nombre antes que rendirse a «Otra
+  autoridad», así que un registro viejo aparece en su pestaña sin tocar nada.
+
+- ⚠️ **Fallo PREEXISTENTE, no de este trabajo**: `verify_menu_expediente` [9] («un único
+  `lcPlazo36`») falla **idéntico contra el build anterior** — comprobado ejecutándolo con el HTML de
+  HEAD. El diff no toca `lcPlazo36` ni `renderCases`.
+- Regresiones en verde: **despachos 53** · OJ 187 · mejora1 156 · mejora3 51 · fpj6 140 · custodia 99 ·
+  simulador 41 · invitado 33 · personas 25 · orden 33 · expediente 13 · almacén 12 ·
+  menú+expediente 15/16 (el fallo preexistente). Anti-caché `?v=81` / `cache-v81`, `_BUILD=81`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
 | C2 | Service Worker requiere HTTPS — sw.js separado no embebido | ALTA |
 | A1 | Localidad/zona/vereda hardcodeadas en datalists | MEDIA |
-| A2 | NUNC con prefijo Medellín hardcodeado — configurar por regional | MEDIA |
+| A2 | NUNC con prefijo Medellín hardcodeado | ✅ RESUELTO (2026-08-28): vive en cada despacho del usuario |
 | S2 | innerHTML con datos de usuario sin escapar en atributos `value=""` (perfiles, secciones del dossier). Los 4 `<textarea>` del wizard ya se escapan (Fase H) | BAJA |
 | S3 | Backup de capturas (`exportarCapturas`) se exporta en JSON plano sin cifrar — ya muestra advertencia explícita al usuario (Fase H), pero no cifra el archivo | BAJA |
 
