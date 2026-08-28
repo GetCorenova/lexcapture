@@ -1438,6 +1438,40 @@ body.guest{padding-top:38px}
 .oj-dest-mas{margin-top:4px}
 .oj-dest-mas+.oj-dest-mas{border-top:1px solid var(--border);padding-top:8px}
 
+/* El despacho que recibe una captura de FLAGRANCIA (paso «Datos del caso»).
+   ⚠️ Mismo peso visual que el destinatario del oficio (.oj-dest) pero SIN su
+   color: en este sistema el violeta significa «orden judicial». Reutiliza
+   .oj-dest-box / -nom / -dir / -src, que no son del módulo OJ sino del patrón
+   «dato resuelto con su procedencia». */
+.lc-desp-blk{
+  background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--acc);
+  border-radius:var(--radius);padding:16px 14px;margin-bottom:14px;
+}
+.lc-desp-blk.falta{border-left-color:var(--warn)}
+.lc-desp-op{
+  background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:11px 13px;margin-bottom:8px;cursor:pointer;
+  transition:background var(--d1) var(--ease),border-color var(--d1) var(--ease);
+}
+.lc-desp-op:hover{background:var(--hover);border-color:var(--acc)}
+.lc-desp-op:active{background:var(--pressed)}
+.lc-desp-pie{display:flex;flex-wrap:wrap;gap:14px;margin-top:2px}
+
+/* Homónimos del catálogo geográfico: los departamentos posibles, en un toque. */
+.lc-geo-hom{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  background:var(--warn-bg);border:1px solid rgba(232,165,79,.35);border-radius:var(--radius-sm);
+  padding:9px 11px;margin:-4px 0 14px;font-size:12.5px;color:var(--text-2);line-height:1.45;
+}
+.lc-geo-hom>span{flex:1 1 100%}
+.lc-geo-op{
+  background:var(--surface-1);border:1px solid var(--border);border-radius:999px;
+  padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;
+  font-family:inherit;
+}
+.lc-geo-op:hover{border-color:var(--acc);background:var(--hover)}
+.lc-geo-op:active{background:var(--pressed)}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MEJORA 1 — direcciones normalizadas, listas repetibles y fecha/hora
    Un único juego de clases para los widgets nuevos, usados en los tres sitios
@@ -2183,6 +2217,8 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <!-- Municipios: base embebida + los que el usuario haya diligenciado en su zona.
      Lo pinta lcGeoPintarDatalist() en cada render del wizard. -->
 <datalist id="dl-muni"></datalist>
+<!-- Los 33 departamentos: campo contiguo al municipio y resolución de homónimos. -->
+<datalist id="dl-depto"></datalist>
 <!-- Grados: lo pinta lcGradoPintarDatalist() al arrancar. La escritura libre se
      conserva a propósito — un datalist sugiere, no restringe. -->
 <datalist id="dl-grado"></datalist>
@@ -2333,7 +2369,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 81;
+var _BUILD = 82;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3589,16 +3625,27 @@ function delCase(id) {
    lugar en el formato: numeral 7, entre el 6 (testigos) y el 8 (vehículos).
    Antes era un textarea perdido al final del paso de Narración y ni siquiera
    llegaba al documento (observación 9). */
-var STEPS_STD = ['Caso','Lugar','Capturados','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor'];
-var STEPS_OJ  = ['Caso','Lugar','Capturado','EMP y EF','Vehículos','Narración','Servidor'];
+/* ⚠️ EL LUGAR VA PRIMERO (2026-08-28, pedido en campo). No es una preferencia de
+   orden: el municipio del hecho es lo que determina la JURISDICCIÓN, y de la
+   jurisdicción sale la fiscalía/URI (o el CESPA) que recibe la captura, que es
+   la primera decisión del paso «Caso». Preguntar el despacho antes que el sitio
+   obligaba a proponerlo a ciegas.
+   ⚠️ Esto NO altera un solo documento: el modelo del caso es el mismo y los
+   pasos son los mismos, solo cambia el orden en que se pintan. Por eso
+   `collectStep` recolecta POR NOMBRE DE PASO y no por índice — el índice 0 dejó
+   de ser «Caso».
+   «EMP y EF» sigue DESPUÉS de Testigos y ANTES de Vehículos porque ese es su
+   lugar en el formato: numeral 7, entre el 6 (testigos) y el 8 (vehículos). */
+var STEPS_STD = ['Lugar','Caso','Capturados','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor'];
+var STEPS_OJ  = ['Lugar','Caso','Capturado','EMP y EF','Vehículos','Narración','Servidor'];
 
 function getWizConfig() {
   // Módulo de orden judicial v2: formulario propio, sin nada de flagrancia.
   if (wc&&wc.ojv===2) return ojWizConfig();
   // Casos OJ creados antes del módulo v2: siguen abriendo con el flujo viejo.
-  if (wc&&wc.tipo==='OJ') return {steps:STEPS_OJ, panels:[rStep1,rStep2,rStep3,rStepEMP,rStepVeh,rStep6,rStep7]};
-  var steps=wc&&wc.tipo==='CESPA'?['Caso','Lugar','Aprehendidos','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor']:STEPS_STD;
-  return {steps:steps, panels:[rStep1,rStep2,rStep3,rStep4,rStep5,rStepEMP,rStepVeh,rStep6,rStep7]};
+  if (wc&&wc.tipo==='OJ') return {steps:STEPS_OJ, panels:[rStep2,rStep1,rStep3,rStepEMP,rStepVeh,rStep6,rStep7]};
+  var steps=wc&&wc.tipo==='CESPA'?['Lugar','Caso','Aprehendidos','Víctimas','Testigos','EMP y EF','Vehículos','Narración','Servidor']:STEPS_STD;
+  return {steps:steps, panels:[rStep2,rStep1,rStep3,rStep4,rStep5,rStepEMP,rStepVeh,rStep6,rStep7]};
 }
 
 function startWizard(tipo) {
@@ -3612,23 +3659,36 @@ function startWizard(tipo) {
   }
   var cfg = DB.getConfig(); var s = lcServidorDefecto(cfg);
   var t = nowParts();
+  /* ⚠️ El municipio NO nace sembrado con «Medellín». Ahora es lo primero que se
+     pregunta y de él sale la jurisdicción que elige el despacho: un valor de
+     fábrica enrutaría en silencio la captura de cualquier equipo a la fiscalía
+     de otra ciudad. Se propone la ciudad de la propia unidad (Ajustes →
+     Estación), que es un dato del usuario, no uno inventado — misma lección que
+     «CANDELARIA» en `nombreEstacion`. Se resuelve ANTES del resto del caso
+     porque el despacho y el NUNC de arranque ya salen de esa jurisdicción. */
+  var muni0 = lcUnidadCiudad(cfg);
+  var lugar0 = {depto:muni0?lcGeoDepto(muni0):'', muni:muni0, dir:'', barrio:'', caract:'',
+    localidad:cfg.localidadDefault||'10', zona:cfg.zonaDefault||'Urbana', vereda:cfg.veredaDefault||'N/A'};
+  var desp0 = lcDespResolver(tipo,lugar0,cfg);
   wc = {
     id:uid(), tipo:tipo,
-    /* Destino y NUNC del despacho predeterminado de este tipo de captura
-       (punto único: lcDespDestino/lcDespNunc). Antes se leían dos claves
-       sueltas de Ajustes, y el NUNC no cambiaba al cambiar de fiscalía. */
-    nunc: lcDespNunc(tipo,cfg),
+    /* Destino y NUNC del despacho que corresponde a este tipo de captura EN LA
+       JURISDICCIÓN del hecho (punto único: lcDespDestino/lcDespNunc). Antes se
+       leían dos claves sueltas de Ajustes, y el NUNC no cambiaba al cambiar de
+       fiscalía. */
+    nunc: lcDespNunc(tipo,cfg,lugar0),
     spoa:'', fechaProc:t.yy+'-'+t.mm+'-'+t.dd,
     /* Una sola conducta de entrada; las demás se agregan si el caso las tiene
        (observación 2). */
     conductas:[''],
     articulosCP:[''],
     elementos:[],
-    destino: lcDespDestino(tipo,cfg),
+    destino: lcDespDestino(tipo,cfg,lugar0),
+    despachoId: desp0.despacho?desp0.despacho.id:'', despachoElegido:false, destinoManual:false,
     numIncidente:'', recibe:'',
     autoridadSolicita:'', destinoOJ:'FISCALIA_URI',
     numOrden:'', delitoOrden:'', juzgadoOrden:'', fechaOrden:'',
-    lugar:{depto:'Antioquia',muni:'Medellín',dir:'',barrio:'',caract:'',localidad:cfg.localidadDefault||'10',zona:cfg.zonaDefault||'Urbana',vereda:cfg.veredaDefault||'N/A'},
+    lugar: lugar0,
     capturados:[], victimas:[], testigos:[],
     hayVehiculos:false, vehiculos:[],
     sinVictima:tipo==='OJ', sinTestigo:tipo==='OJ',
@@ -3679,6 +3739,19 @@ function editCase(id) {
   (wc.vehiculos||[]).forEach(function(v){ if(v) v.placas=lcPlaca(v.placas); });
   if (!wc.autoridadSolicita) wc.autoridadSolicita='';
   if (!wc.destinoOJ) wc.destinoOJ='FISCALIA_URI';
+  /* ⚠️ Una captura YA GUARDADA no cambia de destino sola al reabrirla: el
+     despacho con el que se emitió es parte de lo actuado, igual que la foto del
+     dossier (`lcCongelarDossier`). Se ata al registro si el nombre coincide
+     —así el bloque lo enseña con su dirección y su NUNC y se puede cambiar—; si
+     no coincide con ninguno, se respeta el texto tal cual y la app no propone.
+     Solo se hace una vez: un caso que ya trae estas claves no se toca. */
+  if (wc.despachoId===undefined && wc.destinoManual===undefined) {
+    var _dNom=lcNormNom(wc.destino||''), _dsp=null;
+    if(_dNom) lcDespachos().forEach(function(d){ if(!_dsp&&lcNormNom(d.nombre||'')===_dNom) _dsp=d; });
+    wc.despachoId=_dsp?_dsp.id:'';
+    wc.despachoElegido=!!_dsp;
+    wc.destinoManual=!_dsp&&!!_dNom;
+  }
   ws=0;
   wizMarcarBase();
   document.getElementById('wz-title').textContent = 'Editar caso';
@@ -3942,9 +4015,12 @@ function renderWiz() {
 function wizGoto(i){
   var mx = getWizConfig().steps.length-1;
   if (i<0 || i>mx || i===ws) return;
-  // Misma guarda que wizNext: el NUNC del paso 1 de flagrancia sigue siendo
-  // condición para avanzar (issue M3).
-  if (ws===0 && i>0 && !validateStep1()) return;
+  /* Misma guarda que wizNext: el NUNC del paso de datos del caso sigue siendo
+     condición para avanzar (issue M3). ⚠️ La guarda se decide por la PRESENCIA
+     del campo en pantalla, no por `ws===0`: desde que el lugar de los hechos
+     abre el formulario, el paso del NUNC ya no es el primero. Retroceder no se
+     bloquea — corregir el municipio no puede exigir antes un NUNC completo. */
+  if (i>ws && !validateStep1()) return;
   collectStep();
   ws = i;
   renderWiz();
@@ -3953,7 +4029,7 @@ function wizGoto(i){
 }
 function wizPrev() { collectStep(); if(ws>0) ws--; renderWiz(); wizGuardarBorrador(true); }
 function wizNext() {
-  if (ws===0 && !validateStep1()) return;
+  if (!validateStep1()) return;
   collectStep();
   var mx = getWizConfig().steps.length-1;
   if (ws<mx) ws++;
@@ -3962,7 +4038,7 @@ function wizNext() {
 }
 async function wizSave() {
   if (wc && wc.ojv===2) return ojGuardarYSalir();
-  if (ws===0 && !validateStep1()) return;
+  if (!validateStep1()) return;
   collectStep();
   if (!wc.capturados||!wc.capturados.length){toast('Debe registrar al menos un '+(wc.tipo==='CESPA'?'aprehendido':'capturado'));return;}
   lcLimpiarListas(wc);      // fuera las filas que quedaron en blanco
@@ -3988,9 +4064,27 @@ async function wizSave() {
   }
 }
 
+/* Guarda para salir del paso «Caso». ⚠️ Se decide por la PRESENCIA del campo en
+   pantalla, no por `ws===0`: desde que el lugar de los hechos abre el
+   formulario ese paso ya no es el primero, y llamarla desde cualquier otro paso
+   tiene que ser un no-op. */
 function validateStep1() {
   if (wc && wc.ojv===2) return true;          // el módulo OJ tiene su propia validación
   var el=document.getElementById('w-nunc'); if(!el) return true;
+  /* ⚠️ Con varias fiscalías (o varios CESPA) en la misma jurisdicción no se
+     puede avanzar sin decir a cuál va: de ese despacho sale el NUNC que se
+     imprime en el FPJ-5. Es exactamente lo que pidió el reporte. Con una sola,
+     con predeterminado marcado, con el destino escrito a mano o sin ninguna
+     registrada NO se bloquea nada — ahí no hay elección pendiente. */
+  if(wc && !wc.destinoManual && wc.tipo!=='OJ'){
+    var r=lcDespResolver(wc.tipo,wc.lugar,null,wc.despachoElegido?wc.despachoId:'');
+    if(!r.despacho && r.motivo==='varios'){
+      toast('Elige a cuál de los '+r.candidatos.length+' despachos de '+(r.muni||'tu registro')+' va esta captura');
+      var blk=document.querySelector('.lc-desp-blk');
+      if(blk) blk.scrollIntoView({block:'center'});
+      return false;
+    }
+  }
   var val=el.value.replace(/\D/g,'');
   var err=document.getElementById('nunc-err');
   if(val.length!==16){
@@ -4015,7 +4109,9 @@ function collectStep() {
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
   var isOJ=wc&&wc.tipo==='OJ';
   var stepName=(getWizConfig().steps[ws])||'';
-  if(ws===0){
+  /* ⚠️ Se recolecta POR NOMBRE DE PASO, nunca por índice: desde que el lugar de
+     los hechos abre el formulario, `ws===0` ya no es «Caso». */
+  if(stepName==='Caso'){
     wc.tipo=v('w-tipo');wc.fechaProc=v('w-fecha');wc.nunc=v('w-nunc');
     /* Conductas: lista a demanda, se lee del DOM (observación 2).
        SPOA / No. incidente / fiscal que recibe ya NO se piden aquí — viven en
@@ -4023,12 +4119,23 @@ function collectStep() {
        conservan intactos y se editan desde esa pantalla. */
     lcCondSync();
     /* El destino solo tiene input cuando el usuario abrió el editor; si está
-       cerrado manda lo que ya haya en el modelo — nunca se borra. */
+       cerrado manda lo que ya haya en el modelo — nunca se borra.
+       ⚠️ Escribirlo A MANO cuenta como decisión del usuario y desactiva la
+       propuesta automática por jurisdicción: si no, `lcDespSync` le devolvería
+       el nombre del despacho registrado en cuanto se repintara el paso. Solo
+       cuando el valor CAMBIA — abrir el editor y cerrarlo sin tocar nada no es
+       una elección. */
     var elDest=document.getElementById('w-dest');
-    if(elDest) wc.destino=elDest.value;
+    if(elDest&&elDest.value!==wc.destino){
+      wc.destino=elDest.value; wc.destinoManual=true; wc.despachoId=''; wc.despachoElegido=false;
+    }
     if(isOJ){wc.autoridadSolicita=v('w-autoridad')||v('w-juzgadoOrden');wc.destinoOJ=v('w-destinoOJ');wc.numOrden=v('w-numOrden');wc.delitoOrden=v('w-delitoOrden');wc.juzgadoOrden=v('w-juzgadoOrden');wc.fechaOrden=v('w-fechaOrden');}
   } else if(stepName==='Lugar'){
     wc.lugar={depto:v('w-depto'),muni:v('w-muni'),dir:v('w-dir'),barrio:v('w-barrio'),caract:v('w-caract'),localidad:v('w-local'),zona:v('w-zona'),vereda:v('w-vereda')};
+    /* El municipio acaba de cambiar ⇒ la jurisdicción también. El despacho se
+       vuelve a resolver AQUÍ y no al pintar el paso siguiente: así el dato del
+       caso ya es el correcto aunque nadie llegue a mirar esa pantalla. */
+    lcDespSync(wc);
   } else if(stepName==='EMP y EF'){
     lcEmpSync();
   } else if(stepName==='Narración'){
@@ -4501,48 +4608,169 @@ function rStep1(){
     '<option value="JUZGADO" '+(c.destinoOJ==='JUZGADO'?'selected':'')+'>Juzgado solicitante</option></select></div>'+
     '<div class="fg"><label class="fl">Autoridad que solicita</label><input class="fi" id="w-autoridad" value="'+(c.autoridadSolicita||c.juzgadoOrden||'')+'" placeholder="Se auto-completa desde el juzgado"></div>'+
     '</div>'):('');
-  /* El tipo de captura y el destino del informe decían lo mismo dos veces
-     (el tipo arriba y el nombre de la fiscalía cinco campos más abajo), cada
-     uno en su propio renglón. Ahora son UN control: el selector
-     nombra el destino que le corresponde y el destino se edita ahí mismo, solo
-     cuando hay que cambiarlo (observación 3). */
+  /* ⚠️ EL DESPACHO ABRE EL PASO (2026-08-28). El tipo de captura y el destino
+     se habían fundido en un solo control (Mejora 1, obs. 3) para no decir lo
+     mismo dos veces. Ahora el destino deja de ser una etiqueta del selector y
+     pasa a ser lo que de verdad es: la primera decisión del paso, resuelta por
+     la JURISDICCIÓN del hecho —la fiscalía/URI del municipio donde ocurrió, o
+     el CESPA si es menor—. Por eso el selector vuelve a nombrar solo el tipo:
+     el duplicado ahora sería él. */
   var cfgD=DB.getConfig();
-  var destDe=function(t){ return lcDespDestino(t,cfgD); };
-  var destAct=c.destino||destDe(c.tipo);
   var opt=function(val,txt){
-    var d=val==='OJ'?'':destDe(val);
-    return '<option value="'+val+'"'+(c.tipo===val?' selected':'')+'>'+escHtml(txt+(d?' → '+d:''))+'</option>';
+    return '<option value="'+val+'"'+(c.tipo===val?' selected':'')+'>'+escHtml(txt)+'</option>';
   };
-  var destBloque=_lcDestEdit
-    ? '<div class="fg"><label class="fl">'+(isOJ?'Destino final':'Destino del informe')+'</label>'+
-      '<div style="display:flex;gap:8px;align-items:flex-end">'+
-        '<input class="fi" id="w-dest" value="'+escAttr(destAct)+'" style="flex:1">'+
-        '<button class="btn bs" style="white-space:nowrap" onclick="abrirSelectorDespacho()">Lista</button>'+
-      '</div>'+
-      '<div class="lc-dir-prev"><span>El NUNC cambia con el despacho que recibe la captura.</span>'+
-      '<button type="button" class="lc-dir-link" onclick="lcDestEditar(false)">Listo</button></div></div>'
-    : '<div class="lc-dir-prev" style="margin:-8px 0 14px">'+
-        '<span>Destino del informe:</span><b>'+escHtml(destAct||'—')+'</b>'+
-        '<button type="button" class="lc-dir-link" onclick="lcDestEditar(true)">Cambiar</button>'+
-      '</div>';
   return '<div class="st" style="margin-top:0">Datos del Caso</div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Tipo de captura y destino</label><select class="fs" id="w-tipo" onchange="onTipoChg()">'+
+    '<div class="fr"><div class="fg"><label class="fl">Tipo de captura</label><select class="fs" id="w-tipo" onchange="onTipoChg()">'+
     opt('URI','URI (Adulto)')+opt('CESPA','CESPA (Menor)')+
     '<option value="OJ"'+(c.tipo==='OJ'?' selected':'')+'>&#x2696; Orden Judicial</option>'+
     '</select></div>'+
     '<div class="fg"><label class="fl">Fecha procedimiento</label><input type="date" class="fi" id="w-fecha" value="'+(c.fechaProc||'')+'"></div></div>'+
-    destBloque+
+    lcDespBloque(cfgD)+
     /* El SPOA salía aquí y no aparece en ninguna casilla del FPJ-5 (comprobado
        sobre las dos plantillas): solo alargaba el paso. Se diligencia ahora en
        «Datos del Dossier», junto al No. de incidente y al fiscal que recibe,
        que son igual de ajenos al formato (observaciones 1 y 4). */
     '<div class="fg"><label class="fl">NUNC</label>'+
     '<input class="fi mono" id="w-nunc" value="'+(c.nunc||'')+'" maxlength="16" inputmode="numeric" pattern="\\d{16}" placeholder="16 dígitos" oninput="validateNunc(this)">'+
-    '<div class="nunc-err" id="nunc-err"></div></div>'+
+    '<div class="nunc-err" id="nunc-err"></div>'+
+    '<div class="oj-hint" style="margin:5px 0 0">Los 16 dígitos los fija la unidad receptora: cambian con el despacho de arriba.</div></div>'+
     '<div class="st">Conductas punibles</div>'+
     '<div id="w-conds">'+lcCondHtml()+'</div>'+
     '<div id="w-conds-add">'+lcCondBoton()+'</div>'+
     ojB;
+}
+
+/* ── El despacho que recibe la captura ─────────────────────────────────────
+   Cinco estados, y ninguno deja al funcionario sin salida:
+     · resuelto  → tarjeta con el despacho, su dirección, su NUNC y DE DÓNDE
+                   salió (predeterminado / único de la jurisdicción / elegido);
+     · varios    → la lista de los que hay en ese municipio, para elegir. Es lo
+                   que pidió el reporte: con más de una URI en la jurisdicción
+                   se pregunta, salvo que una esté marcada como predeterminada;
+     · ninguno   → no hay ninguno registrado ahí: se ofrece registrarlo, ya con
+                   el municipio puesto, y queda guardado para siempre;
+     · a mano    → el funcionario escribió el destino él mismo; la app deja de
+                   proponer y lo dice;
+     · sin municipio → todavía no se diligenció el paso 1. Se dice cuál falta en
+                   vez de proponer un despacho a ciegas.
+   ⚠️ Este bloque NO inventa nada: si el despacho no está registrado, no se
+   escribe ningún nombre en el caso — el destino queda como esté y a la vista. */
+function lcDespBloque(cfg){
+  var c=wc; if(!c) return '';
+  cfg=cfg||DB.getConfig();
+  var isOJ=c.tipo==='OJ';
+  var r=lcDespSync(c,cfg);
+  var esCespa=c.tipo==='CESPA';
+  var quien=isOJ?'Destino final':(esCespa?'CESPA que recibe la aprehensión':'Fiscalía / URI que recibe la captura');
+  var l=c.lugar||{};
+  var jur=lcJurisdiccionTexto(l);
+  var cab='<div class="oj-dest-hd">'+escHtml(quien)+'</div>'+
+    (jur?'<p class="oj-hint" style="margin:-8px 0 12px">Jurisdicción del hecho: <b>'+escHtml(jur)+'</b></p>':'');
+
+  /* Editor a mano: se conserva porque hay destinos que no están registrados y
+     escribirlos tiene que seguir siendo posible (Mejora 1, obs. 3). */
+  if(_lcDestEdit){
+    return '<div class="lc-desp-blk">'+cab+
+      '<div class="fg" style="margin-bottom:8px"><label class="fl">Escribe el destino</label>'+
+      '<div style="display:flex;gap:8px;align-items:flex-end">'+
+        '<input class="fi" id="w-dest" value="'+escAttr(c.destino||'')+'" style="flex:1">'+
+        '<button class="btn bs" style="white-space:nowrap" onclick="abrirSelectorDespacho()">Lista</button>'+
+      '</div>'+
+      '<div class="lc-dir-prev"><span>El NUNC cambia con el despacho que recibe la captura.</span>'+
+      '<button type="button" class="lc-dir-link" onclick="lcDestEditar(false)">Listo</button></div></div>'+
+    '</div>';
+  }
+  if(isOJ||!r){
+    return '<div class="lc-desp-blk">'+cab+
+      '<div class="oj-dest-box"><div class="oj-dest-nom">'+escHtml(c.destino||'—')+'</div></div>'+
+      lcDespPie(false)+'</div>';
+  }
+  var acciones=lcDespPie(r.candidatos.length>1||r.otros.length>0);
+
+  if(c.destinoManual){
+    return '<div class="lc-desp-blk">'+cab+
+      '<div class="oj-dest-box"><div class="oj-dest-nom">'+escHtml(c.destino||'—')+'</div>'+
+      '<div class="oj-dest-src" style="color:var(--text-3)">Escrito a mano — la app no lo propone</div></div>'+
+      acciones+'</div>';
+  }
+  if(r.despacho){
+    var d=r.despacho, dir=lcDespDireccion(d);
+    var src={actual:'Elegido para esta captura',
+             defecto:'Predeterminado para flagrancia',
+             unico:'Único registrado en '+(r.muni||'tu registro')}[r.motivo]||'';
+    return '<div class="lc-desp-blk">'+cab+
+      '<div class="oj-dest-box">'+
+        '<div class="oj-dest-nom">'+escHtml(d.nombre||'')+'</div>'+
+        (dir?'<div class="oj-dest-dir">'+escHtml(dir)+'</div>':'')+
+        (d.telefono?'<div class="oj-dest-dir">Tel. '+escHtml(d.telefono)+'</div>':'')+
+        (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+escHtml(d.nunc)+'</b></div>'
+               :'<div class="desp-nunc falta">Sin NUNC registrado — revísalo abajo</div>')+
+        (src?'<div class="oj-dest-src">'+escHtml(src)+'</div>':'')+
+      '</div>'+acciones+'</div>';
+  }
+  /* ⚠️ Sin despacho resuelto, el NUNC que quedó puede ser el de la
+     jurisdicción anterior. No se borra, se DICE de quién es. */
+  var ajeno=lcDespNuncAjeno(c,r);
+  var avisoNunc=ajeno
+    ? '<div class="oj-estado blanda" style="margin-top:10px"><div class="oj-estado-it" style="padding-bottom:12px">'+
+      'El NUNC que hay abajo es el de <b>'+escHtml(ajeno)+'</b>, de otra jurisdicción. Elige el despacho o corrígelo a mano.</div></div>'
+    : '';
+  if(r.motivo==='varios'){
+    return '<div class="lc-desp-blk falta">'+cab+
+      '<div class="oj-estado dura" style="margin-bottom:10px"><div class="oj-estado-it" style="padding-bottom:12px">'+
+      'Hay <b>'+r.candidatos.length+'</b> despachos de este tipo en '+escHtml(lcSinPunto(r.muni)||'tu registro')+
+      '. Elige a cuál va esta captura — de él sale el NUNC.</div></div>'+
+      r.candidatos.map(function(d){
+        var dir=lcDespDireccion(d);
+        return '<div class="lc-desp-op" onclick="lcDespDelBloque(\''+d.id+'\')">'+
+          '<div class="oj-dest-nom">'+escHtml(d.nombre||'')+'</div>'+
+          (dir?'<div class="oj-dest-dir">'+escHtml(dir)+'</div>':'')+
+          (d.nunc?'<div class="oj-hint mono" style="margin:4px 0 0">NUNC '+escHtml(d.nunc)+'</div>':'')+
+        '</div>';
+      }).join('')+avisoNunc+
+      acciones+'</div>';
+  }
+  // motivo === 'ninguno'
+  return '<div class="lc-desp-blk falta">'+cab+
+    '<div class="oj-dest-box falta">'+
+      (r.muni
+        ? 'No tienes registrado ningún despacho de este tipo en <b>'+escHtml(lcSinPunto(r.muni))+'</b>.'
+        : 'Todavía no has registrado un despacho de este tipo.')+
+    '</div>'+
+    '<button class="btn bp bbl bsm" onclick="lcDespAgregarParaCaso()">+ Registrar '+
+      (r.muni?('el despacho de '+escHtml(lcSinPunto(r.muni))):'un despacho')+'</button>'+avisoNunc+
+    acciones+'</div>';
+}
+/* Las salidas comunes del bloque. «Elegir otro» solo aparece cuando de verdad
+   hay otro que elegir; «escribir a mano» siempre, porque hay destinos que no
+   están en el registro y no se puede dejar al funcionario sin salida. */
+function lcDespPie(hayOtros){
+  return '<div class="lc-desp-pie">'+
+    (hayOtros?'<button type="button" class="lc-dir-link" onclick="abrirSelectorDespacho()">Elegir otro despacho</button>':'')+
+    '<button type="button" class="lc-dir-link" onclick="lcDespAgregarParaCaso()">Registrar uno nuevo</button>'+
+    '<button type="button" class="lc-dir-link" onclick="lcDestEditar(true)">Escribir a mano</button>'+
+  '</div>';
+}
+/* Elegir uno de los candidatos de la jurisdicción, desde la lista del propio
+   paso. Marca `despachoId`, así `lcDespSync` lo respeta como decisión tomada. */
+function lcDespDelBloque(id){
+  var d=lcDespachoPorId(id); if(!d) return;
+  collectStep();
+  lcUsarDespachoEnCaso(d);
+}
+/* Registrar el despacho que falta SIN salir del procedimiento, con el municipio
+   y el departamento del hecho ya puestos y la clase que corresponde al tipo de
+   captura. Al guardarlo queda en el registro y se asigna a esta captura.
+   ⚠️ «Si un dato es obligatorio en el procedimiento, se pide en el
+   procedimiento»: mandar al funcionario a la pantalla de Despachos equivale a
+   no pedírselo (lección del escudo del membrete, 2026-07-30). */
+function lcDespAgregarParaCaso(){
+  if(!wc) return;
+  collectStep();
+  var l=wc.lugar||{};
+  _despSelCb=lcUsarDespachoEnCaso;
+  lcDespForm('', {clase:wc.tipo==='CESPA'?'CESPA':'FISCALIA',
+    municipio:l.muni||'', departamento:l.depto||''});
 }
 
 /* ── Destino: se edita solo cuando hace falta (observación 3) ─────────────── */
@@ -4634,13 +4862,17 @@ function lcCondArt(el){
 function onTipoChg(){
   var cfg=DB.getConfig(); var tipo=document.getElementById('w-tipo').value;
   var dest=document.getElementById('w-dest'); var nunc=document.getElementById('w-nunc');
-  /* El destino va DENTRO del selector de tipo: al cambiar de tipo cambia con
-     él, esté o no abierto el editor (observación 3). */
-  var d=lcDespDestino(tipo,cfg);
+  /* El destino cambia con el tipo, esté o no abierto el editor (observación 3).
+     ⚠️ Cambiar de tipo ANULA lo elegido y lo escrito a mano: una fiscalía no es
+     el CESPA de la jurisdicción, así que arrastrar la decisión anterior dejaría
+     la aprehensión de un menor dirigida a la URI de adultos. */
+  wc.tipo=tipo; wc.despachoId=''; wc.despachoElegido=false; wc.destinoManual=false;
+  var d=lcDespDestino(tipo,cfg,wc.lugar);
   if(tipo!=='OJ'){ wc.destino=d; if(dest) dest.value=d; }
-  if(nunc) nunc.value=lcDespNunc(tipo,cfg);
+  if(nunc) nunc.value=lcDespNunc(tipo,cfg,wc.lugar);
   wc.nunc=nunc?nunc.value:wc.nunc;
-  wc.tipo=tipo; renderWiz();
+  lcDespSync(wc,cfg);
+  renderWiz();
 }
 function onDestinoOJChg(){
   var sel=document.getElementById('w-destinoOJ');if(!sel)return;
@@ -4650,11 +4882,28 @@ function onDestinoOJChg(){
   else{var aut=document.getElementById('w-autoridad');dest.value=aut?aut.value:'Juzgado solicitante';}
 }
 
+/* ⚠️ EL MUNICIPIO VA PRIMERO Y EL DEPARTAMENTO SE DEVUELVE SOLO (2026-08-28).
+   No es una preferencia de orden: de este municipio sale la jurisdicción que
+   elige el despacho del paso siguiente. Y ninguno de los dos nace ya escrito —
+   antes venían sembrados con «Antioquia»/«Medellín», que en cualquier otro
+   equipo eran un dato fabricado que además enrutaba la captura en silencio. */
 function rStep2(){
   var l=wc.lugar||{}; var cfg=DB.getConfig();
   return '<div class="st" style="margin-top:0">Lugar de los Hechos</div>'+
-    '<div class="fr"><div class="fg"><label class="fl">Departamento</label><input class="fi" id="w-depto" value="'+(l.depto||'Antioquia')+'"></div>'+
-    '<div class="fg"><label class="fl">Municipio</label><input class="fi" id="w-muni" value="'+(l.muni||'Medellín')+'"></div></div>'+
+    '<div class="fr"><div class="fg"><label class="fl">Municipio</label>'+
+    '<input class="fi" id="w-muni" list="dl-muni" value="'+escAttr(l.muni)+'" placeholder="Municipio del hecho" '+
+    'oninput="lcGeoCompletar(this,&quot;w-depto&quot;);lcGeoHomonimos()" onblur="lcGeoAprender(this,&quot;w-depto&quot;)"></div>'+
+    '<div class="fg"><label class="fl">Departamento</label>'+
+    /* ⚠️ Si el departamento es EXACTAMENTE el que el catálogo da para ese
+       municipio, se vuelve a marcar como puesto por la app: al repintar el paso
+       el elemento es nuevo y perdía `data-lc-auto`, así que cambiar de municipio
+       ya no lo recalculaba y quedaba un departamento de la jurisdicción anterior
+       debajo del municipio nuevo. Marcarlo no pisa nada del usuario: el valor es
+       el mismo que la app habría escrito. */
+    '<input class="fi" id="w-depto" list="dl-depto" value="'+escAttr(l.depto)+'"'+
+    ((l.depto&&lcGeoDepto(l.muni)===l.depto)?' data-lc-auto="1"':'')+
+    ' placeholder="Se completa solo" oninput="lcGeoHomonimos()"></div></div>'+
+    '<div id="w-geo-hom">'+lcGeoHomonimosHtml(l.muni,l.depto)+'</div>'+
     /* Dirección con formato guiado (observación 5). El campo oculto `w-dir`
        sigue llevando el mismo string de siempre, así que collectStep y el
        mapeo al FPJ-5 (celda 63) no cambian ni una línea. */
@@ -4669,6 +4918,52 @@ function rStep2(){
     '</select></div>'+
     '<div class="fg"><label class="fl">Vereda</label><input class="fi" id="w-vereda" value="'+(l.vereda!==undefined?l.vereda:cfg.veredaDefault)+'"></div>'+
     '</div>';
+}
+
+/* ── Homónimos: se preguntan, no se adivinan ───────────────────────────────
+   63 municipios del catálogo comparten nombre con otro de distinto
+   departamento (Barbosa en Antioquia y Santander; La Unión en cuatro). La app
+   no autocompleta ahí —adivinar imprimiría un departamento equivocado en un
+   documento judicial— pero tampoco deja al funcionario delante de un campo
+   vacío y 33 departamentos posibles: le ofrece los que existen de verdad, en un
+   toque. Y lo que elija se APRENDE (`lcGeoRecordar`), así que a su jurisdicción
+   se le pregunta una vez, no una por captura. */
+function lcGeoHomonimosHtml(muni,depto){
+  var ds=lcGeoDeptos(muni);
+  if(!ds.length) return '';                       // fuera del catálogo: no se opina
+  var act=lcGeoNorm(depto);
+  var coherente=act&&ds.some(function(d){return lcGeoNorm(d)===act;});
+  if(coherente) return '';
+  if(!act&&ds.length<2) return '';                // sin ambigüedad, ya lo rellena lcGeoCompletar
+  /* ⚠️ Un departamento INCOMPATIBLE con el municipio tampoco se pisa en
+     silencio: `lcGeoCompletar` nunca sobrescribe lo que escribió el usuario —y
+     esa regla se queda—, pero dejar «Antioquia» debajo de «Bogotá D.C.» porque
+     antes se tecleó a mano imprimiría una jurisdicción falsa en el informe. Se
+     muestra el conflicto y se corrige en un toque; decidir sigue siendo del
+     usuario. */
+  var msg=ds.length>1
+    ? 'Hay <b>'+ds.length+'</b> municipios con ese nombre. ¿Cuál es?'
+    : (act?'<b>'+escHtml(muni)+'</b> no está en «'+escHtml(depto)+'».':'¿Cuál es su departamento?');
+  return '<div class="lc-geo-hom"><span>'+msg+'</span>'+
+    ds.map(function(d){
+      return '<button type="button" class="lc-geo-op" onclick="lcGeoElegirDepto(\''+escAttr(d).replace(/'/g,"\\'")+'\')">'+escHtml(d)+'</button>';
+    }).join('')+'</div>';
+}
+function lcGeoHomonimos(){
+  var box=document.getElementById('w-geo-hom'); if(!box) return;
+  var m=(document.getElementById('w-muni')||{}).value||'';
+  var d=(document.getElementById('w-depto')||{}).value||'';
+  box.innerHTML=lcGeoHomonimosHtml(m,d);
+}
+function lcGeoElegirDepto(dep){
+  var em=document.getElementById('w-muni'), ed=document.getElementById('w-depto');
+  if(!ed) return;
+  ed.value=dep; ed.dataset.lcAuto='';          // lo eligió el usuario, no la app
+  if(em&&em.value) lcGeoRecordar(em.value,dep);
+  lcGeoHomonimos();
+  /* El municipio ya está resuelto ⇒ la jurisdicción también: el despacho del
+     paso siguiente se recalcula ahora, no cuando alguien llegue a mirarlo. */
+  collectStep();
 }
 
 function rStep3(){return rMultiPerson('capturados',wc.tipo==='CESPA'?'Aprehendido':'Capturado',true);}
@@ -11042,49 +11337,97 @@ function loadPerfilServ() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   OLA 2 · CATÁLOGO GEOGRÁFICO — municipio ⇒ departamento
+   CATÁLOGO GEOGRÁFICO — municipio ⇒ departamento (Ola 2, ampliado 2026-08-28)
    El modelo pedía municipio y departamento por separado CINCO veces (despacho,
    residencia, nacimiento, lugar de la diligencia, destinatario) sin enlazarlos:
-   diez campos para cinco datos. Ahora basta escribir el municipio.
+   diez campos para cinco datos. Basta escribir el municipio.
 
-   ⚠️ Por qué el catálogo NO trae los 1 122 municipios del país: una tabla larga
-   escrita de memoria es una tabla con errores, y aquí un error no es cosmético
-   (el departamento sale impreso en un documento judicial). Se embeben los que
-   son verificables sin margen de duda — las 32 capitales y el Valle de Aburrá —
-   y el resto lo APRENDE la app: el primer par municipio/departamento que el
-   usuario escribe a mano queda en `cfg.geoPropios` y desde entonces se completa
-   solo. Mismo patrón que `despachosPropios`.
+   ⚠️ DECISIÓN REVISADA. La Ola 2 embebió SOLO las 32 capitales y el Valle de
+   Aburrá, con este motivo escrito: «una tabla larga escrita de memoria es una
+   tabla con errores, y aquí el error se imprime en un documento judicial».
+   El motivo sigue siendo cierto, pero la premisa cambió: la tabla ya NO se
+   escribe de memoria — el usuario aportó el listado completo de departamentos y
+   municipios del país (2026-08-28) y es su dato. Se transcribió tal cual, con
+   estas cuatro desviaciones, todas de transcripción y todas informadas:
+     · erratas de tecleo corregidas: «Táamesis»→Támesis, «Chiquinquira»→
+       Chiquinquirá, «AltOS del Rosario»→Altos del Rosario, «Córdobas»(Quindío)→
+       Córdoba, «Pie de Cuesta»→Piedecuesta, «Albanía»(Caquetá)→Albania;
+     · capitales que su lista nombraba aparte y no repetía dentro del
+       departamento: se añaden Medellín (Antioquia) y Cartagena (Bolívar);
+     · entradas que su propia lista ponía en DOS departamentos y que aquí
+       quedan solo en el que les corresponde: Ciénaga y Leiva (se quitan de
+       Boyacá, quedan en Magdalena y Nariño), Zona Bananera (se quita de
+       Córdoba, queda en Magdalena) y «El Belén» (Caquetá, duplicado de Belén
+       de los Andaquíes);
+     · una entrada de Norte de Santander llegó ilegible en el mensaje
+       («Ur现实») y NO se adivina: se omite. El usuario la escribe una vez y la
+       app la aprende, que es exactamente el mecanismo que ya existe.
+   ⚠️ Regla que NO cambia: lo que no está aquí no se inventa. `lcGeoDepto`
+   devuelve '' y el par que el usuario diligencie queda en `cfg.geoPropios`.
 
-   ⚠️ Homónimos: hay municipios con el mismo nombre en departamentos distintos
-   (Barbosa está en Antioquia y en Santander; La Unión, en tres). Esos se
-   declaran con lista y la app NO autocompleta: preguntar es correcto, adivinar
-   no. Lo aprendido por el usuario sí manda sobre el homónimo, porque es su zona.
+   ⚠️ Homónimos: 63 nombres se repiten en departamentos distintos (Barbosa en
+   Antioquia y Santander; La Unión en cuatro). NO se autocompletan —preguntar es
+   correcto, adivinar no— pero el formulario ofrece sus departamentos en un
+   toque (`lcGeoDeptos`), y lo elegido se aprende: se pregunta una vez.
+   ⚠️ El índice `LC_GEO` se DERIVA de esta tabla, no se escribe aparte: dos
+   listas que hay que mantener a la vez acaban discrepando.
 ═══════════════════════════════════════════════════════════════════════════ */
-var LC_GEO = {
-  // Las 32 capitales + Bogotá: dato estable y verificable.
-  'Leticia':'Amazonas','Medellín':'Antioquia','Arauca':'Arauca','Barranquilla':'Atlántico',
-  'Cartagena':'Bolívar','Tunja':'Boyacá','Manizales':'Caldas','Florencia':'Caquetá',
-  'Yopal':'Casanare','Popayán':'Cauca','Valledupar':'Cesar','Quibdó':'Chocó',
-  'Montería':'Córdoba','Bogotá D.C.':'Bogotá D.C.','Inírida':'Guainía',
-  'San José del Guaviare':'Guaviare','Neiva':'Huila','Riohacha':'La Guajira',
-  'Santa Marta':'Magdalena','Villavicencio':'Meta','Pasto':'Nariño','Cúcuta':'Norte de Santander',
-  'Mocoa':'Putumayo','Armenia':'Quindío','Pereira':'Risaralda',
-  'San Andrés':'Archipiélago de San Andrés, Providencia y Santa Catalina',
-  'Bucaramanga':'Santander','Sincelejo':'Sucre','Ibagué':'Tolima','Cali':'Valle del Cauca',
-  'Mitú':'Vaupés','Puerto Carreño':'Vichada',
-  // Valle de Aburrá: es la zona de operación de referencia del proyecto.
-  'Bello':'Antioquia','Itagüí':'Antioquia','Envigado':'Antioquia','Sabaneta':'Antioquia',
-  'La Estrella':'Antioquia','Caldas':'Antioquia','Copacabana':'Antioquia',
-  'Girardota':'Antioquia','Rionegro':'Antioquia',
-  // Homónimos conocidos: se listan para que NO se autocompleten a ciegas.
-  'Barbosa':['Antioquia','Santander'],
-  'La Unión':['Antioquia','Nariño','Valle del Cauca','Sucre'],
-  'Sabanalarga':['Atlántico','Antioquia','Casanare'],
-  'Concordia':['Antioquia','Magdalena'],
-  'San Pedro':['Antioquia','Sucre','Valle del Cauca'],
-  'Albania':['La Guajira','Caquetá','Santander'],
-  'Puerto Rico':['Caquetá','Meta']
+var LC_MUNI = {
+'Amazonas':'Leticia|Puerto Nariño',
+'Antioquia':'Abejorral|Abriaquí|Alejandría|Amagá|Amalfi|Andes|Angelópolis|Angostura|Anorí|Anzá|Apartadó|Arboletes|Argelia|Armenia Mantequilla|Barbosa|Bello|Belmira|Betania|Betulia|Briceño|Buriticá|Cáceres|Caicedo|Caldas|Campamento|Cañasgordas|Caracolí|Caramanta|Carepa|El Carmen de Viboral|Carolina del Príncipe|Caucasia|Chigorodó|Cisneros|Ciudad Bolívar|Cocorná|Concepción|Concordia|Copacabana|Dabeiba|Donmatías|Ebéjico|El Bagre|El Peñol|El Retiro|El Santuario|Entrerríos|Envigado|Fredonia|Frontino|Giraldo|Girardota|Gómez Plata|Granada|Guadalupe|Guarne|Guatapé|Heliconia|Hispania|Itagüí|Ituango|Jardín|Jericó|La Ceja|La Estrella|La Pintada|La Unión|Liborina|Maceo|Marinilla|Medellín|Montebello|Murindó|Mutatá|Nariño|Nechí|Necoclí|Olaya|Peque|Pueblorrico|Puerto Berrío|Puerto Nare|Puerto Triunfo|Remedios|Rionegro|Sabanalarga|Sabaneta|Salgar|San Andrés de Cuerquia|San Carlos|San Francisco|San Jerónimo|San José de la Montaña|San Juan de Urabá|San Luis|San Pedro de los Milagros|San Pedro de Urabá|San Rafael|San Roque|San Vicente Ferrer|Santa Bárbara|Santa Fe de Antioquia|Santa Rosa de Osos|Santo Domingo|Segovia|Sonsón|Sopetrán|Támesis|Tarazá|Tarso|Titiribí|Toledo|Uramita|Urrao|Valdivia|Valparaíso|Vegachí|Venecia|Vigía del Fuerte|Yalí|Yarumal|Yolombó|Yondó|Zaragoza',
+'Arauca':'Arauca|Arauquita|Cravo Norte|Fortul|Puerto Rondón|Saravena|Tame',
+'Atlántico':'Baranoa|Barranquilla|Campo de la Cruz|Candelaria|Galapa|Juan de Acosta|Luruaco|Malambo|Manatí|Palmar de Varela|Piojó|Polonuevo|Ponedera|Puerto Colombia|Repelón|Sabanagrande|Sabanalarga|Santa Lucía|Santo Tomás|Soledad|Suan|Tubará|Usiacurí',
+'Bogotá D.C.':'Bogotá D.C.',
+'Bolívar':'Achí|Altos del Rosario|Arenal|Arjona|Arroyohondo|Barranco de Loba|Calamar|Cantagallo|Cartagena|El Carmen de Bolívar|Córdoba Tetón|Clemencia|El Guamo|El Peñón|Hatillo de Loba|Magangué|Mahates|Margarita|María La Baja|Montecristo|Mompox|Morales|Norosí|Pinillos|Regidor|Río Viejo|San Cristóbal|San Estanislao|San Fernando|San Jacinto|San Jacinto del Cauca|San Juan Nepomuceno|San Martín de Loba|San Pablo|Santa Catalina|Santa Rosa|Santa Rosa del Sur|Simití|Soplaviento|Talaigua Nuevo|Tiquisio|Turbaco|Turbaná|Villanueva|Zambrano',
+'Boyacá':'Almeida|Aquitania|Arcabuco|Belén|Berbeo|Betéitiva|Boavita|Boyacá|Briceño|Buenavista|Busbanzá|Caldas|Campohermoso|Cerinza|Chinavita|Chiquinquirá|Chíquiza|Chiscas|Chita|Chitaraque|Chivatá|Chivor|Cóper|Corrales|Covarachía|Cubará|Cucaita|Cuítiva|Duitama|El Cocuy|El Espino|Firavitoba|Floresta|Gachantivá|Gámeza|Garagoa|Guacamayas|Guateque|Guayatá|Güicán|Iza|Jenesano|Jericó|Labranzagrande|La Capilla|La Victoria|La Uvita|Macanal|Maripí|Miraflores|Mongua|Monguí|Moniquirá|Motavita|Muzo|Nobsa|Nuevo Colón|Oicatá|Otanche|Pachavita|Páez|Paipa|Pajarito|Panqueba|Pauna|Paz de Río|Pesca|Pisba|Puerto Boyacá|Quípama|Ramiriquí|Ráquira|Rondón|Saboyá|Sáchica|Samacá|San Eduardo|San José de Pare|San Luis de Gaceno|San Mateo|San Miguel de Sema|San Pablo de Borbur|Santana|Santa María|Santa Rosa de Viterbo|Santa Sofía|Sativanorte|Sativasur|Siachoque|Soatá|Socha|Socotá|Sogamoso|Somondoco|Sora|Soracá|Sotaquirá|Susacón|Sutamarchán|Sutatenza|Tasco|Tenza|Tibaná|Tibasosa|Tinjacá|Tipacoque|Toca|Togüí|Tota|Tunja|Tununguá|Turmequé|Tuta|Tutazá|Úmbita|Ventaquemada|Villa de Leyva|Viracachá|Zetaquira',
+'Caldas':'Aguadas|Anserma|Aranzazu|Belalcázar|Chinchiná|Filadelfia|La Dorada|La Merced|Manizales|Manzanares|Marmato|Marquetalia|Marulanda|Neira|Norcasia|Pácora|Palestina|Pensilvania|Riosucio|Risaralda|Salamina|Samaná|San José|Supía|Victoria|Villamaría|Viterbo',
+'Caquetá':'Albania|Belén de los Andaquíes|Cartagena del Chairá|Curillo|El Doncello|El Paujil|Florencia|La Montañita|Milán|Morelia|Puerto Rico|San José del Fragua|San Vicente del Caguán|Solano|Solita|Valparaíso',
+'Casanare':'Aguazul|Chámeza|Hato Corozal|La Salina|Maní|Monterrey|Nunchía|Orocué|Paz de Ariporo|Pore|Recetor|Sabanalarga|Sácama|San Luis de Palenque|Támara|Tauramena|Trinidad|Villanueva|Yopal',
+'Cauca':'Almaguer|Argelia|Balboa|Bolívar|Buenos Aires|Cajibío|Caldono|Caloto|Corinto|El Tambo|Florencia|Guachené|Guapí|Inzá|Jambaló|La Sierra|La Vega|López de Micay|Mercaderes|Miranda|Morales|Padilla|Páez|Patía|Piamonte|Piendamó|Popayán|Puerto Tejada|Puracé|Rosas|San Sebastián|Santa Rosa|Santander de Quilichao|Silvia|Sotará|Sucre|Suárez|Timbío|Timbiquí|Toribío|Totoró|Villa Rica',
+'Cesar':'Aguachica|Agustín Codazzi|Astrea|Becerril|Bosconia|Chimichagua|Chiriguaná|Curumaní|El Copey|El Paso|Gamarra|González|La Gloria|La Jagua de Ibirico|La Paz|Manaure Balcón del Cesar|Pailitas|Pelaya|Pueblo Bello|Río de Oro|San Alberto|San Diego|San Martín|Tamalameque|Valledupar',
+'Chocó':'Acandí|Alto Baudó|Atrato|Bagadó|Bahía Solano|Bajo Baudó|Bojayá|El Cantón de San Pablo|Carmen del Darién|Cértegui|Condoto|El Carmen de Atrato|El Litoral del San Juan|Istmina|Juradó|Lloró|Medio Atrato|Medio Baudó|Medio San Juan|Nóvita|Nuquí|Quibdó|Río Iró|Río Quito|Riosucio|San José del Palmar|Sipí|Tadó|Unguía|Unión Panamericana',
+'Córdoba':'Ayapel|Buenavista|Canalete|Cereté|Chimá|Chinú|Ciénaga de Oro|Cotorra|La Apartada|Los Córdobas|Momil|Montelíbano|Montería|Moñitos|Planeta Rica|Pueblo Nuevo|Puerto Escondido|Puerto Libertador|Purísima|Sahagún|San Andrés de Sotavento|San Antero|San Bernardo del Viento|San Carlos|San José de Uré|San Pelayo|Tierralta|Tuchín|Valencia',
+'Cundinamarca':'Agua de Dios|Albán|Anapoima|Anolaima|Apulo|Arbeláez|Beltrán|Bituima|Bojacá|Cabrera|Cachipay|Cajicá|Caparrapí|Cáqueza|Carmen de Carupa|Chaguaní|Chía|Chipaque|Choachí|Chocontá|Cogua|Cota|Cucunubá|El Colegio|El Peñón|El Rosal|Facatativá|Fómeque|Fosca|Funza|Fúquene|Fusagasugá|Gachala|Gachancipá|Gachetá|Girardot|Granada|Guachetá|Guaduas|Guasca|Guataquí|Guatavita|Guayabal de Síquima|Guayabetal|Gutiérrez|Jerusalén|Junín|La Calera|La Mesa|La Palma|La Peña|La Vega|Lenguazaque|Machetá|Madrid|Manta|Medina|Mosquera|Nariño|Nemocón|Nilo|Nimaima|Nocaima|Pacho|Paime|Pandi|Paratebueno|Pasca|Puerto Salgar|Pulí|Quebradanegra|Quetame|Quipile|Ricaurte|San Antonio del Tequendama|San Bernardo|San Cayetano|San Francisco|San Juan de Rioseco|Sasaima|Sesquilé|Sibaté|Silvania|Simijaca|Soacha|Sopó|Subachoque|Suesca|Susa|Sutatausa|Tabio|Tausa|Tena|Tenjo|Tocancipá|Topaipí|Ubalá|Ubaque|Ubaté|Une|Útica|Vergara|Vianí|Villagómez|Villapinzón|Villeta|Viotá|Yacopí|Zipacón|Zipaquirá',
+'Guainía':'Inírida',
+'Guaviare':'Calamar|El Retorno|Miraflores|San José del Guaviare',
+'Huila':'Acevedo|Agrado|Aipe|Algeciras|Altamira|Baraya|Campoalegre|Colombia|Elías|Garzón|Gigante|Guadalupe|Hobo|Íquira|Isnos|La Argentina|La Plata|Nátaga|Neiva|Oporapa|Paicol|Palermo|Palestina|Pital|Pitalito|Rivera|Saladoblanco|San Agustín|Santa María|Suaza|Tarqui|Tello|Teruel|Tesalia|Timaná|Villavieja|Yaguará',
+'La Guajira':'Albania|Barrancas|Dibulla|Distracción|El Molino|Fonseca|Hatonuevo|La Jagua del Pilar|Maicao|Manaure|Riohacha|San Juan del Cesar|Uribia|Urumita|Villanueva',
+'Magdalena':'Algarrobo|Aracataca|Ariguaní|Cerro de San Antonio|Chibolo|Ciénaga|Concordia|El Banco|El Piñón|El Retén|Fundación|Guamal|Nueva Granada|Pedraza|Pijiño del Carmen|Pivijay|Plato|Puebloviejo|Remolino|Sabanas de San Ángel|Salamina|San Zenón|Santa Ana|Santa Bárbara de Pinto|Santa Marta|San Sebastián de Buenavista|Sitionuevo|Tenerife|Zapayán|Zona Bananera',
+'Meta':'Acacías|Barranca de Upía|Cabuyaro|Castilla la Nueva|Cubarral|Cumaral|El Calvario|El Castillo|El Dorado|Fuente de Oro|Granada|Guamal|Mapiripán|Mesetas|La Macarena|Uribe|Lejanías|Puerto Concordia|Puerto Gaitán|Puerto López|Puerto Lleras|Puerto Rico|Restrepo|San Carlos de Guaroa|San Juan de Arama|San Juanito|San Martín|Vistahermosa|Villavicencio',
+'Nariño':'Albán|Aldana|Ancuyá|Arboleda|Barbacoas|Belén|Buesaco|Chachagüí|Colón|Consacá|Contadero|Córdoba|Cuaspud|Cumbal|Cumbitara|El Charco|El Peñol|El Rosario|El Tablón de Gómez|El Tambo|Francisco Pizarro|Funes|Guachucal|Guaitarilla|Gualmatán|Iles|Imués|Ipiales|La Cruz|La Florida|La Llanada|La Tola|La Unión|Leiva|Linares|Los Andes|Magüí Payán|Mallama|Mosquera|Nariño|Olaya Herrera|Ospina|Pasto|Policarpa|Potosí|Providencia|Puerres|Pupiales|Ricaurte|Roberto Payán|Samaniego|San Bernardo|San Lorenzo|San Pablo|San Pedro de Cartago|Sandoná|Santa Bárbara|Santacruz|Sapuyes|Taminango|Tangua|Tumaco|Túquerres|Yacuanquer',
+'Norte de Santander':'Ábrego|Arboledas|Bochalema|Bucarasica|Cachirá|Cácota|Chinácota|Chitagá|Convención|Cúcuta|Cucutilla|Durania|El Carmen|El Tarra|El Zulia|Gramalote|Hacarí|Herrán|Labateca|La Esperanza|La Playa|Los Patios|Lourdes|Mutiscua|Ocaña|Pamplona|Pamplonita|Puerto Santander|Ragonvalia|Salazar|San Calixto|San Cayetano|Santiago|Sardinata|Silos|Tibú|Toledo|Villa Caro|Villa del Rosario',
+'Putumayo':'Colón|Mocoa|Orito|Puerto Asís|Puerto Caicedo|Puerto Guzmán|Puerto Leguízamo|Sibundoy|San Francisco|San Miguel|Santiago|Valle del Guamuez|Villagarzón',
+'Quindío':'Armenia|Buenavista|Calarcá|Circasia|Córdoba|Filandia|Génova|La Tebaida|Montenegro|Pijao|Quimbaya|Salento',
+'Risaralda':'Apía|Balboa|Belén de Umbría|Dosquebradas|Guática|La Celia|La Virginia|Marsella|Mistrató|Pereira|Pueblo Rico|Quinchía|Santa Rosa de Cabal|Santuario',
+'Archipiélago de San Andrés, Providencia y Santa Catalina':'Providencia y Santa Catalina Islas|San Andrés',
+'Santander':'Aguada|Albania|Aratoca|Barbosa|Barichara|Barrancabermeja|Betulia|Bolívar|Bucaramanga|Cabrera|California|Capitanejo|Carcasí|Cepitá|Cerrito|Charalá|Charta|Chima|Chipatá|Cimitarra|Concepción|Confines|Contratación|Coromoro|Curití|El Carmen de Chucurí|El Guacamayo|El Peñón|El Playón|Encino|Enciso|Floridablanca|Galán|Gámbita|Girón|Guaca|Guadalupe|Guapotá|Guavatá|Güepsa|Hato|Jesús María|Jordán|La Belleza|Landázuri|La Paz|Lebrija|Los Santos|Macaravita|Málaga|Matanza|Mogotes|Molagavita|Ocamonte|Oiba|Onzaga|Palmar|Palmas del Socorro|Piedecuesta|Pinchote|Puente Nacional|Puerto Parra|Puerto Wilches|Rionegro|Sabana de Torres|San Andrés|San Benito|San Gil|San Joaquín|San José de Miranda|San Miguel|San Vicente de Chucurí|Santa Bárbara|Santa Helena del Opón|Simacota|Socorro|Suaita|Sucre|Suratá|Tona|Valle de San José|Vélez|Vetas|Villanueva|Zapatoca',
+'Sucre':'Buenavista|Caimito|Colosó|Corozal|Coveñas|Chalán|El Roble|Galeras|Guaranda|La Unión|Los Palmitos|Majagual|Morroa|Ovejas|Palmito|Sampués|San Benito Abad|San Juan de Betulia|San Marcos|San Onofre|San Pedro|San Luis de Sincé|Sincelejo|Sucre|Tolú|Tolú Viejo',
+'Tolima':'Alpujarra|Alvarado|Ambalema|Anzoátegui|Armero Guayabal|Ataco|Cajamarca|Carmen de Apicalá|Casabianca|Chaparral|Coello|Coyaima|Cunday|Dolores|Espinal|Falan|Flandes|Fresno|Guamo|Herveo|Honda|Ibagué|Icononzo|Lérida|Líbano|Mariquita|Melgar|Murillo|Natagaima|Ortega|Palocabildo|Piedras|Planadas|Prado|Purificación|Rioblanco|Roncesvalles|Rovira|Saldaña|San Antonio|San Luis|Santa Isabel|Suárez|Valle de San Juan|Venadillo|Villahermosa|Villarrica',
+'Valle del Cauca':'Alcalá|Andalucía|Ansermanuevo|Argelia|El Águila|El Cairo|El Cerrito|El Dovio|Bolívar|Buenaventura|Buga|Bugalagrande|Caicedonia|Cali|Candelaria|Cartago|Dagua|Florida|Ginebra|Guacarí|Jamundí|La Cumbre|La Unión|La Victoria|Obando|Palmira|Pradera|Restrepo|Riofrío|Roldanillo|San Pedro|Sevilla|Toro|Trujillo|Tuluá|Ulloa|Versalles|Vijes|Yotoco|Yumbo|Zarzal',
+'Vaupés':'Carurú|Mitú|Taraira',
+'Vichada':'Cumaribo|La Primavera|Puerto Carreño|Santa Rosalía'
 };
+/* Índice derivado: nombre de municipio ⇒ departamento (string) o la lista de
+   departamentos donde existe (array) cuando es homónimo. Es el mismo formato
+   que la tabla escrita a mano de la Ola 2, así que `lcGeoDepto`,
+   `lcGeoDatalist` y sus regresiones no cambian una línea. */
+var LC_GEO = (function(){
+  var idx={}, nom={};
+  for(var d in LC_MUNI){
+    LC_MUNI[d].split('|').forEach(function(m){
+      var k=m.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      if(!k) return;
+      if(!idx[k]){ idx[k]=[d]; nom[k]=m.trim(); }
+      else if(idx[k].indexOf(d)<0) idx[k].push(d);
+    });
+  }
+  var out={};
+  for(var k in idx) out[nom[k]] = idx[k].length===1 ? idx[k][0] : idx[k];
+  return out;
+})();
+/* Los 33 departamentos, para el datalist del campo contiguo y para resolver un
+   homónimo con un toque. */
+function lcGeoDeptoLista(){ return Object.keys(LC_MUNI).sort(function(a,b){return lcCmpTxt(a,b);}); }
 function lcGeoNorm(s){
   return String(s||'').trim().toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g,'');   // «Medellín» = «medellin»
@@ -11094,6 +11437,17 @@ function lcGeoAprendidos(){
   var cfg=DB.getConfig();
   return (cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
 }
+/* Índice normalizado del catálogo, construido una sola vez.
+   ⚠️ Con 1 085 municipios, recorrer `LC_GEO` normalizando cada clave en cada
+   pulsación del teclado (que es como se llama a `lcGeoDepto`) es trabajo
+   inútil: el índice se calcula la primera vez y se reutiliza. */
+var _lcGeoIdx=null;
+function _lcGeoIndice(){
+  if(_lcGeoIdx) return _lcGeoIdx;
+  _lcGeoIdx={};
+  for(var nombre in LC_GEO) _lcGeoIdx[lcGeoNorm(nombre)]={nom:nombre,dep:LC_GEO[nombre]};
+  return _lcGeoIdx;
+}
 /* Departamento de un municipio, o '' si no se sabe o es ambiguo.
    Lo aprendido por el usuario tiene prioridad: conoce su territorio mejor que
    una tabla embebida, y resuelve además los homónimos de su región. */
@@ -11101,12 +11455,20 @@ function lcGeoDepto(muni){
   var k=lcGeoNorm(muni); if(!k) return '';
   var mios=lcGeoAprendidos();
   if(mios[k]) return mios[k];
-  for(var nombre in LC_GEO){
-    if(lcGeoNorm(nombre)!==k) continue;
-    var v=LC_GEO[nombre];
-    return Array.isArray(v)?'':v;            // homónimo: no se adivina
-  }
-  return '';
+  var e=_lcGeoIndice()[k];
+  if(!e) return '';
+  return Array.isArray(e.dep)?'':e.dep;      // homónimo: no se adivina
+}
+/* Los departamentos donde existe ese municipio. Con uno solo la app ya
+   autocompleta; con varios el formulario los ofrece en un toque en vez de
+   dejar al funcionario delante de un campo vacío y 33 departamentos posibles.
+   ⚠️ Ofrecerlos NO es adivinar: elegir sigue siendo un acto del usuario, y lo
+   que elija se aprende (`lcGeoRecordar`), así que se pregunta una vez. */
+function lcGeoDeptos(muni){
+  var k=lcGeoNorm(muni); if(!k) return [];
+  var e=_lcGeoIndice()[k];
+  if(!e) return [];
+  return Array.isArray(e.dep)?e.dep.slice():[e.dep];
 }
 // Se aprende del par que el usuario diligencia a mano; no se guarda basura ni
 // se pisa lo que ya se sabía (lo último que escriba el usuario manda).
@@ -11164,9 +11526,19 @@ function lcGeoDatalist(){
   Object.keys(mios).forEach(function(k){ if(!vistos[k]){ vistos[k]=1; out.push(k.replace(/(^|\s)\w/g,function(m){return m.toUpperCase();})); } });
   return out.sort();
 }
+/* ⚠️ El datalist se pinta en CADA render del wizard y ahora son 1 085 opciones
+   (unos 40 KB de HTML). Se cachea y solo se rehace cuando cambia lo aprendido:
+   rearmarlo en cada pulsación era el precio de tener el país entero. */
+var _lcGeoDlN=-1;
 function lcGeoPintarDatalist(){
   var el=document.getElementById('dl-muni'); if(!el) return;
+  var n=Object.keys(lcGeoAprendidos()).length;
+  if(el.childElementCount && n===_lcGeoDlN) return;
+  _lcGeoDlN=n;
   el.innerHTML=lcGeoDatalist().map(function(m){ return '<option value="'+escAttr(m)+'">'; }).join('');
+  var dd=document.getElementById('dl-depto');
+  if(dd&&!dd.childElementCount)
+    dd.innerHTML=lcGeoDeptoLista().map(function(d){ return '<option value="'+escAttr(d)+'">'; }).join('');
 }
 
 /* ═══════════════════════════════════════════
@@ -11270,21 +11642,121 @@ function lcDespachoEsDefecto(d,cfg){
   var act=lcDespachoDefecto(def.slot==='CESPA'?'CESPA':'URI',cfg);
   return !!(act&&act.id===d.id);
 }
+/* ── Jurisdicción (2026-08-28) ─────────────────────────────────────────────
+   ⚠️ La captura la recibe la fiscalía/URI —o el CESPA— del municipio DONDE
+   OCURRIÓ EL HECHO, no la de siempre. Por eso el lugar pasó a ser el primer
+   paso del wizard: sin municipio no hay jurisdicción, y sin jurisdicción el
+   despacho solo se puede proponer a ciegas.
+   ⚠️ Un despacho SIN municipio registrado no se descarta nunca. No saber dónde
+   está no es lo mismo que saber que está en otra parte, y los registros
+   anteriores a esta pantalla (los que migraron de `destUri`/`destCespa` y los
+   que se diligenciaron dentro del wizard de orden judicial) no lo traen:
+   excluirlos dejaría a un equipo ya configurado sin despacho de un día para
+   otro. */
+function lcDespJurisdiccion(tipo,lugar,cfg){
+  cfg=cfg||DB.getConfig();
+  var slot=tipo==='CESPA'?'CESPA':'URI';
+  var muni=lcGeoNorm((lugar&&lugar.muni)||'');
+  var mismos=[], otros=[];
+  lcDespachos(cfg).forEach(function(d){
+    var def=lcDespClaseDef(lcDespClase(d));
+    if(!def||def.slot!==slot) return;
+    var m=lcGeoNorm(d.municipio||'');
+    if(!muni||!m||m===muni) mismos.push(d); else otros.push(d);
+  });
+  return {mismos:mismos, otros:otros, slot:slot, muni:(lugar&&lugar.muni)||''};
+}
+/* Qué despacho recibe esta captura, y por qué. `actualId` es el que el USUARIO
+   eligió para este procedimiento: manda sobre el predeterminado, porque es una
+   decisión ya tomada.
+   ⚠️ Solo se pasa cuando lo eligió una persona (`c.despachoElegido`). Pasar
+   también el que la propia app acababa de resolver congelaba la respuesta: el
+   bloque decía «elegido para esta captura» de algo que nadie había elegido, y
+   cambiar de municipio ya no lo recalculaba.
+   motivo → 'actual' · 'defecto' · 'unico' · 'varios' (hay que preguntar) ·
+            'ninguno' (no hay ninguno registrado en esa jurisdicción). */
+function lcDespResolver(tipo,lugar,cfg,actualId){
+  cfg=cfg||DB.getConfig();
+  var j=lcDespJurisdiccion(tipo,lugar,cfg);
+  var enJur=function(id){
+    if(!id) return null;
+    for(var i=0;i<j.mismos.length;i++) if(j.mismos[i].id===id) return j.mismos[i];
+    return null;
+  };
+  var r={despacho:null, motivo:'ninguno', candidatos:j.mismos, otros:j.otros,
+         slot:j.slot, muni:j.muni};
+  var act=enJur(actualId);
+  if(act){ r.despacho=act; r.motivo='actual'; return r; }
+  var marc=enJur((cfg.despachoDefecto||{})[j.slot]);
+  if(marc){ r.despacho=marc; r.motivo='defecto'; return r; }
+  if(j.mismos.length===1){ r.despacho=j.mismos[0]; r.motivo='unico'; return r; }
+  if(j.mismos.length>1){ r.motivo='varios'; return r; }
+  return r;
+}
+/* ⚠️ El NUNC que quedó en el caso puede ser el de la jurisdicción ANTERIOR: sus
+   dígitos 8-12 identifican la unidad receptora, así que uno de Medellín en una
+   captura de Cartago es un número falso en un documento legal. No se borra
+   —perder un número tecleado sigue siendo peor—, pero se DICE de quién es, que
+   es la única forma de que el funcionario pueda corregirlo. Se deriva del
+   registro, sin guardar nada nuevo en el caso. */
+function lcDespNuncAjeno(c,r){
+  var n=String((c&&c.nunc)||'').replace(/\D/g,'');
+  if(!n||!r||r.despacho) return '';
+  if(r.candidatos.some(function(d){ return String(d.nunc||'')===n; })) return '';
+  var due=null;
+  r.otros.forEach(function(d){ if(!due&&String(d.nunc||'')===n) due=d; });
+  return due?(due.nombre||''):'';
+}
+/* Un topónimo que termina en punto («Bogotá D.C.») dentro de una frase que
+   también lo lleva daba «en Bogotá D.C.. Elige». */
+function lcSinPunto(s){ return String(s==null?'':s).replace(/\.\s*$/,''); }
+/* Municipio y departamento de la jurisdicción, sin repetir «Bogotá D.C., Bogotá
+   D.C.» donde el municipio ES el departamento. */
+function lcJurisdiccionTexto(l){
+  l=l||{};
+  var m=String(l.muni||'').trim(), d=String(l.depto||'').trim();
+  if(!m) return d;
+  if(!d||lcGeoNorm(m)===lcGeoNorm(d)) return m;
+  return m+', '+d;
+}
+/* Aplica la resolución al caso en curso. Se llama al recolectar el paso del
+   lugar (el municipio acaba de cambiar) y al pintar el paso del caso.
+   ⚠️ Lo que el usuario escribió a mano NO se toca (`destinoManual`), y el NUNC
+   NUNCA se borra: solo se reemplaza cuando el despacho que entra trae el suyo.
+   Perder un número ya tecleado es peor que dejarlo desactualizado — la misma
+   regla que ya seguía `lcUsarDespachoEnCaso`. */
+function lcDespSync(c,cfg){
+  c=c||wc;
+  if(!c||c.ojv===2||c.tipo==='OJ') return null;
+  cfg=cfg||DB.getConfig();
+  var r=lcDespResolver(c.tipo,c.lugar,cfg,c.despachoElegido?c.despachoId:'');
+  if(c.destinoManual) return r;
+  if(r.despacho){
+    c.despachoId=r.despacho.id;
+    if(r.despacho.nombre) c.destino=r.despacho.nombre;
+    if(r.despacho.nunc)   c.nunc=r.despacho.nunc;
+  } else if(r.motivo==='varios'){
+    c.despachoId=''; c.despachoElegido=false;   // hay que preguntar: destino y NUNC se quedan
+  }
+  return r;
+}
 /* ⚠️ PUNTO ÚNICO del destino y del NUNC de una captura de flagrancia. Antes la
    expresión `tipo==='CESPA'?cfg.destCespa:cfg.destUri` estaba escrita en cinco
    sitios que podían discrepar (el arranque del wizard, el selector de tipo, el
    render del paso 1, el destinatario OJ y el simulador). Las claves de
    configuración quedan como RESPALDO: un equipo que no ha registrado despachos
-   sigue viendo exactamente lo que veía. */
-function lcDespDestino(tipo,cfg){
+   sigue viendo exactamente lo que veía.
+   `lugar` es opcional: sin él la respuesta es la de siempre (el predeterminado
+   del tipo), que es lo que necesitan el simulador y las capturas ya guardadas. */
+function lcDespDestino(tipo,cfg,lugar){
   cfg=cfg||DB.getConfig();
-  var d=lcDespachoDefecto(tipo,cfg);
+  var d=(lugar?lcDespResolver(tipo,lugar,cfg).despacho:null)||lcDespachoDefecto(tipo,cfg);
   if(d&&d.nombre) return d.nombre;
   return tipo==='CESPA'?(cfg.destCespa||'CESPA'):(cfg.destUri||'Fiscalía URI');
 }
-function lcDespNunc(tipo,cfg){
+function lcDespNunc(tipo,cfg,lugar){
   cfg=cfg||DB.getConfig();
-  var d=lcDespachoDefecto(tipo,cfg);
+  var d=(lugar?lcDespResolver(tipo,lugar,cfg).despacho:null)||lcDespachoDefecto(tipo,cfg);
   if(d&&d.nunc) return d.nunc;
   return (tipo==='CESPA'?(cfg.nuncCespa||''):(cfg.nuncUri||''));
 }
@@ -11348,7 +11820,8 @@ function renderDespachos(tab){
     list.innerHTML='<div class="desp-vacio">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M6 21V8l6-4 6 4v13M10 21v-5h4v5M10 11h4"/></svg>'+
       '<h3>Tus despachos</h3>'+
-      '<p>Registra las fiscalías, URI, CESPA y juzgados con los que trabajas: nombre, dirección, barrio y ciudad. Se usan como destino del informe de captura y del oficio de orden judicial, y no hay que volver a escribirlos.</p>'+
+      '<p>Registra las fiscalías, URI, CESPA y juzgados con los que trabajas: nombre, dirección, barrio y <b>ciudad</b>. Se usan como destino del informe de captura y del oficio de orden judicial, y no hay que volver a escribirlos.</p>'+
+      '<p>La <b>ciudad</b> es la que decide cuál se propone: la captura la recibe el despacho del municipio donde ocurrió el hecho. Si en un municipio tienes más de uno, marca cuál es el <b>predeterminado</b> y la app deja de preguntar.</p>'+
       '<p class="desp-vacio-nunc">Cada fiscalía y cada CESPA guarda además su <b>NUNC de 16 dígitos</b>, porque ese número cambia con la unidad que recibe la captura.</p>'+
       '<button class="btn bp" onclick="lcDespForm()">Agregar el primero</button>'+
     '</div>';
@@ -11378,7 +11851,7 @@ function renderDespachos(tab){
     return '<div class="desp-card">'+
       '<div class="desp-head">'+
         '<span class="desp-tipo '+def.css+'">'+def.corto+'</span>'+
-        (esDef?'<span class="desp-def">PREDETERMINADO</span>':'')+
+        (esDef?'<span class="desp-def" title="Se usa sin preguntar en las capturas de flagrancia de su jurisdicción">PREDETERMINADO</span>':'')+
       '</div>'+
       '<div class="desp-nombre">'+escHtml(d.nombre||'(sin nombre)')+'</div>'+
       (dir?'<div class="desp-dir">'+escHtml(dir)+'</div>':'')+
@@ -11387,7 +11860,7 @@ function renderDespachos(tab){
              :(def.nunc?'<div class="desp-nunc falta">Sin NUNC registrado</div>':''))+
       '<div class="desp-acts">'+
         (def.slot&&!esDef
-          ? '<button class="desp-usar" onclick="lcDespPredet('+j+')">Usar por defecto</button>'
+          ? '<button class="desp-usar" onclick="lcDespPredet('+j+')">Predeterminar para flagrancia</button>'
           : '')+
         '<button class="desp-act" onclick="lcDespForm('+j+')">'+
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Editar</button>'+
@@ -11425,11 +11898,15 @@ function lcDespEliminar(id){
    que el lugar de los hechos y el registro de Personas (Mejora 1) y la ciudad el
    mismo campo con inferencia de departamento que el módulo de orden judicial
    (Ola 2): un despacho no se diligencia con otro criterio que una persona. */
-function lcDespForm(id){
+/* `pre` prellena el alta desde el propio procedimiento: el municipio y el
+   departamento del hecho y la clase que corresponde al tipo de captura. Así
+   registrar «la URI de este municipio» no obliga a volver a escribir dónde está
+   el hecho, que la app acaba de preguntar. */
+function lcDespForm(id,pre){
   var d=id?lcDespachoPorId(id):null;
   var nuevo=!d;
-  d=d?Object.assign({},d):{id:'',clase:'FISCALIA',nombre:'',direccion:'',barrio:'',
-    municipio:lcUnidadCiudad()||'',departamento:'',telefono:'',correo:'',nunc:'',tipo:''};
+  d=d?Object.assign({},d):Object.assign({id:'',clase:'FISCALIA',nombre:'',direccion:'',barrio:'',
+    municipio:lcUnidadCiudad()||'',departamento:'',telefono:'',correo:'',nunc:'',tipo:''},pre||{});
   var cl=lcDespClase(d);
   window._lcDespEdit={id:d.id,clase:cl,tipo:d.tipo||''};
   openModal(
@@ -11579,6 +12056,10 @@ function abrirSelectorDespacho(){
 function lcUsarDespachoEnCaso(d){
   if(!wc) return;
   wc.destino=d.nombre||'';
+  /* Elegir uno del registro es una decisión sobre ESTE procedimiento: queda
+     anotada (`despachoId`) para que la propuesta automática la respete, y deja
+     de contar como destino escrito a mano. */
+  wc.despachoId=d.id||''; wc.despachoElegido=true; wc.destinoManual=false;
   var aviso='Destino: '+String(d.nombre||'').substring(0,32);
   if(d.nunc){ wc.nunc=d.nunc; aviso+=' · NUNC '+d.nunc; }
   else aviso+=' — sin NUNC registrado, revísalo';

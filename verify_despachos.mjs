@@ -240,9 +240,17 @@ await page.evaluate(() => {
   cfg.despachoDefecto = { URI: 'd1', CESPA: 'd3' };
   DB.saveConfig(cfg);
 });
-await page.evaluate(() => startWizard('URI'));
+/* ⚠️ Desde 2026-08-28 el LUGAR abre el formulario: el despacho se resuelve por
+   la jurisdicción del hecho, así que primero hay que decir dónde fue. Los
+   despachos sembrados son de Medellín y el equipo de la prueba no tiene ciudad
+   configurada, así que se escribe. */
+await page.evaluate(async () => { wc = null; await wizCerrarBorrador(); startWizard('URI'); });
+await page.waitForTimeout(500);
+await page.fill('#w-muni', 'Medellín');
+await page.waitForTimeout(250);
+await page.evaluate(() => wizGoto(getWizConfig().steps.indexOf('Caso')));
 await page.waitForTimeout(600);
-let dest = await page.textContent('#wz-panels .lc-dir-prev');
+let dest = await page.textContent('.lc-desp-blk');
 let nunc = await page.inputValue('#w-nunc');
 log(/URI Centro/.test(dest) && nunc === '0500160001202601',
   'Una captura nueva arranca con el despacho predeterminado Y su NUNC', JSON.stringify([dest.replace(/\s+/g, ' ').trim(), nunc]));
@@ -250,18 +258,21 @@ log(/URI Centro/.test(dest) && nunc === '0500160001202601',
 // Cambiar de tipo cambia los dos.
 await page.selectOption('#w-tipo', 'CESPA');
 await page.waitForTimeout(500);
-dest = await page.textContent('#wz-panels .lc-dir-prev');
+dest = await page.textContent('.lc-desp-blk');
 nunc = await page.inputValue('#w-nunc');
 log(/CESPA Medellín/.test(dest) && nunc === '0500160055202603',
   'Cambiar a CESPA repone el destino Y el NUNC de esa unidad', JSON.stringify([dest.replace(/\s+/g, ' ').trim(), nunc]));
 await page.selectOption('#w-tipo', 'URI');
 await page.waitForTimeout(500);
 
-/* ⚠️ EL PUNTO QUE PIDIÓ EL USUARIO: cambiar de despacho cambia el NUNC. */
-await page.click('.lc-dir-prev .lc-dir-link');           // «Cambiar»
-await page.waitForTimeout(400);
-log(await page.isVisible('button[onclick="abrirSelectorDespacho()"]'),
+/* ⚠️ EL PUNTO QUE PIDIÓ EL USUARIO: cambiar de despacho cambia el NUNC.
+   Desde 2026-08-28 el despacho tiene bloque propio en el paso, con sus salidas
+   («Elegir otro despacho» · «Registrar uno nuevo» · «Escribir a mano») en vez
+   del renglón «Destino del informe · Cambiar». */
+log(await page.isVisible('.lc-desp-pie button[onclick="abrirSelectorDespacho()"]'),
   'El destino se puede cambiar desde el propio paso de la captura');
+await page.click('.lc-desp-pie button[onclick="lcDestEditar(true)"]');   // «Escribir a mano»
+await page.waitForTimeout(400);
 const avisoNunc = await page.textContent('#wz-panels .lc-dir-prev');
 log(/El NUNC cambia con el despacho/.test(avisoNunc),
   'Y se advierte que el NUNC cambiará con él: si no, se leería como un error de la app');
@@ -277,7 +288,7 @@ await page.screenshot({ path: join(SHOTS, 'desp_03_selector_wizard.png') });
 
 await page.click('#dp-res .oj-row:nth-child(2)');        // URI Robledo
 await page.waitForTimeout(600);
-dest = await page.textContent('#wz-panels .lc-dir-prev');
+dest = await page.textContent('.lc-desp-blk');
 nunc = await page.inputValue('#w-nunc');
 log(/URI Robledo/.test(dest), 'Al elegir otro despacho cambia el destino', dest.replace(/\s+/g, ' ').trim());
 log(nunc === '0500160099202602',

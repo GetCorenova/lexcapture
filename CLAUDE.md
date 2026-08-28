@@ -862,7 +862,9 @@ Las cuatro olas de la auditoría están ejecutadas. Pendientes de otro orden:
   obligatorio, pero no hay un botón que diga «emite el oficio con lo mínimo y completa el resto antes
   de enviarlo». Las validaciones DURAS por caso son exactamente **14 datos**.
 - **Flagrancia (URI/CESPA) no recibió ninguna de las cuatro olas**: sigue en 8 pasos, con
-  `lugar.muni`/`lugar.depto` fijos en Medellín/Antioquia (issue A1) y sin catálogo geográfico. El
+  ~~`lugar.muni`/`lugar.depto` fijos en Medellín/Antioquia (issue A1) y sin catálogo geográfico~~
+  → **RESUELTO el 2026-08-28** (ver «La jurisdicción manda» al final): el lugar abre el wizard,
+  el municipio trae el catálogo completo del país y el departamento se infiere. El
   borrador automático y los puntos navegables de la Ola 1 sí la cubren (viven en el wizard común).
 - **Los 5 pares municipio/departamento del modelo siguen existiendo** aunque ya no se tecleen: son
   datos distintos (despacho, residencia, nacimiento, lugar de la diligencia, destinatario) y el
@@ -3315,3 +3317,113 @@ Fase I y solo las usaba el módulo de orden judicial (81 usos), frente a **150 b
   visible** para el usuario. La auditoría ya lo planteó como incremental **por pantalla**: es la
   única fase que puede pararse a medias sin dejar nada roto. Lo que queda hecho es lo que importa —
   **existe un punto único y documentado** para que una pantalla nueva no vuelva a crear otro campo.
+
+## La jurisdicción manda: el lugar abre la captura y elige el despacho (2026-08-28)
+Reportado en campo con dos pantallazos del wizard: *«coloca el paso dos de la captura como primero
+[…] al llegar al punto dos (datos del caso) como primera opción debe de aparecer la fiscalía (para
+mayores) o el CESPA (para menores) de la jurisdicción»*, y con la pieza que lo explica todo: el
+municipio del hecho **es** lo que determina qué despacho recibe la captura. El usuario aportó además
+el listado completo de departamentos y municipios del país para las listas desplegables. Verificado
+con `verify_jurisdiccion.mjs` (**67 checks**, nuevo) y con las 24 suites previas.
+
+### ⚠️ El orden no era una preferencia: era la causa
+El formulario preguntaba **primero el despacho y después dónde fue el hecho**, así que el despacho
+solo se podía proponer a ciegas —el predeterminado del equipo, viniera la captura de donde viniera—.
+Ahora `STEPS_STD` es `['Lugar','Caso',…]` y el panel del lugar abre el wizard.
+- ⚠️ **No cambia ni un documento**: el modelo del caso es el mismo, los pasos son los mismos y solo
+  se invirtió el orden en que se pintan (`panels:[rStep2,rStep1,…]`). Hay checks que generan el
+  FPJ-5 y comparan modelo y salida.
+- ⚠️ **`collectStep` recolecta por NOMBRE de paso, no por índice.** `ws===0` dejó de ser «Caso», y
+  esa rama era el único sitio del wizard de flagrancia que lo daba por hecho. Misma lección que la
+  Ola 4 en el módulo de orden judicial, ahí resuelta por presencia en el DOM.
+- ⚠️ **La guarda del NUNC (issue M3) se decide por la PRESENCIA del campo**, no por `ws===0`:
+  `validateStep1()` es un no-op en cualquier otro paso, así que `wizNext`/`wizGoto`/`wizSave` la
+  llaman siempre. **Retroceder no se bloquea** — corregir el municipio no puede exigir antes un NUNC
+  completo.
+- Se adaptaron al recorrido nuevo `verify_mejora1` (157, **subió una**: comprueba que el formulario
+  abre por el lugar), `verify_despachos` (53) y `verify_invitado` (34, **subió una**). ⚠️ Ninguna
+  bajó su cuenta, y las que ya pedían el paso por nombre (`indexOf('Servidor')`,
+  `indexOf('Vehículos')`) no se tocaron: es el patrón correcto. En el golden path de `verify_mejora1`
+  el bucle **lee el paso actual en cada vuelta** en vez de suponer que el índice del bucle es `ws`.
+
+### El catálogo geográfico completo — decisión REVISADA
+La Ola 2 embebió **solo** las 32 capitales y el Valle de Aburrá, con este motivo escrito: *«una tabla
+larga escrita de memoria es una tabla con errores, y aquí el error se imprime en un documento
+judicial»*. El motivo sigue siendo cierto; la premisa cambió: **la tabla ya no se escribe de memoria,
+la aportó el usuario**. `LC_MUNI` trae **1 085 municipios en 33 departamentos** y `LC_GEO` **se
+DERIVA de ella** (dos listas que hay que mantener a la vez acaban discrepando).
+- **Cuatro desviaciones de la lista del usuario, todas de transcripción y todas informadas**:
+  erratas de tecleo corregidas (Táamesis→Támesis, Chiquinquira→Chiquinquirá, AltOS del Rosario,
+  Córdobas→Córdoba en Quindío, Pie de Cuesta→Piedecuesta); las dos capitales que su lista nombraba
+  aparte y no repetía dentro (Medellín y Cartagena); cuatro entradas que su lista ponía en dos
+  departamentos y aquí quedan en uno (Ciénaga y Leiva fuera de Boyacá, Zona Bananera fuera de
+  Córdoba, «El Belén» fuera de Caquetá); y **una entrada de Norte de Santander que llegó ilegible en
+  el mensaje y NO se adivina** — se omite y la app la aprende la primera vez que se escriba.
+- ⚠️ **Sus totales por departamento no cuadran con sus propias listas** (Antioquia dice 125 y enumera
+  123; Cundinamarca 116 y enumera 110; Santander 87 y 85; Boyacá 123 y 121; Bolívar 46 y 44; Valle
+  42 y 41). Lo embebido es **lo enumerado**, no la cifra: completar el hueco de memoria sería justo
+  lo que la regla prohíbe. Lo que falte lo aprende `cfg.geoPropios`, como siempre.
+- **63 homónimos** (Barbosa en Antioquia y Santander; La Unión en cuatro). Siguen sin
+  autocompletarse, pero el formulario **ofrece sus departamentos en un toque** (`lcGeoDeptos` +
+  `.lc-geo-hom`) y lo elegido se aprende: se pregunta una vez, no una por captura.
+- ⚠️ **Un departamento INCOMPATIBLE con el municipio también se señala**, con la misma tarjeta.
+  `lcGeoCompletar` **sigue sin pisar nunca lo que escribió el usuario** —esa regla no se toca y
+  `verify_ola2` la comprueba—, pero dejar «Antioquia» debajo de «Bogotá D.C.» porque antes se
+  tecleó a mano imprimiría una jurisdicción falsa.
+- ⚠️ **`data-lc-auto` se repone al pintar** cuando el departamento es EXACTAMENTE el que da el
+  catálogo para ese municipio: al repintar el paso el elemento es nuevo y perdía la marca, así que
+  cambiar de municipio ya no lo recalculaba. Marcarlo no pisa nada del usuario — el valor es el
+  mismo que la app habría escrito.
+- ⚠️ **`lcGeoDepto` usa un índice normalizado calculado una vez** (`_lcGeoIndice`) y el datalist se
+  **cachea** (`_lcGeoDlN`): recorrer 1 085 claves normalizando en cada pulsación, y rearmar 40 KB de
+  `<option>` en cada `renderWiz`, era el precio de tener el país entero.
+- ⚠️ **El municipio ya NO nace sembrado con «Medellín»** (ni el departamento con «Antioquia»). Era
+  un dato fabricado —el error de `'CANDELARIA'` en `nombreEstacion`— y ahora, además, **enrutaría la
+  captura de cualquier equipo a la fiscalía de otra ciudad**. Se propone la ciudad de la propia
+  unidad (Ajustes → Estación), que es un dato del usuario.
+
+### El despacho, resuelto por jurisdicción
+`lcDespJurisdiccion` / `lcDespResolver` / `lcDespSync` son el motor; el bloque `.lc-desp-blk` abre el
+paso «Datos del caso» con **cinco estados y ninguna salida bloqueada**: resuelto · varios · ninguno ·
+escrito a mano · sin municipio todavía.
+- **Único en el municipio ⇒ no se pregunta.** **Predeterminado marcado ⇒ no se pregunta** (es
+  literalmente lo que pidió el reporte; el botón de la pantalla de Despachos dice ahora
+  «Predeterminar para flagrancia»). **Varios ⇒ se pregunta**, con la lista de los de ESE municipio, y
+  `validateStep1` **no deja avanzar** sin elegir: de ese despacho salen los dígitos 8-12 del NUNC que
+  se imprime en el FPJ-5. **Ninguno ⇒ se ofrece registrarlo**, ya con el municipio y el departamento
+  del hecho puestos, y queda guardado para siempre.
+- ⚠️ **Un despacho SIN municipio registrado no se descarta nunca.** No saber dónde está no es saber
+  que está en otra parte, y los registros anteriores a esta pantalla no lo traen: excluirlos dejaría
+  a un equipo ya configurado sin despacho de un día para otro.
+- ⚠️ **Se distingue lo que eligió una persona de lo que resolvió la app** (`despachoElegido`). Pasar
+  al resolutor el que la propia app acababa de poner congelaba la respuesta: el bloque decía
+  «elegido para esta captura» de algo que nadie había elegido, y cambiar de municipio ya no lo
+  recalculaba.
+- ⚠️ **El NUNC nunca se borra, pero sí se delata.** Si al cambiar de jurisdicción queda el número de
+  otra unidad, `lcDespNuncAjeno` lo detecta contra el registro y el bloque dice **de quién es**.
+  Perder un número tecleado sigue siendo peor que dejarlo desactualizado; dejarlo **en silencio**,
+  en cambio, imprimiría una unidad receptora falsa.
+- ⚠️ **Una captura YA GUARDADA no cambia de destino al reabrirla**: `editCase` la ata al registro si
+  el nombre coincide y, si no, respeta el texto tal cual y la app deja de proponer. El despacho con
+  el que se emitió es parte de lo actuado — mismo principio que `lcCongelarDossier`.
+- ⚠️ **Cambiar de tipo (URI ⇄ CESPA) anula lo elegido**: una fiscalía no es el CESPA de la
+  jurisdicción, y arrastrar la decisión anterior dejaría la aprehensión de un menor dirigida a la
+  URI de adultos.
+- ⚠️ **Esto revisa la Mejora 1, obs. 3**, que fundió tipo y destino en un solo control para no decir
+  lo mismo dos veces. Ahora el destino tiene bloque propio —con dirección, NUNC y procedencia—, así
+  que el duplicado pasaría a ser la etiqueta del selector: vuelve a nombrar solo el tipo. Sigue
+  habiendo **una** decisión y ningún campo de texto que rellenar a mano por defecto (escribirlo sigue
+  siendo posible: hay destinos que no están registrados).
+- **Escribir el destino a mano** marca `destinoManual` y la app deja de proponer, **y lo dice** —si
+  no, se leería como que se equivocó.
+- El bloque usa `.lc-desp-blk` y NO `.oj-dest`: en este sistema el violeta significa «orden
+  judicial». Reutiliza `.oj-dest-box/-nom/-dir/-src`, que son el patrón «dato resuelto con su
+  procedencia», no piezas del módulo OJ.
+- Regresiones en verde: **jurisdicción 67** · mejora1 157 · despachos 53 · OJ 187 · fpj6 140 ·
+  custodia 99 · incautación 141 · export 74 · firma 62 · editable 28 · tipografía OJ 42 ·
+  fpj5 tipografía 48 · mejora2 38 · mejora3 51 · simulador 41 · invitado 34 · personas 25 ·
+  expediente 13 · almacén 12 · envío 39 · orden 33 · tema 39 · grados 31 · dossier histórico 29 ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
+  ⚠️ Siguen fallando, **igual que contra el build anterior** (comprobado): `verify_menu_expediente`
+  [9] («un único `lcPlazo36`») y `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08). Anti-caché `?v=82` / `cache-v82`, `_BUILD=82`.

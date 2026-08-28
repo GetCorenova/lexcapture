@@ -95,6 +95,12 @@ function paras(xml) {
   }
   return out;
 }
+/* ⚠️ Desde 2026-08-28 el LUGAR abre el formulario y los datos del caso son el
+   paso 2: los pasos se piden por NOMBRE, nunca por un índice escrito a mano. */
+const irA = async nombre => {
+  await page.evaluate(n => { ws = getWizConfig().steps.indexOf(n); renderWiz(); }, nombre);
+  await page.waitForTimeout(200);
+};
 /* Renglones que el documento trae DENTRO del apartado 7. */
 function numeral7(xml) {
   const P = paras(xml);
@@ -108,6 +114,8 @@ function numeral7(xml) {
 sec('OBS 1 — SPOA fuera del formulario');
 await page.evaluate(() => startWizard('URI'));
 await page.waitForTimeout(250);
+log(await page.isVisible('#w-muni'), 'El formulario abre por el lugar de los hechos, que fija la jurisdicción');
+await irA('Caso');
 log(!(await page.isVisible('#w-spoa').catch(() => false)),
   'El paso 1 ya no pide SPOA');
 log(await page.isVisible('#w-nunc'), 'El NUNC sigue en su sitio (issue M3 intacto)');
@@ -160,14 +168,21 @@ const tope = await page.evaluate(() => {
 log(tope === 4, 'No se pasa de cuatro: es lo que el formato imprime (celdas 58-61)', tope);
 
 /* ═══════════ OBSERVACIÓN 3 · el destino repetía el tipo ═══════════ */
-sec('OBS 3 — tipo y destino integrados');
+/* ⚠️ Actualizado el 2026-08-28. La observación pedía que el tipo y el destino
+   dejaran de ser DOS campos que dicen lo mismo, y se resolvió metiendo el
+   destino dentro de la etiqueta del selector. Desde que el despacho se resuelve
+   por JURISDICCIÓN tiene bloque propio —con su dirección, su NUNC y de dónde
+   sale—, así que el duplicado pasaría a ser la etiqueta: el selector vuelve a
+   nombrar solo el tipo. Sigue habiendo UNA decisión y ningún campo repetido. */
+sec('OBS 3 — tipo y destino, una sola decisión');
 const integrado = await page.evaluate(() => {
   const o = Array.from(document.querySelectorAll('#w-tipo option')).map(x => x.textContent);
-  return { opciones: o, hayInput: !!document.getElementById('w-dest') };
+  return { opciones: o, hayInput: !!document.getElementById('w-dest'),
+    bloque: (document.querySelector('.lc-desp-blk') || {}).textContent || '' };
 });
-log(/URI \(Adulto\) → /.test(integrado.opciones[0]),
-  'El selector de tipo nombra ya el destino que le corresponde', integrado.opciones[0]);
-log(!integrado.hayInput, 'El campo «Destino (Fiscalía)» dejó de ocupar un renglón propio');
+log(integrado.opciones[0].trim() === 'URI (Adulto)' && /recibe la captura/.test(integrado.bloque),
+  'El selector nombra el tipo, y el destino tiene su propio bloque resuelto', integrado.opciones[0]);
+log(!integrado.hayInput, 'El destino NO es un campo de texto que haya que rellenar a mano');
 log(await page.evaluate(() => !!wc.destino), 'El destino sigue existiendo como dato del caso', await page.evaluate(() => wc.destino));
 await page.evaluate(() => lcDestEditar(true));
 await page.waitForTimeout(150);
@@ -192,8 +207,7 @@ log(await page.evaluate(() => 'numIncidente' in wc && 'recibe' in wc),
 
 /* ═══════════ OBSERVACIÓN 5 · direcciones con formato ═══════════ */
 sec('OBS 5 — direcciones normalizadas (lugar de los hechos)');
-await page.evaluate(() => { ws = 1; renderWiz(); });
-await page.waitForTimeout(200);
+await irA('Lugar');
 log(await page.isVisible('#w-dir__via'), 'La dirección del lugar se arma con un tipo de vía predefinido');
 const vias = await page.evaluate(() => Array.from(document.querySelectorAll('#w-dir__via option')).map(o => o.value).filter(Boolean));
 log(vias.includes('CL') && vias.includes('KR') && vias.includes('AV'),
@@ -241,9 +255,8 @@ log(parseos[4].modo === 'libre' && parseos[4].libre === 'Al lado de la cancha, s
 
 /* ═══════════ OBSERVACIÓN 6 · la misma dirección en personas ═══════════ */
 sec('OBS 6 — misma dirección en capturados, víctimas y testigos');
-for (const [paso, rol] of [[2, 'capturados'], [3, 'victimas'], [4, 'testigos']]) {
-  await page.evaluate(async (p) => { ws = p; renderWiz(); }, paso);
-  await page.waitForTimeout(150);
+for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas'], ['Testigos', 'testigos']]) {
+  await irA(paso);
   if (rol !== 'capturados') await page.evaluate((r) => { wc['sin' + (r === 'victimas' ? 'Victima' : 'Testigo')] = false; renderWiz(); }, rol);
   await page.waitForTimeout(120);
   await page.evaluate((r) => addMultiPerson(r, r === 'capturados'), rol);
@@ -607,8 +620,7 @@ log(await page.evaluate(() => wc.conductas.length) === 1,
 log(await page.evaluate(() => wc.elementos.length) === 2,
   'Sus EMP se interpretan solos del texto antiguo', await page.evaluate(() => JSON.stringify(wc.elementos)));
 log(await page.evaluate(() => wc.vehiculos[0].placas) === 'MZH910', 'Y su placa se corrige a mayúsculas al abrirlo');
-await page.evaluate(() => { ws = 1; renderWiz(); });
-await page.waitForTimeout(200);
+await irA('Lugar');
 log(await page.inputValue('#w-dir__num') === '51' && await page.inputValue('#w-dir__cruce') === '42',
   'Su dirección antigua se lee en el widget nuevo sin perder el dato');
 const xmlViejo = await docXmlDe(viejo, 'CARTA', 'legado');
@@ -644,6 +656,7 @@ await page.evaluate(() => startWizard('URI'));
 await page.waitForTimeout(250);
 const pasosG = await page.evaluate(() => getWizConfig().steps);
 log(pasosG.length === 9, 'El wizard de flagrancia tiene 9 pasos', pasosG.join(' · '));
+await irA('Caso');
 await page.fill('#w-nunc', '0500160002062026');
 await page.evaluate(() => {
   const f = document.querySelectorAll('#w-conds [data-fila]')[0];
@@ -651,8 +664,13 @@ await page.evaluate(() => {
   f.querySelector('[data-c="art"]').value = 'Art. 239';
 });
 // Se recorre con el botón «Siguiente», como lo haría el funcionario.
+/* ⚠️ Se lee el paso ACTUAL en cada vuelta en vez de dar por hecho que el
+   índice del bucle es `ws`: desde 2026-08-28 el recorrido arranca en el paso
+   «Caso» (el lugar ya quedó diligenciado) y suponerlo llenaba los EMP en la
+   pantalla de vehículos. */
 for (let i = 0; i < 8; i++) {
-  if (pasosG[i] === 'Capturados') {
+  const pasoAct = await page.evaluate(() => getWizConfig().steps[ws]);
+  if (pasoAct === 'Capturados') {
     await page.evaluate(() => addMultiPerson('capturados', true));
     await page.waitForTimeout(200);
     await page.evaluate(() => {
@@ -666,7 +684,7 @@ for (let i = 0; i < 8; i++) {
     });
     await page.waitForTimeout(250);
   }
-  if (pasosG[i] === 'EMP y EF') {
+  if (pasoAct === 'EMP y EF') {
     await page.evaluate(() => { lcEmpAgregar(); });
     await page.waitForTimeout(150);
     await page.evaluate(() => {

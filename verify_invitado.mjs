@@ -191,7 +191,12 @@ log(/quedó bajo custodia en Estacion de Policia Invitado/.test(contenidoOJ.text
 await page.evaluate(() => go('nueva'));
 await page.click('button[onclick="startWizard(\'URI\')"]');
 await page.waitForTimeout(250);
-log(await page.isVisible('#w-nunc'), 'El invitado también tiene el formulario de flagrancia');
+// El lugar de los hechos abre ahora el formulario (2026-08-28); los datos del
+// caso —con el NUNC— son el paso 2.
+log(await page.isVisible('#w-muni'), 'El invitado también tiene el formulario de flagrancia');
+await page.evaluate(() => wizGoto(getWizConfig().steps.indexOf('Caso')));
+await page.waitForTimeout(250);
+log(await page.isVisible('#w-nunc'), 'Y llega a los datos del caso, con su NUNC');
 // Se arma el caso por API para no repetir los 8 pasos del wizard de flagrancia:
 // lo que se comprueba aquí es que en invitado el FPJ-5 se genera igual.
 const flag = await page.evaluate(async () => {
