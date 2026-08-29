@@ -80,9 +80,20 @@ log(reqPaso1.etiquetas.some(e => /Primer nombre/.test(e)) &&
     reqPaso1.etiquetas.some(e => /Número de documento/.test(e)),
   'Son exactamente los que bloquean el documento (V08, V09)', reqPaso1.etiquetas.join(' · '));
 
-const avisoPaso = await page.textContent('#wz-prog');
-log(/dato.*obligatorio.*sin diligenciar en este paso/i.test(avisoPaso),
-  'La barra de progreso dice cuántos obligatorios faltan en el paso actual');
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 3, 4
+   y 6): la BARRA de aviso —«N datos obligatorios sin diligenciar en este paso —
+   van marcados con *»— se retiró. Decía en un párrafo, y en todos los pasos, lo
+   que dicen a la vez y sin ocupar renglón las dos señales que sí se quedan: el
+   punto del progreso en rojo (con la cuenta en su atributo title) y el asterisco
+   del campo. Lo que este check protege es esa señal, y ahora se mide sobre ella. */
+const avisoPaso = await page.evaluate(() => {
+  const p = document.getElementById('wz-prog');
+  const rojo = p.querySelector('.wd.falta');
+  return { barra: !!p.querySelector('.wz-falta, .wz-ok'),
+           rojo: !!rojo, titulo: rojo ? rojo.getAttribute('title') : '' };
+});
+log(!avisoPaso.barra && avisoPaso.rojo && /dato.*obligatorio.*pendiente/i.test(avisoPaso.titulo),
+  'El progreso marca en rojo el paso con obligatorios pendientes y dice cuántos', avisoPaso.titulo);
 
 /* ─────────── 2. Los puntos del progreso son botones ─────────── */
 const dots = await page.evaluate(() => {

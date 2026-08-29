@@ -137,14 +137,21 @@ const s7 = await page.evaluate(() => ({
   docs: getComputedStyle(document.getElementById('exp-docs')).display,
   cont: getComputedStyle(document.getElementById('exp-contenido')).display,
   tarjetas: [...document.querySelectorAll('#exp-docs .type-card .tbt')].map(e => e.textContent.trim()),
-  plazo: (document.querySelector('#exp-estado .oj-alert b') || {}).textContent
+  estadoTxt: document.getElementById('exp-estado').textContent
 }));
-log(s7.titulo === 'Expediente' && s7.estado !== 'none' && s7.docs !== 'none' && s7.cont !== 'none',
-  '[7] El expediente pinta estado, documentos y contenido', s7.titulo);
+/* ⚠️ Expectativa actualizada el 2026-08-28 (obs. 2): el bloque de ESTADO ya no
+   se pinta en una captura corriente. Sus dos avisos —el plazo de 36 horas y
+   «faltan datos»— se retiraron por ruido: el expediente se consulta tambien
+   dias despues, cuando el procedimiento termino y el registro solo se archiva.
+   El plazo sigue vivo donde se decide algo con el (la revision del wizard de
+   orden judicial) y se imprime en el oficio. */
+log(s7.titulo === 'Expediente' && s7.docs !== 'none' && s7.cont !== 'none',
+  '[7] El expediente pinta documentos y contenido', s7.titulo);
 const s7reg = await page.evaluate(() => lcEstadoDocs(DB.getCases()[0]).map(d => d.lbl));
 log(s7.tarjetas.length === s7reg.length && s7reg.every(l => s7.tarjetas.includes(l)),
   '[7] Todo documento del registro sale como tarjeta agrupada', JSON.stringify(s7.tarjetas));
-log(/36 horas|vencido|demostraci/i.test(s7.plazo || ''), '[7] Y muestra el plazo del art. 28 C.P.', s7.plazo);
+log(s7.estado === 'none' && !/36 horas|Plazo vencido|Faltan datos/i.test(s7.estadoTxt),
+  '[7] Y ya no pinta el aviso del plazo ni el de datos que faltan', s7.estado);
 
 // ── [8] El estado usa los MISMOS validadores que bloquean al generar ──
 const s8 = await page.evaluate(async () => {
@@ -154,11 +161,16 @@ const s8 = await page.evaluate(async () => {
   await DB.saveCase(c);
   renderExpediente(DB.getCase(_dosCasoId));
   const conFalta = document.querySelector('#exp-docs .exp-st.falta') !== null;
-  const texto = document.getElementById('exp-estado').textContent;
+  /* ⚠️ El dato que falta se nombra en LA TARJETA del documento, no en un bloque
+     de Estado aparte: ese bloque se retiro el 2026-08-28 (obs. 2) porque repetia
+     en cuatro renglones lo que cada tarjeta ya dice en su linea. Aqui se mide
+     sobre `lcEstadoDocs`, que es la fuente de las dos cosas. */
+  const nombraNunc = lcEstadoDocs(DB.getCase(_dosCasoId))
+    .some(d => d.falta.some(f => /NUNC/.test(f)));
   c.nunc = nuncBueno; await DB.saveCase(c);
   renderExpediente(DB.getCase(_dosCasoId));
   const sinFalta = document.querySelector('#exp-docs .exp-st.falta') === null;
-  return { conFalta, sinFalta, nombraNunc: /NUNC/.test(texto) };
+  return { conFalta, sinFalta, nombraNunc };
 });
 log(s8.conFalta && s8.nombraNunc && s8.sinFalta,
   '[8] Con NUNC invalido avisa y nombra el dato; corregido, desaparece el aviso');

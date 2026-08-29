@@ -60,6 +60,9 @@ const PID = await page.evaluate(async () => {
     { id: 'p2', grado: 'Patrullero', nombre: 'JUAN PEREZ', cedula: '222', cargo: '', entidad: '', correo: '' }
   ];
   c.perfilActivo = 'p1';
+  /* ⚠️ 2026-08-28 (obs. 12): «Conocieron el caso» se DERIVA del perfil activo y
+     su companero de patrulla, que es donde el usuario ya lo tiene registrado. */
+  c.perfiles[0].companero = { grado: 'Patrullero', nombre: 'JUAN PEREZ', cedula: '222', cargo: '' };
   c.conocieronFuncionarios = [{ pid: 'p1', nom: 'SI NELSON DAVID GOMEZ' }, { pid: 'p2', nom: 'PT JUAN PEREZ' }];
   c.dosVerde3 = { pid: 'p1', nom: 'SI NELSON DAVID GOMEZ' };
   c.dosDiamante3 = 'Teniente Laura Gómez Ríos';
@@ -79,8 +82,12 @@ console.log('\n── I · La configuración guarda REFERENCIAS y las resuelve �
   log(r.v3 === 'SI NELSON DAVID GOMEZ', 'VERDE 3 por referencia se resuelve igual', r.v3);
   log(r.d3 === 'Teniente Laura Gómez Ríos', 'Y el texto libre se conserva tal cual', r.d3);
 
+  /* ⚠️ El respaldo legado se lee cuando el equipo NO tiene ningún perfil
+     registrado, que es el único caso en que puede hacer falta: desde 2026-08-28
+     la lista se DERIVA del perfil activo y su compañero (obs. 12). */
   const legado = await page.evaluate(() => {
     const c = JSON.parse(JSON.stringify(DB.getConfig()));
+    c.perfiles = []; c.perfilActivo = null;
     c.conocieronFuncionarios = ['SI Nelson David', 'PT Juan Pérez'];
     return getConocieronList(c);
   });
@@ -176,55 +183,73 @@ console.log('\n── V · Nada se migra a la fuerza ──\n');
 
 console.log('\n── VI · La pantalla de Ajustes ──\n');
 {
+  /* ⚠️ SECCIÓN REESCRITA el 2026-08-28 (Mejora 6, 2.º documento, obs. 11 y 12).
+     Lo que medía —el selector de perfiles de cada fila de «Conocieron el caso» y
+     el mismo control para VERDE 3 y DIAMANTE 3— ya no existe:
+       · «Conocieron el caso» dejó de ser una lista que diligenciar. Son el
+         titular del perfil y su compañero de patrulla, que ya están registrados
+         en Perfil: pedirlos otra vez era la tercera copia del mismo dato.
+       · VERDE 3 y DIAMANTE 3 volvieron a ser un campo de texto. Son oficiales
+         del MANDO, no funcionarios de este equipo, así que el selector nunca
+         tenía un perfil que ofrecer.
+     Lo que este bloque protege sigue siendo lo mismo y por eso no baja de cinco
+     comprobaciones: que la pantalla enseñe el dato RESUELTO en vez de esconderlo,
+     y que guardar Ajustes no pierda ni pise nada. */
   await page.evaluate(() => go('ajustes'));
   await page.waitForTimeout(800);
-  const ui = await page.evaluate(() => {
-    const filas = document.querySelectorAll('#aj-con-list .aj-con-row');
-    const sel = filas.length ? filas[0].querySelector('.aj-con-sel') : null;
-    return {
-      filas: filas.length,
-      opciones: sel ? [...sel.options].map(o => o.text) : [],
-      elegido: sel ? sel.value : null,
-      inputOculto: filas.length ? filas[0].querySelector('.aj-con-inp').hidden : null,
-      v3: !!document.getElementById('aj-verde3-box'),
-      d3: !!document.getElementById('aj-diamante3-box')
-    };
-  });
-  log(ui.filas === 2, 'Las filas de «Conocieron el caso» se pintan', ui.filas + ' filas');
-  log(ui.opciones.some(o => /NELSON/.test(o)) && ui.opciones.some(o => /Otro/.test(o)),
-    'Cada fila ofrece los perfiles registrados y «Otro»', ui.opciones.join(' | '));
-  log(ui.elegido === 'p1', 'Con el perfil ya seleccionado', ui.elegido);
-  log(ui.inputOculto === true, '  …y el campo de texto oculto mientras haya perfil elegido', 'sin ruido');
-  log(ui.v3 && ui.d3, 'VERDE 3 y DIAMANTE 3 tienen el mismo control', '#aj-verde3-box · #aj-diamante3-box');
+  const ui = await page.evaluate(() => ({
+    sinLista: !document.getElementById('aj-con-list'),
+    eco: (document.getElementById('aj-con-auto') || {}).textContent || '',
+    v3: (document.getElementById('aj-verde3') || {}).value,
+    d3: (document.getElementById('aj-diamante3') || {}).value,
+    esTexto: !document.querySelector('#screen-ajustes select.aj-con-sel')
+  }));
+  log(ui.sinLista, 'No hay lista que diligenciar: los dos salen de Perfil', 'sin #aj-con-list');
+  log(/NELSON DAVID GOMEZ/.test(ui.eco) && /JUAN PEREZ/.test(ui.eco),
+    'La pantalla enseña quiénes son, resueltos, en vez de esconderlo', ui.eco.slice(0, 72));
+  log(/IT NELSON DAVID GOMEZ/.test(ui.eco),
+    '  …con el grado vivo del perfil, que es lo que se propondrá en la próxima captura');
+  log(ui.esTexto, 'VERDE 3 y DIAMANTE 3 son un campo de texto', '#aj-verde3 · #aj-diamante3');
+  /* ⚠️ Sale 'IT': la referencia guardada por la versión anterior estaba VIVA y
+     el perfil ascendió en la sección III. Es lo correcto — VERDE 3 es un dato de
+     configuración, no la foto de un caso. Al guardar queda ya como texto. */
+  log(ui.v3 === 'IT NELSON DAVID GOMEZ' && ui.d3 === 'Teniente Laura Gómez Ríos',
+    '  …y una referencia guardada por la versión anterior se ve resuelta', ui.v3 + ' | ' + ui.d3);
 
   /* Guardar desde la pantalla no puede perder la configuración. */
   await page.evaluate(() => saveAjustes());
   await page.waitForTimeout(700);
   const tras = await page.evaluate(() => {
     const c = DB.getConfig();
-    return { n: (c.conocieronFuncionarios || []).length, v3: c.dosVerde3, lista: getConocieronList(c), legado: c.conocieronCaso };
+    return { lista: getConocieronList(c), v3: c.dosVerde3, legado: c.conocieronCaso,
+             respaldo: (c.conocieronFuncionarios || []).length };
   });
-  log(tras.n === 2 && tras.lista.length === 2,
-    'Guardar Ajustes conserva las dos referencias', JSON.stringify(tras.lista));
-  log(tras.v3 && tras.v3.pid === 'p1', 'Y VERDE 3 sigue siendo una referencia viva', JSON.stringify(tras.v3));
+  log(tras.lista.length === 2 && /IT NELSON/.test(tras.lista[0]),
+    'Guardar Ajustes conserva los dos, derivados del perfil', JSON.stringify(tras.lista));
+  log(tras.v3 === 'IT NELSON DAVID GOMEZ',
+    'Y VERDE 3 queda ya como texto, tal como se ve', JSON.stringify(tras.v3));
   log(/IT NELSON/.test(tras.legado || ''),
     '⚠️ El campo legado en texto se mantiene sincronizado, para configuraciones exportadas', tras.legado);
 }
 
-console.log('\n── VII · Texto libre para quien no tiene perfil ──\n');
+console.log('\n── VII · Sin perfil registrado, lo guardado antes no se pierde ──\n');
 {
-  const r = await page.evaluate(async () => {
-    const c = DB.getConfig();
-    c.conocieronFuncionarios = [{ pid: 'p1', nom: 'x' }, 'IJ FUNCIONARIO DE OTRA UNIDAD'];
-    await DB.saveConfig(c);
-    return getConocieronList(DB.getConfig());
+  /* ⚠️ El respaldo NO desapareció: un equipo SIN ningún perfil registrado sigue
+     leyendo `conocieronFuncionarios`, y ese es el único caso en que se lee. Sin
+     esta caída, una configuración anterior se quedaría muda. */
+  const r = await page.evaluate(() => {
+    const c = JSON.parse(JSON.stringify(DB.getConfig()));
+    c.perfiles = []; c.perfilActivo = null;
+    c.conocieronFuncionarios = [{ pid: 'p1', nom: 'SI ALGUIEN DE ANTES' }, 'IJ FUNCIONARIO DE OTRA UNIDAD'];
+    return getConocieronList(c);
   });
   log(r.length === 2 && r[1] === 'IJ FUNCIONARIO DE OTRA UNIDAD',
-    'Una referencia y un texto libre conviven en la misma lista', r.join(' / '));
+    'Una referencia y un texto libre conviven en el respaldo', r.join(' / '));
 
   /* Un perfil borrado no puede dejar la sección muda ni inventar un nombre. */
   const huerf = await page.evaluate(() => {
     const c = JSON.parse(JSON.stringify(DB.getConfig()));
+    c.perfiles = []; c.perfilActivo = null;
     c.conocieronFuncionarios = [{ pid: 'NO-EXISTE', nom: 'SI ALGUIEN QUE SE FUE' }, { pid: 'TAMPOCO' }];
     return getConocieronList(c);
   });

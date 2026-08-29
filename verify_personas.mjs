@@ -155,21 +155,23 @@ log(copiaViva, 'Copiar el dossier no se perdió: vive en el módulo del dossier'
 /* El documento oficial se abre desde el expediente, que es su casa. */
 await page.evaluate(() => { closeActionSheet(); abrirDossierCaso(DB.getCases()[0].id); });
 await page.waitForTimeout(500);
-await page.click('#exp-docs .type-card');
-await page.waitForTimeout(600);
-// El FPJ-5 no tiene formato que elegir (solo Word); la primera vez sí se pide
-// el tamaño de papel, que es del equipo y a partir de ahí queda recordado.
-log(await page.isVisible('#exp-papel-CARTA'), 'La acción del documento pide primero el tamaño de papel');
-log(!(await page.isVisible('#exp-fmt-PDF').catch(() => false)), 'Y no ofrece PDF para el formato de la Fiscalía');
-await page.click('#exp-papel-CARTA');
-/* Sin Web Share (todo escritorio) NO hay canal que elegir: el sheet de envío
-   enseñaría un único botón, «Descargar documento». Ahí se entrega directo — era
-   justo la duplicación que medía la auditoría entre «Enviar X» y «Descargar X».
-   Donde sí hay Web Share, el mismo ítem abre el sheet con los dos canales. */
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 1 y 9):
+   tocar el documento NO abre ningún diálogo. Los seis formatos tienen una sola
+   salida posible —el oficio de orden judicial era el último con dos y pasó a
+   solo Word— y el tamaño de papel dejó de preguntarse: es Carta fija. Preguntar
+   por una decisión que no existe es la ceremonia que esta auditoría vino a
+   quitar. Sin Web Share (todo escritorio) tampoco hay canal: se entrega.
+   ⚠️ Por eso el disparo va DENTRO del Promise.all: sin diálogo de por medio la
+   descarga sale enseguida y `waitForEvent` se engancharía tarde. */
 const [dlDoc] = await Promise.all([
-  page.waitForEvent('download', { timeout: 9000 }).catch(() => null),
-  page.click('#exp-go')
+  page.waitForEvent('download', { timeout: 12000 }).catch(() => null),
+  page.click('#exp-docs .type-card')
 ]);
+await page.waitForTimeout(600);
+log(!(await page.isVisible('#exp-go').catch(() => false)),
+  'La acción del documento no abre ningún diálogo: no hay nada que preguntar');
+log(await page.evaluate(() => lcPapelEfectivo('FPJ')) === 'CARTA',
+  'Y el formato de la Fiscalía sale en Word, en el tamaño que sus casillas admiten');
 await page.waitForTimeout(500);
 const sinCeremonia = await page.evaluate(() =>
   !document.getElementById('share-sheet').classList.contains('on'));

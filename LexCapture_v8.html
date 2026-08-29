@@ -67,6 +67,13 @@
   /* Informativo: reutiliza el azul que ya tiene el canal de correo — no se
      introduce un matiz nuevo en el sistema, solo se le da nombre semántico. */
   --info:#6FA9F2;    --info-bg:rgba(111,169,242,.12);
+  /* Verde fosforescente — pedido en campo para la marca «PREDETERMINADO» de un
+     despacho, que antes iba en el índigo del acento y se confundía con
+     cualquier otro distintivo. ⚠️ NO sustituye a --ok (que es el verde de
+     «correcto»): esto es una MARCA, no un estado, y por eso tiene tono propio.
+     En oscuro el neón es el texto; en claro es el fondo, con texto casi negro
+     —un neón sobre blanco no se lee—, así se ve fluorescente en los dos temas. */
+  --neon:#4CFF88;    --neon-bg:rgba(76,255,136,.14); --neon-bd:rgba(76,255,136,.45);
 
   /* — Superficies de estado. Antes cada componente resolvía «seleccionado» y
      «deshabilitado» por su cuenta; ahora tienen token, como --hover y --pressed. — */
@@ -145,6 +152,9 @@
   --danger:#C7222F;  --errB:rgba(199,34,47,.07);
   --warn:#A85A12;    --warn-bg:rgba(168,90,18,.10);
   --info:#1663C7;    --info-bg:rgba(22,99,199,.09);
+  /* En claro se invierte: el neón es el FONDO y el texto va casi negro. Un
+     #4CFF88 como texto sobre blanco da 1,4:1 — ilegible. Así medido: 7,9:1. */
+  --neon:#0B3D22;    --neon-bg:#4BE87E;              --neon-bd:#22C55E;
 
   --surface-selected:rgba(78,91,216,.10);
   --surface-disabled:rgba(24,28,38,.04);
@@ -593,12 +603,22 @@ body.guest{padding-top:38px}
 .muted{color:var(--text-2)}
 .small{font-size:13px}
 
-/* ═══ TÍTULOS DE SECCIÓN (formularios) ═══ */
+/* ═══ TÍTULOS DE SECCIÓN (formularios) ═══
+   ⚠️ Reportado en campo: «los títulos importantes como DIRECCIÓN Y CONTACTO
+   casi ni se notan en medio de tanto aviso». Era literal — el título iba a 11px
+   en --text-3, el MISMO color y casi el mismo cuerpo que los párrafos de ayuda
+   que lo rodeaban, así que la jerarquía estaba invertida: el aviso pesaba más
+   que el título. Ahora el título sube a --text-2, gana cuerpo y estrena una
+   barra de acento que lo separa del texto corrido sin ocupar un renglón más. */
 .st{
-  font-size:11px;line-height:15px;font-weight:650;color:var(--text-3);
-  text-transform:uppercase;letter-spacing:.07em;
-  margin:24px 0 12px;
-  display:flex;align-items:center;gap:6px;
+  font-size:12.5px;line-height:16px;font-weight:700;color:var(--text-2);
+  text-transform:uppercase;letter-spacing:.06em;
+  margin:26px 0 12px;
+  display:flex;align-items:center;gap:8px;
+}
+.st::before{
+  content:'';flex:0 0 auto;width:3px;height:13px;border-radius:2px;
+  background:var(--acc);
 }
 
 /* ═══ FORMULARIOS ═══ */
@@ -765,13 +785,9 @@ body.guest{padding-top:38px}
    rellenó y QUÉ se rellenó, en vez de encontrárselo escrito sin explicación. */
 .fi-auto{border-color:var(--ok)!important;background:var(--ok-bg)!important;transition:background .5s,border-color .5s}
 .fg-auto{font-size:11.5px;color:var(--ok);margin-top:4px}
-.wz-falta,.wz-ok{
-  display:block;margin-top:6px;padding:7px 10px;
-  border-radius:var(--radius-sm);font-size:12px;line-height:1.4;color:var(--text)
-}
-.wz-falta{background:var(--errB);border:1px solid var(--danger)}
-.wz-falta b{color:var(--danger)}
-.wz-ok{background:var(--ok-bg);border:1px solid var(--ok)}
+/* ⚠️ .wz-falta y .wz-ok se retiraron con la barra de aviso del progreso: el
+   punto rojo del paso y el asterisco del campo dicen lo mismo sin ocupar un
+   renglón. Ver renderWiz(). */
 /* Borrador sin terminar — tarjeta de recuperación en la pantalla Capturas. */
 .draft-card{
   display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 14px;
@@ -1182,10 +1198,13 @@ body.guest{padding-top:38px}
 .tabs[hidden]{display:none}
 .topbar-btn[hidden]{display:none}
 .desp-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:6px}
+/* ⚠️ Verde fosforescente, no el índigo del acento: es la marca que hay que
+   encontrar de un vistazo entre diez tarjetas, y en el acento se confundía con
+   la insignia del tipo de despacho, que va justo al lado. */
 .desp-def{
-  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;
+  display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;
   padding:2px 7px;border-radius:6px;text-transform:uppercase;
-  background:var(--accG);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 32%,transparent);
+  background:var(--neon-bg);color:var(--neon);border:1px solid var(--neon-bd);
 }
 .desp-nunc{
   display:flex;align-items:center;gap:7px;margin-top:8px;
@@ -1231,32 +1250,12 @@ body.guest{padding-top:38px}
 .aj-sec-lbl svg{width:17px;height:17px;stroke-width:1.8;color:var(--text-3)}
 .aj-sec-arr{font-size:12px;color:var(--text-3)}
 .aj-sec-body{padding-bottom:4px}
+/* Nota de un renglón. ⚠️ Sustituye a los párrafos de cinco y seis renglones que
+   llenaban esta pantalla: reportado en campo —«esa clase de avisos son
+   demasiado largos y no se ven bien desde el celular»—. La regla que quedó es
+   una sola frase, y solo cuando dice algo que el campo no dice ya. */
+.aj-nota{font-size:11.5px;line-height:1.45;color:var(--text-3);margin:-4px 0 12px}
 
-/* ═══ PERFILES REGIONALES ═══ */
-.rp-card{
-  display:flex;align-items:flex-start;gap:12px;padding:14px;
-  background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
-  margin-bottom:10px;box-shadow:var(--sh-1);
-}
-.rp-card.activo{border-color:color-mix(in srgb,var(--acc) 45%,transparent);background:color-mix(in srgb,var(--acc) 5%,var(--surface-1))}
-.rp-body{flex:1;min-width:0}
-.rp-name{font-size:14px;font-weight:650;color:var(--text)}
-.rp-sub{font-size:12px;color:var(--text-2);margin-top:2px}
-.rp-badge{
-  display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
-  padding:2px 8px;border-radius:6px;
-  background:var(--accG);color:var(--acc);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
-  margin-top:6px;
-}
-.rp-acts{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
-.rp-btn{
-  padding:6px 10px;min-height:32px;border-radius:8px;
-  border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
-  font-size:12px;cursor:pointer;min-width:64px;text-align:center;font:inherit;font-weight:550;
-  transition:all var(--d1) var(--ease);
-}
-.rp-btn.act{background:var(--accG);border-color:color-mix(in srgb,var(--acc) 30%,transparent);color:var(--acc)}
-.rp-btn:active{border-color:var(--acc)}
 
 /* ═══ SELECTOR DE TEMA (segmented control) ═══ */
 /* Pista bajo un campo de grado: enseña la abreviatura que se va a derivar. */
@@ -1361,21 +1360,8 @@ body.guest{padding-top:38px}
 }
 .oj-auto svg{width:14px;height:14px;flex:0 0 auto;margin-top:2px;color:var(--ok)}
 
-/* Estado vacío del capturado: una silueta, una frase y las dos salidas. Lo que
-   había antes era el formulario entero desplegado — de ahí la sensación de
-   «rellenar un Word». */
-.oj-persona.vacia{
-  background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius);
-  padding:26px 18px;text-align:center;
-}
-.oj-persona-ic{
-  width:44px;height:44px;margin:0 auto 10px;border-radius:999px;
-  background:var(--surface-3);color:var(--text-3);
-  display:flex;align-items:center;justify-content:center;
-}
-.oj-persona-ic svg{width:22px;height:22px}
-.oj-persona.vacia p{margin:0;font-size:14px;font-weight:600;color:var(--text)}
-.oj-persona.vacia small{display:block;margin-top:5px;font-size:12px;line-height:1.45;color:var(--text-3)}
+/* ⚠️ .oj-persona se retiró (2026-08-28, obs. 3): el estado vacío del capturado
+   repetía en una tarjeta lo que dicen los dos botones que van justo debajo. */
 
 /* Estado del expediente. Antes era una lista abierta de hasta diez faltas con
    su botón: cuatro pantallas de scroll por delante de la única decisión del
@@ -1852,6 +1838,38 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </section>
 
   <!-- ====== AJUSTES ====== -->
+  <!-- ══════════════════════════════════════════════════════════════════════
+       AJUSTES — auditoría y consolidación (2026-08-28, obs. 17)
+       De DIEZ secciones a CINCO. El criterio no fue «acortar»: fue que cada
+       sección responda UNA pregunta y que ningún dato se pida dos veces.
+
+         · Apariencia            (sin cambios)
+         · Mi unidad             = Estación + membrete del oficio + valores por
+                                   defecto del lugar. Los tres pedían atributos
+                                   de la MISMA unidad en tres pantallas: el
+                                   nombre salía en la línea 4 del membrete, en
+                                   el dossier y en el bloque de contacto, y la
+                                   ciudad encabezaba además la fecha del oficio.
+         · Dossier               = lo que solo usa el mensaje de WhatsApp.
+         · Copia de seguridad    = Config + Datos. Las dos eran «exportar e
+                                   importar un .json»; separarlas obligaba a
+                                   recordar en cuál estaba cada botón.
+         · Info                  (sin cambios)
+
+       Se fueron enteras, por instrucción del usuario:
+         · Documentos            → el papel ya no se elige (ver LC_PAPEL_FIJO).
+         · Perfiles Regionales   → obs. 16.
+         · Fiscalía destinataria → obs. 14: sale del registro de Despachos, como
+                                   el destino del numeral 1 del FPJ-5.
+         · Jornada judicial hábil→ obs. 14. El motor conserva 08:00–17:00.
+         · Conocieron el caso    → obs. 12: son el perfil y su compañero.
+
+       ⚠️ NINGUNA clave de configuración se borra por esto. Las que dejaron de
+       tener campo se siguen leyendo donde ya se leían (respaldo de una config
+       exportada antes); las que quedaron sin lector ni escritor están en
+       _CFG_MUERTAS y se limpian al leer, que es el patrón que este archivo ya
+       usaba.
+  ══════════════════════════════════════════════════════════════════════════ -->
   <section id="screen-ajustes" class="screen">
     <header class="topbar">
       <div class="ttl">
@@ -1861,7 +1879,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
 
-      <!-- 0. Apariencia -->
+      <!-- 1. Apariencia -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('apariencia-sec')">
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>Apariencia</span><span class="aj-sec-arr" id="aj-arr-apariencia-sec">▼</span>
@@ -1872,209 +1890,121 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
             <button type="button" id="th-light" aria-pressed="false" onclick="setTheme('light')">Claro</button>
             <button type="button" id="th-system" aria-pressed="false" onclick="setTheme('system')">Sistema</button>
           </div>
-          <p id="th-nota" style="font-size:.72rem;color:var(--txM);margin-top:8px">El cambio se aplica de inmediato y se recuerda en este dispositivo.</p>
+          <p id="th-nota" class="aj-nota">Se aplica al instante.</p>
         </div>
       </div>
 
-      <!-- 0b. Documentos — el papel es del EQUIPO, se elige una vez -->
+      <!-- 2. Mi unidad — quién eres y dónde trabajas. Encabeza los tres documentos. -->
       <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('docs-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>Documentos</span><span class="aj-sec-arr" id="aj-arr-docs-sec">▶</span>
+        <div class="aj-sec-hdr" onclick="toggleAjSec('unidad-sec')">
+          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Mi unidad</span><span class="aj-sec-arr" id="aj-arr-unidad-sec">▼</span>
         </div>
-        <div class="aj-sec-body" id="aj-body-docs-sec" style="display:none;padding-top:12px">
-          <label class="fl">Tamaño del papel</label>
-          <div class="exp-grid" id="aj-papel-grid"></div>
-          <p style="font-size:.72rem;color:var(--txM);margin-top:-6px">El papel de tu impresora. Queda escrito dentro del documento, así que se elige al generarlo — no al imprimir. Se aplica de inmediato y se recuerda.</p>
-          <p style="font-size:.72rem;color:var(--txM);margin-top:10px">El FPJ-5 solo admite Carta y Oficio: sus casillas están calibradas a 8,5" de ancho. Si eliges otro tamaño, ese formato saldrá en Carta.</p>
-        </div>
-      </div>
+        <div class="aj-sec-body" id="aj-body-unidad-sec" style="padding-top:12px">
 
-      <!-- 1. Estación -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('estacion-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Estación</span><span class="aj-sec-arr" id="aj-arr-estacion-sec">▼</span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-estacion-sec" style="padding-top:12px">
-          <div class="fg"><label class="fl">Rango del comandante</label><input class="fi" id="aj-rango" placeholder="CORONEL"></div>
-          <div class="fg"><label class="fl">No. del distrito (en texto)</label><input class="fi" id="aj-distrito" placeholder="TRES"></div>
-          <!-- ⚠️ UN SOLO campo para el nombre de la unidad. Antes había tres: este,
-               «Nombre para el oficio» (aquí mismo) y «Línea 4 — estación o
-               dependencia» en la sección del oficio. Los tres imprimían el mismo
-               dato en tres documentos, y la herencia solo corría en un sentido.
-               Ver lcUnidadNombre(). -->
-          <div class="fg"><label class="fl">Nombre de la unidad</label><input class="fi" id="aj-estacion" placeholder="Escribe solo el nombre: CANDELARIA" oninput="renderAjDerivados()"></div>
-          <p class="oj-hint">Se usa en <b>los tres documentos</b>: el encabezado del dossier, la <b>línea 4 del membrete</b> del oficio de orden judicial y su bloque de contacto. Escribe solo el nombre —<i>CANDELARIA</i>— y la app completa <i>Estación de Policía CANDELARIA</i>. Si tu unidad no es una estación (<i>SECCIONAL DE INVESTIGACIÓN CRIMINAL</i>, <i>CAI Parque Bolívar</i>, <i>DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</i>…), escríbela completa y se respeta tal cual.</p>
-          <div class="st">Dirección y contacto</div>
-          <p class="oj-hint">Dónde queda tu unidad. Se piden <b>una sola vez</b> aquí y bajan solos a los documentos: el oficio de orden judicial los imprime dos veces —en la constancia con que cierra la narración y en el bloque de contacto del final—, así: <i>Calle 48 # 55–50, barrio La Candelaria, Medellín</i>. Si un procedimiento termina en otra unidad, se cambian en el último paso del formulario.</p>
-          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="Ej: Calle 48 # 55–50"></div>
+          <div class="st" style="margin-top:0">Identificación</div>
           <div class="fr">
-            <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="Ej: La Candelaria"></div>
-            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Ej: Medellín" oninput="renderAjDerivados()"></div>
+            <div class="fg"><label class="fl">Rango del comandante</label><input class="fi" id="aj-rango" placeholder="CORONEL"></div>
+            <div class="fg"><label class="fl">No. del distrito (en texto)</label><input class="fi" id="aj-distrito" placeholder="TRES"></div>
           </div>
-          <p class="oj-hint">La ciudad es además la que <b>encabeza la fecha</b> del oficio de orden judicial: no se vuelve a pedir en su sección.</p>
+          <!-- ⚠️ UN SOLO campo para el nombre de la unidad. Llegó a pedirse tres
+               veces (aquí, «Nombre para el oficio» y «Línea 4 del membrete»).
+               Ver lcUnidadNombre(). -->
+          <div class="fg"><label class="fl">Nombre de la unidad</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
+          <p class="aj-nota">Escribe solo el nombre y la app completa «Estación de Policía …». Si es otra dependencia, escríbela completa.</p>
+
+          <div class="st">Dirección y contacto</div>
+          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="CL 48 # 55 - 50"></div>
           <div class="fr">
-            <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="Ej: 3126543210"></div>
+            <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="La Candelaria"></div>
+            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="3126543210"></div>
             <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
           </div>
-          <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-web" placeholder="Última línea del bloque de contacto"></div>
+          <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-web" placeholder="Sitio web"></div>
+
+          <div class="st">Encabezado del oficio</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Línea 1 — ministerio o sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece"></div>
+            <div class="fg"><label class="fl">Línea 2 — institución</label><input class="fi" id="aj-oj-inst" placeholder="Tu institución"></div>
+          </div>
+          <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento o dirección"></div>
+          <p class="aj-nota">La línea 4 y la ciudad de la fecha salen del nombre y la ciudad de arriba.</p>
+          <div class="fg"><label class="fl">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
+          <p class="aj-nota">Marcadores: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
+
+          <div class="st">Valores por defecto del lugar</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Localidad</label><input class="fi mono" id="aj-localidad" placeholder="10" inputmode="numeric" maxlength="4"></div>
+            <div class="fg"><label class="fl">Zona</label><select class="fs" id="aj-zona"><option value="Urbana">Urbana</option><option value="Rural">Rural</option></select></div>
+          </div>
+          <div class="fg"><label class="fl">Vereda</label><input class="fi" id="aj-vereda" placeholder="N/A"></div>
         </div>
       </div>
 
-      <!-- 2. Dossier -->
+      <!-- 3. Dossier — lo que solo usa el mensaje de WhatsApp -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('dossier-sec')">
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Dossier</span><span class="aj-sec-arr" id="aj-arr-dossier-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-dossier-sec" style="display:none;padding-top:12px">
-          <!-- VERDE 3 y DIAMANTE 3 son funcionarios, igual que «Conocieron el caso»:
-               se eligen de los perfiles registrados y solo se teclean si no lo están. -->
-          <div class="fg"><label class="fl">VERDE 3 — oficial</label><div id="aj-verde3-box"></div></div>
-          <div class="fg"><label class="fl">DIAMANTE 3 — oficial</label><div id="aj-diamante3-box"></div></div>
+          <!-- ⚠️ Obs. 11: VERDE 3 y DIAMANTE 3 vuelven a ser campos de texto. El
+               selector de perfiles que se les había puesto nunca se pidió: son
+               oficiales del mando, no funcionarios de este equipo, así que
+               nunca hay un perfil que elegir y el selector solo estorbaba. -->
           <div class="fr">
-            <div class="fg"><label class="fl">Patrulla</label><input class="fi" id="aj-patrulla" placeholder="Ej: 32"></div>
-            <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-unidad" placeholder="Ej: CAI Parque Bolívar"></div>
-          </div>
-          <div class="fg">
-            <label class="fl">Conocieron el caso — funcionarios</label>
-            <div id="aj-con-list"></div>
-            <button class="btn bs bsm" onclick="addConocieronRow()" style="margin-top:8px">+ Agregar funcionario</button>
+            <div class="fg"><label class="fl">VERDE 3 — oficial</label><input class="fi" id="aj-verde3" placeholder="TC Jin Eduardo Moreno"></div>
+            <div class="fg"><label class="fl">DIAMANTE 3 — oficial</label><input class="fi" id="aj-diamante3" placeholder="TC William Quintero"></div>
           </div>
           <div class="fr">
-            <p class="oj-auto" id="aj-dest-auto"></p>
+            <div class="fg"><label class="fl">Patrulla</label><input class="fi" id="aj-patrulla" placeholder="32"></div>
+            <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-unidad" placeholder="CAI Parque Bolívar"></div>
           </div>
+          <!-- ⚠️ Obs. 12: «Conocieron el caso» ya no se pide. Son el titular del
+               perfil y su compañero de patrulla, que ya están registrados en
+               Perfil; se ordenan por rango (getConocieronList). Para nombrar a
+               otro funcionario se edita el texto en la pantalla del dossier. -->
+          <p class="aj-nota" id="aj-con-auto"></p>
         </div>
       </div>
 
-      <!-- 2b. Oficio de orden judicial -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('oj-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7h14M7 21h10M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z"/></svg>Oficio de orden judicial</span><span class="aj-sec-arr" id="aj-arr-oj-sec">▶</span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-oj-sec" style="display:none;padding-top:12px">
-          <div class="st" style="margin-top:0">Membrete</div>
-          <p class="oj-hint">Las cuatro líneas del encabezado del oficio. Se imprimen siempre con esta jerarquía y no se editan dentro del documento: se toman de aquí.</p>
-          <div class="fr">
-            <div class="fg"><label class="fl">Línea 1 — ministerio o sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece la unidad"></div>
-            <div class="fg"><label class="fl">Línea 2 — institución</label><input class="fi" id="aj-oj-inst" placeholder="Nombre de tu institución"></div>
-          </div>
-          <div class="fg"><label class="fl">Línea 3 — unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento de policía, dirección o especialidad"></div>
-          <p class="oj-hint">Ej: METROPOLITANA DEL VALLE DE ABURRÁ · METROPOLITANA DE BOGOTÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE INVESTIGACIÓN CRIMINAL E INTERPOL · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES</p>
-          <!-- ⚠️ La línea 4 NO se pide aquí: es el nombre de la unidad, que ya se
-               escribe en Ajustes → Estación y lo imprimen también el dossier y el
-               bloque de contacto de este mismo oficio. Ver lcUnidadNombre(). -->
-          <div class="fg"><label class="fl">Línea 4 — estación o dependencia</label><div class="oj-auto" id="aj-oj-dep-eco">Se toma de <b>Ajustes → Estación → Nombre de la unidad</b></div></div>
-          <p class="oj-hint">Si en un procedimiento concreto el membrete debe decir otra cosa, se cambia en el último paso del formulario de la captura.</p>
-          <!-- ⚠️ Plegado: el escudo del formato viene embebido y se pone solo, así que
-               esto NO es un paso de configuración — es el reemplazo opcional para una
-               unidad que use otro. `renderLogoOJ` lo abre solo si hay uno propio
-               cargado, para que se vea cuál está en uso y se pueda deshacer. -->
-          <details class="oj-mas" id="aj-oj-logo-det"><summary>Escudo del membrete <small>— viene cargado, no hay que hacer nada</small></summary>
-            <div id="aj-oj-logo-prev"></div>
-            <p class="oj-hint">Se imprime a 1,9 cm a la izquierda de las cuatro líneas. Cámbialo solo si tu unidad usa otro escudo.</p>
-            <div class="fg">
-              <input type="file" accept="image/png,image/jpeg,image/gif" id="aj-oj-logo-file" class="fi" onchange="ajCargarLogoOJ(this)" style="padding:10px;cursor:pointer">
-            </div>
-          </details>
-          <!-- ⚠️ «Ciudad del oficio» tampoco se pide aquí: es la ciudad de la
-               unidad (Ajustes → Estación), que el oficio ya imprime en el bloque
-               de contacto. Ver lcUnidadCiudad(). -->
-          <div class="fg"><label class="fl">Ciudad que encabeza la fecha</label><div class="oj-auto" id="aj-oj-ciu-eco">Se toma de <b>Ajustes → Estación → Ciudad</b></div></div>
-          <div class="fg"><label class="fl">Asunto (parametrizable)</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
-          <p class="oj-hint">Marcadores disponibles: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
-          <div class="st">Lugar de custodia y bloque de contacto</div>
-          <p class="oj-hint">Se toman de <b>Ajustes → Estación</b>: nombre, dirección, barrio, ciudad, teléfono, correo y sitio web se piden una sola vez ahí y bajan solos a cada oficio. Si un procedimiento termina en otra unidad, se cambian en el último paso del formulario.</p>
-          <div class="st">Fiscalía destinataria</div>
-          <p class="oj-hint">Cuando el informe se remite a la <b>Fiscalía</b>, el oficio abre con estos tres renglones y no se vuelven a pedir en cada captura. Ej: <i>FISCALÍA URI CENTRO · Carrera 64C # 67-300, barrio Caribe · Medellín, Antioquia</i>. Si lo dejas vacío se usa el «Destino URI (Fiscalía)» del bloque de Dossier.</p>
-          <div class="fg"><label class="fl">Nombre de la fiscalía</label><input class="fi" id="aj-oj-fnom" placeholder="Ej: FISCALÍA URI CENTRO"></div>
-          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-oj-fdir" placeholder="Ej: Carrera 64C # 67-300, barrio Caribe"></div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-oj-fmun" list="dl-muni" placeholder="Ej: Medellín" oninput="lcGeoCompletar(this,'aj-oj-fdep')" onblur="lcGeoAprender(this,'aj-oj-fdep')"></div>
-            <div class="fg"><label class="fl">Departamento</label><input class="fi" id="aj-oj-fdep" placeholder="Se completa solo"></div>
-          </div>
-          <div class="st">Jornada judicial hábil</div>
-          <p class="oj-hint">Se usa para calcular si el juzgado está disponible dentro del término de 36 horas. Los festivos de Colombia se calculan solos.</p>
-          <div class="fr">
-            <div class="fg"><label class="fl">Desde</label><input type="time" class="fi" id="aj-oj-jini"></div>
-            <div class="fg"><label class="fl">Hasta</label><input type="time" class="fi" id="aj-oj-jfin"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Valores por defecto -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('defaults-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Valores por defecto</span><span class="aj-sec-arr" id="aj-arr-defaults-sec">▶</span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-defaults-sec" style="display:none;padding-top:12px">
-          <p class="oj-auto" id="aj-nunc-auto"></p>
-          <button class="btn bs bbl bsm" style="margin-bottom:14px" onclick="go('despachos')">Administrar mis despachos</button>
-          <div class="fr">
-            <div class="fg"><label class="fl">Localidad por defecto</label><input class="fi mono" id="aj-localidad" placeholder="10" inputmode="numeric" maxlength="4"></div>
-            <div class="fg"><label class="fl">Zona por defecto</label><select class="fs" id="aj-zona"><option value="Urbana">Urbana</option><option value="Rural">Rural</option></select></div>
-          </div>
-          <div class="fg"><label class="fl">Vereda por defecto</label><input class="fi" id="aj-vereda" placeholder="N/A"></div>
-        </div>
-      </div>
-
-      <!-- 4. Exportar / Importar config -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('expconf-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>Config (exportar/importar)</span><span class="aj-sec-arr" id="aj-arr-expconf-sec">▶</span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-expconf-sec" style="display:none;padding-top:12px">
-          <p style="font-size:.8rem;color:var(--txD);margin-bottom:12px">Guarda o restaura la configuración del sistema (ajustes, sin capturas).</p>
-          <div class="flx g8">
-            <button class="btn bs" onclick="exportarConfig()" style="flex:1">Exportar config</button>
-            <button class="btn bs" onclick="document.getElementById('imp-cfg').click()" style="flex:1">Importar config</button>
-          </div>
-          <input type="file" id="imp-cfg" accept=".json" style="display:none" onchange="importarConfig(event)">
-        </div>
-      </div>
-
-      <!-- 5. Datos (capturas) -->
+      <!-- 4. Copia de seguridad — config y capturas, que antes eran dos secciones -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('datos-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Datos</span><span class="aj-sec-arr" id="aj-arr-datos-sec">▶</span>
+          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Copia de seguridad</span><span class="aj-sec-arr" id="aj-arr-datos-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-datos-sec" style="display:none;padding-top:12px">
-          <p style="font-size:.8rem;color:var(--txD);margin-bottom:12px">Exporta o importa todas las capturas registradas.</p>
+          <div class="st" style="margin-top:0">Configuración</div>
+          <div class="flx g8">
+            <button class="btn bs" onclick="exportarConfig()" style="flex:1">Exportar</button>
+            <button class="btn bs" onclick="document.getElementById('imp-cfg').click()" style="flex:1">Importar</button>
+          </div>
+          <input type="file" id="imp-cfg" accept=".json" style="display:none" onchange="importarConfig(event)">
+          <div class="st">Capturas y personas</div>
           <div class="flx g8 mb8">
-            <button class="btn bs" onclick="exportarCapturas()" style="flex:1">Exportar capturas</button>
-            <button class="btn bs" onclick="document.getElementById('imp-cap').click()" style="flex:1">Importar capturas</button>
+            <button class="btn bs" onclick="exportarCapturas()" style="flex:1">Exportar</button>
+            <button class="btn bs" onclick="document.getElementById('imp-cap').click()" style="flex:1">Importar</button>
           </div>
           <input type="file" id="imp-cap" accept=".json" style="display:none" onchange="importarCapturas(event)">
+          <p class="aj-nota">El archivo de capturas sale sin cifrar: contiene datos sensibles.</p>
           <button class="btn bd bbl" onclick="limpiarDatos()" style="margin-top:4px">Limpiar todos los datos</button>
         </div>
       </div>
 
-      <!-- 6. Info -->
+      <!-- 5. Info -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('info-sec')">
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Info</span><span class="aj-sec-arr" id="aj-arr-info-sec">▶</span>
         </div>
         <div class="aj-sec-body" id="aj-body-info-sec" style="display:none;padding-top:12px">
-          <p style="font-size:.78rem;color:var(--txD);margin-top:4px">Aplicación de gestión de capturas</p>
-          <p style="font-size:.75rem;color:var(--txM);margin-top:4px">Auditoría: 2026-06-16 · Release: 2026-07-14</p>
-          <p style="font-size:.75rem;color:var(--txM);margin-top:2px">100% offline · Sin servidor · localStorage AES-256</p>
-        </div>
-      </div>
-
-      <!-- 7. Perfiles Regionales -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('regionales-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/></svg>Perfiles Regionales</span><span class="aj-sec-arr" id="aj-arr-regionales-sec">▶</span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-regionales-sec" style="display:none;padding-top:12px">
-          <p style="font-size:.8rem;color:var(--txD);margin-bottom:12px">Guarda configuraciones por zona. Al activar un perfil se propagan NUNC, localidad, zona y despachos.</p>
-          <div id="rp-list"></div>
-          <button class="btn bt bbl" onclick="openPerfilRegionalForm(null)" style="margin-top:4px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Agregar perfil regional</button>
+          <p class="aj-nota">Aplicación de gestión de capturas · 100% offline · localStorage AES-256</p>
         </div>
       </div>
 
       <button class="btn bp bbl" onclick="saveAjustes()" style="margin-top:16px">Guardar ajustes</button>
     </div>
   </section>
-
 
   <!-- ====== PERSONAS ====== -->
   <section id="screen-personas" class="screen">
@@ -2281,7 +2211,7 @@ function go(name) {
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
-  if (name === 'ajustes') { loadAjustesFields(); renderPerfilesRegionales(); }
+  if (name === 'ajustes') { loadAjustesFields(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
   // El navegador puede autocompletar o restaurar el buscador con un valor viejo
@@ -2353,10 +2283,14 @@ function applyTheme(pref) {
     var el = document.getElementById(b[0]);
     if (el) { el.classList.toggle('on', p === b[1]); el.setAttribute('aria-pressed', p === b[1] ? 'true' : 'false'); }
   });
+  /* ⚠️ Con «Sistema» la nota SIGUE diciendo qué se está viendo: es lo único que
+     el botón marcado no puede decir, porque marca la preferencia y no el
+     aspecto. En los otros dos casos no queda nada que explicar — el cambio se
+     ve en el momento (2026-08-28, obs. 10). */
   var nota = document.getElementById('th-nota');
   if (nota) nota.textContent = p === 'system'
-    ? 'Sigue la apariencia del dispositivo — ahora mismo, ' + (real === 'light' ? 'claro' : 'oscuro') + '.'
-    : 'El cambio se aplica de inmediato y se recuerda en este dispositivo.';
+    ? 'Sigue al dispositivo — ahora mismo, ' + (real === 'light' ? 'claro' : 'oscuro') + '.'
+    : 'Se aplica al instante.';
 }
 function setTheme(pref) {
   try { localStorage.setItem('lc_theme', pref); } catch (e) {}
@@ -2402,7 +2336,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 85;
+var _BUILD = 86;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2764,8 +2698,19 @@ var LC_DOCS = {
     nota:'El FPJ-5 es el formato oficial de la Fiscalía',
     build:function(ctx,papel){ return buildFPJBlob(ctx.caso, papel); }
   },
+  /* ⚠️ El oficio pasa a SOLO WORD (2026-08-28, pedido en campo). Era el único
+     documento que se ofrecía también en PDF —lo compone la app y está dentro
+     del subconjunto que el traductor OOXML→HTML reproduce, así que era
+     técnicamente correcto—, pero preguntarlo en cada envío costaba un diálogo
+     que solo servía para elegir entre un archivo que se puede corregir y uno
+     que no. Razón del usuario, y es la buena: «el archivo de Word se adapta a
+     las configuraciones de cualquier impresora». El .docx además es lo que el
+     funcionario necesita, porque el oficio se completa a mano después de
+     generarlo (ver «El documento tiene que poder editarse»).
+     La vista de impresión NO se retira: sigue siendo el camino a PDF desde el
+     propio Word y `lcImprimir` sigue existiendo para el oficio. */
   OJ: {
-    lbl:'Oficio de puesta a disposición', soloWord:false, anchoFijo:false,
+    lbl:'Oficio de puesta a disposición', soloWord:true, anchoFijo:false,
     build:function(ctx,papel){ return buildOficioOJBlob(ctx.caso, papel); }
   },
   FPJ6: {
@@ -2807,144 +2752,51 @@ var LC_DOCS = {
 function lcDoc(kind){ return LC_DOCS[kind] || LC_DOCS.OJ; }
 function lcPapelSirveDoc(kind,id){ return lcDoc(kind).anchoFijo ? lcPapelSirveFPJ(id) : true; }
 function lcPapelesDe(kind){ return lcDoc(kind).anchoFijo ? lcPapelesFPJ() : LC_PAPEL_ORDEN; }
-function lcDocNota(kind, pidePapel){
-  var d = lcDoc(kind);
-  if(!d.nota) return '';
-  return d.nota + (pidePapel && d.notaAncho ? ': ' + d.notaAncho : '.') +
-    ' Sale en Word para conservarlo exacto; para PDF, ábrelo e imprime desde Word.';
-}
+/* ⚠️ `lcDocNota` se retiró con el diálogo de exportación: era el párrafo que
+   explicaba, dentro de ese diálogo, por qué un formato solo sale en Word. Sin
+   diálogo no hay dónde decirlo, y sin elección que hacer tampoco hay nada que
+   explicar. Los campos `nota`/`notaAncho` de LC_DOCS se conservan porque
+   documentan la decisión en el propio registro. */
 
-/* ⚠️ El tamaño de papel NO se puede dejar «para el momento de imprimir»: queda
-   escrito dentro del .docx (w:pgSz). Un documento de Oficio impreso en Carta se
-   corta, y corregirlo obliga a entrar a Diseño → Configurar página en cada
-   documento. Por eso se sigue decidiendo al generar — pero es propiedad del
-   EQUIPO (el papel de la impresora de la unidad), no del caso: se pregunta UNA
-   vez y se recuerda. Estos tres helpers son el único punto que lo resuelve, así
-   descargar, enviar y el botón del wizard no pueden discrepar. */
-function lcPapelCfg(){
-  try { var p = DB.getConfig().papel; return LC_PAPEL[p] ? p : ''; } catch(e){ return ''; }
-}
-function lcGuardarPapel(id){
-  if(!LC_PAPEL[id]) return false;
-  try { var cfg = DB.getConfig(); cfg.papel = id; DB.saveConfig(cfg); return true; } catch(e){ return false; }
-}
-/* Tamaño con el que se va a producir de verdad. Al FPJ-5 nunca se le entrega un
-   ancho que sus casillas no admiten: cae a Carta, igual que la salvaguarda del
-   motor. Devuelve '' si el equipo todavía no ha elegido nunca. */
+/* ═══ PAPEL Y FORMATO DE SALIDA ════════════════════════════════════════════
+   ⚠️ AQUÍ VIVÍA UN DIÁLOGO DE EXPORTACIÓN Y YA NO EXISTE (2026-08-28). Las dos
+   preguntas que hacía se quedaron sin respuestas posibles:
+
+     · «¿Word o PDF?» — el oficio de orden judicial era el ÚNICO documento con
+       dos salidas; desde que sale solo en Word (ver LC_DOCS.OJ), los seis
+       formatos tienen exactamente un formato posible cada uno. Cuatro son .docx
+       oficiales que no se traducen a la vista de impresión y dos YA son el PDF
+       oficial estampado.
+     · «¿Qué tamaño de papel?» — retirada por instrucción explícita del usuario
+       («esto lo único que hace es generar traumatismo y el archivo de Word se
+       adapta a las configuraciones de cualquier impresora»). Con la sección
+       Ajustes → Documentos retirada, no queda ninguna pantalla desde la que
+       verlo ni cambiarlo, y un tamaño invisible que decide cómo se imprime un
+       documento judicial es exactamente el «dato que se hereda en silencio» que
+       este proyecto tiene prohibido.
+
+   Por eso el papel es una CONSTANTE: Carta, el tamaño estándar y el que las 35
+   tablas del FPJ-5 tienen calibrado. ⚠️ Un `cfg.papel` guardado antes deja de
+   leerse (pasa a _CFG_MUERTAS): si se respetara, un equipo que un día eligió
+   Oficio seguiría sacando Oficio para siempre sin verlo ni poder cambiarlo.
+   `lcPedirExport` se conserva como PUNTO ÚNICO de la decisión —la llaman las
+   cinco salidas— para que descargar, imprimir y enviar no puedan discrepar. */
+var LC_PAPEL_FIJO = 'CARTA';
+function lcPapelCfg(){ return LC_PAPEL_FIJO; }
+/* Tamaño con el que se produce de verdad. Se conserva la salvaguarda del FPJ-5:
+   nunca recibe un ancho que sus casillas no admiten. */
 function lcPapelEfectivo(kind){
-  var p = lcPapelCfg();
-  if(!p) return '';
-  if(!lcPapelSirveDoc(kind, p)) return 'CARTA';
-  return p;
+  return lcPapelSirveDoc(kind, LC_PAPEL_FIJO) ? LC_PAPEL_FIJO : 'CARTA';
 }
-
-/* Diálogo de salida. Solo pregunta lo que de verdad es una decisión de ESTE
-   momento; lo que es del equipo se pregunta una vez y se recuerda:
-
-   · Formato — sí es por-momento (¿lo mando o lo imprimo?). Solo para el oficio
-     de orden judicial, que lo compone la app.
-   · Tamaño de papel — es del equipo. La primera vez se pregunta; después se ve
-     y se cambia desde aquí mismo o en Ajustes → Documentos.
-
-   ⚠️ El FPJ-5 NO se ofrece en PDF. Es el formato oficial de la Fiscalía y su
-   maquetación no es de la app: usa altos de fila fijos, celdas fusionadas en
-   vertical, anchos por celda y filas de encabezado repetidas que la vista de
-   impresión del navegador no reproduce. Un PDF que se PARECE al formato oficial
-   es peor que no tener PDF, porque quien lo recibe no puede distinguirlo del
-   bueno. Sale en .docx y se imprime desde Word, que sí lo maqueta.
-
-   Si no queda ninguna pregunta que hacer, no se abre un diálogo para no
-   preguntar nada: se genera. El tamaño usado se nombra siempre en el aviso
-   final, así la decisión recordada nunca es invisible. */
-var _lcExportCb = null, _lcExportKind = 'OJ', _lcExportSel = { fmt:'', papel:'' };
-var _lcExportNombre = '', _lcExportPidePapel = false;
 function lcExportSoloWord(kind){ return !!lcDoc(kind).soloWord; }
+/* No queda ninguna pregunta legítima que hacer: se entrega la decisión resuelta.
+   ⚠️ El callback se sigue invocando de forma ASÍNCRONA (setTimeout 0). Los cinco
+   llamadores se escribieron contando con que la respuesta llega después del tap
+   —abren sheets, generan documentos pesados y guardan el caso—; resolver en
+   línea cambiaría el orden en que ocurren esas cosas sin que nadie lo pida. */
 function lcPedirExport(kind, nombreDoc, cb){
-  /* Un formato que YA es el PDF oficial no tiene nada que preguntar: ni
-     formato de salida (solo hay uno) ni papel (lo fija el propio archivo). */
-  if (lcDoc(kind).esPDF) { if (cb) cb({ fmt:'PDF', papel:'' }); return; }
-  var papel = lcPapelEfectivo(kind);
-  var soloWord = lcExportSoloWord(kind);
-  _lcExportCb = cb; _lcExportKind = kind; _lcExportNombre = nombreDoc || '';
-  _lcExportSel = { fmt: soloWord ? 'DOCX' : '', papel: papel || '' };
-  _lcExportPidePapel = !papel;
-  if (papel && soloWord) { _lcExportEntregar(); return; }   // nada que preguntar
-  _lcExportPintar();
-}
-function _lcExportOpt(grupo, id, lbl, sub){
-  return '<button type="button" class="exp-opt" id="exp-'+grupo+'-'+id+'" '+
-    'onclick="lcExportElegir(\''+grupo+'\',\''+id+'\')">'+
-    '<span class="exp-opt-lbl">'+escHtml(lbl)+'</span>'+
-    (sub?'<span class="exp-opt-sub">'+escHtml(sub)+'</span>':'')+'</button>';
-}
-function _lcExportPintar(){
-  var kind = _lcExportKind, soloWord = lcExportSoloWord(kind);
-  var papeles = lcPapelesDe(kind);
-  var paso = 1;
-  var h = '<div class="mh"><h2>Exportar documento</h2><button class="mx" onclick="lcExportCancelar()">✕</button></div>'+
-    (_lcExportNombre?'<p class="oj-hint" style="margin-top:0">'+escHtml(_lcExportNombre)+'</p>':'');
-  if(!soloWord){
-    h += '<div class="st" style="margin-top:12px">'+(paso++)+' · Formato de salida</div>'+
-      '<div class="exp-grid">'+
-        _lcExportOpt('fmt','DOCX','Word','.docx — editable')+
-        _lcExportOpt('fmt','PDF','PDF','.pdf — listo para imprimir')+
-      '</div>';
-  }
-  if(_lcExportPidePapel){
-    h += '<div class="st" style="margin-top:12px">'+(paso++)+' · Tamaño del papel</div>'+
-      '<div class="exp-grid">'+
-        papeles.map(function(p){ return _lcExportOpt('papel',p,LC_PAPEL[p].lbl,LC_PAPEL[p].sub); }).join('')+
-      '</div>'+
-      '<p class="oj-hint">Es el papel de tu impresora: se pregunta una vez y queda recordado. '+
-      'Se cambia cuando quieras en Ajustes → Documentos.</p>';
-  } else {
-    h += '<p class="oj-hint" id="exp-papel-actual" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">'+
-      '<span>Papel: <strong>'+escHtml(lcPapel(_lcExportSel.papel).lbl)+'</strong></span>'+
-      '<button type="button" class="btn bs bsm" id="exp-papel-cambiar" onclick="lcExportCambiarPapel()">Cambiar</button></p>';
-  }
-  if(soloWord){
-    var nota = lcDocNota(kind, _lcExportPidePapel);
-    if(nota) h += '<p class="oj-hint">'+nota+'</p>';
-  }
-  h += '<button class="btn bp bbl" id="exp-go" disabled style="margin-top:18px" onclick="lcExportConfirmar()">Elige</button>';
-  openModal(h);
-  _lcExportRefrescar();
-}
-function _lcExportRefrescar(){
-  ['DOCX','PDF'].forEach(function(x){
-    var el=document.getElementById('exp-fmt-'+x); if(el) el.classList.toggle('on', x===_lcExportSel.fmt);
-  });
-  LC_PAPEL_ORDEN.forEach(function(x){
-    var el=document.getElementById('exp-papel-'+x); if(el) el.classList.toggle('on', x===_lcExportSel.papel);
-  });
-  var go=document.getElementById('exp-go'); if(!go) return;
-  var listo=!!(_lcExportSel.fmt && _lcExportSel.papel);
-  go.disabled=!listo;
-  go.textContent = listo
-    ? 'Generar '+(_lcExportSel.fmt==='PDF'?'PDF':'Word')+' en '+lcPapel(_lcExportSel.papel).lbl
-    : (!_lcExportSel.fmt ? 'Elige el formato de salida' : 'Elige el tamaño del papel');
-}
-function lcExportElegir(grupo, id){
-  _lcExportSel[grupo==='fmt'?'fmt':'papel']=id;
-  _lcExportRefrescar();
-}
-/* Cambiar el papel desde el diálogo cambia el del EQUIPO, no el de este
-   documento suelto: es la misma impresora la próxima vez. */
-function lcExportCambiarPapel(){
-  _lcExportPidePapel = true; _lcExportSel.papel = '';
-  _lcExportPintar();
-}
-function lcExportCancelar(){ _lcExportCb=null; closeModal(); }
-function _lcExportEntregar(){
-  var cb=_lcExportCb; _lcExportCb=null;
-  var sel={ fmt:_lcExportSel.fmt, papel:_lcExportSel.papel };
-  if(sel.papel) lcGuardarPapel(sel.papel);      // queda como el papel del equipo
-  if(cb) cb(sel);
-}
-function lcExportConfirmar(){
-  if(!_lcExportSel.fmt || !_lcExportSel.papel) return;   // no se genera nada a medias
-  closeModal();
-  _lcExportEntregar();
+  var sel = { fmt: lcDoc(kind).esPDF ? 'PDF' : 'DOCX', papel: lcPapelEfectivo(kind) };
+  if (cb) setTimeout(function(){ cb(sel); }, 0);
 }
 
 /* ═══ MODO INVITADO ═══
@@ -3313,7 +3165,18 @@ function _lcPurgarPlantillas() {
    lee ni las escribe nadie (comprobado clave por clave sobre todo el archivo). */
 var _CFG_MUERTAS=['despachosFavoritos',
   'ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasificacion',
-                  'ojUbicacionTRD','ojReviso'];
+                  'ojUbicacionTRD','ojReviso',
+  /* 2026-08-28 — se quedaron sin lector Y sin escritor, comprobado clave por
+     clave sobre todo el archivo. Seguirlas sembrando en cada guardado y hacerlas
+     viajar en cada «Exportar config» es basura que se arrastra:
+       · papel                → el tamaño ya no se elige (LC_PAPEL_FIJO, obs. 1 y 9)
+       · perfilesRegionales   → sección retirada (obs. 16)
+       · perfilRegionalActivo → íd.
+     ⚠️ Lo que NO entra aquí, y es la distinción importante: `ojFiscalia*`,
+     `ojJornada*` y `conocieronFuncionarios` perdieron su campo pero SE SIGUEN
+     LEYENDO como respaldo de una configuración anterior. Sin escritor pero con
+     lector no es una clave muerta: es un valor legado. */
+  'papel','perfilesRegionales','perfilRegionalActivo'];
 function _cfgConDefaults(stored) {
     stored=stored||{};
     /* ⚠️ `nombreEstacion` NACE VACÍA a propósito. Venía sembrada con «CANDELARIA»
@@ -3361,13 +3224,11 @@ function _cfgConDefaults(stored) {
       ojCustEstacion:'',ojCustDireccion:'',ojCustBarrio:'',ojCustCiudad:'',
       ojCustTelefono:'',ojCustCorreo:'',
       ojLogoB64:'',ojLogoMime:'',
-      ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[],
-      /* Tamaño del papel de la impresora de la unidad. Es propiedad del EQUIPO,
-         no del caso: no cambia entre un procedimiento y el siguiente. Nace vacío
-         y se pregunta UNA vez (la primera exportación); desde ahí se recuerda y
-         se cambia en Ajustes → Documentos. Mismo criterio que el membrete y la
-         custodia del oficio (Ola 4): lo del equipo se pide una vez. */
-      papel:''};
+      /* ⚠️ La jornada hábil ya no tiene campo (2026-08-28, obs. 14) pero el
+         motor de destinatario la SIGUE leyendo para decidir si el juzgado está
+         disponible dentro del término de 36 horas (R4-A / R4-B, C-042/2018). Se
+         conserva con su valor por defecto: dejó de preguntarse, no de usarse. */
+      ojJornadaIni:'08:00',ojJornadaFin:'17:00',despachosPropios:[]};
     var out={}; for(var k in def) out[k]=stored[k]!==undefined?stored[k]:def[k]; for(var k in stored) if(!(k in out)) out[k]=stored[k];
     for(var m=0;m<_CFG_MUERTAS.length;m++) delete out[_CFG_MUERTAS[m]];
     /* Migración del nombre de la unidad — se hace AL LEER y es idempotente: si
@@ -4072,26 +3933,22 @@ function renderWiz() {
   });
   var nav = (ws>0?'<button class="btn bs" onclick="wizPrev()">← Anterior</button>':'<div></div>')+
     (ws<maxWs?'<button class="btn bp" onclick="wizNext()">Siguiente →</button>':'<button class="btn bp" onclick="wizSave()">Guardar</button>');
-  /* ⚠️ Los paneles se pintan ANTES que el aviso de progreso: el texto del aviso
-     depende de si el paso enseña asteriscos. Desde Mejora 3 (obs. 1) el paso del
-     capturado no tiene campos —su formulario vive en un modal—, así que decir
-     «van marcados con *» ahí mandaba a buscar una marca que no está en pantalla. */
   document.getElementById('wz-panels').innerHTML =
     '<div class="wpn on">'+cfg.panels[ws]()+'</div><div class="wnav">'+nav+'</div>';
-  var nPaso = faltas[ws]||0;
-  var hayMarcas = !!document.querySelector('#wz-panels .req');
-  var avisoPaso = nPaso
-    ? '<div class="wz-falta"><b>'+nPaso+' dato'+(nPaso===1?'':'s')+' obligatorio'+(nPaso===1?'':'s')+
-      '</b> sin diligenciar en este paso'+
-      (hayMarcas?' — van marcados con <span class="req">*</span>':'')+'</div>'
-    : (wc && wc.ojv===2 && !Object.keys(faltas).length
-        ? '<div class="wz-ok">Todos los datos obligatorios están diligenciados.</div>' : '');
+  /* ⚠️ AQUÍ IBA UNA BARRA DE AVISO —«N datos obligatorios sin diligenciar en
+     este paso — van marcados con *»— y se retiró (2026-08-28, obs. 3, 4 y 6).
+     Decía en un párrafo lo que ya dicen, a la vez y sin ocupar renglón, DOS
+     señales que sí se quedan: el punto del progreso en rojo (que además dice
+     cuántas son en su `title`) y el asterisco en el campo que falta. Aparecía en
+     todos los pasos, empujaba el formulario hacia abajo y nombraba una marca que
+     el usuario ya tenía delante. El aviso gemelo de «todo diligenciado» se va
+     por lo mismo: no comunicaba nada que la ausencia de puntos rojos no dijera. */
   document.getElementById('wz-prog').innerHTML =
     '<div class="wz-mob">' +
       '<div class="wz-lbl">Paso '+(ws+1)+' de '+total+': <strong>'+cfg.steps[ws]+'</strong></div>' +
       '<div class="wz-bar"><div class="wz-fill" style="width:'+pct+'%"></div></div>' +
     '</div>' +
-    '<div class="wz-dots">'+dots+'</div>' + avisoPaso;
+    '<div class="wz-dots">'+dots+'</div>';
   wizMontarAutoguardado();
   lcGeoPintarDatalist();      // sugerencias de municipio, incluidas las aprendidas
   lcDtPrev();                 // desglose D/M/A + hora tal como se imprimirá
@@ -6601,67 +6458,56 @@ function lcDossierDe(caso, cfg) {
   };
 }
 
-/* ── Interfaz: elegir de los perfiles registrados en vez de teclear ────────── */
-
-/* Opciones del selector: los perfiles del equipo + «Otro». El valor es el id del
-   perfil, o la cadena vacía para texto libre. */
-function lcRefOpciones(cfg, ref) {
-  var sel = (ref && typeof ref === 'object' && ref.pid) ? ref.pid : '';
-  var html = (cfg.perfiles || []).map(function (p) {
-    return '<option value="' + escAttr(p.id) + '"' + (sel === p.id ? ' selected' : '') + '>' +
-      escHtml(lcGradoNombre(p.grado, p.nombre) || p.nombre || '(sin nombre)') + '</option>';
-  }).join('');
-  return html + '<option value=""' + (sel ? '' : ' selected') + '>Otro — escribir a mano</option>';
-}
-
-/* Lee una fila: perfil elegido → referencia; «Otro» → el texto escrito. */
-function lcRefLeer(selEl, inpEl) {
-  var pid = selEl ? selEl.value : '';
-  if (pid) {
-    var cfg = DB.getConfig(), nom = '';
-    (cfg.perfiles || []).forEach(function (p) { if (p.id === pid) nom = lcGradoNombre(p.grado, p.nombre); });
-    /* Se guarda también el nombre resuelto como respaldo: si el perfil se borra,
-       la configuración no se queda muda. */
-    return { pid: pid, nom: nom };
-  }
-  return inpEl ? String(inpEl.value || '').trim() : '';
-}
-
-/* Muestra/oculta el campo de texto según si se eligió un perfil o «Otro». */
-function lcRefToggle(selEl) {
-  if (!selEl) return;
-  var row = selEl.closest('.aj-con-row') || selEl.parentNode;
-  var inp = row ? row.querySelector('.aj-con-inp') : null;
-  if (inp) inp.hidden = !!selEl.value;
-}
-
-
-/* VERDE 3 y DIAMANTE 3 son un solo funcionario cada uno, así que reutilizan las
-   mismas primitivas que las filas de «Conocieron el caso» en vez de estrenar un
-   segundo mecanismo — que es la duplicación que esta auditoría vino a quitar. */
-function lcRenderRef(boxId, ref) {
-  var box = document.getElementById(boxId); if (!box) return;
-  var cfg = DB.getConfig();
-  var esRef = ref && typeof ref === "object" && ref.pid;
-  var txt = esRef ? "" : lcRefTexto(cfg, ref);
-  box.innerHTML = '<div class="flx g8 aj-con-row" style="align-items:center;flex-wrap:wrap">' +
-    '<select class="fi aj-con-sel" style="flex:1;min-width:150px" onchange="lcRefToggle(this)">' + lcRefOpciones(cfg, ref) + '</select>' +
-    '<input class="fi aj-con-inp" style="flex:1;min-width:150px" value="' + escAttr(txt) + '" placeholder="Ej: Subteniente Juan Martínez López"' + (esRef ? " hidden" : "") + '>' +
-    '</div>';
-}
-function lcLeerRef(boxId) {
-  var box = document.getElementById(boxId); if (!box) return "";
-  return lcRefLeer(box.querySelector(".aj-con-sel"), box.querySelector(".aj-con-inp"));
-}
+/* ⚠️ AQUÍ VIVÍAN LOS SELECTORES DE PERFIL de Ajustes (lcRefOpciones · lcRefLeer ·
+   lcRefToggle · lcRenderRef · lcLeerRef) y se retiraron el 2026-08-28.
+   VERDE 3 y DIAMANTE 3 (obs. 11) son oficiales del MANDO, no funcionarios de
+   este equipo: nunca hay un perfil registrado que elegir, así que el selector
+   ofrecía una lista vacía y «Otro — escribir a mano» era siempre la respuesta.
+   «Conocieron el caso» (obs. 12) dejó de ser una lista: son el titular del
+   perfil y su compañero de patrulla, que ya están registrados en Perfil.
+   ⚠️ lcRefTexto SE QUEDA y es lo que hace que nada se pierda: sigue resolviendo
+   una referencia a un perfil guardada por la versión anterior, tanto al pintar
+   Ajustes como al congelar la foto del dossier de un caso. */
 
 /* Funcionarios que conocieron el caso. Fallback al campo legado (string único). */
+/* Funcionarios que conocieron el caso — SE DERIVAN (2026-08-28, obs. 12).
+   «Siempre van a conocer el caso el usuario del perfil y su compañero de
+   patrulla registrado en este mismo perfil»: los dos ya están diligenciados en
+   Perfil, así que la lista de Ajustes pedía por tercera vez unos datos que la
+   app tenía. Para nombrar a otro funcionario —o corregir a uno de los dos— se
+   edita el texto en la pantalla del dossier, que es donde se ve el resultado.
+
+   ⚠️ ORDEN POR RANGO, no por orden de registro: en un documento de este tipo el
+   de mayor rango encabeza. `LC_GRADOS` ya está escrito de mayor a menor, así que
+   la pirámide es su índice — no hace falta una segunda tabla que pueda divergir
+   de la del catálogo. Un grado que no esté en el catálogo va al final (no se
+   inventa una posición) y el desempate conserva el orden titular → compañero.
+
+   ⚠️ FALLBACK, y solo ese: si el equipo NO tiene ningún perfil registrado se
+   siguen leyendo `conocieronFuncionarios` y `conocieronCaso`. Es el único caso
+   en que se leen — así una configuración anterior no se queda muda, sin que la
+   app vuelva a depender de un dato que ya no se puede editar en Ajustes. */
+/* ⚠️ Se apoya en `lcGradoBuscar`, no en una segunda comparación propia: dos
+   normalizadores que divergen dan un grado que casa en un sitio y no en otro
+   —la lección que este archivo ya dejó escrita al crear el catálogo—. */
+function lcGradoRango(txt) {
+  var x = lcGradoBuscar(txt);
+  return x ? LC_GRADOS.indexOf(x) : LC_GRADOS.length;   // desconocido: al final
+}
 function getConocieronList(cfg) {
   cfg=cfg||DB.getConfig();
+  var p=null; (cfg.perfiles||[]).forEach(function(x){ if(x.id===cfg.perfilActivo) p=x; });
+  p = p || (cfg.perfiles||[])[0] || null;
+  if (p) {
+    var gente=[p];
+    if (p.companero && (p.companero.nombre||'').trim()) gente.push(p.companero);
+    return gente.map(function(x,i){ return {r:lcGradoRango(x.grado), i:i, t:lcGradoNombre(x.grado,x.nombre)}; })
+      .filter(function(x){ return !!x.t; })
+      .sort(function(a,b){ return a.r-b.r || a.i-b.i; })
+      .map(function(x){ return x.t; });
+  }
   var arr=cfg.conocieronFuncionarios;
   if(Array.isArray(arr)) {
-    /* Cada entrada puede ser una cadena (lo de siempre) o {pid} (referencia a un
-       perfil registrado). lcRefTexto resuelve las dos, así una configuración
-       guardada antes de la Fase F sigue imprimiendo exactamente lo mismo. */
     arr=arr.map(function(f){return lcRefTexto(cfg,f);}).filter(Boolean);
     if(arr.length) return arr;
   }
@@ -6846,31 +6692,36 @@ function lcEstadoDocs(c) {
      dejó abierto la auditoría del módulo Capturas para que el menú no vuelva a
      crecer un ítem por documento. */
   var emps = (typeof ccElementos === 'function') ? ccElementos(c) : [];
-  var faltaEmp = emps.length ? [] : ['Ningún EMP o EF registrado en el numeral 7'];
-  var cadenas = emps.length && typeof ccGrupos === 'function' ? ccGrupos(c).length : 0;
+  /* ⚠️ SIN EMP NI EF NO SE OFRECEN (2026-08-28, obs. 2). Antes se pintaban las
+     tres tarjetas con «Faltan datos: ningún EMP o EF registrado en el numeral 7»
+     y ese mismo texto subía, repetido tres veces, al bloque de Estado. Pero eso
+     no es un dato que falte: **hay capturas que sencillamente no tienen EMP ni
+     EF**, y en ellas los tres formatos no existen. Un documento que no
+     corresponde al procedimiento no se ofrece «bloqueado»: no se ofrece.
+     En cuanto se registre un elemento en el numeral 7, las tres aparecen. */
+  if (!emps.length) return docs;
+  var cadenas = typeof ccGrupos === 'function' ? ccGrupos(c).length : 0;
 
   /* 3 · El acta de incautación. A diferencia de los otros dos es UNA por
      captura —lleva todos los elementos juntos, numerados— y la firma la persona
      a quien se le incautaron. Por eso además de elementos necesita capturado. */
   docs.push({
     lbl: 'Acta de incautación',
-    de: emps.length
-      ? 'Todos los elementos del numeral 7 (' + emps.length + ')'
-      : 'Los elementos del numeral 7',
-    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : (faltaEmp.length ? faltaEmp : ['Ninguna persona registrada']),
+    de: 'Todos los elementos del numeral 7 (' + emps.length + ')',
+    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : ['Ninguna persona registrada'],
     accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
   });
   docs.push({
     lbl: 'Registro de cadena de custodia',
     de: cadenas > 1
       ? 'FPJ-8 · ' + cadenas + ' cadenas para ' + emps.length + ' elementos'
-      : 'FPJ-8 — ' + (emps.length ? emps.length + (emps.length === 1 ? ' elemento' : ' elementos') : 'sin elementos'),
-    falta: faltaEmp, accion: 'abrirCadenaCustodia', tc: 'tc-neutro', ic: ACT_IC.custodia
+      : 'FPJ-8 — ' + emps.length + (emps.length === 1 ? ' elemento' : ' elementos'),
+    falta: [], accion: 'abrirCadenaCustodia', tc: 'tc-neutro', ic: ACT_IC.custodia
   });
   docs.push({
     lbl: 'Rótulo de EMP y EF',
-    de: 'FPJ-7 · uno por cada elemento' + (emps.length ? ' (' + emps.length + ')' : ''),
-    falta: faltaEmp, accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
+    de: 'FPJ-7 · uno por cada elemento (' + emps.length + ')',
+    falta: [], accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
   });
   return docs;
 }
@@ -6965,40 +6816,36 @@ function renderExpediente(caso) {
       cont=document.getElementById('exp-contenido');
   if(!est||!box||!cont) return;
 
-  // ── Estado: el plazo del art. 28 C.P. y lo que falta para cada documento ──
-  var pl=lcPlazo36(caso), docs=lcEstadoDocs(caso);
-  var pendientes=docs.filter(function(d){ return d.falta.length; });
-  var hPlazo;
-  if(pl.estado==='demo'){
-    hPlazo='<div class="oj-alert info"><b>Caso de demostración</b>'+
-      'No cuenta el plazo de 36 horas: no es un procedimiento real.</div>';
-  } else if(pl.estado==='vencido'){
-    hPlazo='<div class="oj-alert dura"><b>Plazo vencido</b>'+
-      'Han pasado más de 36 horas desde que se registró la captura (art. 28 C.P.).</div>';
-  } else {
-    var h=Math.floor(pl.restan), mi=Math.round((pl.restan-h)*60);
-    if(mi===60){ h+=1; mi=0; }
-    hPlazo='<div class="oj-alert '+(pl.estado==='urgente'?'blanda':'ok')+'"><b>Plazo de 36 horas</b>'+
-      'Quedan '+h+' h '+(mi<10?'0':'')+mi+' min para poner a disposición.</div>';
-  }
-  /* Captura de orden judicial del formato anterior. La entrada vivía en el menú
-     ⋮ y su sitio es este: es un estado del caso —«este expediente todavía no
-     está en el módulo nuevo»—, no una de las cuatro cosas que se hacen con una
-     captura. Sin este bloque se habría quedado sin puerta. */
-  var hLegado='';
+  /* ── Estado ────────────────────────────────────────────────────────────────
+     ⚠️ AQUÍ HABÍA DOS AVISOS Y LOS DOS SE RETIRARON (2026-08-28, obs. 2):
+
+       · «PLAZO VENCIDO / Plazo de 36 horas» — el expediente se consulta también
+         días después, cuando el procedimiento ya terminó y el registro solo se
+         archiva: «las capturas se terminan y los registros quedan, entonces no
+         tiene ningún sentido ese aviso». Además se medía desde `created`, que es
+         cuando se ABRIÓ el registro, no cuando ocurrió la captura. El reloj que
+         de verdad cuenta —el del art. 28 C.P., desde la hora de la diligencia—
+         sigue vivo donde se decide algo con él: la revisión del wizard de orden
+         judicial (`ojPlazo36`), y se imprime en el oficio.
+       · «FALTAN DATOS» — repetía, en un bloque de cuatro renglones, lo que cada
+         tarjeta de documento ya dice en su propia línea de estado. Y lo que
+         solía enumerar era «ningún EMP o EF registrado» × 3, que ya no es una
+         falta sino un procedimiento sin elementos (ver lcEstadoDocs).
+
+     Queda el aviso del caso de ORDEN JUDICIAL DEL FORMATO ANTERIOR, que no es
+     un aviso sino la única puerta a «Completar al formato nuevo»: sin él esa
+     acción se quedaría sin sitio. Por eso el bloque entero solo se pinta
+     entonces. ── */
+  var docs=lcEstadoDocs(caso);
   if((caso.tipo==='OJ') && caso.ojv!==2){
-    hLegado='<div class="oj-alert info"><b>Captura del formato anterior</b>'+
-      'Se registró antes del módulo de orden judicial. El oficio sale igual, con los datos que tiene; '+
-      'pasarla al formato nuevo permite diligenciar lo que aquel formulario no pedía.</div>'+
-      '<button class="btn bs bsm" style="margin-bottom:10px" onclick="ojCompletarCaso(\''+caso.id+'\')">Completar al formato nuevo</button>';
+    est.innerHTML='<div class="st" style="margin-top:0">Estado</div>'+
+      '<div class="oj-alert info"><b>Captura del formato anterior</b>'+
+      'El oficio sale igual con los datos que tiene. Al pasarla al formato nuevo se puede diligenciar el resto.</div>'+
+      '<button class="btn bs bsm" onclick="ojCompletarCaso(\''+caso.id+'\')">Completar al formato nuevo</button>';
+    est.style.display='block';
+  } else {
+    est.innerHTML=''; est.style.display='none';
   }
-  est.innerHTML='<div class="st" style="margin-top:0">Estado</div>'+hPlazo+hLegado+
-    (pendientes.length
-      ? '<div class="oj-alert blanda"><b>Faltan datos</b>'+
-        pendientes.map(function(d){ return escHtml(d.lbl)+': '+escHtml(d.falta.join(' · ')); }).join('<br>')+
-        '</div><button class="btn bs bsm" onclick="editCase(\''+caso.id+'\')">Completar la captura</button>'
-      : '<p class="oj-hint" style="margin:0">Todos los documentos del caso se pueden generar.</p>');
-  est.style.display='block';
 
   /* ── Documentos, agrupados. Reutiliza `.type-card`, el mismo componente de
      tarjeta que la pantalla «Nueva captura»: no se estrena un patrón visual
@@ -8932,7 +8779,7 @@ function f6Abrir(id, idx) {
     '<summary>Identidad y poblaciones especiales — nombre identitario, LGBTI, pertenencia étnica, redes</summary>' +
     '<div class="fg"><label class="fl">Nombre identitario (personas trans)</label>' +
     '<input class="fi" id="f6-identitario" value="' + escAttr(cap.nombreIdentitario) + '"></div>' +
-    '<p class="oj-hint">Nombre con el que se autoidentifica, independiente de su nombre legal. Se deja vacío si no aplica.</p>' +
+    '<p class="oj-hint">Se deja vacío si no aplica.</p>' +
 
     '<div class="fr"><div class="fg"><label class="fl">¿Se identifica como persona LGBTI?</label>' +
     '<select class="fs" id="f6-lgbti" onchange="f6RefrescarLgbti()">' +
@@ -9936,8 +9783,7 @@ function ccPintar(c) {
 
   var repHtml = its.length > 1
     ? '<div class="st">¿Cómo se reparten los elementos?</div>' +
-      '<p class="oj-hint" style="margin-top:-2px">Todos en una sola cadena, una cadena por elemento, o los que tú elijas juntos. ' +
-      'Cada cadena de custodia es un documento aparte.</p>' +
+      '<p class="oj-hint" style="margin-top:-2px">Cada cadena es un documento aparte.</p>' +
       '<div class="flx g8" style="flex-wrap:wrap;margin-bottom:10px">' +
         '<button type="button" class="btn bs bsm" onclick="ccReparto(\'UNA\')">Todos en una</button>' +
         '<button type="button" class="btn bs bsm" onclick="ccReparto(\'CADA\')">Uno por elemento</button>' +
@@ -10135,8 +9981,7 @@ async function abrirRotuloEmp(id) {
   if (its.length === 1) { rtAbrir(id, its[0].id); return; }
   openModal(
     '<div class="mh"><h2>¿De qué elemento es el rótulo?</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
-    '<p class="oj-hint">Por cada EMP y EF se diligencia un rótulo. El número que lleva impreso es el que ese ' +
-    'elemento tiene dentro de su cadena de custodia.</p>' +
+    '<p class="oj-hint">Un rótulo por elemento, con el número que tiene en su cadena.</p>' +
     its.map(function (it) {
       var g = ccGrupoDe(c, it.id);
       return '<button class="exp-opt" style="width:100%;margin-bottom:8px" onclick="rtAbrir(\'' + c.id + '\',\'' + escAttr(it.id) + '\')">' +
@@ -10177,8 +10022,7 @@ function rtAbrir(id, empId) {
       '<div class="fg"><label class="fl">Cantidad</label>' +
         '<input class="fi mono" id="rt-cant" value="' + escAttr(m.cantidad) + '"></div>' +
     '</div>' +
-    '<p class="oj-hint">El número es el que le corresponde dentro de su cadena de custodia; cambia si se reparten ' +
-    'los elementos de otra manera. La cantidad viene del numeral 7 y se puede ajustar.</p>' +
+    '<p class="oj-hint">El número sale de la cadena; la cantidad, del numeral 7.</p>' +
 
     '<div class="st">3. Fecha y hora de recolección</div>' +
     '<div class="fg"><label class="fl">Hora</label><input type="time" class="fi" id="rt-hora" value="' +
@@ -10190,7 +10034,7 @@ function rtAbrir(id, empId) {
       '<input class="fi" id="rt-dir" value="' + escAttr(m.direccion) + '"></div>' +
     '<div class="fg"><label class="fl">Ubicación</label>' +
       '<textarea class="ft" id="rt-ubic" placeholder="En la vía pública · En la pretina del pantalón · En la mano derecha">' + escHtml(m.ubicacion) + '</textarea></div>' +
-    '<p class="oj-hint">La ubicación tiene que ser específica: dónde exactamente estaba el elemento cuando se halló.</p>' +
+    '<p class="oj-hint">Dónde exactamente estaba el elemento al hallarlo.</p>' +
     ((c.capturados || []).length > 1
       ? '<div class="fg"><label class="fl">¿A cuál de las personas capturadas se le encontró?</label>' +
         '<select class="fs" id="rt-cap">' +
@@ -11959,8 +11803,7 @@ function lcNacCampos(pre,p){
       '<div class="fg"><input class="fi" id="'+pre+'-nacPais" list="dl-pais" value="'+escAttr(n.pais)+'" '+
         'placeholder="País" aria-label="País de nacimiento"></div>'+
     '</div>'+
-    '<p class="oj-hint">Con un municipio de Colombia, el departamento y el país se completan solos. '+
-    'Para una persona extranjera se escriben la ciudad, el estado o provincia y su país.</p>'+
+    '<p class="oj-hint">Con un municipio de Colombia, departamento y país se completan solos.</p>'+
   '</div>';
 }
 /* ⚠️ La inferencia se dispara en el `input` del MUNICIPIO, nunca en su blur: en
@@ -12305,9 +12148,11 @@ function renderDespachos(tab){
     '</div>';
     return;
   }
-  /* Alfabético: la lista es corta y no tiene marca de alta que ordenar. Se usa
-     el mismo comparador en español que Capturas y Personas — «Álvaro» va con la
-     A y la Ñ entre la N y la O. */
+  /* ⚠️ LOS PREDETERMINADOS PRIMERO (2026-08-28, obs. 8), y dentro de cada grupo
+     alfabético. Son los que la app usa sin preguntar, así que son los que hay
+     que poder comprobar de un vistazo — y con la lista alfabética podían quedar
+     debajo de cualquier otro. Se usa el mismo comparador en español que Capturas
+     y Personas: «Álvaro» va con la A y la Ñ entre la N y la O. */
   var filtrados=todos.filter(function(d){
     if(query){
       var txt=((d.nombre||'')+' '+lcDespDireccion(d)+' '+(d.nunc||'')).toLowerCase();
@@ -12315,7 +12160,10 @@ function renderDespachos(tab){
     }
     if(tab==='todos') return true;
     return lcDespClase(d)===tab;
-  }).sort(function(a,b){ return lcCmpTxt(a.nombre,b.nombre); });
+  }).sort(function(a,b){
+    var da=lcDespachoEsDefecto(a,cfg)?0:1, db=lcDespachoEsDefecto(b,cfg)?0:1;
+    return (da-db) || lcCmpTxt(a.nombre,b.nombre);
+  });
 
   if(!filtrados.length){
     list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:.83rem">'+
@@ -12574,7 +12422,7 @@ function importarConfig(ev) {
     try{
       var cfg=JSON.parse(e.target.result);
       if(typeof cfg!=='object'||Array.isArray(cfg)){toast('Archivo inválido');return;}
-      DB.saveConfig(cfg); loadAjustesFields(); renderPerfilesRegionales();
+      DB.saveConfig(cfg); loadAjustesFields();
       toast('Config importada ✓');
     }catch(err){toast('Error al leer el archivo');}
   };
@@ -12617,153 +12465,35 @@ function limpiarDatos() {
   renderCases(); toast('Datos eliminados');
 }
 
-/* ═══════════════════════════════════════════
-   FASE D — PERFILES REGIONALES
-═══════════════════════════════════════════ */
-function renderPerfilesRegionales() {
-  var cfg=DB.getConfig(); var prs=cfg.perfilesRegionales||[]; var activo=cfg.perfilRegionalActivo;
-  var list=document.getElementById('rp-list'); if(!list) return;
-  if(!prs.length){
-    list.innerHTML='<p style="font-size:.8rem;color:var(--txD);margin-bottom:8px">Sin perfiles. Agrega uno para cambiar rápidamente entre zonas.</p>';
-    return;
-  }
-  list.innerHTML=prs.map(function(p){
-    var isAct=p.id===activo;
-    return '<div class="rp-card'+(isAct?' activo':'')+'">'+
-      '<div class="rp-body">'+
-        '<div class="rp-name">'+p.nombre+'</div>'+
-        '<div class="rp-sub">'+p.departamento+(p.municipio?', '+p.municipio:'')+'</div>'+
-        (isAct?'<span class="rp-badge">✓ ACTIVO</span>':'')+
-      '</div>'+
-      '<div class="rp-acts">'+
-        (!isAct?'<button class="rp-btn act" onclick="activarPerfilRegional(\''+p.id+'\')">Activar</button>':'')+
-        '<button class="rp-btn" onclick="openPerfilRegionalForm(\''+p.id+'\')">Editar</button>'+
-        (prs.length>1?'<button class="rp-btn" style="color:var(--err)" onclick="delPerfilRegional(\''+p.id+'\')">Eliminar</button>':'')+
-      '</div>'+
-    '</div>';
-  }).join('');
-}
+/* ⚠️ AQUÍ VIVÍAN LOS PERFILES REGIONALES y se retiraron por instrucción del
+   usuario (2026-08-28, obs. 16): «esto no es necesario, no cumple ninguna
+   función». Guardaban NUNC, localidad, zona, unidad y despachos por zona y los
+   propagaban al activarlos — pero desde que el DESPACHO es el que lleva su
+   propio NUNC y su propia jurisdicción (2026-08-28), activar un perfil regional
+   no hacía más que reescribir claves de respaldo que ya no manda nadie: el
+   despacho predeterminado seguía decidiendo. Era una segunda forma de
+   configurar lo mismo, y la peor de las dos.
+   Se fueron: renderPerfilesRegionales · activarPerfilRegional · lcDespDesdeRegional ·
+   delPerfilRegional · openPerfilRegionalForm · savePerfilRegionalForm · ojRegionActiva
+   y el CSS .rp-*. Las claves `perfilesRegionales` y `perfilRegionalActivo` pasan
+   a _CFG_MUERTAS: sin lector ni escritor, seguían viajando en cada exportación. */
 
-function activarPerfilRegional(id) {
-  var cfg=DB.getConfig(); var prs=cfg.perfilesRegionales||[]; var p=null;
-  prs.forEach(function(x){if(x.id===id)p=x;}); if(!p) return;
-  cfg.perfilRegionalActivo=id;
-  if(p.nuncUri!==undefined&&p.nuncUri!=='') cfg.nuncUri=p.nuncUri;
-  if(p.nuncCespa!==undefined&&p.nuncCespa!=='') cfg.nuncCespa=p.nuncCespa;
-  if(p.localidadDefault!==undefined&&p.localidadDefault!=='') cfg.localidadDefault=p.localidadDefault;
-  if(p.zonaDefault) cfg.zonaDefault=p.zonaDefault;
-  if(p.uriDestino) cfg.destUri=p.uriDestino;
-  if(p.cespaDestino) cfg.destCespa=p.cespaDestino;
-  lcDespDesdeRegional(p,cfg);
-  if(p.unidad) cfg.ojUnidad=p.unidad;      // línea 3 del membrete de esa zona
-  DB.saveConfig(cfg); loadAjustesFields(); renderPerfilesRegionales();
-  toast('Perfil '+p.nombre+' activado — datos de '+p.departamento+' aplicados.');
-}
-
-/* Crea o actualiza el despacho de la zona y lo deja predeterminado. Se busca
-   POR NOMBRE antes de crear: reactivar un perfil no debe sembrar un duplicado
-   cada vez. Solo actúa sobre lo que el perfil trae escrito. */
-function lcDespDesdeRegional(p,cfg){
-  [{slot:'URI',clase:'FISCALIA',ojTipo:'FISCALIA',nom:p.uriDestino,nunc:p.nuncUri},
-   {slot:'CESPA',clase:'CESPA',ojTipo:'ADOLESCENTES',nom:p.cespaDestino,nunc:p.nuncCespa}
-  ].forEach(function(z){
-    var nom=String(z.nom||'').trim(), nunc=String(z.nunc||'').replace(/[^0-9]/g,'');
-    if(!nom&&!nunc) return;
-    var previo=null;
-    (cfg.despachosPropios||[]).forEach(function(x){
-      if(nom&&x.nombre===nom&&lcDespClase(x)===z.clase) previo=x;
-    });
-    var reg={id:(previo&&previo.id)||'',clase:z.clase,tipo:(previo&&previo.tipo)||z.ojTipo,
-      nombre:nom||(previo&&previo.nombre)||''};
-    if(nunc) reg.nunc=nunc;
-    lcDespGuardar(reg,cfg);
-    lcDespMarcarDefecto(reg.id,cfg);
-  });
-}
-
-function delPerfilRegional(id) {
-  var cfg=DB.getConfig(); var prs=cfg.perfilesRegionales||[];
-  if(prs.length<=1){toast('No puedes eliminar el único perfil regional');return;}
-  if(!confirm('¿Eliminar perfil regional?')) return;
-  cfg.perfilesRegionales=prs.filter(function(p){return p.id!==id;});
-  if(cfg.perfilRegionalActivo===id) cfg.perfilRegionalActivo=cfg.perfilesRegionales.length?cfg.perfilesRegionales[0].id:null;
-  DB.saveConfig(cfg); renderPerfilesRegionales(); toast('Perfil regional eliminado');
-}
-
-function openPerfilRegionalForm(id) {
-  var cfg=DB.getConfig(); var prs=cfg.perfilesRegionales||[];
-  var p={}; if(id) prs.forEach(function(x){if(x.id===id)p=x;});
-  openModal(
-    '<div class="mh"><h2>'+(id?'Editar perfil regional':'Nuevo perfil regional')+'</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
-    '<div class="st" style="margin-top:0">Identificación de la zona</div>'+
-    '<div class="fr">'+
-      '<div class="fg"><label class="fl">Nombre del perfil</label><input class="fi" id="rpm-nombre" value="'+(p.nombre||'')+'" placeholder="Ej: Medellín Centro"></div>'+
-      '<div class="fg"><label class="fl">Departamento</label><input class="fi" id="rpm-dpto" value="'+(p.departamento||'')+'" placeholder="Antioquia"></div>'+
-    '</div>'+
-    '<div class="fg"><label class="fl">Municipio</label><input class="fi" id="rpm-muni" list="dl-muni" value="'+(p.municipio||'')+'" placeholder="Medellín" onblur="lcGeoCompletar(this,\'rpm-dpto\')"></div>'+
-    /* Línea 3 del membrete del oficio: es la unidad a la que pertenece la zona
-       (metropolitana, departamento de policía, dirección…). Se escribe UNA vez
-       aquí y entra sola en cada captura de esa zona.
-       ⚠️ No se puede embeber una tabla municipio→unidad: los nombres de unidad
-       son nombres institucionales y el filtro de Play Store los prohíbe en el
-       código (ver «Publicación en Play Store — de-branding»). Por eso lo escribe
-       el usuario, igual que las otras tres líneas del membrete. */
-    '<div class="fg"><label class="fl">Unidad (línea 3 del membrete del oficio)</label>'+
-      '<input class="fi" id="rpm-unidad" value="'+escAttr(p.unidad||'')+'" placeholder="La unidad de la que depende esta zona"></div>'+
-    '<div class="st">NUNC por defecto</div>'+
-    '<div class="fr">'+
-      '<div class="fg"><label class="fl">NUNC URI</label><input class="fi mono" id="rpm-nuncUri" value="'+(p.nuncUri||'')+'" maxlength="16" inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"></div>'+
-      '<div class="fg"><label class="fl">NUNC CESPA</label><input class="fi mono" id="rpm-nuncCespa" value="'+(p.nuncCespa||'')+'" maxlength="16" inputmode="numeric" oninput="this.value=this.value.replace(/\\D/g,\'\')"></div>'+
-    '</div>'+
-    '<div class="st">Destinos</div>'+
-    '<div class="fr">'+
-      '<div class="fg"><label class="fl">URI (destino)</label><input class="fi" id="rpm-uri" value="'+(p.uriDestino||'')+'" placeholder="Fiscalía URI"></div>'+
-      '<div class="fg"><label class="fl">CESPA (destino)</label><input class="fi" id="rpm-cespa" value="'+(p.cespaDestino||'')+'" placeholder="CESPA"></div>'+
-    '</div>'+
-    '<div class="st">Lugar por defecto</div>'+
-    '<div class="fr">'+
-      '<div class="fg"><label class="fl">Localidad</label><input class="fi mono" id="rpm-local" value="'+(p.localidadDefault||'')+'" inputmode="numeric" maxlength="4"></div>'+
-      '<div class="fg"><label class="fl">Zona</label><select class="fs" id="rpm-zona">'+
-        '<option value="Urbana" '+((p.zonaDefault||'Urbana')==='Urbana'?'selected':'')+'>Urbana</option>'+
-        '<option value="Rural" '+(p.zonaDefault==='Rural'?'selected':'')+'>Rural</option>'+
-      '</select></div>'+
-    '</div>'+
-    '<button class="btn bp bbl" onclick="savePerfilRegionalForm(\''+  (id||'')+'\' )" style="margin-top:16px">Guardar perfil regional</button>'
-  );
-}
-
-function savePerfilRegionalForm(id) {
-  function v(x){var el=document.getElementById('rpm-'+x);return el?el.value.trim():'';}
-  var nombre=v('nombre'); if(!nombre){toast('El nombre es obligatorio');return;}
-  var cfg=DB.getConfig(); if(!cfg.perfilesRegionales) cfg.perfilesRegionales=[];
-  var newId=id||uid();
-  var p={id:newId,nombre:nombre,departamento:v('dpto'),municipio:v('muni'),unidad:v('unidad'),
-    nuncUri:v('nuncUri'),nuncCespa:v('nuncCespa'),uriDestino:v('uri'),cespaDestino:v('cespa'),
-    localidadDefault:v('local'),zonaDefault:v('zona')};
-  if(p.municipio&&p.departamento) lcGeoRecordar(p.municipio,p.departamento);
-  if(id){
-    var found=false;
-    cfg.perfilesRegionales.forEach(function(x,i){if(x.id===id){cfg.perfilesRegionales[i]=p;found=true;}});
-    if(!found) cfg.perfilesRegionales.push(p);
-  } else {
-    cfg.perfilesRegionales.push(p);
-    if(!cfg.perfilRegionalActivo) cfg.perfilRegionalActivo=p.id;
-  }
-  DB.saveConfig(cfg); closeModal(); renderPerfilesRegionales(); toast('Perfil regional guardado ✓');
-}
-
-/* ─── Ajustes ─── */
+/* ─── Ajustes ───
+   ⚠️ La pantalla se consolidó de diez secciones a cinco (obs. 17). Lo que
+   desapareció de aquí y por qué está anotado en el HTML de #screen-ajustes.
+   Regla que sigue mandando en las dos funciones de abajo: **una clave sin campo
+   en pantalla NO se escribe**. `v()` devuelve '' para un elemento inexistente,
+   así que asignarla a ciegas BORRA lo que el equipo tenía configurado — es la
+   trampa que ya costó un incidente con `ojDependencia` y con el NUNC. */
 function loadAjustesFields() {
   var cfg=DB.getConfig();
-  /* El nombre de la unidad se muestra RESUELTO: si el equipo lo tenía escrito en
-     una de las claves del oficio (membrete o custodia) y no en esta, el usuario
-     lo ve aquí y no lo vuelve a teclear. */
+  /* El nombre de la unidad y su ciudad se muestran RESUELTOS: si el equipo los
+     tenía escritos en una de las claves del oficio (membrete o custodia) y no
+     en esta, el usuario los ve aquí y no los vuelve a teclear. */
   var map={'aj-rango':cfg.rangoComandante,'aj-distrito':cfg.numDistrito,'aj-estacion':lcUnidadNombre(cfg),
     /* Contacto de la unidad. Se edita AQUÍ y se guarda en las claves `ojCust*`,
-       que son las que lee el oficio: antes esta sección escribía en `dosDir`/
-       `dosTel` —que no las leía ningún documento— y el oficio pedía lo mismo
-       otra vez en su propia sección. Las claves legadas se siguen leyendo para
-       que una config guardada antes no pierda lo que el usuario ya escribió. */
+       que son las que lee el oficio. Las legadas (`dosDir`/`dosTel`) se siguen
+       leyendo para que una config guardada antes no pierda lo ya escrito. */
     'aj-dir':cfg.ojCustDireccion||cfg.dosDir||'',
     'aj-bar':cfg.ojCustBarrio,'aj-ciu':lcUnidadCiudad(cfg),
     'aj-tel':cfg.ojCustTelefono||cfg.dosTel||'','aj-cor':cfg.ojCustCorreo,'aj-web':cfg.ojPieWeb,
@@ -12771,185 +12501,34 @@ function loadAjustesFields() {
     'aj-localidad':cfg.localidadDefault,'aj-vereda':cfg.veredaDefault,
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,
     'aj-oj-asunto':cfg.ojAsunto,
-    'aj-oj-fnom':cfg.ojFiscaliaNombre,'aj-oj-fdir':cfg.ojFiscaliaDireccion,
-    'aj-oj-fmun':cfg.ojFiscaliaMunicipio,'aj-oj-fdep':cfg.ojFiscaliaDepartamento,
-    'aj-oj-jini':cfg.ojJornadaIni||'08:00','aj-oj-jfin':cfg.ojJornadaFin||'17:00'};
+    /* ⚠️ Obs. 11 — vuelven a ser texto plano. `lcRefTexto` resuelve una
+       referencia `{pid}` guardada por la versión anterior, así que un equipo que
+       la usó ve su nombre y no pierde nada; al guardar queda ya como texto. */
+    'aj-verde3':lcRefTexto(cfg,cfg.dosVerde3),
+    'aj-diamante3':lcRefTexto(cfg,cfg.dosDiamante3)};
   for(var id in map){var el=document.getElementById(id);if(el&&map[id]!==undefined)el.value=map[id];}
   var zonaEl=document.getElementById('aj-zona'); if(zonaEl) zonaEl.value=cfg.zonaDefault||'Urbana';
-  renderAjDespachos(cfg);
-  renderLogoOJ(cfg);
-  renderPapelAj(cfg);
-  renderAjDerivados();
-  renderConocieronRows(cfg.conocieronFuncionarios&&cfg.conocieronFuncionarios.length?cfg.conocieronFuncionarios:getConocieronList(cfg));
-  lcRenderRef('aj-verde3-box',cfg.dosVerde3);
-  lcRenderRef('aj-diamante3-box',cfg.dosDiamante3);
+  renderAjConocieron(cfg);
 }
-/* Los dos datos que la sección del oficio dejó de pedir porque ya se escriben en
-   Estación. No son campos: son el ESPEJO de lo que se va a imprimir, para que el
-   usuario vea el valor sin tener que subir a comprobarlo y sepa de dónde sale.
-   Se repintan mientras teclea, así el vínculo entre las dos secciones es visible
-   en el momento en que importa. */
-function renderAjDerivados(){
-  var uni=document.getElementById('aj-estacion'), ciu=document.getElementById('aj-ciu');
-  var cfg=null;
-  function val(el,resuelve){
-    if(el) return el.value.trim();
-    cfg=cfg||DB.getConfig(); return resuelve(cfg);
-  }
-  var eco=document.getElementById('aj-oj-dep-eco');
-  if(eco){
-    var u=val(uni,lcUnidadNombre);
-    eco.innerHTML=u
-      ? escHtml(mayus(ojEstacionLabel(u,true)))+' <small>— de Ajustes → Estación</small>'
-      : 'Se toma de <b>Ajustes → Estación → Nombre de la unidad</b>';
-  }
-  var ecoC=document.getElementById('aj-oj-ciu-eco');
-  if(ecoC){
-    var c=val(ciu,lcUnidadCiudad);
-    ecoC.innerHTML=c
-      ? escHtml(c)+' <small>— de Ajustes → Estación</small>'
-      : 'Se toma de <b>Ajustes → Estación → Ciudad</b>';
-  }
+
+/* Quién va a firmar el «Conocieron el caso» del dossier. Ya no es un formulario
+   (obs. 12): son el titular del perfil y su compañero de patrulla. Se enseña
+   resuelto —un dato que se hereda en silencio es indistinguible de un dato que
+   falta— y se dice dónde se cambia. */
+function renderAjConocieron(cfg){
+  var el=document.getElementById('aj-con-auto'); if(!el) return;
+  var lista=getConocieronList(cfg||DB.getConfig());
+  el.textContent=lista.length
+    ? 'Conocieron el caso: '+lista.join(' / ')+' — salen de Perfil, por orden de rango.'
+    : 'Conocieron el caso: se toman de Perfil (titular y compañero de patrulla).';
 }
-/* Tamaño del papel. Se aplica al instante y no depende de «Guardar ajustes»,
-   igual que el tema: es una preferencia del equipo, no un formulario. */
-function renderPapelAj(cfg){
-  var g=document.getElementById('aj-papel-grid'); if(!g) return;
-  cfg=cfg||DB.getConfig();
-  var sel=lcPapelCfg();
-  g.innerHTML=LC_PAPEL_ORDEN.map(function(p){
-    var d=LC_PAPEL[p];
-    return '<button type="button" class="exp-opt'+(p===sel?' on':'')+'" id="aj-papel-'+p+'" '+
-      'onclick="ajSetPapel(\''+p+'\')">'+
-      '<span class="exp-opt-lbl">'+escHtml(d.lbl)+'</span>'+
-      '<span class="exp-opt-sub">'+escHtml(d.sub)+'</span></button>';
-  }).join('');
-}
-function ajSetPapel(id){
-  if(!lcGuardarPapel(id)) return;
-  renderPapelAj();
-  toast('Papel: '+lcPapel(id).lbl+' — se usará en los documentos que generes');
-}
-/* Logo del membrete. Se guarda en la configuración como base64 y se embebe en el
-   .docx: ningún escudo ni logotipo institucional viaja dentro del código de la
-   app (requisito de publicación — la app no puede alegar pertenecer a ninguna
-   institución; el usuario aporta el suyo). */
-function renderLogoOJ(cfg){
-  var el=document.getElementById('aj-oj-logo-prev'); if(!el) return;
-  cfg=cfg||DB.getConfig();
-  // Siempre hay escudo: el del formato viene embebido. Aquí solo se ve cuál
-  // está en uso y, si se cargó otro, se puede volver al del formato.
-  var propio=!!cfg.ojLogoB64;
-  // Solo se despliega si hay uno propio: quien usa el del formato no tiene nada
-  // que mirar ahí, y quien lo cambió necesita ver cuál quedó y poder deshacerlo.
-  var det=document.getElementById('aj-oj-logo-det'); if(det) det.open=propio;
-  el.innerHTML='<div class="flx g8" style="align-items:center;margin-top:8px">'+
-    '<img src="data:'+escAttr(propio?(cfg.ojLogoMime||'image/png'):OJ_LOGO_MIME)+';base64,'+
-      escAttr(propio?cfg.ojLogoB64:OJ_LOGO_B64)+'" '+
-    'alt="Logo del membrete" style="width:56px;height:56px;object-fit:contain;background:var(--surface-2);border-radius:8px;padding:4px">'+
-    '<div style="flex:1;min-width:140px"><p class="oj-hint" style="margin:0">'+
-      (propio?'Logo propio de tu unidad.':'Escudo del formato — ya viene cargado, no hay que hacer nada.')+'</p></div>'+
-    (propio?'<button class="btn bs bsm" style="color:var(--err)" onclick="ajQuitarLogoOJ()">Volver al del formato</button>':'')+
-    '</div>';
-}
-/* ⚠️ La app NO pide logo: el escudo del formato viene embebido (OJ_LOGO_B64) y
-   se pone solo. Esto es solo el reemplazo opcional, para una unidad que use
-   otro — vive únicamente en Ajustes y nada del procedimiento lo pregunta. */
-function ojLogoGuardar(f,hecho){
-  if(!f) return;
-  if(f.size>400*1024){ toast('La imagen es muy pesada: usa una de menos de 400 KB'); return; }
-  var rd=new FileReader();
-  rd.onload=function(e){
-    var cfg=DB.getConfig();
-    cfg.ojLogoB64=String(e.target.result).split(',')[1]||'';
-    cfg.ojLogoMime=f.type||'image/png';
-    DB.saveConfig(cfg); toast('Logo cargado ✓'); if(hecho) hecho(cfg);
-  };
-  rd.readAsDataURL(f);
-}
-function ojLogoBorrar(hecho){
-  var cfg=DB.getConfig(); cfg.ojLogoB64=''; cfg.ojLogoMime='';
-  DB.saveConfig(cfg); toast('Logo quitado'); if(hecho) hecho(cfg);
-}
-function ajCargarLogoOJ(input){
-  ojLogoGuardar(input&&input.files&&input.files[0],function(cfg){ renderLogoOJ(cfg); });
-  if(input) input.value='';
-}
-function ajQuitarLogoOJ(){
-  ojLogoBorrar(function(cfg){ renderLogoOJ(cfg); });
-  var f=document.getElementById('aj-oj-logo-file'); if(f) f.value='';
-}
+
 /* Completa el tipo de dependencia AL SALIR DEL CAMPO, no en silencio al
    imprimir: el usuario ve exactamente lo que va a salir y puede corregirlo. */
 function ojCompletarEstacion(el,caps){
   if(!el) return;
   var v=ojEstacionLabel(el.value,caps);
   if(v&&v!==el.value) el.value=v;
-}
-
-/* ─── Ajustes › funcionarios que conocieron el caso (lista dinámica) ─── */
-function renderConocieronRows(list) {
-  var wrap=document.getElementById('aj-con-list'); if(!wrap) return;
-  if(!list||!list.length) list=[''];
-  var cfg=DB.getConfig();
-  /* Cada fila: un selector de los perfiles ya registrados —para no volver a
-     teclear un funcionario que el equipo ya conoce— y, si se elige «Otro», el
-     campo de texto de siempre. El texto libre NO desaparece: hay funcionarios de
-     otra unidad que no tienen perfil aquí. */
-  wrap.innerHTML=list.map(function(f){
-    var esRef=f&&typeof f==='object'&&f.pid;
-    var txt=esRef?'':lcRefTexto(cfg,f);
-    return '<div class="flx g8 aj-con-row" style="margin-bottom:8px;align-items:center;flex-wrap:wrap">'+
-      '<select class="fi aj-con-sel" style="flex:1;min-width:150px" onchange="lcRefToggle(this)">'+lcRefOpciones(cfg,f)+'</select>'+
-      '<input class="fi aj-con-inp" style="flex:1;min-width:150px" value="'+escAttr(txt)+'" placeholder="Ej: SI Nelson David"'+(esRef?' hidden':'')+'>'+
-      '<button class="btn bs bsm" style="flex:0 0 auto;padding:0 12px;color:var(--err)" onclick="delConocieronRow(this)" title="Quitar funcionario">✕</button>'+
-      '</div>';
-  }).join('');
-}
-
-function readConocieronRows() {
-  var out=[];
-  /* Se lee por FILA, no por campo suelto: cada fila aporta o una referencia a un
-     perfil o su texto libre, nunca las dos cosas. */
-  document.querySelectorAll('#aj-con-list .aj-con-row').forEach(function(row){
-    out.push(lcRefLeer(row.querySelector('.aj-con-sel'), row.querySelector('.aj-con-inp')));
-  });
-  return out;
-}
-
-function addConocieronRow() {
-  /* Se lee el DOM ANTES de crecer, igual que las demás listas repetibles de la
-     app: si no, la fila nueva se llevaría por delante lo ya escrito. */
-  var list=readConocieronRows(); list.push('');
-  renderConocieronRows(list);
-  var inputs=document.querySelectorAll('#aj-con-list .aj-con-inp');
-  if(inputs.length) inputs[inputs.length-1].focus();
-}
-
-function delConocieronRow(btn) {
-  var row=btn.parentNode; if(row&&row.parentNode) row.parentNode.removeChild(row);
-  if(!document.querySelectorAll('#aj-con-list .aj-con-row').length) renderConocieronRows(['']);
-}
-
-/* Las dos líneas derivadas de la sección «Valores por defecto»: qué despacho
-   recibe cada tipo de captura y con qué NUNC. Se pintan resueltas, con su
-   procedencia, en lugar de los cuatro campos que se retiraron. */
-function renderAjDespachos(cfg){
-  cfg=cfg||DB.getConfig();
-  var chk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
-  var linea=function(id,txt){
-    var el=document.getElementById(id); if(el) el.innerHTML=chk+escHtml(txt);
-  };
-  var d=function(t){
-    var x=lcDespachoDefecto(t,cfg);
-    return x?(x.nombre||'(sin nombre)'):lcDespDestino(t,cfg);
-  };
-  linea('aj-dest-auto','Destino del informe: '+d('URI')+' (adultos) · '+d('CESPA')+' (menores). '+
-    'Se toman del despacho predeterminado de cada tipo.');
-  var n=function(t){ var v=lcDespNunc(t,cfg); return v||'sin registrar'; };
-  linea('aj-nunc-auto','NUNC: '+n('URI')+' (URI) · '+n('CESPA')+' (CESPA). '+
-    'Cada despacho guarda el suyo, porque el número cambia con la unidad que recibe la captura.');
 }
 
 function saveAjustes() {
@@ -12961,21 +12540,17 @@ function saveAjustes() {
      consultan POR DELANTE en sus cadenas, así que si el usuario cambia el nombre
      aquí y ellas conservaran el anterior, ganarían ellas y el cambio no se vería
      en el oficio. Por eso:
-       · si el nombre CAMBIÓ, se propaga a las dos (es la única pantalla donde se
-         edita: cambiarlo significa cambiar el de la unidad, no el de una sola
-         salida);
+       · si el nombre CAMBIÓ, se propaga a las dos;
        · si NO cambió, solo se rellenan las que estén vacías — así una unidad que
          deliberadamente tenga un membrete distinto del lugar de custodia (una
          seccional que retiene en la estación) no se colapsa por abrir Ajustes y
-         pulsar Guardar. Ese caso se sigue diligenciando por captura, en el
-         último paso del formulario. */
+         pulsar Guardar. Ese caso se sigue diligenciando por captura. */
   var uniNueva=v('aj-estacion').trim(), uniCambio=(uniNueva!==(cfg.nombreEstacion||''));
   if(uniCambio){ cfg.ojCustEstacion=uniNueva; cfg.ojDependencia=uniNueva; }
   else { if(!cfg.ojCustEstacion) cfg.ojCustEstacion=uniNueva; if(!cfg.ojDependencia) cfg.ojDependencia=uniNueva; }
   cfg.nombreEstacion=uniNueva;
   /* Contacto de la unidad → las claves que lee el oficio. `dosDir`/`dosTel` se
-     mantienen en espejo para no romper una configuración ya exportada, igual
-     que se hace con `conocieronCaso`. */
+     mantienen en espejo para no romper una configuración ya exportada. */
   cfg.ojCustDireccion=v('aj-dir');
   cfg.ojCustBarrio=v('aj-bar');
   // Misma regla para la ciudad: `ojCiudad` encabeza la fecha del oficio y se lee
@@ -12985,41 +12560,36 @@ function saveAjustes() {
   cfg.ojCustCiudad=ciuNueva;
   cfg.ojCustTelefono=v('aj-tel'); cfg.ojCustCorreo=v('aj-cor'); cfg.ojPieWeb=v('aj-web');
   cfg.dosDir=cfg.ojCustDireccion; cfg.dosTel=cfg.ojCustTelefono;
-  /* ⚠️ Solo se escriben si su contenedor está en pantalla — la sección puede no
+  /* ⚠️ Solo se escriben si su campo está en pantalla — la sección puede no
      haberse pintado, y v() devuelve '' para un elemento que no existe, así que
-     escribir a ciegas borraría lo que el equipo ya tenía configurado. Es la
-     misma trampa que ya protege al bloque del oficio de orden judicial. */
-  if(document.getElementById('aj-verde3-box')) cfg.dosVerde3=lcLeerRef('aj-verde3-box');
-  if(document.getElementById('aj-diamante3-box')) cfg.dosDiamante3=lcLeerRef('aj-diamante3-box');
-  cfg.patrullaNum=v('aj-patrulla').trim(); cfg.patrullaUnidad=v('aj-unidad').trim();
-  // Si la lista nunca se pintó (pantalla no cargada), no borrar lo guardado.
-  if(document.querySelectorAll('#aj-con-list .aj-con-row').length) {
-    cfg.conocieronFuncionarios=readConocieronRows().filter(function(f){
-      return typeof f==='string' ? !!f.trim() : !!(f&&f.pid);
-    });
-    /* `conocieronCaso` se mantiene sincronizado en TEXTO por compatibilidad hacia
-       atrás: hay configuraciones exportadas que solo tienen ese campo. */
-    cfg.conocieronCaso=getConocieronList(cfg).join(', ');
+     escribir a ciegas borraría lo que el equipo ya tenía configurado. */
+  if(document.getElementById('aj-verde3')){
+    cfg.dosVerde3=v('aj-verde3').trim(); cfg.dosDiamante3=v('aj-diamante3').trim();
+    cfg.patrullaNum=v('aj-patrulla').trim(); cfg.patrullaUnidad=v('aj-unidad').trim();
   }
-  /* ⚠️ `nuncUri`, `nuncCespa`, `destUri` y `destCespa` NO se escriben aquí: sus
-     campos se retiraron (el destino y el NUNC viven en el despacho). Escribirlos
-     con `v()` los habría BORRADO, porque `v()` devuelve '' cuando el elemento no
-     existe — la misma trampa que ya protegía a `ojDependencia`. Las claves se
-     conservan intactas como respaldo de configuraciones anteriores. */
+  /* ⚠️ `conocieronFuncionarios` NO se escribe: su lista se retiró (obs. 12) y
+     `getConocieronList` la deriva ahora del perfil activo y su compañero. La
+     clave se conserva intacta como respaldo para un equipo SIN perfil
+     registrado, que es el único caso en que se sigue leyendo.
+     `conocieronCaso` SÍ se mantiene sincronizado en texto, como venía haciéndose:
+     hay configuraciones exportadas que solo tienen ese campo, y es además el
+     último respaldo que lee `getConocieronList`. */
+  cfg.conocieronCaso=getConocieronList(cfg).join(', ');
+  /*
+     ⚠️ `nuncUri`, `nuncCespa`, `destUri` y `destCespa` tampoco: el destino y el
+     NUNC viven en el despacho desde 2026-08-28. */
   cfg.localidadDefault=v('aj-localidad'); cfg.zonaDefault=v('aj-zona'); cfg.veredaDefault=v('aj-vereda');
-  // Oficio de orden judicial (la sección puede no estar en el DOM: solo se
-  // escribe lo que exista, para no borrar configuración ya guardada).
+  // Membrete del oficio (la sección puede no estar en el DOM: solo se escribe lo
+  // que exista, para no borrar configuración ya guardada).
   if(document.getElementById('aj-oj-min')){
     cfg.ojMinisterio=v('aj-oj-min'); cfg.ojInstitucion=v('aj-oj-inst');
     cfg.ojUnidad=v('aj-oj-uni');
-    /* ⚠️ `ojDependencia` y `ojCiudad` NO se escriben aquí: sus campos se
-       retiraron de esta sección (son el nombre y la ciudad de la unidad, que se
-       piden en Ajustes → Estación). Escribirlos con `v()` los habría BORRADO,
-       porque `v()` devuelve '' cuando el elemento no existe. */
+    /* ⚠️ `ojDependencia` y `ojCiudad` NO se escriben aquí: son el nombre y la
+       ciudad de la unidad, que se piden arriba en esta misma sección. */
     cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
-    cfg.ojFiscaliaNombre=v('aj-oj-fnom'); cfg.ojFiscaliaDireccion=v('aj-oj-fdir');
-    cfg.ojFiscaliaMunicipio=v('aj-oj-fmun'); cfg.ojFiscaliaDepartamento=v('aj-oj-fdep');
-    cfg.ojJornadaIni=v('aj-oj-jini')||'08:00'; cfg.ojJornadaFin=v('aj-oj-jfin')||'17:00';
+    /* ⚠️ `ojFiscalia*` y `ojJornada*` tampoco: sus campos se retiraron (obs. 14).
+       La fiscalía destinataria sale del registro de Despachos y la jornada hábil
+       usa 08:00–17:00 en el motor. Las claves se conservan como respaldo. */
   }
   DB.saveConfig(cfg); toast('Ajustes guardados ✓');
 }
@@ -13338,12 +12908,8 @@ function ojPerfilActivo(cfg){
   var p=null; (cfg.perfiles||[]).forEach(function(x){ if(x.id===cfg.perfilActivo) p=x; });
   return p||{};
 }
-function ojRegionActiva(cfg){
-  var r=null; (cfg.perfilesRegionales||[]).forEach(function(x){ if(x.id===cfg.perfilRegionalActivo) r=x; });
-  return r||{};
-}
 function ojNuevoCaso(){
-  var cfg=DB.getConfig(), t=nowParts(), reg=ojRegionActiva(cfg), perfil=ojPerfilActivo(cfg);
+  var cfg=DB.getConfig(), t=nowParts();
   var c={
     id:uid(), tipo:'OJ', ojv:2, created:Date.now(), updated:Date.now(),
     fechaProc:t.yy+'-'+t.mm+'-'+t.dd, isTest:false,
@@ -13352,22 +12918,24 @@ function ojNuevoCaso(){
   };
   c.oj.diligencia.fecha=t.yy+'-'+t.mm+'-'+t.dd;
   c.oj.diligencia.hora=t.hh+':'+t.mi;
-  c.oj.diligencia.lugarMunicipio=reg.municipio||'';
-  c.oj.diligencia.lugarDepartamento=reg.departamento||'';
+  /* ⚠️ El municipio de la diligencia se propone con la ciudad de la unidad, no
+     con la de un «perfil regional» (retirado, obs. 16): es el mismo dato que el
+     usuario ya escribió en Ajustes → Mi unidad, y el departamento se infiere de
+     él con el catálogo del país. Se PROPONE: el funcionario lo cambia si la
+     diligencia ocurrió en otro municipio. */
+  c.oj.diligencia.lugarMunicipio=lcUnidadCiudad(cfg)||'';
+  c.oj.diligencia.lugarDepartamento=c.oj.diligencia.lugarMunicipio
+    ? (lcGeoDepto(c.oj.diligencia.lugarMunicipio)||'') : '';
   c.oj.diligencia.unidad=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim()||(cfg.nombreEstacion||'');
   c.oj.diligencia.patrulla=cfg.patrullaNum||'';
   /* ⚠️ Mejora 3 (obs. 2) — la verificación de la orden y la lectura de derechos
      ya NO se preguntan: se DERIVAN de la diligencia (ojVerificacion / ojDerechos).
      Preguntaban por segunda vez la fecha, la hora y el funcionario que la app ya
      tenía tres campos más arriba. La constancia sigue imprimiéndose igual. */
-  if(perfil.nombre){
-    c.oj.diligencia.funcionarios=[{grado:perfil.grado||'',nombre:perfil.nombre||'',cedula:sinPuntos(perfil.cedula||''),placa:perfil.placa||''}];
-  }
-  // Departamento del municipio del perfil regional, si la zona lo tiene claro.
-  if(c.oj.diligencia.lugarMunicipio&&!c.oj.diligencia.lugarDepartamento)
-    c.oj.diligencia.lugarDepartamento=lcGeoDepto(c.oj.diligencia.lugarMunicipio)||'';
-  // Línea 3 del membrete desde el perfil regional (ver ojPrellenarDeCfg).
-  if(reg.unidad&&!cfg.ojUnidad) c.oj.encabezado.unidad=reg.unidad;
+  /* ⚠️ La patrulla completa, no solo el titular (2026-08-28, obs. 7): el
+     compañero ya está registrado en el perfil y el procedimiento lo hacen los
+     dos. Antes entraba uno y el segundo se tecleaba en cada captura. */
+  c.oj.diligencia.funcionarios=ojFuncionariosDeCfg(cfg);
   ojPrellenarDeCfg(c,cfg);
   return c;
 }
@@ -13783,12 +13351,31 @@ function ojTermino(c){
     ? {sust:'aprehendido', Sust:'Aprehendido', acc:'aprehensión', Acc:'Aprehensión'}
     : {sust:'capturado',  Sust:'Capturado',  acc:'captura',      Acc:'Captura'};
 }
-/* Datos de la Fiscalía destinataria: se preguntan UNA vez en Ajustes y de ahí
-   sale el encabezado del oficio cuando el informe se remite a la Fiscalía
-   (Mejora 2, obs. 1). El nombre cae a `destUri` —el que ya usaba flagrancia—
-   para que un equipo ya configurado no tenga que escribirlo otra vez. */
+/* Datos de la Fiscalía destinataria del oficio.
+   ⚠️ SALE DEL REGISTRO DE DESPACHOS (2026-08-28, obs. 14). Tenía cuatro campos
+   propios en Ajustes —nombre, dirección, ciudad y departamento— que pedían por
+   segunda vez un despacho que el usuario ya tiene registrado con esos mismos
+   cuatro datos, y que es además el que recibe sus capturas de flagrancia. El
+   usuario lo dijo con la referencia exacta: «cuando el oficio va remitido a la
+   fiscalía este se selecciona de las opciones del despacho y debe registrarse la
+   dirección y el nombre como lo hace el numeral uno del FPJ-5».
+   Ahora es el despacho de clase FISCALÍA marcado como predeterminado, el mismo
+   que resuelve `lcDespachoDefecto('URI')` para el numeral 1 del FPJ-5: un solo
+   registro, un solo sitio donde corregirlo.
+   ⚠️ Las claves `ojFiscalia*` se siguen leyendo DETRÁS, como respaldo de una
+   configuración anterior a este cambio; y `destUri` detrás de ellas, como venía
+   haciéndose. Un equipo ya configurado no pierde nada. */
 function ojFiscaliaCfg(cfg){
   cfg=cfg||DB.getConfig();
+  var d=(typeof lcDespachoDefecto==='function')?lcDespachoDefecto('URI',cfg):null;
+  if(d&&(d.nombre||'').trim()){
+    return {
+      nombre:d.nombre||'',
+      direccion:[d.direccion,d.barrio?'barrio '+d.barrio:''].filter(Boolean).join(', '),
+      municipio:d.municipio||'',
+      departamento:d.departamento||''
+    };
+  }
   return {
     nombre:cfg.ojFiscaliaNombre||cfg.destUri||'',
     direccion:cfg.ojFiscaliaDireccion||'',
@@ -14105,7 +13692,11 @@ function ojV(id){ var el=document.getElementById(id); return el?el.value:''; }
 function ojC(id){ var el=document.getElementById(id); return el?!!el.checked:false; }
 
 var OJ_LISTS={
-  delitos:{ path:'proceso.delitos', et:'Delito', vacio:'Sin delitos registrados. Agrega los que indique la orden (art. 298 CPP).',
+  /* ⚠️ `vacio` vacío = no se pinta nada (2026-08-28, obs. 5). «Sin delitos
+     registrados. Agrega los que indique la orden (art. 298 CPP)» era un renglón
+     que decía, encima del botón «+ Agregar delito», que no había delitos y que
+     había que agregarlos. Ver ojListaPintar(). */
+  delitos:{ path:'proceso.delitos', et:'Delito', vacio:'',
     campos:[
       // El datalist de conductas ya existía para flagrancia (dl-cond) y OJ no lo
       // usaba; al elegir una, el artículo del C.P. se rellena solo.
@@ -14122,7 +13713,7 @@ var OJ_LISTS={
      bloqueo por orden vencida, que ahora es una advertencia. `ojVigencia` SIGUE
      leyendo `o.prorrogas` para que una captura guardada con prórroga conserve
      exactamente la vigencia con la que se emitió. */
-  funcionarios:{ path:'diligencia.funcionarios', et:'Funcionario', vacio:'Sin funcionarios registrados.',
+  funcionarios:{ path:'diligencia.funcionarios', et:'Funcionario', vacio:'',
     campos:[
       {k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a',lista:'dl-grado'},
       {k:'cedula',l:'Cédula',ph:'Sin puntos',mono:true,par:'b'},
@@ -14187,7 +13778,7 @@ function ojListaLeer(kind){
 function ojListaPintar(kind){
   var d=OJ_LISTS[kind], ref=ojRef(kind), wrap=document.getElementById('oj-list-'+kind);
   if(!wrap) return;
-  if(!ref.arr.length){ wrap.innerHTML='<p class="oj-vacio">'+escHtml(d.vacio)+'</p>'; return; }
+  if(!ref.arr.length){ wrap.innerHTML=d.vacio?'<p class="oj-vacio">'+escHtml(d.vacio)+'</p>':''; return; }
   wrap.innerHTML=ref.arr.map(function(it,i){
     var pares={}, html='';
     d.campos.forEach(function(f){
@@ -14290,8 +13881,9 @@ function ojMotivoCambio(){ ojCollect(); renderWiz(); }
 function ojStep1(){
   var o=wc.oj.orden, p=wc.oj.proceso, d=wc.oj.despacho;
   ojPost(function(){ ojListaPintar('delitos'); });
+  /* ⚠️ Sin párrafo de introducción (obs. 4): decía que se transcribe la orden en
+     el orden del informe, delante de un formulario que ya está en ese orden. */
   return '<div class="st" style="margin-top:0">2. Datos del proceso judicial</div>'+
-    '<p class="oj-hint">Se transcribe la orden que tienes en la mano, en el mismo orden en que la imprime el informe. La app no produce órdenes de captura: registra la que expidió el despacho y documenta su cumplimiento.</p>'+
 
     '<div class="oj-blk">'+
       // Filas 1 y 2 del formato — la de expedición además dispara la vigencia.
@@ -14316,7 +13908,6 @@ function ojStep1(){
     // Fila 7 — delitos imputados.
     '<div class="oj-blk">'+
       '<div class="st">Delito(s) Imputado(s)</div>'+
-      '<p class="oj-hint">Al elegir la conducta, el artículo del Código Penal se completa solo. La orden manda: si trae otra calificación, cámbiala.</p>'+
       ojListaBtn('delitos','Agregar delito')+
     '</div>'+
 
@@ -14328,7 +13919,6 @@ function ojStep1(){
        encabeza el oficio cuando el informe se remite a un juzgado (obs. 1). */
     '<div class="oj-blk">'+
       '<div class="st">Autoridad solicitante</div>'+
-      '<p class="oj-hint">El despacho que libró la orden. Si el informe se remite a un juzgado, este mismo dato encabeza el oficio.</p>'+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojSelectorDespacho()">Buscar en despachos guardados</button>'+
       ojwF('Nombre completo del despacho',ojwIn('oj-d-nom',d.nombre,'Ej: Juzgado Tercero Penal Municipal con F.C.G. de Medellín'),'',!d.nombre)+
       ojwR(
@@ -14376,18 +13966,21 @@ function ojNotaDerivada(txt){
 function ojDespachosGuardados(){
   var cfg=DB.getConfig(); return cfg.despachosPropios||[];
 }
-function ojSelectorDespacho(modoDestino){
+function ojSelectorDespacho(modoDestino,clase){
   window._ojDestinoMode=!!modoDestino;
   /* ⚠️ Antes esta lista concatenaba `DESPACHOS_MEDELLIN`, quince despachos con
      dirección escrita en el código. El registro es ahora UNO solo y es del
      usuario: lo que agregue en la pantalla Despachos aparece aquí, y lo que
-     diligencie aquí aparece allá. */
+     diligencie aquí aparece allá.
+     ⚠️ `clase` acota la lista a los que pueden ser ESE destinatario (obs. 14):
+     un botón que dice «Elegir fiscalía» y ofrece juzgados invita a mandar el
+     oficio a quien no corresponde. Sin `clase`, se ofrecen todos. */
   var todos=ojDespachosGuardados();
+  if(clase) todos=todos.filter(function(d){ return lcDespClase(d)===clase; });
   openModal(
     '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<input class="fi" id="oj-desp-q" placeholder="Buscar por nombre o municipio…" oninput="ojSelectorDespachoFiltrar()" style="margin-bottom:12px">'+
-    '<div id="oj-desp-res"></div>'+
-    '<p class="oj-hint" style="margin-top:10px">Los despachos que diligencies a mano quedan guardados para reutilizarlos en próximas actuaciones. Se administran en <b>Despachos</b>.</p>'
+    '<div id="oj-desp-res"></div>'
   );
   window._ojDespCache=todos;
   ojSelectorDespachoFiltrar();
@@ -14483,8 +14076,11 @@ function ojStep4(){
   var aviso='';
   if(edad!==null&&edad<14) aviso='<div class="oj-alert dura"><b>Menor de 14 años</b>Al momento de los hechos tenía '+edad+' años: no es responsable penalmente. No procede el informe de captura; corresponde activar la ruta de protección.</div>';
   else if(ojEsAdolescente(wc)) aviso='<div class="oj-alert info"><b>Sistema de responsabilidad penal para adolescentes</b>Al momento de los hechos tenía '+(edad===null?'menos de 18':edad)+' años: el documento hablará de «aprehensión» y el destino será el sistema de adolescentes.<div class="oj-fund">Ley 1098 de 2006</div></div>';
+  /* ⚠️ Sin párrafo de introducción (2026-08-28, obs. 3). El título dice de qué
+     apartado se trata y los dos botones dicen qué se puede hacer; explicar
+     además para qué sirve identificar a la persona no le aporta nada a quien
+     está diligenciando un procedimiento con la persona delante. */
   return '<div class="st" style="margin-top:0">1. Identificación del '+escHtml(t.sust)+'</div>'+
-    '<p class="oj-hint">La identidad es la verificación central de una captura por orden judicial: es lo que descarta una homonimia.</p>'+
     aviso+ojRequeridoCard();
 }
 /* Tarjeta del requerido (o el estado vacío con las dos salidas). El resumen
@@ -14494,14 +14090,11 @@ function ojRequeridoCard(){
   var r=wc.oj.requerido, t=ojTermino(wc);
   var nom=ojNombreRequerido(r);
   var faltan=ojFaltasRequerido(r);
-  if(!nom){
-    return '<div class="oj-persona vacia">'+
-      '<div class="oj-persona-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" '+
-        'stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>'+
-      '<p>Sin '+escHtml(t.sust)+' registrado</p>'+
-      '<small>Agrégalo a mano o tráelo del registro de Personas: si ya estuvo capturado, sus datos vuelven solos.</small>'+
-    '</div>'+ojRequeridoBotones();
-  }
+  /* ⚠️ El estado vacío se retiró (2026-08-28, obs. 3): era una tarjeta de 26px
+     de alto con una silueta, un título y dos renglones de instrucciones, encima
+     de los DOS BOTONES que dicen exactamente lo mismo — «+ Agregar capturado» y
+     «Buscar existente». Sin capturado, los botones son el estado vacío. */
+  if(!nom) return ojRequeridoBotones();
   return '<div class="pcard">'+
       '<div><div class="pinfo">'+escHtml(nom)+'</div>'+
       '<div class="pdoc">'+escHtml(ojDocRequerido(r)||'Sin documento')+
@@ -14676,7 +14269,6 @@ function ojRequeridoForm(){
 
     '<div class="oj-blk">'+
       '<div class="st">Confirmación de la identidad</div>'+
-      '<p class="oj-hint">Cómo se estableció que la persona '+escHtml(ojTermino(wc).sust==='aprehendido'?'aprehendida':'capturada')+' es la requerida por la orden.</p>'+
       ojwF('Método',ojwSel('oj-r-imet','metodoIdent',r.identidadMetodo,'— Selecciona —'))+
       ojwF('Observación',ojwIn('oj-r-iobs',r.identidadObservacion,'Ej: se confirmó con reseña decadactilar'))+
     '</div>';
@@ -14748,17 +14340,10 @@ function ojUsarPersona(id){
 /* ─────────────────────────────────────────────────────────────────────────
    I.8 · PASOS DEL FORMULARIO (5 a 7)
 ───────────────────────────────────────────────────────────────────────── */
-function ojReloj36Html(){
-  var p=ojPlazo36(wc);
-  if(!p.vence) return '<div class="oj-alert info"><b>Término constitucional</b>Registra la fecha y la hora de la diligencia: de ahí arrancan las 36 horas del art. 28 de la Constitución.</div>';
-  var cls={OK:'ok',ALERTA:'blanda',URGENTE:'dura',VENCIDO:'dura'}[p.semaforo]||'info';
-  var horas=Math.floor(Math.abs(p.horas)), mins=Math.round((Math.abs(p.horas)-horas)*60);
-  var txt=p.horas<0
-    ? 'El término venció hace '+horas+' h '+mins+' min (vencía el '+p.vence+').'
-    : 'Quedan '+horas+' h '+mins+' min. Vence el '+p.vence+'.';
-  return '<div class="oj-alert '+cls+'"><b>Término de 36 horas — '+p.semaforo+'</b>'+escHtml(txt)+
-    '<div class="oj-fund">Art. 28 de la Constitución Política · art. 297 CPP</div></div>';
-}
+/* ⚠️ ojReloj36Html se retiró (2026-08-28, obs. 6): era el cuadro del término de
+   36 horas que abría el paso 3 y no queda ninguna vía que lo pinte. El cálculo
+   sigue intacto en ojPlazo36 —que es el que se imprime en el oficio— y su forma
+   compacta, ojPlazoBarraHtml, sigue en la revisión. */
 /* ⚠️ `ojGPS` y el campo de coordenadas se eliminaron con Mejora 3 (obs. 3): no
    salen en ninguna fila del formato y el relato las citaba como un paréntesis
    que nadie pide. Un caso guardado con coordenadas las sigue imprimiendo. */
@@ -14769,8 +14354,12 @@ function ojReloj36Html(){
 function ojStep5(){
   var g=wc.oj.diligencia, t=ojTermino(wc);
   ojPost(function(){ ojListaPintar('funcionarios'); });
+  /* ⚠️ Sin el cuadro del término de 36 horas (2026-08-28, obs. 6). Ocupaba
+     media pantalla en el paso donde se registran la fecha y la hora, y lo que
+     decía era un cálculo derivado de esos dos campos: nada que decidir. El
+     reloj no se pierde — sigue en la revisión (`ojPlazoBarraHtml`, una línea)
+     y se imprime en el oficio, que es donde tiene efecto. */
   return '<div class="st" style="margin-top:0">3. Materialización de la '+escHtml(t.acc)+'</div>'+
-    ojReloj36Html()+
 
     '<div class="oj-blk">'+
       // Fila 1 del numeral 3 — de aquí arranca el término de 36 horas.
@@ -14795,17 +14384,46 @@ function ojStep5(){
        ninguna fila. El relato abre ahora con una fórmula fija y cierta
        («en desarrollo de labores propias del servicio»), y lo que tenga de
        particular el procedimiento se cuenta en la narración. */
-    '<div class="oj-blk">'+
-      '<div class="st">Quién hizo la diligencia</div>'+
+    /* ⚠️ PLEGADO Y YA DILIGENCIADO (2026-08-28, obs. 7). «Las diligencias
+       siempre van a ser realizadas por el usuario del perfil y su compañero de
+       patrulla, o bien se da la opción de registrar cualquier funcionario»: los
+       dos ya están en Perfil, así que la app los pone (`ojFuncionariosDeCfg`, al
+       crear el caso) y aquí solo se ven o se corrigen. Cerrado ocupa un renglón
+       en vez de cuatro pantallas de campos.
+       ⚠️ Plegar NO es borrar: un `<details>` conserva sus hijos en el DOM, así
+       que `ojCollectDiligencia` y `ojListaLeer` los siguen recolectando con el
+       bloque cerrado — la lección de la Ola 4. Se abre solo si falta el dato,
+       que es cuando hay algo que hacer ahí. */
+    '<details class="oj-blk oj-mas"'+((g.funcionarios||[]).length?'':' open')+'>'+
+      '<summary>Quién hizo la diligencia <small>— '+escHtml(ojFuncionariosResumen(g))+'</small></summary>'+
       ojwR(
         ojwF('Unidad policial',ojwIn('oj-g-uni',g.unidad,'Ej: estación o CAI')),
         ojwF('Patrulla',ojwIn('oj-g-pat',g.patrulla,'Ej: 32'))
       )+
       '<label class="fl" style="margin-top:4px">Funcionarios participantes'+
-        ((wc.oj.diligencia.funcionarios||[]).length?'':'<span class="req" title="Obligatorio: debe constar al menos un funcionario">*</span>')+'</label>'+
+        ((g.funcionarios||[]).length?'':'<span class="req" title="Obligatorio: debe constar al menos un funcionario">*</span>')+'</label>'+
       ojListaBtn('funcionarios','Agregar funcionario')+
-      ojNotaDerivada('El oficio lo firma un solo funcionario (paso 4); el dossier registra la patrulla completa que ves aquí.')+
-    '</div>';
+    '</details>';
+}
+/* Resumen del bloque plegado: quiénes van, para no tener que abrirlo. */
+function ojFuncionariosResumen(g){
+  var f=(g.funcionarios||[]).map(function(x){ return lcGradoNombre(x.grado,x.nombre); }).filter(Boolean);
+  if(!f.length) return 'falta registrar al menos un funcionario';
+  return f.join(' · ');
+}
+/* La patrulla que hace el procedimiento: el titular del perfil activo y su
+   compañero registrado. ⚠️ Es el MISMO par que alimenta la cadena de custodia y
+   el «Conocieron el caso» del dossier — se resuelve desde `cfg.perfiles`, no con
+   un tercer criterio propio, para que los tres no puedan nombrar a gente
+   distinta en el mismo procedimiento. */
+function ojFuncionariosDeCfg(cfg){
+  var p=ojPerfilActivo(cfg||DB.getConfig()), out=[];
+  var pon=function(x){
+    if(!x||!(x.nombre||'').trim()) return;
+    out.push({grado:x.grado||'',cedula:sinPuntos(x.cedula||''),nombre:x.nombre||'',placa:''});
+  };
+  pon(p); pon(p.companero);
+  return out;
 }
 /* ── El relato y los anexos ──────────────────────────────────────────────────
    ⚠️ MEJORA 3 (obs. 4 y 5) — esta pantalla era «ACTUACIÓN POLICIAL»: cuatro
@@ -14838,10 +14456,11 @@ function ojStep6(){
   var nAnx=anexosSel.length;
   return '<div class="oj-blk">'+
       '<div class="st">Narración de los hechos</div>'+
-      '<p class="oj-hint">El oficio arma solo el relato con lo que ya registraste: fecha, hora, lugar, '+
-      'verificación de la orden, lectura de derechos y puesta a disposición. Escribe aquí lo que solo tú '+
-      'sabes — cómo se ubicó, si hubo uso de la fuerza, lesiones o novedades, con quién se comunicó. '+
-      'Se imprime al final, bajo «Observaciones».</p>'+
+      /* ⚠️ El párrafo de cuatro renglones que había aquí se resumió a uno
+         (2026-08-28, obs. 10): enumeraba lo que el oficio ya arma solo —fecha,
+         hora, lugar, verificación, derechos, disposición— cuando lo único que el
+         funcionario necesita saber es qué le toca escribir A ÉL. */
+      '<p class="oj-hint">Lo que solo tú sabes: cómo se ubicó, uso de la fuerza, lesiones, novedades.</p>'+
       ojwF('Relato del procedimiento',ojwTA('oj-a-obs',a.observaciones,'Cuenta el procedimiento con tus palabras.',8))+
     '</div>'+
 
@@ -14849,7 +14468,7 @@ function ojStep6(){
        tarea, son una comprobación. */
     '<details class="oj-blk oj-mas">'+
       '<summary>Anexos que acompañan el oficio <small>— '+escHtml(ojNumPalabra(nAnx))+' ('+nAnx+'), marcados automáticamente</small></summary>'+
-      '<p class="oj-hint">La app los marca según lo que ya registraste y los cuenta en el oficio. Si tocas una casilla, deja de proponer.</p>'+
+      '<p class="oj-hint">Si tocas una casilla, la app deja de proponer.</p>'+
       anexosHtml+
       ojwF('Otros anexos',ojwIn('oj-a-anxo',otros,'Sepáralos con comas — se imprimen en el orden que los escribas'))+
     '</details>';
@@ -14933,32 +14552,33 @@ function ojStep7(){
     '<details class="oj-blk oj-mas"'+(faltaEnc?' open':'')+'>'+
       '<summary>Encabezado, custodia y firma <small>— '+(faltaEnc?'FALTAN DATOS: se piden una sola vez':'ya configurados en este equipo')+'</small></summary>'+
       '<div class="st" style="margin-top:0">Las 4 líneas del membrete</div>'+
+      /* ⚠️ Los cuatro párrafos de ayuda de este bloque se resumieron o retiraron
+         (2026-08-28, obs. 10 y 13). Los campos ya vienen diligenciados de
+         Ajustes; explicar aquí de dónde salen, qué pasa si se cambian, cómo
+         completa la app el tipo de dependencia y que el escudo «ya viene
+         cargado» eran cinco renglones de texto delante de un bloque que en la
+         mayoría de las capturas no hay ni que abrir. */
       (faltaEnc
-        ? '<div class="oj-alert dura"><b>Falta el encabezado</b>El oficio se imprime con estas cuatro líneas arriba. '+
-          'Diligéncialas aquí: quedan guardadas como valor por defecto y no se te vuelven a pedir.</div>'
-        : '<p class="oj-hint">Viene de Ajustes → Oficio de orden judicial. Si lo cambias aquí, queda como nuevo valor por defecto.</p>')+
+        ? '<div class="oj-alert dura"><b>Falta el encabezado</b>Se pide una sola vez: queda como valor por defecto.</div>'
+        : '')+
       ojwF('Línea 1 — ministerio o sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece la unidad'),'',!e.ministerio)+
       ojwF('Línea 2 — institución',ojwIn('oj-e-ins',e.institucion,'Nombre de tu institución'),'',!e.institucion)+
-      ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento de policía o dirección/especialidad'),'Ej: METROPOLITANA DEL VALLE DE ABURRÁ · DEPARTAMENTO DE POLICÍA CAUCA · DIRECCIÓN DE TRÁNSITO Y TRANSPORTES',!e.unidad)+
-      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Escribe solo el nombre: CANDELARIA',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'Si escribes solo el nombre, la app completa «ESTACIÓN DE POLICÍA …». Si es otro tipo de unidad (SECCIONAL DE INVESTIGACIÓN CRIMINAL, CAI…), escríbelo completo y se respeta tal cual.',!e.dependencia)+
-      /* ⚠️ Aquí NO se pide el logo: el escudo del formato viene embebido y se
-         pone solo. Solo se avisa de que ya está, para que nadie lo busque. */
-      '<p class="oj-hint">El escudo del membrete ya viene cargado — no hay que hacer nada. '+
-      'Si tu unidad usa otro, se cambia una sola vez en Ajustes → Oficio de orden judicial.</p>'+
+      ojwF('Línea 3 — unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento o dirección'),'',!e.unidad)+
+      ojwF('Línea 4 — estación o dependencia',ojwIn('oj-e-dep',e.dependencia,'Escribe solo el nombre: CANDELARIA',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'',!e.dependencia)+
 
     /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
        narración. No siempre es la misma estación, por eso se puede cambiar aquí. */
       '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
-      '<p class="oj-hint">Estos datos salen <b>dos veces</b> en el oficio: en la constancia con que cierra la narración '+
-      'y en el bloque de contacto del final. Vienen de Ajustes, pero cámbialos si esta vez quedó en otro sitio.</p>'+
       ojwF('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}),'',!cu.estacion&&!cu.direccion)+
       ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 # 55–50'),'',!cu.estacion&&!cu.direccion)+
       ojwR(
         ojwF('Barrio',ojwIn('oj-c-bar',cu.barrio,'Ej: La Candelaria')),
         ojwF('Ciudad',ojwIn('oj-c-ciu',cu.ciudad,'Ej: Medellín',{extra:' list="dl-muni"'}))
       )+
-      '<p class="oj-hint">Se imprimen en un solo renglón: <i>'+
-        escHtml(ojCustodiaDireccion(cu)||'Calle 48 # 55–50, barrio La Candelaria, Medellín')+'</i></p>'+
+      /* La vista previa se queda: no es una explicación, es exactamente el
+         renglón que va a salir impreso. */
+      '<p class="oj-hint"><i>'+
+        escHtml(ojCustodiaDireccion(cu)||'CL 48 # 55 - 50, barrio La Candelaria, Medellín')+'</i></p>'+
       ojwR(
         ojwF('Abonado telefónico',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
         ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
@@ -14967,8 +14587,7 @@ function ojStep7(){
 
     /* Firma (selección 8): del perfil activo, o a mano si no hay perfil. */
       '<div class="st">Quién firma el oficio</div>'+
-      (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil cargado</b>No hay un perfil de funcionario activo en este '+
-        'equipo. Diligencia aquí quién firma: se imprime al pie del oficio y no se guarda en ningún perfil.</div>')+
+      (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil activo</b>Diligencia aquí quién firma.</div>')+
       '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar datos del perfil activo</button>'+
       ojwR(
         ojwF('Grado',lcGradoInput('oj-f-gra',fi.grado)),
@@ -15054,8 +14673,8 @@ function ojAnexosAuto(c){
    La opción marcada la propone el motor de destinatario con su regla; el
    funcionario la confirma o la cambia, y el cambio queda trazable. */
 var OJ_VIAS=[
-  ['FISCALIA','Fiscalía','Sale de Ajustes — no se diligencia aquí'],
-  ['JUZGADO','Juzgado','Es la autoridad solicitante del numeral 2'],
+  ['FISCALIA','Fiscalía','La registrada como predeterminada'],
+  ['JUZGADO','Juzgado','La autoridad solicitante del numeral 2'],
   ['ADOLESCENTES','Adolescentes','Ruta del sistema de responsabilidad penal para adolescentes']
 ];
 function ojDestinatarioHtml(d,s){
@@ -15078,26 +14697,28 @@ function ojDestinatarioHtml(d,s){
   var etiqueta, accion='', fuente='', aviso='';
   if(via==='FISCALIA'){
     etiqueta='Fiscalía destinataria';
-    /* «Como por lo general es una sola por municipio, esta se debe cargar de las
-       que se tienen guardadas por defecto desde ajustes»: se carga sola y aquí
-       solo se dice de dónde salió. */
-    if(fis.nombre) fuente='Cargada de Ajustes · Fiscalía destinataria';
-    else aviso='<div class="oj-alert dura"><b>La fiscalía no está configurada</b>Escríbela abajo una sola vez: '+
-        'se guarda como la fiscalía por defecto del equipo y las próximas capturas ya la traerán cargada.'+
-        '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="go(\'ajustes\')">Configurarla en Ajustes</button></div>';
+    /* «Como por lo general es una sola por municipio, se carga sola»: viene del
+       despacho de fiscalía predeterminado, el mismo del numeral 1 del FPJ-5
+       (obs. 14). Aquí solo se dice de dónde salió y se deja elegir otro. */
+    accion='<button class="btn bs bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino(\'FISCALIA\')">'+
+      (d.nombre?'Elegir otra fiscalía':'Elegir fiscalía de los despachos registrados')+'</button>';
+    if(fis.nombre) fuente='Del despacho predeterminado de fiscalía';
+    else aviso='<div class="oj-alert dura"><b>No hay una fiscalía registrada</b>'+
+        'Regístrala en Despachos y márcala como predeterminada: se carga sola en las próximas capturas.'+
+        '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="go(\'despachos\')">Ir a Despachos</button></div>';
   } else if(via==='JUZGADO'){
     etiqueta='Juzgado destinatario';
     /* «El usuario solo selecciona juzgado y automáticamente se carga»: el botón
        de elegir es la acción principal, y de la selección salen nombre,
        dirección, ciudad y teléfono sin teclear nada. */
-    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino()">'+
+    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino(\'JUZGADO\')">'+
       (d.nombre?'Elegir otro juzgado':'Elegir juzgado de los registrados')+'</button>';
     if(d.nombre) fuente=(d.nombre===wc.oj.despacho.nombre)
       ? 'Es la autoridad solicitante del numeral 2'
       : 'Despacho registrado';
   } else if(via==='ADOLESCENTES'){
     etiqueta='Autoridad destinataria';
-    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino()">Elegir de los registrados</button>';
+    accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino(\'CESPA\')">Elegir de los registrados</button>';
     fuente='Sistema de responsabilidad penal para adolescentes · Ley 1098 de 2006';
   } else {
     etiqueta='Autoridad ante la que se deja a disposición';
@@ -15140,21 +14761,31 @@ function ojDestinatarioHtml(d,s){
     '</details>'+
   '</div>';
 }
-/* La fiscalía es del EQUIPO, no de la captura: se pregunta una vez y de ahí en
-   adelante se carga sola (obs. 7). Este botón es el atajo para el funcionario
-   que la escribió en la primera captura sin haber pasado por Ajustes. */
+/* La fiscalía es del EQUIPO, no de la captura: se registra una vez y de ahí en
+   adelante se carga sola. Este botón es el atajo para el funcionario que la
+   escribió en la primera captura sin haber pasado por Despachos.
+   ⚠️ Desde 2026-08-28 (obs. 14) se guarda como DESPACHO —no en cuatro claves
+   propias de la configuración—, y se marca predeterminado: es el mismo registro
+   que usa el numeral 1 del FPJ-5, así que queda visible y editable en la
+   pantalla de Despachos como cualquier otro. */
 function ojGuardarFiscaliaDefecto(){
   ojCollect();
   var x=wc.oj.destino;
   if(!x.nombre){ toast('Escribe primero el nombre de la fiscalía'); return; }
   var cfg=DB.getConfig();
-  cfg.ojFiscaliaNombre=x.nombre; cfg.ojFiscaliaDireccion=x.direccion||'';
-  cfg.ojFiscaliaMunicipio=x.municipio||''; cfg.ojFiscaliaDepartamento=x.departamento||'';
+  var previo=null;
+  (cfg.despachosPropios||[]).forEach(function(y){ if(y.nombre===x.nombre) previo=y; });
+  var reg=lcDespGuardar({id:(previo&&previo.id)||'',clase:'FISCALIA',
+    tipo:(previo&&previo.tipo)||'FISCALIA',nombre:x.nombre,
+    direccion:x.direccion||'',municipio:x.municipio||'',departamento:x.departamento||''},cfg);
+  lcDespMarcarDefecto(reg.id,cfg);
   DB.saveConfig(cfg);
   renderWiz();
-  toast('Fiscalía guardada — las próximas capturas la traerán cargada ✓');
+  toast('Fiscalía guardada en Despachos ✓ — las próximas capturas la traerán cargada');
 }
-function ojSelectorDestino(){ ojSelectorDespacho(true); }
+/* El destinatario del oficio, acotado a la clase de despacho que corresponde a
+   la vía elegida: fiscalía, juzgado o CESPA. */
+function ojSelectorDestino(clase){ ojSelectorDespacho(true,clase||''); }
 /* El destinatario del oficio también es un despacho reutilizable: quien lo
    diligencia a mano una vez no debería volver a escribirlo nunca. */
 function ojGuardarDestinatario(){
@@ -16518,8 +16149,8 @@ function ojModalFaltantes(id,duras,legado){
   openModal(
     '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<div class="oj-alert dura"><b>No se puede generar todavía</b>'+
-    'El oficio de puesta a disposición es un documento legal: sin estos datos saldría incompleto ante el despacho judicial.</div>'+
-    (legado?'<div class="oj-hint" style="margin:0 0 12px">Esta captura viene del formato anterior, que no pedía el encabezado ni los datos del cierre. Se piden una sola vez: al guardarlos quedan como valor por defecto para los siguientes procedimientos.</div>':'')+
+    'Sin estos datos el oficio saldría incompleto ante el despacho judicial.</div>'+
+    (legado?'<div class="oj-hint" style="margin:0 0 12px">Captura del formato anterior: estos datos se piden una sola vez.</div>':'')+
     filas+
     (id?'<button class="btn bp bbl" style="margin-top:16px" onclick="ojCompletarCaso(\''+id+'\','+duras[0].paso+')">Completar el caso</button>':'')
   );
@@ -16569,9 +16200,10 @@ function ojConfirmarVigencia(caso,cb){
     ' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden vencida obliga a la libertad inmediata: '+
     'da aviso inmediato y por escrito a la autoridad que la libró y a la Fiscalía.'+
     '<div class="oj-fund">Art. 298 CPP (mod. Ley 1453 de 2011, art. 56) · CSJ AP4491-2016</div></div>'+
-    '<p class="oj-hint">Si la fecha de expedición está mal escrita, corrígela y la vigencia se recalcula sola. '+
-    'Si necesitas dejar constancia escrita del procedimiento, el informe se genera indicando que la orden '+
-    'figuraba vencida — no se afirma lo contrario en ninguna línea.</p>'+
+    /* ⚠️ El cuadro rojo de arriba NO se toca: es la advertencia legal, y ahí
+       cada palabra tiene efecto. Lo que se resumió es la explicación de las dos
+       salidas, que los propios botones ya nombran. */
+    '<p class="oj-hint">Si generas, el informe deja constancia de que la orden figuraba vencida.</p>'+
     '<div class="flx g8" style="flex-wrap:wrap">'+
       '<button class="btn bs" onclick="ojCancelarVencida()">Revisar la fecha</button>'+
       '<button class="btn bp" onclick="ojSeguirVencida()">Generar de todos modos</button>'+

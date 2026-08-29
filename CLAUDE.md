@@ -3721,3 +3721,220 @@ el build de HEAD: falla idéntico**. `ojResolverDestino` funciona bien: fuera de
 hay juzgado disponible y enruta a **R4-B** (juez de turno, C-042/2018); lo que está mal es que las
 suites dan por hecho un día y una hora hábiles. `verify_menu_expediente` [9] y `verify_ds`
 («favorito con estrella SVG») ya estaban documentados.
+
+## Mejora 6 — SEGUNDO DOCUMENTO (2026-08-28) — la app deja de hablar tanto
+⚠️ **El archivo `Documentos/Otro/Mejora 6.docx` fue REEMPLAZADO por el usuario.** Su contenido
+anterior —menú ⋮ / expediente— está implementado y verificado en `verify_mejora6.mjs` (32 checks,
+sección «Mejora 6» de arriba), que sigue en verde. Este es un documento nuevo con **17 observaciones**
+sobre los mismos pantallazos de la app. Verificado con `verify_mejora6b.mjs` (**67 checks**, nuevo),
+medido sobre la app real en un teléfono (384×800, touch).
+
+⚠️ **El hilo que une las diecisiete**: la app se llenó de avisos, estados y campos que **no comunican
+nada y tapan lo que sí importa**. El usuario lo dijo con una frase que vale como criterio —
+*«los títulos importantes como DIRECCIÓN Y CONTACTO casi ni se notan en medio de tanto aviso»*— y era
+literal: el título iba a 11 px en `--text-3`, el **mismo color y casi el mismo cuerpo** que los
+párrafos de ayuda que lo rodeaban. La jerarquía estaba invertida. La respuesta no fue maquillar: fue
+**quitar**, y donde el dato seguía haciendo falta, **ponerlo solo**.
+
+### Obs. 1 y 9 · El documento sale en Word, y el papel deja de preguntarse
+El oficio de orden judicial era el **último documento con dos salidas**; con su PDF retirado, los
+seis formatos tienen **exactamente una salida posible cada uno** — cuatro son `.docx` oficiales que
+no se traducen a la vista de impresión y dos YA son el PDF oficial estampado. Y el tamaño de papel se
+retiró por instrucción explícita: *«esto lo único que hace es generar traumatismo y el archivo de
+Word se adapta a las configuraciones de cualquier impresora»*.
+- **El diálogo de exportación se eliminó entero** (`_lcExportPintar`, `lcExportElegir`,
+  `lcExportConfirmar`, `lcExportCancelar`, `lcExportCambiarPapel`, `_lcExportRefrescar`,
+  `_lcExportOpt`, `lcDocNota`, `renderPapelAj`, `ajSetPapel`, `lcGuardarPapel` y el CSS `.exp-grid`):
+  sus dos preguntas se quedaron sin respuestas posibles. `lcPedirExport` **se conserva como PUNTO
+  ÚNICO** —lo llaman las cinco salidas— para que descargar, imprimir y enviar no puedan discrepar.
+- ⚠️ **El callback sigue siendo ASÍNCRONO** (`setTimeout 0`). Los cinco llamadores se escribieron
+  contando con que la respuesta llega **después del tap** —abren sheets, generan documentos pesados y
+  guardan el caso—; resolver en línea cambiaría el orden en que ocurren esas cosas sin que nadie lo
+  pida. Hay un check dedicado.
+- ⚠️ **El papel es una CONSTANTE, `LC_PAPEL_FIJO = 'CARTA'`, y un `cfg.papel` guardado antes deja de
+  leerse** (pasa a `_CFG_MUERTAS`). Si se respetara, un equipo que un día eligió Oficio seguiría
+  sacando Oficio para siempre **sin verlo ni poder cambiarlo** — que es exactamente el «dato que se
+  hereda en silencio» que este proyecto tiene prohibido. Se conserva la salvaguarda del FPJ-5:
+  `lcPapelEfectivo` nunca entrega un ancho que sus casillas no admiten.
+- ⚠️ **Pendiente, medido y NO ejecutado**: con esto, **la vista de impresión queda sin ningún
+  llamador que pueda alcanzarla**. `lcPrintDoc` · `lcPaginar` · `lcImprimir` · `lcRunHtml` ·
+  `lcParHtml` · `lcTablaHtml` · `lcPrintCss` (~250 líneas + su CSS) existían **solo** para producir
+  el PDF del oficio, y las dos ramas `sel.fmt==='PDF'` ya no se pueden seleccionar. Retirarlo es la
+  consecuencia correcta y el precedente está sentado (el subsistema de plantillas subidas, 2026-08-08),
+  pero **no es lo que se pidió** y arrastra la reescritura de dos suites; queda propuesto como paso
+  aparte. La guarda `out.noPDF` de `lcImprimir` sigue verificada.
+
+### Obs. 2 · El expediente, sin avisos, y sin los formatos que ese procedimiento no produce
+- **«PLAZO VENCIDO» se retiró**: *«las capturas se terminan y los registros quedan, entonces no tiene
+  ningún sentido ese aviso»*. Es correcto — el expediente se consulta también días después, cuando el
+  procedimiento ya terminó. Y además se medía desde `created`, que es cuando se **abrió el registro**,
+  no cuando ocurrió la captura. ⚠️ El reloj que de verdad cuenta sigue vivo donde se decide algo con
+  él: `ojPlazo36`, desde la hora de la diligencia, en la revisión del wizard y **impreso en el oficio**.
+- **«FALTAN DATOS» se retiró**: repetía en un bloque de cuatro renglones lo que cada tarjeta de
+  documento ya dice en su línea de estado.
+- ⚠️ **SIN EMP NI EF, los tres formatos del numeral 7 NO SE OFRECEN.** Era la causa de fondo del
+  aviso: se pintaban las tres tarjetas con «ningún EMP o EF registrado» ×3. Pero **eso no es un dato
+  que falte** — *«puede ocurrir que en ciertas capturas no se tenga EMP Y EF»*—, y en esas capturas el
+  acta de incautación, la cadena de custodia y el rótulo **no existen**. Un documento que no
+  corresponde al procedimiento no se ofrece «bloqueado»: no se ofrece. En cuanto se registre un
+  elemento, las tres aparecen.
+- El bloque **Estado solo se pinta** para una captura de orden judicial del formato anterior, porque
+  ahí no es un aviso sino **la única puerta** a «Completar al formato nuevo».
+
+### Obs. 3, 4, 5 y 6 · El formulario de orden judicial, sin ruido
+- **La barra «N datos obligatorios sin diligenciar en este paso — van marcados con \*» se retiró**
+  (`.wz-falta` / `.wz-ok`). Decía en un párrafo, y en todos los pasos, lo que dicen a la vez y sin
+  ocupar renglón **dos señales que sí se quedan**: el punto del progreso en rojo (con la cuenta en su
+  `title`) y el asterisco del campo. El aviso gemelo de «todo diligenciado» se fue por lo mismo.
+- **El estado vacío del capturado** (`.oj-persona`) era una tarjeta con silueta, título y dos
+  renglones de instrucciones **encima de los dos botones que dicen lo mismo**. Sin capturado, los
+  botones SON el estado vacío.
+- **Fuera los párrafos de introducción** de los pasos 1 y 2, el de «Delito(s) imputado(s)», el de
+  «Autoridad solicitante» y el «Sin delitos registrados. Agrega los que indique la orden» que estaba
+  **encima de su propio botón** (`OJ_LISTS.*.vacio` vacío = no se pinta nada).
+- **El cuadro del término de 36 horas salió del paso 3** (`ojReloj36Html`, retirada): ocupaba media
+  pantalla para mostrar un cálculo derivado de los dos campos que tenía justo debajo. El reloj sigue
+  en la revisión, en una línea (`ojPlazoBarraHtml`), y se imprime en el oficio.
+
+### Obs. 7 · La patrulla se pone sola, y su bloque viaja plegado
+*«Las diligencias siempre van a ser realizadas por el usuario del perfil y su compañero de patrulla,
+o bien se da la opción de registrar cualquier funcionario. Estos datos deben cargarse automáticamente
+sin necesidad de pedirlos.»*
+- **`ojFuncionariosDeCfg`** llena `diligencia.funcionarios` con el titular del perfil activo y su
+  compañero registrado. ⚠️ Es el **mismo par** que alimenta la cadena de custodia y el «Conocieron el
+  caso» del dossier: se resuelve desde `cfg.perfiles`, **no con un tercer criterio propio**, para que
+  los tres no puedan nombrar a gente distinta en el mismo procedimiento.
+- El bloque pasa a `<details>` **plegado**, con un resumen que dice quiénes van sin abrirlo. Se abre
+  solo si falta el dato. ⚠️ **Plegar no es borrar**: un `<details>` conserva sus hijos en el DOM, así
+  que `ojCollectDiligencia` y `ojListaLeer` los siguen recolectando cerrado (lección de la Ola 4). Hay
+  un check que recolecta con el bloque cerrado y comprueba que los dos siguen ahí.
+- Se conserva «+ Agregar funcionario»: la patrulla no siempre es la misma.
+- ⚠️ **Una captura ya guardada no se toca**: solo los casos nuevos nacen con los dos.
+
+### Obs. 8 · Los predeterminados primero, en verde fosforescente
+*«Las predeterminadas se deben ver de primeras en la lista y la palabra “predeterminada” en un color
+verde fosforescente. No uses tanto los colores genéricos de la IA.»*
+- Orden: **predeterminados primero**, y dentro de cada grupo el mismo comparador en español que
+  Capturas y Personas. Son los que la app usa **sin preguntar**, así que son los que hay que poder
+  comprobar de un vistazo.
+- Tokens nuevos **`--neon` / `--neon-bg` / `--neon-bd`**. ⚠️ **NO sustituyen a `--ok`** (el verde de
+  «correcto»): esto es una **marca**, no un estado, y por eso tiene tono propio. ⚠️ En oscuro el neón
+  es el **texto** (`#4CFF88`); en claro es el **fondo** con texto casi negro — un `#4CFF88` como texto
+  sobre blanco da 1,4:1, ilegible; así medido da **7,9:1** y se sigue viendo fluorescente. Antes la
+  marca iba en el índigo del acento y se confundía con la insignia del tipo de despacho, que va al lado.
+
+### Obs. 10 · Los títulos vuelven a pesar más que los avisos
+- **`.st` sube a 12,5 px / 700 en `--text-2`** y estrena una **barra de acento** que lo separa del
+  texto corrido sin ocupar un renglón. Antes iba a 11 px en `--text-3`: el mismo color y casi el mismo
+  cuerpo que el párrafo de ayuda de al lado.
+- **Regla medible que quedó**: ningún aviso pasa de **110 caracteres**. Se reescribieron o retiraron
+  los de Ajustes (los de cinco y seis renglones), los del wizard de orden judicial y los de los
+  modales del acta, la cadena de custodia y el rótulo. `verify_mejora6b` [47] lo vigila en Ajustes.
+- ⚠️ **Lo que NO se tocó**: el cuadro rojo de la confirmación de orden vencida. Es la advertencia
+  legal (art. 298 CPP · CSJ AP4491-2016) y ahí cada palabra tiene efecto; lo que se resumió es la
+  explicación de las dos salidas, que los propios botones ya nombran.
+
+### Obs. 11 y 12 · Los funcionarios del dossier
+- **VERDE 3 y DIAMANTE 3 vuelven a ser un campo de texto.** El selector de perfiles que se les había
+  puesto **nunca se pidió**: son oficiales del **mando**, no funcionarios de este equipo, así que
+  nunca hay un perfil que elegir y «Otro — escribir a mano» era siempre la respuesta. Se retiraron
+  `lcRefOpciones` · `lcRefLeer` · `lcRefToggle` · `lcRenderRef` · `lcLeerRef`.
+  ⚠️ **`lcRefTexto` SE QUEDA** y es lo que hace que nada se pierda: sigue resolviendo una referencia
+  `{pid}` guardada por la versión anterior, al pintar Ajustes y al congelar la foto de un caso.
+- **«Conocieron el caso» se DERIVA** (`getConocieronList`): *«siempre van a conocer el caso el usuario
+  del perfil y su compañero de patrulla registrado en este mismo perfil»*. Los dos ya están en Perfil;
+  la lista de Ajustes pedía por tercera vez unos datos que la app tenía. Para nombrar a otro
+  funcionario se edita el texto en la pantalla del dossier.
+- ⚠️ **ORDEN POR RANGO, no por orden de registro** (*«primero el que tiene más rango»*): `LC_GRADOS`
+  ya está escrito de mayor a menor, así que **la pirámide es su índice** — no hace falta una segunda
+  tabla que pueda divergir del catálogo. `lcGradoRango` se apoya en `lcGradoBuscar`, no en una
+  comparación propia. Un grado que no esté en el catálogo va **al final** (no se inventa una posición)
+  y el desempate conserva titular → compañero.
+- ⚠️ **El respaldo sigue vivo, y solo ese**: sin ningún perfil registrado se leen
+  `conocieronFuncionarios` y `conocieronCaso`, para que una configuración anterior no se quede muda.
+  `conocieronCaso` se mantiene sincronizado en texto al guardar, como venía haciéndose.
+
+### Obs. 13, 14, 15 y 16 · Lo que Ajustes dejó de pedir
+- **Obs. 13 — el bloque del escudo del membrete, fuera.** No era un paso de configuración: el escudo
+  **viene embebido y se pone solo** desde 2026-07-30. Ocupaba media pantalla con una miniatura, un
+  selector de archivo y **dos frases que decían que no había que hacer nada**. Con él se fueron el
+  ejemplo de la línea 3, la línea 4 derivada y la ciudad derivada. ⚠️ **El oficio no cambia**: la línea
+  4 sigue saliendo del nombre de la unidad y la ciudad de la fecha, de la ciudad de la unidad. La
+  lectura de `cfg.ojLogoB64` se conserva para un equipo que ya hubiera cargado uno propio.
+- **Obs. 14 — la fiscalía destinataria sale del REGISTRO DE DESPACHOS**, con la referencia exacta que
+  dio el usuario: *«se selecciona de las opciones del despacho y debe registrarse la dirección y el
+  nombre como lo hace el numeral uno del FPJ-5»*. `ojFiscaliaCfg` resuelve ahora el despacho de clase
+  FISCALÍA marcado como predeterminado — **el mismo que resuelve `lcDespachoDefecto('URI')` para el
+  numeral 1 del FPJ-5**: un solo registro, un solo sitio donde corregirlo. Las claves `ojFiscalia*` se
+  leen **detrás**, como respaldo. `ojGuardarFiscaliaDefecto` guarda ya como despacho y lo marca
+  predeterminado. ⚠️ **El selector se acota a la clase de la vía** (`ojSelectorDestino('FISCALIA')`):
+  un botón que dice «Elegir fiscalía» y ofrece juzgados invita a mandar el oficio a quien no
+  corresponde.
+- **Obs. 14 — la jornada judicial hábil, fuera del formulario.** ⚠️ **Dejó de preguntarse, no de
+  usarse**: el motor de destinatario la sigue leyendo con su valor por defecto 08:00–17:00 para
+  decidir si el juzgado está disponible dentro del término (R4-A / R4-B, C-042/2018).
+- **Obs. 15 — la línea del NUNC y «Administrar mis despachos», fuera.** Decían en dos renglones lo que
+  la pantalla de Despachos enseña en la tarjeta, con su marca de PREDETERMINADO y su NUNC.
+- **Obs. 16 — los Perfiles Regionales, eliminados.** Guardaban NUNC, localidad, zona, unidad y
+  despachos por zona y los propagaban al activarlos — pero **desde que el DESPACHO lleva su propio
+  NUNC y su propia jurisdicción** (2026-08-28), activar un perfil regional no hacía más que reescribir
+  claves de respaldo que ya no manda nadie: el despacho predeterminado seguía decidiendo. Era una
+  segunda forma de configurar lo mismo, y la peor de las dos. Se fueron sus seis funciones,
+  `ojRegionActiva` y el CSS `.rp-*`. ⚠️ `ojNuevoCaso` propone ahora el municipio de la diligencia con
+  **la ciudad de la unidad** (dato del usuario) y el departamento se infiere del catálogo del país.
+
+### Obs. 17 · La auditoría de Ajustes: de DIEZ secciones a CINCO
+El criterio no fue «acortar»: fue que **cada sección responda UNA pregunta** y que **ningún dato se
+pida dos veces**. Cada fusión, justificada:
+
+| Sección resultante | Qué reúne | Por qué |
+|---|---|---|
+| **Apariencia** | tema | sin cambios |
+| **Mi unidad** | Estación + membrete del oficio + valores por defecto del lugar | Los tres pedían atributos de la **misma** unidad en tres pantallas: su nombre salía en la línea 4 del membrete, en el dossier y en el bloque de contacto, y su ciudad encabezaba además la fecha del oficio |
+| **Dossier** | VERDE 3, DIAMANTE 3, patrulla y unidad | lo que **solo** usa el mensaje de WhatsApp |
+| **Copia de seguridad** | Config + Datos | las dos eran «exportar e importar un `.json`»; separarlas obligaba a recordar en cuál estaba cada botón |
+| **Info** | versión y almacenamiento | sin cambios |
+
+- ⚠️ **NINGUNA clave de configuración se borra por esto.** Las que dejaron de tener campo se siguen
+  leyendo donde ya se leían (respaldo de una config exportada antes); solo `papel`,
+  `perfilesRegionales` y `perfilRegionalActivo` entran en `_CFG_MUERTAS`, porque se quedaron **sin
+  lector Y sin escritor**. ⚠️ La distinción importa: `ojFiscalia*`, `ojJornada*` y
+  `conocieronFuncionarios` perdieron su campo pero **conservan lector** — sin escritor pero con lector
+  no es una clave muerta, es un valor legado.
+- ⚠️ **La trampa de `v()` sigue vigente y se respetó en las dos funciones**: devuelve `''` para un
+  elemento que no existe, así que asignar a ciegas una clave sin campo en pantalla **BORRA** lo que el
+  equipo tenía configurado. Es lo que ya costó un incidente con `ojDependencia` y con el NUNC.
+- **Medido**: 10 → **5 secciones**; ningún aviso de más de 110 caracteres.
+
+### Regresiones
+En verde: **mejora6b 67** (nuevo) · mejora6 32 · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 ·
+OJ 186/187 · fpj6 140 · custodia 99 · incautación 141 · export 66 · firma 62 · editable 28 ·
+tipografía OJ 42 · fpj5 tipografía 48 · envío 39 · almacén 12 · expediente 13 · menú+expediente 16 ·
+personas 25 · invitado 34 · simulador 41 · orden 33 · tema 39 · grados 31 · dossier histórico 29 ·
+despachos 53 · jurisdicción 67 · vía CR 41 · ola1 38 · ola2 33/34 · ola3 33 · ola4 22 · multipersona ·
+DS 9/10.
+
+⚠️ **Suites adaptadas al comportamiento nuevo, con su porqué anotado en el propio check** — ninguna
+perdió una comprobación salvo `verify_export`, que se explica abajo: `verify_oj` (187),
+`verify_ola1` (38), `verify_ola2` (34), `verify_ola4` (22), `verify_mejora2` (38), `verify_mejora3` (51),
+`verify_mejora5` (78), `verify_mejora6` (32), `verify_menu_expediente` (16), `verify_personas` (25),
+`verify_invitado` (34), `verify_despachos` (53), `verify_dossier_historico` (29), `verify_fpj6` (140),
+`verify_custodia` (99), `verify_incautacion` (141), `verify_envio_doc` (39), `verify_tipografia_oj` (42),
+`verify_ds` (su umbral de secciones de Ajustes baja de 8 a 5 — lo que protege, que ningún encabezado
+se quede sin icono SVG, no se relaja).
+
+⚠️ **`verify_export` pasa de 74 a 66 comprobaciones, y es la única que baja.** Quince de las suyas
+medían, paso a paso, el diálogo de exportación: el botón que nace deshabilitado, el texto que dice
+qué falta, «Cambiar» que vuelve a ofrecer los tamaños. **Ese diálogo ya no existe**, así que no
+tienen sujeto — y rellenar el número con comprobaciones de adorno habría sido peor. Se repuso lo que
+sí se puede medir y antes no se medía: un bloque nuevo que comprueba, **para los seis formatos**, que
+resuelven su salida por el mismo punto, con un formato concreto, y que a **ningún** motor le llega un
+papel que su formato no admita; más el contrato asíncrono del que dependen los cinco llamadores.
+
+⚠️ **Tres fallos PREEXISTENTES, no de este trabajo**: `verify_oj` [18] y `verify_ola2` [12]
+— **comprobado ejecutando `verify_oj` contra el build de HEAD con este mismo reloj: falla idéntico,
+1 de 187**. Es el calendario: era sábado a las 00:08, y fuera de la jornada hábil `ojResolverDestino`
+enruta **correctamente** a R4-B (juez de turno, C-042/2018); lo que está mal es que las suites dan por
+hecho un día y una hora hábiles. `verify_ds` («favorito con estrella SVG») ya estaba documentado
+desde el 2026-08-08.
+Anti-caché `?v=86` / `cache-v86`, `_BUILD=86`.

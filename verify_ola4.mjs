@@ -70,8 +70,10 @@ log(estructura.nombres.join(' · ') === 'El capturado · El proceso judicial · 
 /* ⚠️ Mejora 3 (obs. 1): la pantalla 1 sigue siendo el numeral 1, pero se
    presenta como la tarjeta del capturado — sus campos viven en un modal, igual
    que en flagrancia. */
+/* ⚠️ La tarjeta de estado vacío se retiró el 2026-08-28 (obs. 3): sin capturado
+   registrado, los dos botones son el estado vacío. */
 const pantallaA = await page.evaluate(() => ({
-  requerido: !!document.querySelector('.oj-persona.vacia, .pcard'),
+  requerido: !!document.querySelector('.pcard, button[onclick="ojAbrirRequerido()"]'),
   sinOrden: !document.getElementById('oj-o-num')
 }));
 log(pantallaA.requerido && pantallaA.sinOrden,

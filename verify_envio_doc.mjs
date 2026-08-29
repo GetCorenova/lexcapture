@@ -95,21 +95,29 @@ const SEL_DL = '#share-it-dl';
   // ---- 1b. Enviar es una salida más: pide lo que falte antes de nada ----
   // (el resto de la suite entra por _abrirEnvioSheet, que es la mecánica del
   // sheet ya con el papel elegido; aquí se comprueba la puerta de entrada)
-  // El equipo todavia no ha elegido papel, asi que aqui SI se pregunta.
-  await page.evaluate((id) => abrirEnvioDoc(id), uriId);
-  await page.waitForTimeout(250);
+  /* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.o documento, obs. 1 y 9):
+     enviar NO abre ningun dialogo. Los seis formatos tienen una sola salida
+     posible cada uno —el oficio de orden judicial era el ultimo con dos y paso a
+     solo Word— y el tamano de papel dejo de preguntarse: es Carta fija. */
+  /* Sin Web Share declarada todavia (eso llega mas abajo), la salida es la
+     descarga directa: lo que se mide aqui es que NADA la precede. */
+  const [dl1b] = await Promise.all([
+    page.waitForEvent('download', { timeout: 12000 }).catch(() => null),
+    page.evaluate((id) => abrirEnvioDoc(id), uriId)
+  ]);
+  await page.waitForTimeout(400);
   const gate = await page.evaluate(() => ({
     dialogo: !!document.getElementById('exp-go'),
-    bloqueado: !!(document.getElementById('exp-go') || {}).disabled,
-    papel: !!document.getElementById('exp-papel-CARTA'),
-    pdf: !!document.getElementById('exp-fmt-PDF'),
-    sheet: document.getElementById('share-sheet').classList.contains('on')
+    sheet: document.getElementById('share-sheet').classList.contains('on'),
+    pdf: lcExportSoloWord('FPJ'),
+    papel: lcPapelEfectivo('FPJ')
   }));
-  log(gate.dialogo && gate.bloqueado && gate.papel && !gate.sheet,
-    '[1b] Enviar pregunta el tamano de papel la primera vez y no produce nada hasta elegir',
-    JSON.stringify(gate));
-  log(!gate.pdf, '[1b] Y al FPJ-5 nunca se le ofrece PDF: solo Word conserva el formato de la Fiscalia');
-  await page.evaluate(() => lcExportCancelar());
+  log(!gate.dialogo && !!dl1b,
+    '[1b] Enviar no pregunta nada: entrega el documento, porque no hay decision que pedir',
+    JSON.stringify(gate) + ' · ' + (dl1b ? dl1b.suggestedFilename() : 'sin descarga'));
+  log(gate.pdf === true && gate.papel === 'CARTA',
+    '[1b] Y al FPJ-5 nunca se le ofrece PDF: solo Word conserva el formato de la Fiscalia');
+  await page.evaluate(() => closeShareSheet());
   await page.waitForTimeout(200);
 
   // ---- 2. Android con Web Share de archivos: el .docx va ADJUNTO por la hoja ----

@@ -56,9 +56,9 @@ await page.fill('#pin-a', '2468');
 await page.fill('#pin-b', '2468');
 await page.click('button[onclick="doSetPin()"]');
 await page.waitForTimeout(400);
-// El papel se pregunta UNA vez (Exportación v2): se fija para que el acta salga
-// sin abrir el diálogo y la suite mida el documento, no el diálogo.
-await page.evaluate(() => { lcGuardarPapel('CARTA'); });
+// ⚠️ 2026-08-28 (Mejora 6, 2.º documento, obs. 1 y 9): el papel dejó de
+// preguntarse y de guardarse — es Carta fija (LC_PAPEL_FIJO). No hay nada que
+// preparar aquí: el documento sale sin diálogo de por medio.
 
 /* ── Utilidades de lectura del .docx ───────────────────────────────────────
    ZIP stored: la entrada se lee sin inflar, igual que `unzipDocx` en la app. */

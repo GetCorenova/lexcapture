@@ -95,72 +95,72 @@ const ids = await page.evaluate(async () => {
   return { oj: oj.id, fpj: fpj.id };
 });
 log(!!ids.oj && !!ids.fpj, 'Semilla lista: un caso de orden judicial y uno de flagrancia');
-log(await page.evaluate(() => lcPapelCfg()) === '', 'El equipo arranca SIN papel elegido');
 
-/* ═══════════ 1. La PRIMERA vez sí se pregunta el papel ═══════════ */
-await page.evaluate((id) => lcExportarCaso(id), ids.oj);
-await page.waitForTimeout(300);
-log(await page.isVisible('#exp-go'), 'Al exportar se abre el diálogo');
-log(await page.isDisabled('#exp-go'), 'El botón de generar nace DESHABILITADO: nada sale sin elegir');
-log(await page.isVisible('#exp-papel-OFICIO'), 'La primera vez SÍ se pregunta el tamaño del papel');
+/* ═══════════ 1 a 4 · SECCIÓN REESCRITA el 2026-08-28 ═══════════════════════
+   Mejora 6 (2.º documento), obs. 1 y 9. Aquí se medía, paso a paso, un DIÁLOGO
+   DE EXPORTACIÓN que ya no existe. Sus dos preguntas se quedaron sin respuestas
+   posibles:
 
-await page.click('#exp-fmt-DOCX');
-await page.waitForTimeout(120);
-log(await page.isDisabled('#exp-go'), 'Con solo el formato elegido sigue bloqueado');
-log((await page.textContent('#exp-go')).includes('tamaño del papel'), 'Y dice que falta el tamaño');
+     · «¿Word o PDF?» — el oficio de orden judicial era el ÚNICO documento con
+       dos salidas. El usuario pidió retirarle el PDF («esto lo único que hace es
+       generar traumatismo y el archivo de Word se adapta a las configuraciones
+       de cualquier impresora»), y con eso los seis formatos pasaron a tener
+       exactamente una salida posible cada uno.
+     · «¿Qué tamaño de papel?» — retirada por instrucción explícita. Con la
+       sección Ajustes → Documentos fuera, no queda ninguna pantalla desde la que
+       verlo ni cambiarlo, y un tamaño invisible que decide cómo se imprime un
+       documento judicial es el «dato que se hereda en silencio» que este
+       proyecto tiene prohibido. Por eso es una CONSTANTE: Carta.
 
-await page.click('#exp-papel-OFICIO');
-await page.waitForTimeout(120);
-log(!(await page.isDisabled('#exp-go')), 'Elegidas ambas cosas, se habilita');
-log((await page.textContent('#exp-go')).includes('Oficio'), 'El botón nombra lo que va a generar', await page.textContent('#exp-go'));
+   Lo que estas comprobaciones protegían sigue vigente y se mide igual de
+   estricto, solo que sobre el resultado en vez de sobre el diálogo: que exportar
+   ENTREGA el documento, que el FPJ-5 nunca sale en PDF, y que a ningún motor le
+   llega un ancho que sus casillas no admiten. Y se añade lo que antes no podía
+   comprobarse: que nada precede a la entrega. ═════════════════════════════ */
+log(await page.evaluate(() => lcPapelCfg()) === 'CARTA',
+  'El papel es una constante del equipo: Carta', await page.evaluate(() => lcPapelCfg()));
 
+/* ═══════════ 1. Exportar entrega el documento, sin nada por delante ═══════ */
 const [dlOficio] = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
-  page.click('#exp-go')
+  page.evaluate((id) => lcExportarCaso(id), ids.oj)
 ]);
-log(!!dlOficio, 'Se descarga el .docx en el tamaño elegido', dlOficio ? dlOficio.suggestedFilename() : '(sin descarga)');
+await page.waitForTimeout(400);
+log(!!dlOficio && /\.docx$/.test(dlOficio.suggestedFilename()),
+  'Exportar el oficio entrega el .docx', dlOficio ? dlOficio.suggestedFilename() : '(sin descarga)');
+log(!(await page.isVisible('#exp-go').catch(() => false)),
+  'Sin ningún diálogo por delante: no hay decisión que pedir');
+log(await page.evaluate(() => typeof window.lcExportConfirmar === 'undefined' &&
+    typeof window.lcExportCancelar === 'undefined' && typeof window.lcGuardarPapel === 'undefined'),
+  'El diálogo no quedó como código muerto: sus funciones se retiraron');
 
-/* ═══════════ 2. …y no se vuelve a preguntar nunca más ═══════════ */
-log(await page.evaluate(() => lcPapelCfg()) === 'OFICIO',
-  'La elección queda guardada como el papel del EQUIPO', await page.evaluate(() => lcPapelCfg()));
-
-await page.evaluate((id) => lcExportarCaso(id), ids.oj);
-await page.waitForTimeout(300);
-log(await page.isVisible('#exp-go'), 'La segunda exportación sigue abriendo el diálogo (hay formato que elegir)');
-log(!(await page.isVisible('#exp-papel-OFICIO').catch(() => false)),
-  'Pero YA NO pregunta el tamaño: es del equipo, no del caso');
-const lineaPapel = await page.textContent('#exp-papel-actual').catch(() => '');
-log(/Oficio/.test(lineaPapel), 'Muestra cuál está en uso, no lo esconde', lineaPapel.replace(/\s+/g, ' ').trim());
-log(await page.isVisible('#exp-papel-cambiar'), 'Y deja cambiarlo sin salir del diálogo');
-log(await page.isDisabled('#exp-go'), 'El botón sigue esperando a que se elija el formato');
-await page.click('#exp-fmt-DOCX');
-await page.waitForTimeout(120);
-log(!(await page.isDisabled('#exp-go')), 'Con solo elegir formato ya se puede generar: UNA pregunta, no dos');
-
-/* ═══════════ 3. «Cambiar» vuelve a ofrecer los tamaños ═══════════ */
-await page.click('#exp-papel-cambiar');
-await page.waitForTimeout(200);
-log(await page.isVisible('#exp-papel-CARTA'), '«Cambiar» vuelve a mostrar los tamaños');
-await page.click('#exp-fmt-DOCX');
-await page.click('#exp-papel-CARTA');
-await page.waitForTimeout(120);
-const [dlCarta] = await Promise.all([
+/* ═══════════ 2. Una segunda exportación se comporta igual ═══════════ */
+const [dlOficio2] = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
-  page.click('#exp-go')
+  page.evaluate((id) => lcExportarCaso(id), ids.oj)
 ]);
-log(!!dlCarta, 'Genera con el tamaño nuevo');
+log(!!dlOficio2, 'La segunda exportación entrega igual', dlOficio2 ? dlOficio2.suggestedFilename() : '(sin descarga)');
 log(await page.evaluate(() => lcPapelCfg()) === 'CARTA',
-  'Y el cambio queda como el del equipo para la próxima vez', await page.evaluate(() => lcPapelCfg()));
-await page.evaluate(() => lcGuardarPapel('OFICIO'));
+  'Y el papel sigue siendo el mismo: no hay estado que se acumule');
+log(await page.evaluate(() => { const c = DB.getConfig(); return !('papel' in c); }),
+  '⚠️ La clave `papel` pasa a _CFG_MUERTAS: sin lector ni escritor, ya no viaja en la config');
 
-/* ═══════════ 4. El FPJ-5 NO tiene PDF ═══════════ */
+/* ═══════════ 3. El oficio de orden judicial pasa a SOLO WORD ═══════════ */
+log(await page.evaluate(() => lcExportSoloWord('OJ')) === true,
+  'El oficio de orden judicial es ahora solo-Word (obs. 1)');
+log(await page.evaluate(() => Object.keys(LC_DOCS).every(k => LC_DOCS[k].soloWord || LC_DOCS[k].esPDF)),
+  'Y con él, los seis formatos tienen una sola salida posible cada uno');
+const ojDocx = await page.evaluate(async (id) => {
+  const out = await buildOficioOJBlob(ojCasoParaDocumento(DB.getCase(id)), lcPapelEfectivo('OJ'));
+  return out ? { papel: out.papel, n: (await out.blob.arrayBuffer()).byteLength } : null;
+}, ids.oj);
+log(!!ojDocx && ojDocx.papel === 'CARTA' && ojDocx.n > 20000,
+  'El motor del oficio no cambió: sigue produciendo el .docx entero', ojDocx && (ojDocx.papel + ' · ' + ojDocx.n + ' bytes'));
+
+/* ═══════════ 4. El FPJ-5 NO tiene PDF, y la guarda es estructural ═══════════ */
 log(await page.evaluate(() => lcExportSoloWord('FPJ')) === true,
   'El FPJ-5 está declarado como documento solo-Word');
-log(await page.evaluate(() => lcExportSoloWord('OJ')) === false,
-  'El oficio de orden judicial sí ofrece los dos formatos');
 
-/* Con el papel ya elegido y sin formato que preguntar, no queda ninguna
-   pregunta: exportar el FPJ-5 descarga directamente. */
 const [dlFpj] = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
   page.evaluate((id) => lcExportarCaso(id), ids.fpj)
@@ -181,26 +181,14 @@ log(fpjPdf.noPDF === true, 'El .docx del FPJ-5 viaja marcado como no-imprimible 
 log(fpjPdf.r === false && fpjPdf.despues === false,
   'lcImprimir() lo rechaza y no llega a construir la vista: ninguna ruta futura puede imprimirlo');
 
-/* Si el equipo aún no ha elegido papel, al FPJ-5 se le pregunta solo eso. */
-await page.evaluate(() => { const c = DB.getConfig(); c.papel = ''; DB.saveConfig(c); });
-await page.evaluate((id) => lcExportarCaso(id), ids.fpj);
-await page.waitForTimeout(300);
-log(await page.isVisible('#exp-papel-CARTA'), 'Sin papel elegido, al FPJ-5 se le pregunta el tamaño');
-log(!(await page.isVisible('#exp-fmt-PDF').catch(() => false)),
-  'Pero NUNCA se le ofrece PDF, ni en la primera exportación');
-const explica = await page.textContent('#modal').catch(() => '');
-log(/formato oficial de la Fiscal/.test(explica), 'Y explica por qué, en vez de limitar en silencio');
-const opcionesFpj = await page.$$eval('[id^="exp-papel-"]', els => els.map(e => e.id.replace('exp-papel-', '')).filter(x => x !== 'actual' && x !== 'cambiar'));
-log(opcionesFpj.join(',') === 'CARTA,OFICIO',
-  'El FPJ-5 solo ofrece los tamaños que respetan el ancho de sus casillas', opcionesFpj.join(','));
-await page.evaluate(() => lcExportCancelar());
-await page.waitForTimeout(200);
-await page.evaluate(() => lcGuardarPapel('OFICIO'));
-
+log(await page.evaluate(() => lcPapelesDe('FPJ').join(',')) === 'CARTA,OFICIO',
+  'El FPJ-5 solo admite los tamaños que respetan el ancho de sus casillas',
+  await page.evaluate(() => lcPapelesDe('FPJ').join(',')));
 log(await page.evaluate(() => lcPapelesFPJ().join(',')) === 'CARTA,OFICIO',
   'lcPapelesFPJ() mantiene la lista corta');
-log(await page.evaluate(() => { lcGuardarPapel('P8X135'); const r = lcPapelEfectivo('FPJ'); lcGuardarPapel('OFICIO'); return r; }) === 'CARTA',
-  'Salvaguarda: si el equipo elige un ancho que el FPJ-5 no admite, ese formato cae a Carta');
+log(await page.evaluate(() => lcPapelSirveDoc('FPJ', 'P8X135') === false && lcPapelEfectivo('FPJ') === 'CARTA'),
+  'Salvaguarda: un ancho que el FPJ-5 no admite nunca le llega — cae a Carta');
+
 
 /* ═══════════ 5. El .docx lleva la geometría del papel elegido ═══════════ */
 const geo = await page.evaluate(async () => {
@@ -404,27 +392,74 @@ const avisa = await page.evaluate(() => {
 });
 log(avisa === true, 'Y lcImprimir() lo convierte en un aviso al usuario, con la salida por el Word');
 
-/* ═══════════ 9. El papel es visible y cambiable en Ajustes ═══════════ */
-await page.evaluate(() => { lcGuardarPapel('OFICIO'); go('ajustes'); loadAjustesFields(); toggleAjSec('docs-sec'); });
+/* ═══════════ 9 · SECCIÓN REESCRITA el 2026-08-28 ══════════════════════════
+   Mejora 6 (2.º documento), obs. 9: la sección «Documentos» de Ajustes —donde se
+   veía y se cambiaba el tamaño del papel— se retiró por instrucción del usuario.
+   Con el papel convertido en constante, ya no hay una decisión recordada que
+   pueda quedarse invisible, que era exactamente el riesgo que este bloque
+   protegía. Lo que se mide ahora es que la constante llegue de verdad hasta el
+   motor de cada documento, sin puntos intermedios donde pueda discrepar. */
+await page.evaluate(() => { go('ajustes'); loadAjustesFields(); });
 await page.waitForTimeout(300);
-log(await page.isVisible('#aj-papel-grid'), 'Ajustes → Documentos muestra el tamaño de papel');
-const ajOpts = await page.$$eval('#aj-papel-grid .exp-opt', els => els.map(e => ({ id: e.id.replace('aj-papel-', ''), on: e.classList.contains('on') })));
-log(ajOpts.length === 3, 'Con los tres tamaños', ajOpts.map(o => o.id).join(','));
-log(ajOpts.filter(o => o.on).map(o => o.id).join() === 'OFICIO',
-  'Y marcado el que está en uso: la decisión recordada nunca es invisible',
-  ajOpts.filter(o => o.on).map(o => o.id).join() || '(ninguno)');
-await page.click('#aj-papel-CARTA');
-await page.waitForTimeout(250);
-log(await page.evaluate(() => lcPapelCfg()) === 'CARTA',
-  'Cambiarlo se aplica al instante, sin pasar por «Guardar ajustes»', await page.evaluate(() => lcPapelCfg()));
-log(await page.$eval('#aj-papel-CARTA', e => e.classList.contains('on')), 'Y la selección se repinta');
+const ajPapel = await page.evaluate(() => ({
+  seccion: !!document.getElementById('aj-papel-grid'),
+  secciones: [...document.querySelectorAll('#screen-ajustes .aj-sec-lbl')].map(e => e.textContent.trim())
+}));
+log(!ajPapel.seccion, 'Ajustes ya no tiene sección de papel: no hay tamaño que elegir', ajPapel.secciones.join(' · '));
+log(!ajPapel.secciones.some(t => /Documentos/i.test(t)),
+  'Ni queda su entrada en el índice de la pantalla');
+log(await page.evaluate(() => lcPapelCfg()) === 'CARTA' &&
+    await page.evaluate(() => lcPapelEfectivo('OJ')) === 'CARTA',
+  'El papel se resuelve en UN punto y siempre da lo mismo', await page.evaluate(() => lcPapelEfectivo('OJ')));
 const dlAj = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
   page.evaluate((id) => lcExportarCaso(id), ids.fpj)
 ]).then(r => r[0]);
-log(!!dlAj, 'El siguiente documento sale ya con el papel de Ajustes, sin volver a preguntar');
+log(!!dlAj, 'El documento sale sin preguntar nada', dlAj ? dlAj.suggestedFilename() : '(sin descarga)');
 const fpjPapel = await page.evaluate((id) => buildFPJBlob(DB.getCase(id), lcPapelEfectivo('FPJ')).papel, ids.fpj);
 log(fpjPapel === 'CARTA', 'Y el motor recibe ese mismo tamaño, no otro', fpjPapel);
+
+/* ═══════════ 10 · El punto único de la decisión, formato por formato ═══════
+   ⚠️ Bloque NUEVO del 2026-08-28. Retirado el diálogo, `lcPedirExport` dejó de
+   ser una pantalla y pasó a ser lo que de verdad importa: el ÚNICO sitio donde
+   se resuelve con qué formato y en qué papel sale cada documento. Antes eso se
+   comprobaba a través de la interfaz —y solo para dos formatos—; ahora se mide
+   sobre los seis, que es lo que impide que descargar, imprimir y enviar puedan
+   discrepar. */
+const decision = await page.evaluate(() => new Promise(res => {
+  const kinds = Object.keys(LC_DOCS), out = {};
+  let pend = kinds.length;
+  kinds.forEach(k => lcPedirExport(k, 'prueba', sel => { out[k] = sel; if (!--pend) res(out); }));
+}));
+const kinds = await page.evaluate(() => Object.keys(LC_DOCS));
+log(kinds.every(k => !!decision[k]),
+  'Los seis formatos resuelven su salida por el mismo punto', kinds.join(','));
+log(kinds.every(k => decision[k].fmt === 'DOCX' || decision[k].fmt === 'PDF'),
+  'Cada uno con un formato concreto, nunca vacío',
+  kinds.map(k => k + ':' + decision[k].fmt).join(' · '));
+log(decision.FPJ7.fmt === 'PDF' && decision.FPJ8.fmt === 'PDF',
+  'Los dos formatos que YA son el PDF oficial se entregan como PDF');
+log(decision.OJ.fmt === 'DOCX' && decision.FPJ.fmt === 'DOCX' &&
+    decision.FPJ6.fmt === 'DOCX' && decision.INCAU.fmt === 'DOCX',
+  'Y los cuatro que se rellenan o se componen, en Word');
+log(await page.evaluate(() => Object.keys(LC_DOCS).every(k =>
+      !LC_DOCS[k].esPDF ? lcPapelSirveDoc(k, lcPapelEfectivo(k)) : true)),
+  '⚠️ A ningún motor le llega un papel que su formato no admita');
+log(await page.evaluate(() => Object.keys(LC_DOCS).every(k => typeof LC_DOCS[k].build === 'function')),
+  'Todas las entradas del registro tienen su constructor');
+
+/* ⚠️ El callback sigue llegando de forma ASÍNCRONA, y no es un detalle: los
+   cinco llamadores se escribieron contando con que la respuesta llega DESPUÉS
+   del tap —abren sheets, generan documentos pesados y guardan el caso—.
+   Resolver en línea cambiaría el orden en que ocurren esas cosas. */
+const asincrono = await page.evaluate(() => new Promise(res => {
+  let orden = [];
+  lcPedirExport('OJ', 'prueba', () => { orden.push('callback'); res(orden); });
+  orden.push('despues-de-llamar');
+}));
+log(asincrono[0] === 'despues-de-llamar' && asincrono[1] === 'callback',
+  '⚠️ La decisión se entrega de forma asíncrona, como esperan los cinco llamadores',
+  asincrono.join(' → '));
 
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 

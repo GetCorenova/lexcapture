@@ -181,7 +181,12 @@ log(rotulos === 'El capturado | El proceso judicial | La materialización | Revi
   'Y sus pasos son, uno a uno, los numerales del formato', rotulos);
 /* ⚠️ Mejora 3 (obs. 1): el paso 1 es la TARJETA del capturado, con «Agregar» y
    «Buscar existente» como en flagrancia; los campos viven en un modal. */
-log(await page.isVisible('.oj-persona.vacia') && await page.isVisible('button[onclick="ojAbrirRequerido()"]'),
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 3):
+   la tarjeta de estado vacío se retiró — repetía en un recuadro lo que dicen los
+   DOS BOTONES que tiene justo debajo. Sin capturado registrado, los botones SON
+   el estado vacío, y eso es lo que este check mide ahora. */
+log(await page.isVisible('button[onclick="ojAbrirRequerido()"]') &&
+    await page.isVisible('button[onclick="ojCargarPersona()"]'),
   'Paso 1 · «1. Identificación del capturado» — tarjeta y dos salidas, como en flagrancia');
 await page.click('button[onclick="ojAbrirRequerido()"]'); await page.waitForTimeout(200);
 log(await page.isVisible('#oj-r-pn'), 'Los datos se diligencian en un modal enfocado');
@@ -283,8 +288,18 @@ await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await pa
 await page.fill('#ojl-funcionarios-1-grado', 'Patrullero');
 await page.fill('#ojl-funcionarios-1-nombre', 'ACOMPANANTE DE PRUEBA');
 await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
-const reloj = await page.textContent('#wz-panels');
-log(/Término de 36 horas/.test(reloj), 'El reloj de 36 horas aparece desde el paso de materialización');
+/* ⚠️ Expectativa actualizada el 2026-08-28 (obs. 6): el CUADRO del término de
+   36 horas se retiró del paso de materialización —ocupaba media pantalla para
+   mostrar un cálculo derivado de los dos campos que hay debajo—. El reloj sigue
+   vivo: se calcula igual (ojPlazo36), se ve en una línea en la revisión y se
+   imprime en el oficio. Eso es lo que se mide. */
+const reloj = await page.evaluate(() => ({
+  enPaso: /Término de 36 horas/.test(document.getElementById('wz-panels').textContent),
+  calcula: !!ojPlazo36(wc).vence,
+  enRevision: /36 h/.test(ojPlazoBarraHtml())
+}));
+log(!reloj.enPaso && reloj.calcula && reloj.enRevision,
+  'El reloj de 36 horas se calcula y se ve en la revisión, no en el paso de materialización');
 
 /* ⚠️ Mejora 3 (obs. 4 y 5): el bloque «Actuación policial» y el de elementos
    incautados desaparecieron. Queda el relato y la comprobación de los anexos. */
@@ -643,9 +658,13 @@ await page.evaluate(() => {
 });
 await page.evaluate(id => abrirEnvioDoc(id), idCaso);
 await page.waitForTimeout(200);
-log(await page.isVisible('#exp-go'), 'Enviar pide primero formato y tamaño de papel');
+/* ⚠️ Expectativa actualizada el 2026-08-28 (obs. 1 y 9): ya NO hay diálogo. El
+   oficio sale solo en Word y el papel es Carta fija, así que no queda ninguna
+   pregunta legítima que hacer antes de producir. */
+log(!(await page.isVisible('#exp-go').catch(() => false)),
+  'Enviar no pregunta formato ni tamaño: el oficio tiene una sola salida');
 await elegirExport();
-await page.waitForTimeout(1200);
+await page.waitForTimeout(1600);
 const sheet = await page.evaluate(() => ({
   titulo: (document.getElementById('share-title') || {}).textContent,
   doc: window._shareDoc ? _shareDoc.fname : null
@@ -686,9 +705,10 @@ await page.evaluate(async () => {
   descargarDocCaso('legado1');
   return { paso: 1 };
 });
-log(await page.isVisible('#exp-go'), 'También al descargar: nada se produce sin elegir formato y tamaño');
+log(!(await page.isVisible('#exp-go').catch(() => false)),
+  'También al descargar: sin diálogo, porque no hay dos opciones que ofrecer');
 await elegirExport();
-await page.waitForTimeout(900);
+await page.waitForTimeout(1400);
 const legado = await page.evaluate(async () => {
   const adaptado = ojDesdeLegado(DB.getCase('legado1'));
   return {
@@ -1126,22 +1146,21 @@ const limpio = await page.evaluate(() => {
    'ojUbicacionTRD','ojReviso'].forEach(k => { crudo[k] = 'residuo'; });
   DB.saveConfig(crudo);
   const tras = DB.getConfig();
-  const campos = [...document.querySelectorAll('#aj-body-oj-sec input')]
-    .map(i => i.id).filter(Boolean);
+  const campos = [...document.querySelectorAll('#aj-body-unidad-sec input')]
+    .map(i => i.id).filter(Boolean).filter(i => /^aj-oj-/.test(i));
 
-  // El escudo del formato viene embebido: su bloque no debe pedir nada.
-  const det = document.getElementById('aj-oj-logo-det');
-  const sinPropio = JSON.parse(JSON.stringify(tras)); sinPropio.ojLogoB64 = '';
-  renderLogoOJ(sinPropio);
-  const abiertoSinPropio = det.open;
-  const conPropio = JSON.parse(JSON.stringify(tras));
-  conPropio.ojLogoB64 = 'iVBORw0KGgo='; conPropio.ojLogoMime = 'image/png';
-  renderLogoOJ(conPropio);
+  /* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 13):
+     el bloque del escudo se retiró de Ajustes. No era un paso de configuración
+     —el escudo del formato viene EMBEBIDO y se pone solo— sino un reemplazo
+     opcional que ocupaba media pantalla con una miniatura, un selector de
+     archivo y dos frases que decían que no había que hacer nada. Lo que este
+     check protege sigue siendo lo importante y ahora se mide directo: que el
+     escudo se resuelva solo, sin pedirle nada a nadie. */
   const escudo = {
-    plegado: det.tagName === 'DETAILS' && det.className.includes('oj-mas'),
-    abiertoSinPropio, abiertoConPropio: det.open
+    embebido: typeof OJ_LOGO_B64 === 'string' && OJ_LOGO_B64.length > 1000,
+    sinCampo: !document.getElementById('aj-oj-logo-file') && !document.getElementById('aj-oj-logo-det'),
+    seResuelve: !!ojCfgDoc({ ojLogoB64: '' })._logo || !!OJ_LOGO_B64
   };
-  renderLogoOJ(sinPropio);
 
   return {
     muertas: _CFG_MUERTAS.filter(k => k in tras),
@@ -1154,12 +1173,17 @@ log(limpio.muertas.length === 0,
   '⚠️ Las seis claves huérfanas (consecutivo, código/versión/clasificación, TRD, revisó) se retiran de la config',
   limpio.muertas.join(', '));
 log(limpio.intacto, 'Sin tocar nada de lo que sí se imprime');
-log(limpio.escudo.plegado && !limpio.escudo.abiertoSinPropio && limpio.escudo.abiertoConPropio,
-  '⚠️ El escudo viene embebido: su bloque va plegado y solo se abre si hay uno propio cargado',
+log(limpio.escudo.embebido && limpio.escudo.sinCampo,
+  '⚠️ El escudo viene embebido y ya no se pide: no hay campo que diligenciar',
   JSON.stringify(limpio.escudo));
-log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-logo-file,' +
-    'aj-oj-asunto,aj-oj-fnom,aj-oj-fdir,aj-oj-fmun,aj-oj-fdep,aj-oj-jini,aj-oj-jfin',
-  'La sección del oficio se queda solo con campos que el documento imprime o usa Y que no se piden en otra parte',
+/* ⚠️ La sección «Oficio de orden judicial» dejó de existir el 2026-08-28: sus
+   cuatro campos vivos (las tres líneas del membrete y el asunto) se fusionaron
+   con Ajustes → Mi unidad, porque son atributos de la MISMA unidad cuyo nombre,
+   dirección y ciudad ya se piden ahí — y la línea 4 salía justamente de ese
+   nombre. Los demás campos se retiraron por instrucción del usuario (fiscalía
+   destinataria → registro de Despachos; jornada hábil → no es relevante). */
+log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-asunto',
+  'El membrete se queda solo con lo que el documento imprime Y no se pide en otra parte',
   limpio.campos.join(', '));
 
 /* ─────────── 12. El nombre de la unidad: un solo dato, tres documentos ───────────

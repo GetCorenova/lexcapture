@@ -79,7 +79,7 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
 await page.fill('#pin-a', '445566'); await page.fill('#pin-b', '445566');
 await page.click('button[onclick="doSetPin()"]'); await page.waitForTimeout(400);
-await page.evaluate(() => lcGuardarPapel('CARTA'));
+// ⚠️ 2026-08-28: el papel es Carta fija; ya no hay que elegirlo antes de medir.
 
 /* Perfilador compartido: resuelve tamaño y fuente EFECTIVOS igual que Word
    (rPr → rStyle → estilo del párrafo con su cadena basedOn → docDefaults). */

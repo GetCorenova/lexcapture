@@ -326,12 +326,23 @@ log(ajustes.nu === '9999999999999999' && ajustes.du === 'Fiscalía de siempre' &
     ajustes.nc === '8888888888888888' && ajustes.dc === 'CESPA de siempre',
   '⚠️ Y guardar Ajustes NO las borra: `v()` devuelve "" para un elemento que no existe', JSON.stringify(ajustes));
 await page.waitForTimeout(300);
-const derivadas = await page.evaluate(() => ({
-  dest: (document.getElementById('aj-dest-auto') || {}).textContent || '',
-  nunc: (document.getElementById('aj-nunc-auto') || {}).textContent || ''
-}));
-log(/URI Centro/.test(derivadas.dest) && /0500160001202601/.test(derivadas.nunc),
-  'Ajustes muestra el destino y el NUNC RESUELTOS, con su procedencia', JSON.stringify(derivadas.nunc.slice(0, 60)));
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 15):
+   las dos líneas derivadas de Ajustes se retiraron —decían en dos renglones lo
+   que la pantalla de Despachos enseña en la tarjeta, con su marca de
+   PREDETERMINADO y su NUNC—. Lo que este check protege no cambia: que el
+   destino y el NUNC se RESUELVAN del despacho predeterminado. Se mide sobre los
+   resolutores, que es donde vive la regla, y sobre la pantalla que sí los pinta. */
+const derivadas = await page.evaluate(() => {
+  go('despachos'); renderDespachos('todos');
+  return {
+    dest: lcDespDestino('URI'), nunc: lcDespNunc('URI'),
+    enPantalla: document.getElementById('desp-list').textContent
+  };
+});
+log(/URI Centro/.test(derivadas.dest) && /0500160001202601/.test(derivadas.nunc) &&
+    /0500160001202601/.test(derivadas.enPantalla),
+  'El destino y el NUNC se resuelven del despacho predeterminado, y la pantalla los enseña',
+  derivadas.dest + ' · ' + derivadas.nunc);
 await page.evaluate(() => go('ajustes'));
 await page.waitForTimeout(300);
 await page.screenshot({ path: join(SHOTS, 'desp_04_ajustes.png'), fullPage: false });

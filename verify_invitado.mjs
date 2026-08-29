@@ -131,7 +131,11 @@ await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
 /* El equipo no está configurado: la app pide unidad, dependencia y firma. */
 const panel7 = await page.textContent('#wz-panels');
 log(/Falta el encabezado/.test(panel7), 'Sin configuración, la pantalla de revisión pide la unidad y la dependencia');
-log(/Sin perfil cargado/.test(panel7), 'Y avisa que no hay perfil para la firma');
+/* ⚠️ El texto del aviso se acortó el 2026-08-28 (obs. 10): decía «No hay un
+   perfil de funcionario activo en este equipo. Diligencia aquí quién firma: se
+   imprime al pie del oficio y no se guarda en ningún perfil» — tres renglones
+   para decir lo que dicen dos palabras y el campo que tiene debajo. */
+log(/Sin perfil activo/.test(panel7), 'Y avisa que no hay perfil para la firma');
 log((await page.inputValue('#oj-e-uni')) === '', 'La unidad llega vacía: no hereda la del dueño');
 
 const durasAntes = await page.evaluate(() => { ojCollect(); return ojDuras(wc).map(v => v.id); });
@@ -154,16 +158,19 @@ await page.fill('#oj-f-cor', 'invitado@prueba.test');
 const durasDespues = await page.evaluate(() => { ojCollect(); return ojDuras(wc).map(v => v.id); });
 log(durasDespues.length === 0, 'Diligenciados a mano, no queda ninguna validación dura', durasDespues.join(',') || 'ninguna');
 
-/* Genera y descarga el oficio: pasa por el diálogo obligatorio de exportación */
-await page.click('button[onclick="ojGenerarDesdeWizard()"]');
-await page.waitForSelector('#exp-go', { timeout: 8000 });
-log(await page.isDisabled('#exp-go'), 'Al invitado también se le piden formato y tamaño antes de producir nada');
-await page.click('#exp-fmt-DOCX');
-await page.click('#exp-papel-OFICIO');
+/* Genera y descarga el oficio.
+   ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 1 y 9):
+   ya NO hay diálogo de exportación. El oficio sale solo en Word y el tamaño de
+   papel dejó de preguntarse (Carta fija), así que no queda ninguna decisión que
+   pedirle a nadie — tampoco al invitado. Por eso el disparo va dentro del
+   Promise.all: la descarga sale enseguida. */
 const [dlOJ] = await Promise.all([
   page.waitForEvent('download', { timeout: 20000 }).catch(() => null),
-  page.click('#exp-go')
+  page.click('button[onclick="ojGenerarDesdeWizard()"]')
 ]);
+await page.waitForTimeout(400);
+log(!(await page.isVisible('#exp-go').catch(() => false)),
+  'Al invitado no se le pide formato ni tamaño: no hay nada que elegir');
 log(!!dlOJ && /^OJ_Disposicion_.*\.docx$/.test(dlOJ.suggestedFilename()),
   'El invitado descarga su oficio de orden judicial completo', dlOJ ? dlOJ.suggestedFilename() : '(sin descarga)');
 

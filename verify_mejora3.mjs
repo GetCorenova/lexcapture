@@ -63,7 +63,10 @@ await page.evaluate(() => {
   cfg.ojFiscaliaNombre = 'FISCALIA URI CENTRO';
   cfg.ojFiscaliaDireccion = 'Carrera 64C 67-300, barrio Caribe';
   cfg.ojFiscaliaMunicipio = 'Medellin'; cfg.ojFiscaliaDepartamento = 'Antioquia';
-  cfg.perfiles = [{ id: 'p1', grado: 'Subintendente', nombre: 'NELSON DAVID DAVID', cedula: '1035302775', cargo: 'Patrullero', telefono: '3000000000', correo: 'f@m3.test' }];
+  cfg.perfiles = [{ id: 'p1', grado: 'Subintendente', nombre: 'NELSON DAVID DAVID', cedula: '1035302775', cargo: 'Patrullero', telefono: '3000000000', correo: 'f@m3.test',
+    /* ⚠️ 2026-08-28 (obs. 12): «Conocieron el caso» dejo de ser una lista de
+       Ajustes y se DERIVA del perfil activo y su companero de patrulla. */
+    companero: { grado: 'Patrullero', nombre: 'JUAN CORDOBA', cedula: '71234567', cargo: 'Patrullero' } }];
   cfg.perfilActivo = 'p1';
   cfg.patrullaNum = '32'; cfg.patrullaUnidad = 'CAI Parque Bolivar';
   cfg.conocieronFuncionarios = ['SI Nelson David', 'PT Juan Cordoba'];
@@ -116,7 +119,8 @@ const p1 = await page.evaluate(() => {
     campos: panel.querySelectorAll('input,select,textarea').length,
     agregar: !!panel.querySelector('[onclick="ojAbrirRequerido()"]'),
     buscar: !!panel.querySelector('[onclick="ojCargarPersona()"]'),
-    estadoVacio: !!panel.querySelector('.oj-persona.vacia'),
+    // ⚠️ 2026-08-28 (obs. 3): el estado vacío son ahora los dos botones.
+    estadoVacio: !!panel.querySelector('button[onclick="ojAbrirRequerido()"]'),
     alto: panel.scrollHeight
   };
   // El patrón de flagrancia, para comparar: tarjetas + Agregar + Buscar existente.
@@ -329,7 +333,11 @@ const p7b = await page.evaluate(() => {
 });
 log(p7b.nombre === 'FISCALIA URI CENTRO' && p7b.dir === 'Carrera 64C 67-300, barrio Caribe' && p7b.mun === 'Medellin',
   'Fiscalía: nombre, dirección y ciudad se cargan solos de Ajustes', p7b.nombre);
-log(/FISCALIA URI CENTRO/.test(p7b.box) && /Ajustes/.test(p7b.src),
+/* ⚠️ 2026-08-28 (obs. 14): la fiscalia sale del REGISTRO DE DESPACHOS —el
+   mismo que resuelve el numeral 1 del FPJ-5— y, si el equipo no tiene ninguno
+   registrado, de la clave legada de Ajustes. La tarjeta sigue diciendo de donde
+   salio, que es lo que este check protege. */
+log(/FISCALIA URI CENTRO/.test(p7b.box) && /despacho|Ajustes/i.test(p7b.src),
   'Se muestra resuelta en una tarjeta que dice de dónde salió', p7b.src);
 
 const p7c = await page.evaluate(() => {
@@ -339,8 +347,11 @@ const p7c = await page.evaluate(() => {
     direccion: 'Carrera 52 No 42-73', municipio: 'Medellin', departamento: 'Antioquia', telefono: '6042221111' }];
   DB.saveConfig(cfg);
   ojCambiarVia('JUZGADO');
-  const btn = !!document.querySelector('.oj-dest .btn.bp[onclick="ojSelectorDestino()"]');
-  ojSelectorDestino();
+  /* ⚠️ El selector se acota a la clase de despacho que corresponde a la via
+     (2026-08-28, obs. 14): un boton que dice «Elegir juzgado» y ofrece fiscalias
+     invita a mandar el oficio a quien no corresponde. */
+  const btn = !!document.querySelector('.oj-dest .btn.bp[onclick*="ojSelectorDestino"]');
+  ojSelectorDestino('JUZGADO');
   ojUsarDespacho(0);
   const x = wc.oj.destino;
   return { btn, nombre: x.nombre, dir: x.direccion, mun: x.municipio, tel: x.telefono };
@@ -382,7 +393,7 @@ log(!/\?\?/.test(cuando) && /a las \d{2}:\d{2} horas/.test(cuando),
   'CUÁNDO ya no sale «??/??/?? a las ??:?? horas»', cuando);
 log(!/^—, Barrio —/.test(donde) && /CL 52 # 50-31, Barrio La Candelaria, Medellin - Antioquia/.test(donde),
   'DÓNDE imprime la dirección, el barrio, el municipio y el departamento', donde);
-log(/\*Conocieron el caso\*\nPATRULLA 32 CAI Parque Bolivar — SI Nelson David \/ PT Juan Cordoba/.test(p8.dos),
+log(/\*Conocieron el caso\*\nPATRULLA 32 CAI Parque Bolivar — SI NELSON DAVID DAVID \/ PT JUAN CORDOBA/.test(p8.dos),
   'El dossier sigue registrando la patrulla completa, aunque el oficio lo firme uno solo');
 log(/\*CÓMO\*\nRelato del procedimiento escrito por el funcionario\./.test(p8.dos),
   'Y CÓMO trae el relato del funcionario, que antes se quedaba fuera');

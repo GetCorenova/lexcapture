@@ -292,18 +292,20 @@ const verif = await page.evaluate(() => ojVerificacion(ojNuevoCaso()).funcionari
 log(/JUAN PEREZ/.test(verif), 'El funcionario que verifica la orden sale del perfil activo', verif);
 
 /* ─────────── 11. Cuánto se ahorró ─────────── */
-await page.evaluate(() => {
-  const cfg = DB.getConfig();
-  cfg.perfilesRegionales = [{ id: 'r1', nombre: 'Zona', departamento: 'Antioquia', municipio: 'Medellín', unidad: 'UNIDAD DE PRUEBA' }];
-  cfg.perfilRegionalActivo = 'r1';
-  DB.saveConfig(cfg);
-});
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 16):
+   los PERFILES REGIONALES se retiraron por instrucción del usuario. Guardaban
+   NUNC, localidad, zona, unidad y despachos por zona, pero desde que el DESPACHO
+   lleva su propio NUNC y su propia jurisdicción, activar un perfil regional solo
+   reescribía claves de respaldo que ya no manda nadie.
+   Lo que este check protege sigue siendo lo mismo —que la línea 3 del membrete
+   se escriba UNA vez y entre sola en cada captura— y ahora sale de Ajustes →
+   Mi unidad, que es donde el usuario ya escribe las otras tres líneas. */
 const unidadLinea3 = await page.evaluate(() => {
-  const cfg = DB.getConfig(); delete cfg.ojUnidad; DB.saveConfig(cfg);
+  const cfg = DB.getConfig(); cfg.ojUnidad = 'UNIDAD DE PRUEBA'; DB.saveConfig(cfg);
   return ojNuevoCaso().oj.encabezado.unidad;
 });
 log(unidadLinea3 === 'UNIDAD DE PRUEBA',
-  'La línea 3 del membrete entra desde el perfil regional (se escribe una vez)', unidadLinea3);
+  'La línea 3 del membrete entra sola en cada captura (se escribe una vez)', unidadLinea3);
 
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 console.log('\n' + (fails ? `❌ ${fails} de ${n} comprobaciones fallaron` : `✅ ${n} comprobaciones, todas en verde`));

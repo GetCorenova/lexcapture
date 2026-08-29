@@ -191,7 +191,8 @@ const orden = await page.evaluate(() => {
     bloques.push({
       // Mejora 3 (obs. 1): el bloque del capturado se presenta como tarjeta y su
       // formulario vive en un modal — sigue siendo el numeral 1 de la pantalla 1.
-      requerido: !!document.querySelector('#wz-panels .oj-persona.vacia, #wz-panels .pcard'),
+      // ⚠️ El estado vacío se retiró el 2026-08-28 (obs. 3): quedan los botones.
+      requerido: !!document.querySelector('#wz-panels .pcard, #wz-panels button[onclick="ojAbrirRequerido()"]'),
       orden: !!document.getElementById('oj-o-num'),
       proceso: !!document.getElementById('oj-p-rad'),
       solicitante: !!document.getElementById('oj-d-nom'),

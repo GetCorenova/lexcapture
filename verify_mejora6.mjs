@@ -140,7 +140,13 @@ const exp = await page.evaluate(() => {
   };
 });
 log(exp.on && exp.titulo === 'Expediente', '[3] El expediente se llama Expediente', exp.titulo);
-log(exp.estado && exp.docs && exp.cont, '[3] Trae estado, documentos y contenido de la captura', JSON.stringify(exp));
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, segundo documento, obs. 2):
+   el bloque de ESTADO ya no se pinta en una captura corriente — sus dos avisos
+   («plazo de 36 horas» y «faltan datos») se retiraron por ruido y solo queda el
+   de la captura de orden judicial del formato anterior, que es la puerta a
+   «Completar al formato nuevo». Lo que este check mide sigue siendo lo mismo:
+   que el expediente trae LOS DOCUMENTOS y EL CONTENIDO de la captura. */
+log(!exp.estado && exp.docs && exp.cont, '[3] Trae documentos y contenido de la captura, sin bloque de avisos', JSON.stringify({ estado: exp.estado, docs: exp.docs, cont: exp.cont }));
 log(!exp.dossierDentro, '[3] El dossier NO esta dentro del expediente: ni editor, ni secciones, ni salidas');
 log(!/Dossier WhatsApp|Secciones del dossier|Datos del Dossier/.test(exp.texto),
   '[3] Y no queda ni rastro suyo en la pantalla');

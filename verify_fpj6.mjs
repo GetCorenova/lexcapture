@@ -80,9 +80,8 @@ await page.fill('#pin-b', '445566');
 await page.click('button[onclick="doSetPin()"]');
 await page.waitForTimeout(400);
 
-// El papel queda elegido de antemano: el diálogo de exportación no es lo que
-// se está midiendo aquí (tiene su propia suite).
-await page.evaluate(() => { lcGuardarPapel('OFICIO'); });
+// ⚠️ 2026-08-28: el papel dejó de elegirse (Carta fija). Donde esta suite mide
+// geometría de Oficio, se lo pasa directamente al motor, que no cambió.
 
 /* ══ A · ARQUITECTURA ══════════════════════════════════════════════════════ */
 console.log('\n── A · Arquitectura: registro de documentos y aislamiento ──');
@@ -92,12 +91,18 @@ log(reg.includes('FPJ') && reg.includes('OJ') && reg.includes('FPJ6'),
   'El acta es una entrada más del registro de documentos, no un motor paralelo', reg.join(','));
 log(await page.evaluate(() => lcExportSoloWord('FPJ6')) === true,
   'FPJ-6 declarado «solo Word» — su maquetación es de la Fiscalía, no de la app');
+/* ⚠️ El oficio de orden judicial pasó a SOLO WORD el 2026-08-28 (obs. 1): era
+   el último documento con dos salidas y preguntarlo en cada envío costaba un
+   diálogo para elegir entre un archivo que se puede corregir y uno que no. */
 log(await page.evaluate(() => lcExportSoloWord('FPJ')) === true &&
-    await page.evaluate(() => lcExportSoloWord('OJ')) === false,
-  'El registro no cambió lo que ya regía para el FPJ-5 ni para el oficio OJ');
+    await page.evaluate(() => lcExportSoloWord('OJ')) === true,
+  'Los seis formatos tienen una sola salida posible: el FPJ-5 y el oficio, en Word');
 log(await page.evaluate(() => lcPapelesDe('FPJ6').join(',')) === 'CARTA,OFICIO',
   'Al acta solo se le ofrecen los tamaños de su mismo ancho');
-log(await page.evaluate(() => { lcGuardarPapel('P8X135'); const r = lcPapelEfectivo('FPJ6'); lcGuardarPapel('OFICIO'); return r; }) === 'CARTA',
+/* ⚠️ La salvaguarda del motor se mide directamente sobre él: aunque le llegue un
+   ancho que sus casillas no admiten, el acta cae a Carta. Antes se medía dando
+   ese rodeo por el papel del equipo, que ya no existe. */
+log(await page.evaluate(() => lcPapelSirveDoc('FPJ6', 'P8X135') === false && lcPapelEfectivo('FPJ6') === 'CARTA'),
   'Un ancho que las casillas no admiten cae a Carta, igual que en el FPJ-5');
 log(await page.evaluate(() => typeof lcProducirDoc === 'function'),
   'Hay un productor único: descarga, aviso y vista de impresión se heredan');

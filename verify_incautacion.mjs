@@ -139,10 +139,12 @@ log(await page.evaluate(() => LC_DOCS.INCAU.soloWord === true && lcExportSoloWor
 log(await page.evaluate(() => LC_DOCS.INCAU.anchoFijo === true && lcPapelesDe('INCAU').join(',') === 'CARTA,OFICIO'),
   '⚠️ anchoFijo: solo se le ofrecen tamaños de 8,5" — sus casillas son geometría del formulario',
   await page.evaluate(() => lcPapelesDe('INCAU').join(',')));
-log(await page.evaluate(() => lcExportSoloWord('FPJ') === true && lcExportSoloWord('OJ') === false && LC_DOCS.FPJ8.esPDF === true),
-  'El registro no cambió lo que ya regía para los otros cuatro formatos');
-
-await page.evaluate(() => lcGuardarPapel('OFICIO'));
+/* ⚠️ El oficio de orden judicial pasó a SOLO WORD el 2026-08-28 (obs. 1): era el
+   último documento con dos salidas. Y el papel dejó de elegirse —es Carta fija—,
+   así que aquí ya no hay nada que preparar: donde esta suite mide geometría de
+   Oficio se lo pasa directamente al motor, que no cambió. */
+log(await page.evaluate(() => lcExportSoloWord('FPJ') === true && lcExportSoloWord('OJ') === true && LC_DOCS.FPJ8.esPDF === true),
+  'Los seis formatos tienen una sola salida posible cada uno');
 
 /* ── Caso sembrado ── */
 const idCaso = await page.evaluate(async ({ e1, e2, e3 }) => {
@@ -197,12 +199,19 @@ const faltaCoincide = await page.evaluate(() => {
 });
 log(faltaCoincide, 'Lo que la tarjeta dice que falta es lo mismo que bloquea al generar');
 
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 2):
+   sin EMP ni EF el acta NO se ofrece bloqueada — no se ofrece. No es un dato que
+   falte: hay capturas que sencillamente no tienen elementos, y en ellas el acta
+   de incautación no existe. Ofrecerla con un «Faltan datos» invitaba a
+   diligenciar un documento que no corresponde a ese procedimiento. */
 const sinEmp = await page.evaluate(async () => {
   const c = Object.assign({}, DB.getCase('ai-uri'), { id: 'ai-vacio', elementos: [], narracion: { emp: '' } });
   await DB.saveCase(c);
-  return lcEstadoDocs(DB.getCase('ai-vacio')).find(d => d.lbl === 'Acta de incautación').falta.join('|');
+  const docs = lcEstadoDocs(DB.getCase('ai-vacio'));
+  return { acta: docs.some(d => d.lbl === 'Acta de incautación'), quedan: docs.map(d => d.lbl).join(' · ') };
 });
-log(/EMP/.test(sinEmp), 'Sin EMP registrados dice qué falta, en vez de ofrecer un acta en blanco', sinEmp);
+log(sinEmp.acta === false,
+  'Sin EMP registrados el acta no se ofrece: no corresponde a ese procedimiento', sinEmp.quedan);
 
 /* ══ B · LA PLANTILLA ══════════════════════════════════════════════════════ */
 console.log('\n── B · Es el archivo oficial, limpio y sin red ──');

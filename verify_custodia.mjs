@@ -105,20 +105,23 @@ log(reg.includes('FPJ8') && reg.includes('FPJ7'),
   'Los dos formatos son entradas del registro de documentos, no motores paralelos', reg.join(','));
 log(await page.evaluate(() => LC_DOCS.FPJ8.esPDF === true && LC_DOCS.FPJ7.esPDF === true),
   'Declarados «esPDF»: su build entrega el PDF oficial estampado, no un .docx');
-log(await page.evaluate(() => lcExportSoloWord('FPJ') === true && lcExportSoloWord('OJ') === false),
-  'El registro no cambió lo que ya regía para el FPJ-5 ni para el oficio OJ');
+/* ⚠️ El oficio de orden judicial pasó a SOLO WORD el 2026-08-28 (obs. 1): era
+   el último documento con dos salidas posibles. */
+log(await page.evaluate(() => lcExportSoloWord('FPJ') === true && lcExportSoloWord('OJ') === true),
+  'Los seis formatos tienen una sola salida posible: el FPJ-5 y el oficio, en Word');
 
 /* ⚠️ Un formato que ya ES el PDF oficial no tiene formato de salida que elegir
    ni papel que fijar: el diálogo no puede abrirse a preguntar nada. */
 const sinDialogo = await page.evaluate(() => new Promise(res => {
-  lcGuardarPapel('');                       // ni siquiera con el papel sin elegir
+  /* ⚠️ 2026-08-28: ya no hay diálogo para NINGÚN documento (los seis tienen una
+     sola salida posible y el papel es Carta fija). El check se conserva porque
+     lo que protege sigue vigente: un PDF oficial no puede pedir nada. */
   let llamado = null;
   lcPedirExport('FPJ8', 'prueba', sel => { llamado = sel; });
   setTimeout(() => res({ llamado, dialogo: !!document.getElementById('exp-fmt-DOCX') }), 150);
 }));
 log(sinDialogo.llamado && sinDialogo.dialogo === false,
   'No se abre diálogo de exportación: no hay ninguna decisión que pedir', JSON.stringify(sinDialogo.llamado));
-await page.evaluate(() => lcGuardarPapel('OFICIO'));
 
 /* ══ Caso sembrado ══ */
 const idCaso = await page.evaluate(async ({ e1, e2, e3 }) => {
@@ -160,13 +163,20 @@ log(!items.some(t => /custodia|Rótulo/i.test(t)),
 await page.evaluate(() => closeSheet());
 await page.waitForTimeout(150);
 
+/* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 2):
+   sin EMP ni EF los dos formatos NO se ofrecen bloqueados — no se ofrecen. No es
+   un dato que falte: hay capturas que sencillamente no tienen elementos, y en
+   ellas la cadena de custodia y el rótulo no existen. Ofrecerlos con un «Faltan
+   datos» invitaba a diligenciar un documento que no corresponde. */
 const sinEmp = await page.evaluate(async () => {
   const c = Object.assign({}, DB.getCase('cc-uri'), { id: 'cc-vacio', elementos: [], narracion: { emp: '' } });
   await DB.saveCase(c);
-  return lcEstadoDocs(DB.getCase('cc-vacio')).filter(d => /custodia|Rótulo/i.test(d.lbl)).map(d => d.falta.join('|'));
+  const docs = lcEstadoDocs(DB.getCase('cc-vacio'));
+  return { cc: docs.filter(d => /custodia|Rótulo|incautaci/i.test(d.lbl)).length,
+           quedan: docs.map(d => d.lbl) };
 });
-log(sinEmp.length === 2 && sinEmp.every(f => /Ningún EMP/.test(f)),
-  'Sin EMP registrados, los dos dicen qué falta en vez de ofrecer un formato en blanco', sinEmp[0]);
+log(sinEmp.cc === 0,
+  'Sin EMP registrados los dos formatos no se ofrecen: no corresponden a ese procedimiento', sinEmp.quedan.join(' · '));
 
 /* ══ B · EL FORMATO OFICIAL, INTACTO ═══════════════════════════════════════ */
 console.log('\n── B · El PDF oficial viaja sin un byte cambiado ──');
