@@ -124,7 +124,7 @@ const idUri = await page.evaluate(async () => {
       priNom: 'Carlos', segNom: 'Andrés', priApe: 'Restrepo', segApe: 'Gómez',
       alias: 'El Flaco', fn: '1994-03-12', edad: '32', sexo: 'M', lugNac: 'Bello, Antioquia',
       ecivil: 'Unión libre', escol: 'Bachiller', ocup: 'Comerciante',
-      dirRes: 'KR 45 # 30-12', tel: '3001234567', correo: 'carlos@prueba.test',
+      dirRes: 'CR 45 # 30-12', tel: '3001234567', correo: 'carlos@prueba.test',
       padres: 'María Gómez y Luis Restrepo', senas: 'Cicatriz en el antebrazo'
     }],
     victimas: [], testigos: [], sinVictima: true, sinTestigo: true,
@@ -217,7 +217,7 @@ log(cUri[76] === 'Bello, Antioquia', 'Lugar de nacimiento');
 log(cUri[78] === 'María Gómez y Luis Restrepo', 'Nombre de los padres');
 log(cUri[80] === 'Unión libre', 'Estado civil');
 log(cUri[82] === 'Comerciante', 'Ocupación u oficio');
-log(/KR 45 # 30-12/.test(cUri[84]) && /3001234567/.test(cUri[84]), 'Dirección y teléfono en una sola casilla', cUri[84]);
+log(/CR 45 # 30-12/.test(cUri[84]) && /3001234567/.test(cUri[84]), 'Dirección y teléfono en una sola casilla', cUri[84]);
 log(cUri[86] === 'carlos@prueba.test', 'Correo electrónico');
 log(cUri[88] === '@carlosr', 'Redes sociales');
 
@@ -753,7 +753,7 @@ const sz = await page.evaluate(async () => {
     capturados:[{ id:'szp', tipoDoc:'CC', numDoc:'71234567', expEn:'Medellín',
       priNom:'Carlos', priApe:'Restrepo', fn:'1994-03-12', lugNac:'Bello, Antioquia',
       padres:'María Gómez y Luis Restrepo', ecivil:'Unión libre', ocup:'Comerciante',
-      dirRes:'KR 45 # 30-12', tel:'3001234567', correo:'c@prueba.test', redes:'@carlosr',
+      dirRes:'CR 45 # 30-12', tel:'3001234567', correo:'c@prueba.test', redes:'@carlosr',
       nombreIdentitario:'Camila Restrepo', lgbti:'SI', lgbtiCual:'Transgénero',
       etnia:'AFRO', comunidadEtnica:'Consejo Comunitario San José' }],
     narracion:{ fechaCapD:'03', fechaCapM:'08', fechaCapA:'2026', horaCapH:'14', horaCapM:'35' }
@@ -888,7 +888,7 @@ const semillaGemela = (id, tipo) => page.evaluate(async ([id, tipo]) => {
       id: 'per-' + id, rol: 'Capturado', tipoDoc: 'TI', numDoc: '1.028.111.222', expEn: 'Medellín',
       priNom: 'Juan', segNom: 'David', priApe: 'Osorio', segApe: 'Ruiz',
       fn: '2009-05-10', sexo: 'M', lugNac: 'Medellín, Antioquia', ecivil: 'Soltero',
-      ocup: 'Estudiante', dirRes: 'KR 45 # 30-12', tel: '3001234567',
+      ocup: 'Estudiante', dirRes: 'CR 45 # 30-12', tel: '3001234567',
       correo: 'j@prueba.test', padres: 'Ana Ruiz y Pedro Osorio'
     }],
     victimas: [], testigos: [], sinVictima: true, sinTestigo: true,

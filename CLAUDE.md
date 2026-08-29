@@ -3237,6 +3237,64 @@ hábiles) y `verify_ds` («favorito con estrella SVG», mecanismo retirado el 20
 se calcula en **un solo sitio**.
 Anti-caché `?v=84` / `cache-v84`, `_BUILD=84`.
 
+## Carrera se abrevia «CR», no «KR» (2026-08-28)
+Reportado en campo con el numeral 1 de un informe impreso y un recuadro rojo sobre la abreviatura:
+*«Cambia de todos los formularios de la aplicación el formato "KR" para referirse a Carrera, en su
+lugar siempre debe de ser "CR". Esto debe quedar corregido en todos los formularios y por ende los
+informes y documentos deben de tener ese formato»*. Verificado con `verify_via_cr.mjs` (**41 checks**,
+nuevo). Las 28 suites previas siguen en verde salvo los dos fallos preexistentes que se listan al final.
+
+- ⚠️ **La abreviatura venía del catastro, no de los juzgados.** `LC_VIA` se armó (Mejora 1) con la
+  nomenclatura del **IGAC/DANE**, que escribe «KR». Es correcta para el catastro y equivocada para el
+  destinatario real de estos documentos: un despacho judicial escribe «CR». El catálogo cambia; el
+  criterio que lo justificaba —*abreviatura corta, que cabe en la casilla estrecha del formato*— no.
+- ⚠️ **La conversión es en UN SOLO SENTIDO, y ahí está todo el diseño.** «KR» deja de **producirse**
+  pero se sigue **reconociendo**: pasa de ser una entrada de `LC_VIA` a ser un alias de
+  `LC_VIA_ALIAS` (junto a `KRA`, `CRA`, `CARR`). Quitarlo del todo habría hecho que una dirección ya
+  guardada como «KR 45 # 12-30» dejara de interpretarse y cayera a **texto libre** al abrir su
+  formulario — perdiendo la vía, el número y la placa que la app sí tenía. Hay un check dedicado.
+- **`lcDirCR(s)` es la primitiva única** y se aplica en los **mismos tres momentos que `lcPlaca`**,
+  por la misma razón que se documentó entonces: *un caso puede venir del simulador o de un import y
+  no pasar por el formulario*.
+  1. **Al salir del campo** (`lcDirLibreCR`, `onblur` del modo libre) — ⚠️ **visible, no silenciosa**:
+     el usuario tiene que ver en el formulario lo que se va a imprimir, en vez de encontrarse en el
+     documento una palabra que él no escribió (misma decisión que `ojEstacionLabel`). En el formato
+     guiado ya se ve solo: el selector dice «Carrera (CR)» y la vista previa, «CR 83 # 47A-91».
+  2. **Al guardar** — `DB.saveCases`/`savePersons`, el único punto por el que pasa toda escritura,
+     así quedan cubiertos el simulador y la importación de un `.json`.
+  3. **Al leer lo ya guardado** — `_lcLoadCaches` (capturas, personas y el borrador del wizard) y
+     `_cfgConDefaults` (despachos registrados, lugar de custodia, fiscalía destinataria). ⚠️ Sobre la
+     caché en memoria y **sin forzar ninguna escritura**: una captura anterior imprime «CR» aunque
+     nadie vuelva a abrir su formulario, y el dato se persiste cuando el caso se guarde por su cuenta.
+- ⚠️ **Ni un motor documental se tocó.** Con el dato normalizado en el origen, los seis formatos
+  salen con «CR» sin una línea nueva en `buildFPJBlob`, `buildActaBlob`, `ojDocCuerpo` ni en los dos
+  PDF estampados. La alternativa —normalizar en cada punto de impresión— eran **más de doce sitios**
+  que pueden discrepar, que es justo el defecto que este proyecto ya pagó entre descargar y enviar.
+- ⚠️ **`lcDirCR` NO reinterpreta de más.** Solo sustituye cuando «KR» (o «KRA») es **palabra completa
+  y encabeza el número de la vía**: «KRISTAL 45» y «detrás del parque KR» se quedan intactos, igual
+  que una dirección sin nomenclatura. Es la misma regla que hace que `lcDirParsear` devuelva el texto
+  íntegro ante lo que no encaja — una dirección mal interpretada manda a la policía judicial al sitio
+  equivocado. Y es **idempotente**, porque corre en tres momentos sobre el mismo dato.
+- **`LC_VIA_CRUCE` sigue el cambio** (`CL:'CR'`, `CR:'CL'`), así que la dirección sin placa se sigue
+  escribiendo en palabras («Calle 49 con carrera 54», Mejora 5 obs. 3) sin tocar nada más.
+- ⚠️ **`AK` (Avenida Carrera) NO cambia**: no es la abreviatura de carrera, es la de otra vía del
+  catálogo, y el reporte era sobre «KR». Cambiarla habría sido ir más allá de lo pedido sobre una
+  sigla que el usuario no señaló.
+- Suites actualizadas a la abreviatura nueva **sin bajar su cuenta**: `verify_mejora1` (157),
+  `verify_mejora5` (78), `verify_despachos` (53), `verify_fpj6` (140) y `verify_fpj5_tipografia` (48).
+  El check [34] de la suite nueva reproduce **la línea exacta del pantallazo** del reporte.
+- Regresiones en verde: **vía CR 41** · mejora1 157 · mejora5 78 · mejora6 32 · mejora2 38 ·
+  mejora3 51 · despachos 53 · jurisdicción 67 · fpj6 140 · fpj5 tipografía 48 · incautación 141 ·
+  custodia 99 · export 74 · firma 62 · editable 28 · tipografía OJ 42 · envío 39 · almacén 12 ·
+  expediente 13 · menú+expediente 16 · personas 25 · invitado 34 · simulador 41 · orden 33 ·
+  tema 39 · grados 31 · dossier histórico 29 · ola1 38 · ola3 33 · ola4 22 · multipersona ·
+  OJ 186/187.
+  ⚠️ **Dos fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD**:
+  `verify_oj` [18] y `verify_ola2` [12] (calendario: fuera de jornada hábil `ojResolverDestino`
+  enruta correctamente a **R4-B**, juez de turno, C-042/2018 — las suites dan por hecho un día y una
+  hora hábiles) y `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
+  Anti-caché `?v=85` / `cache-v85`, `_BUILD=85`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

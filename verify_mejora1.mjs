@@ -210,7 +210,7 @@ sec('OBS 5 — direcciones normalizadas (lugar de los hechos)');
 await irA('Lugar');
 log(await page.isVisible('#w-dir__via'), 'La dirección del lugar se arma con un tipo de vía predefinido');
 const vias = await page.evaluate(() => Array.from(document.querySelectorAll('#w-dir__via option')).map(o => o.value).filter(Boolean));
-log(vias.includes('CL') && vias.includes('KR') && vias.includes('AV'),
+log(vias.includes('CL') && vias.includes('CR') && vias.includes('AV'),
   'El catálogo trae calle, carrera y avenida (y 13 más)', vias.length + ' vías');
 await page.evaluate(() => {
   document.getElementById('w-dir__via').value = 'CL';
@@ -247,7 +247,7 @@ const parseos = await page.evaluate(() => ([
 ]));
 log(parseos[0].via === 'CL' && parseos[0].num === '51' && parseos[0].cruce === '42' && parseos[0].placa === '82',
   'Interpreta «Calle 51 No 42-82» ya guardada', JSON.stringify(parseos[0]));
-log(parseos[1].via === 'KR' && parseos[1].comp === 'APTO 301', 'Reconoce abreviaturas y el complemento', JSON.stringify(parseos[1]));
+log(parseos[1].via === 'CR' && parseos[1].comp === 'APTO 301', 'Reconoce abreviaturas y el complemento', JSON.stringify(parseos[1]));
 log(parseos[2].via === 'CL' && parseos[2].cruce === '50', 'Entiende «Calle 52 con carrera 50»', JSON.stringify(parseos[2]));
 log(parseos[3].via === 'DG' && parseos[3].num === '75B' && parseos[3].placa === '15', 'Y los números con letra', JSON.stringify(parseos[3]));
 log(parseos[4].modo === 'libre' && parseos[4].libre === 'Al lado de la cancha, sin nomenclatura',
@@ -265,7 +265,7 @@ for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas
   log(ok, `El registro de ${rol} usa el MISMO widget de dirección`);
   if (ok) {
     await page.evaluate(() => {
-      document.getElementById('pm-dirRes__via').value = 'KR';
+      document.getElementById('pm-dirRes__via').value = 'CR';
       document.getElementById('pm-dirRes__num').value = '45';
       document.getElementById('pm-dirRes__cruce').value = '12';
       document.getElementById('pm-dirRes__placa').value = '30';
@@ -276,7 +276,7 @@ for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas
     });
     await page.evaluate((r) => savePersonModal(r, -1, r === 'capturados'), rol);
     await page.waitForTimeout(200);
-    log(await page.evaluate((r) => wc[r][0].dirRes, rol) === 'KR 45 # 12-30',
+    log(await page.evaluate((r) => wc[r][0].dirRes, rol) === 'CR 45 # 12-30',
       `Y la guarda con el mismo formato en ${rol}`);
   } else { log(false, `(no se pudo probar el guardado en ${rol})`); }
 }

@@ -2402,7 +2402,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 84;
+var _BUILD = 85;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3194,6 +3194,13 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_firmas');
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
+  /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
+     memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
+     vuelva a abrir su formulario. No se fuerza ninguna escritura — el dato se
+     persiste cuando el caso se guarde por su cuenta. */
+  (_casesCache||[]).forEach(lcDirCRCaso);
+  (_personsCache||[]).forEach(lcDirCRPersona);
+  if(_draftCache&&_draftCache.caso) lcDirCRCaso(_draftCache.caso);
   _syncPersonsFromCases();
 }
 
@@ -3241,7 +3248,10 @@ var DB = {
     return Promise.resolve();
   },
   getCases: function() { return _casesCache !== null ? _casesCache : []; },
-  saveCases: function(c) { return _lcGuardarCache('cases', c, _lcLeerCases, _lcEscribirCases); },
+  /* ⚠️ La abreviatura de carrera se normaliza a «CR» AQUÍ, en el único punto por
+     el que pasa toda escritura de capturas: así también quedan cubiertos el
+     simulador y la importación de un .json, que no pasan por el formulario. */
+  saveCases: function(c) { (c||[]).forEach(lcDirCRCaso); return _lcGuardarCache('cases', c, _lcLeerCases, _lcEscribirCases); },
   getCase: function(id) { var a=this.getCases(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
   /* ⚠️ `.slice()` no es cosmético: `getCases()` devuelve la caché VIVA, y hacer
      `push` sobre ella la muta antes de saber si el guardado va a funcionar —
@@ -3266,7 +3276,7 @@ var DB = {
     return _lcEncSave('firmas', _firmasCache);
   },
   getPersons: function() { return _personsCache !== null ? _personsCache : []; },
-  savePersons: function(p) { return _lcGuardarCache('persons', p, _lcLeerPersons, _lcEscribirPersons); },
+  savePersons: function(p) { (p||[]).forEach(lcDirCRPersona); return _lcGuardarCache('persons', p, _lcLeerPersons, _lcEscribirPersons); },
   getPerson: function(id) { var a=this.getPersons(); for(var i=0;i<a.length;i++) if(a[i].id===id) return a[i]; return null; },
   savePerson: function(p) { var a=this.getPersons().slice(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
@@ -3403,6 +3413,10 @@ function _cfgConDefaults(stored) {
         }
       }
     }
+    /* La misma migración de «KR» → «CR» para las direcciones que vive en la
+       configuración: los despachos ya registrados, el lugar de custodia y la
+       fiscalía destinataria. Al leer, sin forzar un guardado. */
+    lcDirCRCfg(out);
     return out;
 }
 /* ── ÚNICO punto donde se resuelve el nombre de la unidad ──────────────────
@@ -4250,14 +4264,19 @@ function collectStep() {
    El usuario escogía la vía a mano y cada quien escribía "Cll 52", "calle 52",
    "CALLE 52 CON CRA 50"… El formato oficial tiene una casilla estrecha para la
    dirección, así que la mezcla de estilos largos la desbordaba. Se estandariza
-   con la abreviatura del IGAC/DANE (CL, KR, AV…), que es corta y es la que
-   usan los despachos.
+   con la abreviatura corta que usan los despachos (CL, CR, AV…).
+   ⚠️ CARRERA SE ABREVIA «CR», NO «KR» (decisión del usuario, 2026-08-28, sobre
+   el numeral 1 de un informe impreso). El IGAC/DANE usa «KR» en su nomenclatura
+   catastral, pero los despachos judiciales escriben «CR» y es lo que el usuario
+   quiere ver en TODOS sus formularios y documentos. «KR» sigue reconociéndose al
+   LEER (alias) para que ninguna dirección ya guardada se pierda, y `lcDirCR` la
+   convierte al escribirla — nunca al revés.
    ⚠️ La libertad de escribir a mano NO se toca: es un requisito explícito de la
    observación y además hay direcciones que ningún formato captura ("finca La
    Esperanza, vía al mar km 4"). El widget tiene los dos modos y recuerda cuál
    quedó activo por el propio contenido del dato. */
 var LC_VIA=[
-  {ab:'CL', nom:'Calle'},          {ab:'KR', nom:'Carrera'},
+  {ab:'CL', nom:'Calle'},          {ab:'CR', nom:'Carrera'},
   {ab:'AV', nom:'Avenida'},        {ab:'AC', nom:'Avenida Calle'},
   {ab:'AK', nom:'Avenida Carrera'},{ab:'CQ', nom:'Circular'},
   {ab:'CV', nom:'Circunvalar'},    {ab:'DG', nom:'Diagonal'},
@@ -4268,7 +4287,56 @@ var LC_VIA=[
 ];
 /* Sinónimos que la gente escribe de verdad. Se consultan al interpretar una
    dirección ya guardada; no se ofrecen en el selector. */
-var LC_VIA_ALIAS={CLL:'CL',CLE:'CL',CA:'CL',CRA:'KR',CR:'KR',KRA:'KR',CARR:'KR',AVE:'AV',TRANS:'TV',TRV:'TV',DIAG:'DG',DIG:'DG',MAN:'MZ',MZA:'MZ',CIRC:'CQ',VDA:'VDA',VRD:'VDA'};
+var LC_VIA_ALIAS={CLL:'CL',CLE:'CL',CA:'CL',CRA:'CR',KR:'CR',KRA:'CR',CARR:'CR',AVE:'AV',TRANS:'TV',TRV:'TV',DIAG:'DG',DIG:'DG',MAN:'MZ',MZA:'MZ',CIRC:'CQ',VDA:'VDA',VRD:'VDA'};
+
+/* ── «KR» → «CR» sobre una dirección YA ESCRITA ─────────────────────────────
+   El catálogo y el widget guiado ya solo producen «CR», pero eso no alcanza:
+   hay direcciones escritas a mano (modo libre), capturas guardadas antes de este
+   cambio, despachos ya registrados y datos que llegan por importación o del
+   simulador — ninguno pasa por el selector. Esta es la primitiva única que las
+   convierte, y se aplica en los MISMOS tres momentos que `lcPlaca`: al salir del
+   campo, al guardar y al leer lo ya guardado.
+   ⚠️ Solo se sustituye cuando «KR» (o «KRA») es PALABRA COMPLETA y va seguida del
+   número de la vía: es ahí donde significa carrera sin ninguna duda. No se toca
+   dentro de otra palabra, ni suelta, ni delante de un texto — reinterpretar de
+   más una dirección manda a la policía judicial al sitio equivocado (misma regla
+   que `lcDirParsear`, que ante lo que no encaja devuelve el texto intacto).
+   ⚠️ La conversión es en UN SOLO SENTIDO. «KR» se sigue reconociendo al leer
+   (`LC_VIA_ALIAS`) para que ninguna dirección guardada se pierda; lo que nunca
+   se hace es volver a escribirla. */
+var LC_RE_KR=/\b(?:KRA|KR)\.?\s*(?=[0-9])/gi;
+function lcDirCR(s){
+  var t=String(s==null?'':s);
+  return t.indexOf('K')<0&&t.indexOf('k')<0 ? t : t.replace(LC_RE_KR,'CR ');
+}
+/* Asigna solo si de verdad cambia: así un campo ausente sigue ausente y un caso
+   que ya está bien no se marca como modificado. */
+function _lcCR(o,k){ if(!o) return; var v=o[k]; if(!v||typeof v!=='string') return; var n=lcDirCR(v); if(n!==v) o[k]=n; }
+/* Todas las direcciones de una persona, de un caso y de la configuración. Es la
+   lista completa de sitios donde el modelo guarda una dirección; si aparece un
+   campo nuevo, va aquí y queda cubierto en los tres momentos a la vez. */
+function lcDirCRPersona(p){ _lcCR(p,'dirRes'); return p; }
+function lcDirCRCaso(c){
+  if(!c||typeof c!=='object') return c;
+  _lcCR(c.lugar,'dir');
+  ['capturados','victimas','testigos'].forEach(function(k){ (c[k]||[]).forEach(lcDirCRPersona); });
+  (c.rotulos||[]).forEach(function(r){ _lcCR(r,'direccion'); });
+  var o=c.oj;
+  if(o){
+    _lcCR(o.despacho,'direccion');
+    _lcCR(o.requerido,'resDireccion');
+    _lcCR(o.diligencia,'lugarDireccion');
+    _lcCR(o.destino,'direccion');
+    _lcCR(o.custodia,'direccion');
+  }
+  return c;
+}
+function lcDirCRCfg(cfg){
+  if(!cfg) return cfg;
+  ['dosDir','ojCustDireccion','ojFiscaliaDireccion','ojPieDireccion'].forEach(function(k){ _lcCR(cfg,k); });
+  (cfg.despachosPropios||[]).forEach(function(d){ _lcCR(d,'direccion'); });
+  return cfg;
+}
 
 function lcViaNombre(ab){
   var r=ab||''; LC_VIA.forEach(function(v){ if(v.ab===ab) r=v.nom; }); return r;
@@ -4286,7 +4354,7 @@ function lcViaNombre(ab){
    «con» y el número, sin ponerle un tipo de vía que nadie registró.
    ⚠️ `lcDirParsear` ya entiende «Calle 52 con carrera 50», así que el dato va y
    vuelve del formulario sin perder nada. */
-var LC_VIA_CRUCE={CL:'KR',AC:'KR',KR:'CL',AK:'CL',DG:'TV',TV:'DG'};
+var LC_VIA_CRUCE={CL:'CR',AC:'CR',CR:'CL',AK:'CL',DG:'TV',TV:'DG'};
 /* Compone la dirección en el formato uniforme: "CL 52 # 50-31 APTO 301", o en
    palabras cuando es un cruce sin placa: "Calle 49 con carrera 54". */
 function lcDirComponer(o){
@@ -4366,7 +4434,18 @@ function lcDirWidget(id,valor,label,ph){
 }
 function lcDirValor(id){
   var st=_lcDir[id]||{};
-  return st.modo==='libre'?String(st.libre||'').trim():lcDirComponer(st);
+  return lcDirCR(st.modo==='libre'?String(st.libre||'').trim():lcDirComponer(st));
+}
+/* ⚠️ En escritura libre la conversión de «KR» se hace VISIBLE al salir del campo,
+   no en silencio mientras se teclea: el usuario tiene que ver en el formulario lo
+   que se va a imprimir, en vez de encontrarse en el documento una palabra que él
+   no escribió (misma decisión que ojEstacionLabel con su `onblur`). `lcDirValor`
+   la aplica igual como red de seguridad, por si el valor llega por otro camino. */
+function lcDirLibreCR(id){
+  var st=_lcDir[id]; if(!st||st.modo!=='libre') return;
+  var el=document.getElementById(id+'__libre'); if(!el) return;
+  var n=lcDirCR(el.value);
+  if(n!==el.value){ el.value=n; lcDirEditar(id); }
 }
 function lcDirCuerpo(id,ph){
   var st=_lcDir[id]||{};
@@ -4374,7 +4453,7 @@ function lcDirCuerpo(id,ph){
   if(st.modo==='libre'){
     return '<input class="fi" id="'+id+'__libre" value="'+escAttr(st.libre)+'" '+
         'placeholder="'+escAttr(ph||'Escribe la dirección como quieras')+'" '+
-        'oninput="lcDirEditar('+j+')">'+
+        'oninput="lcDirEditar('+j+')" onblur="lcDirLibreCR('+j+')">'+
       '<div class="lc-dir-prev"><span>Escritura libre.</span>'+
       '<button type="button" class="lc-dir-link" onclick="lcDirModo('+j+',\'form\')">Usar el formato guiado</button></div>';
   }
@@ -11988,7 +12067,7 @@ function _lcSinCola(txt,cola){
 /* Mejora 5, obs. 1 — «1. DESTINO DEL INFORME» del FPJ-5.
    Imprimía SOLO el nombre («Fiscalía URI»), mientras la app ya tiene registrada
    la dirección del despacho y la enseña en el paso 1. Ahora sale el despacho
-   entero, tal como se ve en pantalla: «Fiscalía URI KR 64C # 67-300, barrio
+   entero, tal como se ve en pantalla: «Fiscalía URI CR 64C # 67-300, barrio
    Caribe, Medellín».
    ⚠️ La ciudad NO se repite. El nombre registrado suele terminar en ella
    («Fiscalía URI Medellín») y `lcDespDireccion` la pone al final de la

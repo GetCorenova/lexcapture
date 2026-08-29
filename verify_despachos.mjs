@@ -105,7 +105,7 @@ log(await page.isVisible('#dp-dir__via'), 'La dirección usa el MISMO widget gui
 log(await page.isVisible('#dp-nunc'), 'Una fiscalía SÍ tiene casilla de NUNC');
 
 await page.fill('#dp-nom', 'URI Centro');
-await page.selectOption('#dp-dir__via', 'KR');
+await page.selectOption('#dp-dir__via', 'CR');
 await page.fill('#dp-dir__num', '56');
 await page.fill('#dp-dir__cruce', '42');
 await page.fill('#dp-dir__placa', '70');
@@ -121,14 +121,14 @@ await page.waitForTimeout(500);
 
 let l = await despachos();
 log(l.length === 1 && l[0].nombre === 'URI Centro', 'El despacho queda guardado', JSON.stringify(l[0] && l[0].nombre));
-log(l[0].direccion === 'KR 56 # 42-70' && l[0].barrio === 'Boston' && l[0].municipio === 'Medellín',
+log(l[0].direccion === 'CR 56 # 42-70' && l[0].barrio === 'Boston' && l[0].municipio === 'Medellín',
   'Con su dirección, barrio y ciudad', JSON.stringify([l[0].direccion, l[0].barrio, l[0].municipio]));
 log(l[0].nunc === '0500160001202601', 'Y con SU NUNC de 16 dígitos', l[0].nunc);
 log(l[0].clase === 'FISCALIA' && l[0].tipo === 'FISCALIA',
   'La clase se guarda y el `tipo` del módulo de orden judicial se sincroniza', JSON.stringify([l[0].clase, l[0].tipo]));
 
 const card = await page.textContent('#desp-list .desp-card');
-log(/KR 56 # 42-70, barrio Boston, Medellín/.test(card),
+log(/CR 56 # 42-70, barrio Boston, Medellín/.test(card),
   'La tarjeta compone la dirección completa sin repetir lo que ya diga', card.replace(/\s+/g, ' ').slice(0, 90));
 log(/PREDETERMINADO/.test(card), 'El primero de su clase queda predeterminado: si es el único, no hay elección');
 log((await page.isHidden('#desp-search')) === false, 'Con despachos registrados vuelve el buscador');

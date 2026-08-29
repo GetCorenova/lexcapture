@@ -59,7 +59,7 @@ function persona(o) {
     priNom: 'JUAN', segNom: 'CARLOS', priApe: 'PEREZ', segApe: 'GOMEZ', alias: 'EL FLACO',
     tipoDoc: 'CC', numDoc: '71.234.567', expEn: 'MEDELLIN', edad: '32', sexo: 'M', fn: '1994-03-04',
     lugNac: 'MEDELLIN', ecivil: 'SOLTERO', escol: 'BACHILLER', ocup: 'COMERCIANTE',
-    correo: 'juan@correo.test', padres: 'PEDRO PEREZ Y ANA GOMEZ', dirRes: 'KR 45 # 10-20',
+    correo: 'juan@correo.test', padres: 'PEDRO PEREZ Y ANA GOMEZ', dirRes: 'CR 45 # 10-20',
     tel: '3001234567', senas: 'CICATRIZ EN LA CEJA IZQUIERDA'
   }, o || {});
 }
@@ -298,7 +298,7 @@ sec('COBERTURA — qué familias de dato quedaron verificadas');
     ['NUNC (16 casillas de un dígito)', esc.filter(r => /^celda:(1[7-9]|2\d|3[0-2])$/.test(r.quien))],
     ['Identificación de personas (nombres, documento)', en(/^(JUAN|CARLOS|PEREZ|GOMEZ|MARIA|RIOS|71234567|43111222)$/)],
     ['Fechas y horas celda por celda', esc.filter(r => /^celda:(5[4-6]|2[6-8]\d)$/.test(r.quien))],
-    ['Direcciones', en(/KR 45|CL 52|CL 100/)],
+    ['Direcciones', en(/CR 45|CL 52|CL 100/)],
     ['Narración de los hechos', en(/^Siendo las 15:45/)],
     ['EMP y EF del numeral 7', en(/celulares marca Samsung|tarjetas debito/)],
     ['Conductas punibles numeradas', en(/^\d\.\s(HURTO|PORTE|LESIONES|FABRICACION)/)],

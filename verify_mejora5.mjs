@@ -149,13 +149,13 @@ sec('OBS 1 — el destino del informe sale con su dirección y sin repetir la ci
 const idDesp = await page.evaluate(async () => {
   const d = lcDespGuardar({
     nombre: 'Fiscalía URI Medellín', clase: 'FISCALIA',
-    direccion: 'KR 64C # 67-300', barrio: 'Caribe', municipio: 'Medellín',
+    direccion: 'CR 64C # 67-300', barrio: 'Caribe', municipio: 'Medellín',
     departamento: 'Antioquia', nunc: '0500160002062026'
   });
   return d.id;
 });
 const compuesto = await page.evaluate(id => lcDestinoInforme({ destino: 'Fiscalía URI Medellín', despachoId: id }), idDesp);
-log(compuesto === 'Fiscalía URI KR 64C # 67-300, barrio Caribe, Medellín',
+log(compuesto === 'Fiscalía URI CR 64C # 67-300, barrio Caribe, Medellín',
   'El destino se compone como en la tarjeta del wizard, con una sola vez la ciudad', compuesto);
 log(!/Medellín[\s\S]*Medellín[\s\S]*Medellín/.test(compuesto),
   '⚠️ La ciudad aparece UNA vez: sale del nombre porque la dirección ya la lleva');
@@ -181,7 +181,7 @@ const idC1 = await sembrar({ destino: 'Fiscalía URI Medellín', despachoId: idD
 const x1 = await fpjDe(idC1, 'obs1');
 log(!!x1, 'El FPJ-5 se genera con el despacho enlazado');
 const c1 = x1 && celdas(x1);
-log(!!c1 && texto(c1[57]).trim() === 'Fiscalía URI KR 64C # 67-300, barrio Caribe, Medellín',
+log(!!c1 && texto(c1[57]).trim() === 'Fiscalía URI CR 64C # 67-300, barrio Caribe, Medellín',
   'El numeral 1 del documento imprime el despacho entero', c1 && texto(c1[57]).trim());
 log(!!x1 && (x1.match(/<w:tbl>/g) || []).length === 35,
   'El formato conserva sus 35 tablas', x1 && (x1.match(/<w:tbl>/g) || []).length);
@@ -229,7 +229,7 @@ sec('OBS 3 — un cruce sin placa se escribe «Calle 49 con carrera 54»');
 const dirs = await page.evaluate(() => ({
   completa:  lcDirComponer({ via: 'CL', num: '52A', cruce: '50', placa: '46' }),
   cruceCL:   lcDirComponer({ via: 'CL', num: '49', cruce: '54' }),
-  cruceKR:   lcDirComponer({ via: 'KR', num: '64C', cruce: '67' }),
+  cruceCR:   lcDirComponer({ via: 'CR', num: '64C', cruce: '67' }),
   cruceDG:   lcDirComponer({ via: 'DG', num: '75B', cruce: '34' }),
   cruceAV:   lcDirComponer({ via: 'AV', num: '33', cruce: '45' }),
   soloVia:   lcDirComponer({ via: 'CL', num: '49' }),
@@ -239,7 +239,7 @@ const dirs = await page.evaluate(() => ({
 log(dirs.completa === 'CL 52A # 50-46',
   '⚠️ Una dirección COMPLETA no cambia: sigue abreviada como hasta ahora', dirs.completa);
 log(dirs.cruceCL === 'Calle 49 con carrera 54', 'Sin placa, la calle cruza con carrera', dirs.cruceCL);
-log(dirs.cruceKR === 'Carrera 64C con calle 67', 'Y la carrera con calle', dirs.cruceKR);
+log(dirs.cruceCR === 'Carrera 64C con calle 67', 'Y la carrera con calle', dirs.cruceCR);
 log(dirs.cruceDG === 'Diagonal 75B con transversal 34', 'Diagonal y transversal, igual', dirs.cruceDG);
 log(dirs.cruceAV === 'Avenida 33 con 45',
   '⚠️ Donde ese par no existe se dice «con» y el número: no se inventa un tipo de vía que nadie registró', dirs.cruceAV);
