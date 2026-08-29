@@ -80,8 +80,8 @@ await page.evaluate(() => go('estadisticas'));
 await page.waitForTimeout(400);
 await page.screenshot({ path: OUT('07_stats_dark') });
 
-// 7. Dossier con caso seleccionado (se entra desde una captura → sin selector interno)
-await page.evaluate(() => { const cs = DB.getCases(); if (cs[0]) _dosCasoId = cs[0].id; go('dossier'); });
+// 7. Dossier con caso seleccionado — modulo propio, se entra desde una captura
+await page.evaluate(() => { const cs = DB.getCases(); if (cs[0]) abrirDossierTexto(cs[0].id); });
 await page.waitForTimeout(400);
 log(await page.$eval('#dos-actions', el => getComputedStyle(el).display) === 'flex', 'Botones de dossier visibles (display:flex)');
 await page.screenshot({ path: OUT('08_dossier_dark') });

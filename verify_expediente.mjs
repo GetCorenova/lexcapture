@@ -56,7 +56,7 @@ const m = await page.evaluate(() => {
     tit: [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim())
   };
 });
-log(m.n === 5 && !m.scroll, '[1] El menu esta en 5 items y no se desplaza', m.alto + 'px de ' + m.tope + 'px');
+log(m.n === 4 && !m.scroll, '[1] El menu esta en 4 items y no se desplaza', m.alto + 'px de ' + m.tope + 'px');
 console.log('      ' + m.tit.join(' | '));
 
 // [2] hay una entrada al expediente
@@ -69,9 +69,13 @@ const s3 = await page.evaluate(() => ({
   pantalla: document.getElementById('screen-dossier').classList.contains('on'),
   vacio: getComputedStyle(document.getElementById('dos-empty')).display,
   sub: document.getElementById('dos-sub').textContent,
-  texto: (document.getElementById('dos-txt').value || '').slice(0, 40)
+  docs: document.querySelectorAll('#exp-docs .type-card').length
 }));
-log(s3.pantalla && s3.vacio === 'none' && s3.texto.length > 10, '[3] Abre el expediente con el caso cargado', s3.sub);
+log(s3.pantalla && s3.vacio === 'none' && s3.docs > 0, '[3] Abre el expediente con el caso cargado', s3.sub);
+/* El dossier salio del expediente: tiene su propia pantalla. Todo lo suyo
+   —editor, secciones y Datos del Dossier— se comprueba a partir de aqui alli. */
+await page.evaluate(() => abrirDossierTexto(DB.getCases()[0].id));
+await page.waitForTimeout(500);
 await page.screenshot({ path: resolve(SHOTS, 'p2_expediente.png'), fullPage: true });
 
 // [4] los tres campos huérfanos se pueden diligenciar y persisten
@@ -103,7 +107,7 @@ await page.waitForTimeout(1000);
 log(await page.evaluate(() => DB.getCases()[0].spoa) === '110016000000202400123', '[6] Persisten tras recargar');
 
 // [7] el editor de secciones ahora tiene botón y abre
-await page.evaluate(() => { _dosCasoId = DB.getCases()[0].id; go('dossier'); });
+await page.evaluate(() => abrirDossierTexto(DB.getCases()[0].id));
 await page.waitForTimeout(500);
 log(!!(await page.$('#dos-sec-btn')), '[7] El editor de secciones tiene boton en pantalla');
 await page.click('#dos-sec-btn');
@@ -146,8 +150,10 @@ log(s11, '[11] Otro caso genera su propio dossier, sin arrastrar la edicion del 
 // [12] no quedan funciones de salida sin llamador
 const src = readFileSync(join(ROOT, 'LexCapture_v8.html'), 'utf8');
 const cuenta = n => src.split(new RegExp('\\b' + n + '\\b')).length - 1;
-const huerf = ['abrirDossierCaso', 'toggleSecEditor', 'lcDossierExtra', 'copyDosTxt', 'shareDosWA'].filter(n => cuenta(n) < 2);
-log(huerf.length === 0, '[12] Ninguna funcion del expediente se quedo sin puerta', huerf.length ? huerf : 'todas alcanzables');
+const huerf = ['abrirDossierCaso', 'abrirDossierTexto', 'renderDossierWA', 'toggleSecEditor',
+  'lcDossierExtra', 'copyDosTxt', 'shareDosWA', 'enviarDossierCaso'].filter(n => cuenta(n) < 2);
+log(huerf.length === 0, '[12] Ninguna funcion del expediente ni del dossier se quedo sin puerta',
+  huerf.length ? huerf : 'todas alcanzables');
 
 log(errs.length === 0, '[13] Consola sin errores', errs.length ? errs.slice(0, 3) : '');
 console.log('\n' + R.filter(Boolean).length + '/' + R.length + ' comprobaciones');

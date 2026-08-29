@@ -114,11 +114,12 @@ await page.screenshot({ path: OUT('07_capturas') });
 await page.click('.cc .prow-more');
 await page.waitForTimeout(450);
 const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
-// 5 desde que el canal se colapsó: un documento es UN ítem (el canal —descargar
-// o compartir— se elige después), y lo que no corre prisa vive en el expediente.
-// Era un producto cartesiano documento × canal, que crecía dos ítems por formato.
-log(ccItems.length === 5 && ccItems.includes('Acta de derechos') && ccItems.includes('Expediente del caso'),
-  'Sheet de captura con 5 acciones etiquetadas', JSON.stringify(ccItems));
+/* 4: lo que se HACE con una captura. Ningún documento asoma aquí — todos viven
+    en el expediente, que es donde caben, así el menú no crece un ítem por
+    formato nuevo (con los seis de hoy serían 12-14, y en un teléfono el menú ya
+    se desplaza a partir de 8). */
+log(ccItems.length === 4 && ccItems.includes('Dossier') && ccItems.includes('Expediente del caso'),
+  'Sheet de captura con 4 acciones etiquetadas', JSON.stringify(ccItems));
 log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
 await page.screenshot({ path: OUT('08_capturas_sheet') });
 
@@ -137,23 +138,25 @@ log(/aprehensión/.test(cespaDel), 'CESPA usa "aprehensión" en el texto de elim
 // dentro del expediente, donde además respeta lo que el funcionario acabe de
 // editar. Lo que NO puede pasar es que copiar se haya perdido — se comprueba abajo.
 const actAll = await page.$eval('#act-items', el => el.textContent);
-log(/Informe FPJ-5/.test(actAll) && /Acta de derechos/.test(actAll) && /Enviar Dossier/.test(actAll) && /Expediente del caso/.test(actAll)
-    && !/Descargar /.test(actAll),
-  'Sheet ofrece el documento (un solo ítem), acta, dossier y expediente');
-// Copiar el dossier sigue siendo alcanzable, un nivel adentro
+log(/Expediente del caso/.test(actAll) && /Dossier/.test(actAll) && /Editar captura/.test(actAll)
+    && !/FPJ-5|Descargar |Acta de derechos/.test(actAll),
+  'Sheet ofrece expediente, dossier, editar y eliminar — y ningún documento');
+// Copiar el dossier sigue siendo alcanzable, ahora en su propia pantalla
 const copiaViva = await page.evaluate(() => {
   const id = DB.getCases()[0].id;
-  abrirDossierCaso(id);
-  const btn = [...document.querySelectorAll('#screen-dossier button')]
+  abrirDossierTexto(id);
+  const btn = [...document.querySelectorAll('#screen-dossierwa button')]
     .find(b => /Copiar texto/i.test(b.textContent));
-  const ok = !!btn && document.getElementById('screen-dossier').classList.contains('on');
+  const ok = !!btn && document.getElementById('screen-dossierwa').classList.contains('on');
   go('capturas');
   return ok;
 });
-log(copiaViva, 'Copiar el dossier no se perdió: vive dentro del expediente');
-// La 1ª acción es el documento oficial, ahora en un solo ítem.
-await page.click('#act-items .sheet-item:nth-child(1)');
+log(copiaViva, 'Copiar el dossier no se perdió: vive en el módulo del dossier');
+/* El documento oficial se abre desde el expediente, que es su casa. */
+await page.evaluate(() => { closeActionSheet(); abrirDossierCaso(DB.getCases()[0].id); });
 await page.waitForTimeout(500);
+await page.click('#exp-docs .type-card');
+await page.waitForTimeout(600);
 // El FPJ-5 no tiene formato que elegir (solo Word); la primera vez sí se pide
 // el tamaño de papel, que es del equipo y a partir de ahí queda recordado.
 log(await page.isVisible('#exp-papel-CARTA'), 'La acción del documento pide primero el tamaño de papel');
@@ -176,10 +179,15 @@ await page.screenshot({ path: OUT('09_dossier') });
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);
 
-// Tap en la tarjeta abre la edición
+/* Tap en la tarjeta abre el EXPEDIENTE, no la edición: en la lista de un
+   teléfono ese toque se hace sin querer, y entrar al wizard arranca el
+   autoguardado y el diálogo al salir. Editar se pide a propósito, desde el
+   menú ⋮ o desde el propio expediente. */
 await page.click('.cc .cc-name');
 await page.waitForTimeout(600);
-log(await page.evaluate(() => document.getElementById('screen-wizard').classList.contains('on')), 'Tap en la tarjeta abre el wizard de edición');
+log(await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on')
+  && !document.getElementById('screen-wizard').classList.contains('on')),
+  'Tap en la tarjeta abre el expediente, no el wizard de edición');
 await page.evaluate(() => cancelWiz());
 await page.waitForTimeout(400);
 

@@ -1734,7 +1734,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
       <div id="dos-empty" class="empty" style="display:none">
         <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
         <h3>Sin captura seleccionada</h3>
-        <p>Abre una captura y toca «Expediente del caso» para ver aquí su estado, sus documentos y su dossier.</p>
+        <p>Abre una captura y toca «Expediente del caso» para ver aquí su estado, sus documentos y su contenido.</p>
         <button class="cta" onclick="go('capturas')">Ir a Capturas</button>
       </div>
 
@@ -1747,6 +1747,40 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
            (acta de incautación, rótulo, cadena de custodia): en este bloque, no
            en el menú ⋮ — por eso el menú deja de crecer. -->
       <div class="card" id="exp-docs" style="display:none"></div>
+
+      <!-- Lo que la captura tiene registrado: la vista de CONSULTA que faltaba.
+           Hasta ahora, para ver qué había en un caso había que abrirlo en el
+           wizard, es decir entrar a modificarlo. -->
+      <div class="card" id="exp-contenido" style="display:none"></div>
+
+    </div>
+  </section>
+
+  <!-- ====== DOSSIER ======
+       ⚠️ Módulo PROPIO, fuera del expediente. El dossier no es una pieza del
+       caso: es un resumen que se redacta para mandar por chat, con su editor,
+       sus secciones y sus datos aparte. Dentro del expediente competía por
+       espacio con los documentos oficiales, que es lo que ahí se viene a hacer.
+       Se entra desde el menú ⋮ de la captura. -->
+  <section id="screen-dossierwa" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn" onclick="go('capturas')" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ttl">
+        <h1>Dossier</h1>
+        <span class="sub" id="dw-sub">Sin captura seleccionada</span>
+      </div>
+    </header>
+    <div class="pane stack">
+
+      <!-- Sin caso seleccionado: esta pantalla se abre desde una captura -->
+      <div id="dw-empty" class="empty" style="display:none">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+        <h3>Sin captura seleccionada</h3>
+        <p>Abre una captura y toca «Dossier» para redactar aquí su resumen y enviarlo.</p>
+        <button class="cta" onclick="go('capturas')">Ir a Capturas</button>
+      </div>
 
       <!-- Editor del dossier (mensaje de WhatsApp) -->
       <div class="card" id="dos-preview-wrap" style="display:none">
@@ -1767,18 +1801,13 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         <div id="dos-sec-inner" style="display:none;margin-top:10px"></div>
       </div>
 
-      <!-- Salidas del dossier. «Enviar el documento» salió de aquí: ahora vive
-           en el bloque de Documentos, que es su sitio, y así no se ofrece la
-           misma acción dos veces en la misma pantalla. -->
+      <!-- Salidas del dossier. Los documentos oficiales NO se ofrecen aquí: son
+           del expediente, y repetirlos sería la misma duplicación que la
+           auditoría encontró entre «Enviar X» y «Descargar X». -->
       <div id="dos-actions" class="stack-sm" style="display:none">
         <button class="btn bwa bbl" onclick="shareDosWA()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>Compartir por WhatsApp</button>
         <button class="btn bs bbl" onclick="copyDosTxt()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copiar texto</button>
       </div>
-
-      <!-- Lo que la captura tiene registrado: la vista de CONSULTA que faltaba.
-           Hasta ahora, para ver qué había en un caso había que abrirlo en el
-           wizard, es decir entrar a modificarlo. -->
-      <div class="card" id="exp-contenido" style="display:none"></div>
 
     </div>
   </section>
@@ -2235,7 +2264,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','perfil','despachos','ajustes','wizard','personas'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2251,6 +2280,7 @@ function go(name) {
   if (name === 'capturas') renderCases();
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
+  if (name === 'dossierwa') renderDossierWA();
   if (name === 'ajustes') { loadAjustesFields(); renderPerfilesRegionales(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -2372,7 +2402,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 83;
+var _BUILD = 84;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2420,59 +2450,42 @@ function _mkShareFile(out) {
   if (!out) return null;
   try { return new File([out.blob], _asciiName(out.fname), {type: out.blob.type}); } catch(e) { return null; }
 }
-/* Enviar también produce un documento final, así que también pide formato y
-   tamaño primero. Si se elige PDF se va directo a la vista de impresión: no hay
-   archivo que adjuntar hasta que el usuario lo guarde desde ahí. */
-function abrirEnvioDoc(id) {
-  if (!id) { toast('Selecciona un caso primero'); return; }
-  var c0 = DB.getCase(id);
-  if (!c0) { toast('Caso no encontrado'); return; }
-  var esOJ = (c0.tipo === 'OJ' || c0.ojv === 2);
-  var quien = (c0.capturados && c0.capturados[0]) ? fullName(c0.capturados[0]) : '';
-  var lbl = esOJ ? 'Oficio de puesta a disposición' : (c0.tipo === 'CESPA' ? 'Informe de aprehensión CESPA' : 'FPJ-5 URI');
-  lcPedirExport(esOJ ? 'OJ' : 'FPJ', lbl + (quien ? ' — ' + quien : ''), function(sel){
-    if (sel.fmt === 'PDF') { lcProducir(c0, sel, esOJ); return; }
-    _sharePapel = sel.papel;
-    _abrirEnvioSheet(id);
+/* ═══ CANAL DE SALIDA — descargar o enviar, para CUALQUIER documento ═══════
+   Todo documento final sale por aquí: el FPJ-5, el oficio de orden judicial, el
+   acta de derechos, la de incautación y los dos formatos de cadena de custodia.
+   ⚠️ Hasta ahora esta mecánica conocía solo DOS documentos y los ramificaba a
+   mano (`if (esOJ)`) — el último resto de la cadena de condicionales que
+   `LC_DOCS` vino a sustituir. Por eso el acta de derechos, registrada en el
+   catálogo desde el primer día, no tenía ruta de envío: solo sabía descargar.
+   Ahora el trabajo pendiente se describe con una entrada del catálogo
+   (`_shareJob`), así que un formato nuevo hereda el envío sin tocar nada aquí. */
+var _sharePapel = 'CARTA';        // papel del último trabajo abierto en el sheet
+var _shareJob = null;             // { kind, ctx, sel, lbl, casoId }
+var _shareSeq = 0;                // el sheet puede cambiar de documento mientras se genera
+
+/* Puerta única: pregunta lo que falte (formato, papel) y después ofrece el
+   CANAL. ⚠️ Dos casos no abren el sheet, y no por ahorrar un toque sino porque
+   no habría nada que elegir:
+   · PDF por vista de impresión — no existe archivo hasta que el usuario lo
+     guarda desde el diálogo del sistema, así que no hay nada que adjuntar.
+   · Equipo sin Web Share de archivos (todo escritorio) — el sheet enseñaría un
+     único botón, «Descargar», que es exactamente la ceremonia que la auditoría
+     del menú vino a quitar. */
+function lcSalida(kind, ctx, nombre) {
+  lcPedirExport(kind, nombre, function(sel) {
+    if (sel.fmt === 'PDF' && !lcDoc(kind).esPDF) { lcProducirDoc(kind, ctx, sel); return; }
+    if (!_docShareOk() && !_capNative()) { lcProducirDoc(kind, ctx, sel); return; }
+    _shareAbrir({ kind:kind, ctx:ctx, sel:sel, lbl:nombre || lcDoc(kind).lbl,
+                  casoId:(ctx && ctx.caso) ? ctx.caso.id : '' });
   });
 }
-var _sharePapel = 'CARTA';
-function _abrirEnvioSheet(id) {
-  var c = DB.getCase(id);
-  if (!c) { toast('Caso no encontrado'); return; }
-  // Mismo criterio que la descarga: lo que no se puede generar tampoco se envía.
-  // Antes el sheet sí producía un oficio al que le faltaban datos obligatorios.
-  // Toda captura OJ pasa por aquí, del módulo o del formato anterior: las dos
-  // producen el mismo oficio, así que las dos responden al mismo criterio.
-  if (c.tipo === 'OJ' || c.ojv === 2) {
-    var _leg = ojEsLegado(c);
-    var _caso = ojCasoParaDocumento(c);
-    var _duras = ojBloqueoDoc(_caso, _leg);
-    // Se limpia el documento pre-generado de otro caso: si no, quedaría vivo un
-    // .docx que no corresponde al caso que el usuario acaba de tocar.
-    if (_duras.length) { _shareDoc = null; _shareCasoId = null; ojModalFaltantes(id, _duras, _leg); return; }
-    /* La advertencia de orden vencida rige en las TRES salidas (descargar,
-       imprimir y enviar): enviar al juzgado por una vía lo que otra advierte
-       sería el mismo desajuste que ya se corrigió con las validaciones duras. */
-    if (ojVigenciaVencida(_caso)) {
-      _shareDoc = null; _shareCasoId = null;
-      ojConfirmarVigencia(_caso, function(){ _abrirEnvioSheetAhora(id); });
-      return;
-    }
-  }
-  _abrirEnvioSheetAhora(id);
-}
-function _abrirEnvioSheetAhora(id) {
-  var c = DB.getCase(id);
-  if (!c) { toast('Caso no encontrado'); return; }
-  _shareCasoId = id;
+function _shareAbrir(job) {
+  _shareJob = job;
+  _shareCasoId = job.casoId || null;
+  _sharePapel = (job.sel && job.sel.papel) || '';
   _shareDoc = null;
-  // Toda captura por orden judicial produce el mismo oficio, sea del módulo o
-  // del formato anterior: el sheet nombra lo que realmente va a salir.
-  var lbl = (c.tipo==='OJ'||c.ojv===2) ? 'Oficio de disposición' : (c.tipo==='CESPA' ? 'Informe aprehensión CESPA' : 'FPJ-5 URI');
-  var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : '';
   var t = document.getElementById('share-title');
-  if (t) t.textContent = lbl + (cap ? ' — ' + cap : '');
+  if (t) t.textContent = job.lbl || 'Enviar documento';
   document.getElementById('share-back').classList.add('on');
   document.getElementById('share-sheet').classList.add('on');
   // "Compartir directo" (Web Share) solo tiene sentido donde el navegador lo
@@ -2480,9 +2493,53 @@ function _abrirEnvioSheetAhora(id) {
   var sd = document.getElementById('share-it-doc');
   if (sd) sd.style.display = (_docShareOk() || _capNative()) ? '' : 'none';
   _shareDiag(_shareCaps());
-  // El .docx se genera AQUÍ (no al tocar Descargar/Compartir) para que
+  // El documento se genera AQUÍ (no al tocar Descargar/Compartir) para que
   // navigator.share() —si se usa— caiga dentro de la activación del tap.
-  _pregenShareDoc(c, id);
+  _pregenShareDoc();
+}
+/* Guarda del oficio de orden judicial — PUNTO ÚNICO. Lo que no se puede generar
+   tampoco se envía ni se imprime: descargar y enviar no pueden aplicar criterios
+   distintos sobre el mismo caso. Entrega al continuador el caso YA adaptado al
+   módulo (`ojCasoParaDocumento`), que es lo que el motor espera. Si bloquea, ya
+   avisó por su cuenta y no llama a nadie. */
+function lcGuardaOJ(c, seguir) {
+  if (!(c.tipo === 'OJ' || c.ojv === 2)) { seguir(c); return; }
+  var leg = ojEsLegado(c), caso = ojCasoParaDocumento(c);
+  var duras = ojBloqueoDoc(caso, leg);
+  // Se limpia el documento pre-generado de otro caso: si no, quedaría vivo un
+  // .docx que no corresponde al caso que el usuario acaba de tocar.
+  if (duras.length) { _shareDoc = null; _shareCasoId = null; _shareJob = null; ojModalFaltantes(c.id, duras, leg); return; }
+  /* La advertencia de orden vencida rige en las TRES salidas (descargar,
+     imprimir y enviar): enviar al juzgado por una vía lo que otra advierte
+     sería el mismo desajuste que ya se corrigió con las validaciones duras. */
+  if (ojVigenciaVencida(caso)) {
+    _shareDoc = null; _shareCasoId = null; _shareJob = null;
+    ojConfirmarVigencia(caso, function(){ seguir(caso); });
+    return;
+  }
+  seguir(caso);
+}
+/* Enviar el documento oficial del caso. Es la misma puerta que descargarlo: lo
+   que cambia es el canal, y ese se elige al final. */
+function abrirEnvioDoc(id) {
+  if (!id) { toast('Selecciona un caso primero'); return; }
+  lcSalidaDoc(id);
+}
+/* Abre el sheet del documento oficial con el papel ya elegido, saltándose el
+   diálogo: es la mecánica interna del envío. La puerta normal es `lcSalidaDoc`. */
+function _abrirEnvioSheet(id) {
+  var c = DB.getCase(id);
+  if (!c) { toast('Caso no encontrado'); return; }
+  lcGuardaOJ(c, function(caso){ _abrirEnvioSheetAhora(caso); });
+}
+function _abrirEnvioSheetAhora(c) {
+  if (typeof c === 'string') c = DB.getCase(c);
+  if (!c) { toast('Caso no encontrado'); return; }
+  var esOJ = (c.tipo === 'OJ' || c.ojv === 2), kind = esOJ ? 'OJ' : 'FPJ';
+  var cap = (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : '';
+  _shareAbrir({ kind:kind, ctx:{ caso:c },
+    sel:{ fmt:'DOCX', papel:_sharePapel || lcPapelEfectivo(kind) || 'CARTA' },
+    lbl: lcNombreDoc(c) + (cap ? ' — ' + cap : ''), casoId: c.id });
 }
 // WhatsApp/correo quedan bloqueados mientras se genera el .docx: si se tocan
 // antes, el envío tendría que esperar y share() caería fuera de la activación.
@@ -2495,14 +2552,15 @@ function _shareHint(direct) {
   if (direct === 'busy') { de.textContent = 'Preparando el documento…'; return; }
   de.textContent = 'Un toque si tu equipo lo permite (Gmail, Drive)';
 }
-async function _pregenShareDoc(c, id) {
+async function _pregenShareDoc() {
+  var job = _shareJob;
+  if (!job) return;
+  var seq = ++_shareSeq;
   _shareBusy(true); _shareHint('busy');
   var out = null;
-  try {
-    if (c.tipo === 'OJ' || c.ojv === 2) out = await buildOficioOJBlob(ojCasoParaDocumento(c), _sharePapel);
-    else out = buildFPJBlob(c, _sharePapel);
-  } catch(e) { console.error(e); _shareBusy(false); _shareHint(false); return; }
-  if (_shareCasoId !== id) return;                                  // el sheet ya cambió de caso
+  try { out = await lcDoc(job.kind).build(job.ctx, job.sel.papel); }
+  catch(e) { console.error(e); _shareBusy(false); _shareHint(false); return; }
+  if (seq !== _shareSeq) return;                                    // el sheet ya cambió de documento
   if (!out) { _shareBusy(false); _shareHint(false); return; }        // no se pudo generar (p. ej. NUNC inválido)
   out.file = _mkShareFile(out);
   _shareDoc = out;
@@ -2516,19 +2574,26 @@ function closeShareSheet() { document.getElementById('share-back').classList.rem
 function _dlDone(label) {
   toast((label || 'Documento') + ' en Descargas ✓ — envíalo desde WhatsApp o Correo con el clip 📎', 6000);
 }
+/* Avisos del propio documento (contenido que no cupo en los renglones del
+   formato). Se dicen SIEMPRE, salga por descarga o por la hoja de compartir:
+   nada se recorta en silencio. */
+function _shareAvisos(out) {
+  (out && out.avisos || []).forEach(function(a, i) {
+    setTimeout(function(){ toast('⚠️ ' + a, 8000); }, 900 * (i + 1));
+  });
+}
 function enviarDocCaso(via) {
-  var c = DB.getCase(_shareCasoId);
-  if (!c) { closeShareSheet(); toast('Caso no encontrado'); return; }
+  if (!_shareJob) { closeShareSheet(); toast('No hay documento que enviar'); return; }
   // Si la pre-generación aún no terminó (o falló), generar ahora. Tras el await ya
   // no hay activación del tap, así que no se puede invocar share() (Chrome lo
-  // rechazaría): se descarga el .docx (vía fiable) y se guía el envío manual.
+  // rechazaría): se descarga el documento (vía fiable) y se guía el envío manual.
   if (!_shareDoc) {
     closeShareSheet();
     toast('Generando documento…');
-    _pregenShareDoc(c, _shareCasoId).then(function() {
+    _pregenShareDoc().then(function() {
       if (!_shareDoc) { toast('Error generando el documento'); return; }
       if (!_shareDoc._dl) { _shareDoc._dl = true; _dlDocBlob(_shareDoc.blob, _shareDoc.fname); }
-      _dlDone(_shareDoc.label);
+      _dlDone(_shareDoc.label); _shareAvisos(_shareDoc);
     });
     return;
   }
@@ -2536,8 +2601,9 @@ function enviarDocCaso(via) {
   closeShareSheet();
   // Descargar es la vía fiable (default). El usuario lo toca a propósito -> descarga
   // siempre; marcamos _dl para que un intento posterior de "Compartir" no re-descargue.
-  if (via === 'dl') { out._dl = true; _dlDocBlob(out.blob, out.fname); _dlDone(out.label); return; }
+  if (via === 'dl') { out._dl = true; _dlDocBlob(out.blob, out.fname); _dlDone(out.label); _shareAvisos(out); return; }
   _compartirDoc(out);
+  _shareAvisos(out);
 }
 // base64 del blob (sin el prefijo "data:...;base64,") para el plugin Filesystem.
 function _blobToB64(blob) {
@@ -3586,7 +3652,12 @@ function renderCases() {
     var testBadge = c.isTest?'<span class="badge b-test">Demo</span>':'';
     var extra = nCap>1?' <span class="txd" style="font-size:.75rem">(+'+(nCap-1)+' más)</span>':'';
     var conducta = (c.conductas||[]).filter(Boolean)[0]||c.delitoOrden||'Sin conducta';
-    return '<div class="cc-wrap"><div class="cc" onclick="editCase(\''+c.id+'\')">'+
+    /* ⚠️ La tarjeta abre el EXPEDIENTE, no el wizard. Tocarla entraba a
+       modificar la captura —con su foto inicial, su autoguardado y su diálogo al
+       salir—, y en la lista de un teléfono ese toque se hace sin querer. El
+       expediente es la vista de CONSULTA equivalente: no cambia un dato, y desde
+       ahí (o desde el menú ⋮) se edita a propósito. */
+    return '<div class="cc-wrap"><div class="cc" onclick="abrirDossierCaso(\''+c.id+'\')">'+
       '<div class="cc-top">'+
         '<div class="cc-badges"><span class="badge '+tbadge+'">'+tipoLbl+'</span>'+urgBadge+testBadge+'</div>'+
         '<div class="cc-name">'+cap+extra+'</div>'+
@@ -5273,42 +5344,28 @@ function openCaseSheet(id) {
     '</div>';
   // "Aprehensión" para menores (CESPA): diferencia legal, no cosmética.
   var termino = c.tipo==='CESPA' ? 'la aprehensión' : 'la captura';
-  // Nombre del documento oficial según el tipo de caso: FPJ-5 en flagrancia
-  // (URI/CESPA) u Oficio de Disposición por orden judicial (Juzgado/Fiscalía).
-  var isOJ = c.tipo==='OJ';
-  /* ⚠️ El menú guarda SOLO las salidas de las primeras horas, a dos toques, y
-     manda el resto al expediente. No es una preferencia estética: la lista era
-     un PRODUCTO CARTESIANO de documento × canal («Enviar X» + «Descargar X» por
-     cada formato), así que crecía dos ítems por documento nuevo. Con los tres
-     que faltan —acta de incautación, rótulo y cadena de custodia— llegaba a 12-14
-     ítems, y medido en un teléfono el menú ya se desplaza a partir de 8 (691 px
-     sobre un presupuesto de 640). Colapsado el canal, un documento es un ítem; y
-     lo que no corre prisa vive en el expediente, que sí tiene sitio. */
+  /* ⚠️ CUATRO entradas, y ninguna es un documento. El menú no es un índice de
+     salidas: es lo que se hace CON una captura —abrirla, mandar el resumen,
+     corregirla, borrarla—. Los documentos viven todos en el expediente, que es
+     su casa y donde caben; así el menú no vuelve a crecer un ítem por formato,
+     que es lo que ya midió la auditoría del módulo Capturas (con los seis de hoy
+     serían 12-14 ítems, y en un teléfono el menú ya se desplaza a partir de 8).
+     ⚠️ «Editar captura» VUELVE al menú: la tarjeta dejó de abrir el wizard —un
+     toque involuntario en la lista entraba a modificar el caso, con su
+     autoguardado y su diálogo al salir—, así que sin esta entrada la edición se
+     quedaría sin puerta directa. */
   openActionSheet(head,
-    // 1) El documento oficial del caso. El canal (descargar o compartir) se
-    //    elige DESPUÉS, donde de verdad hay algo que elegir.
-    actItem('lcSalidaDoc', id, ACT_IC.send, lcNombreDoc(c), lcDescDoc(c), '', ACT_ACC) +
-    // 2) Acta de derechos del capturado (FPJ-6). Es otra SALIDA del caso, como
-    //    el documento oficial y el dossier: se imprime, se firma y se archiva.
-    //    No es un paso del wizard — el flujo de captura no la conoce.
-    actItem('abrirActaDerechos', id, ACT_IC.dossier, 'Acta de derechos',
-      'FPJ-6 con la información del caso — para imprimir y firmar', '', ACT_URI) +
-    // 3) Enviar el dossier (resumen de texto) por WhatsApp o correo
-    actItem('enviarDossierCaso', id, ACT_IC.wa, 'Enviar Dossier', 'Resumen del caso por WhatsApp o correo', '', ACT_OK) +
-    /* 4) Expediente: el caso completo. Es la casa de todo lo que no cabe en un
-       menú —lo que se consulta y lo que se diligencia—, y la razón por la que la
-       lista deja de crecer: un documento nuevo entra ahí, no aquí. */
+    /* 1) El expediente: la casa del caso. Todo documento se genera desde ahí. */
     actItem('abrirDossierCaso', id, ACT_IC.folder, 'Expediente del caso',
-      'Estado, documentos, dossier y contenido de la captura') +
-    // 4b) Captura OJ del formato anterior: pasarla al módulo nuevo
-    (isOJ && c.ojv !== 2
-      ? actItem('ojCompletarCaso', id, ACT_IC.edit, 'Completar al formato nuevo',
-          'Pasa esta captura al módulo de orden judicial con sus datos actuales', '', ACT_OJ)
-      : '') +
-    /* 5) Eliminar. «Editar captura» salió del menú: repetía exactamente el toque
-       en la tarjeta (`.cc` ya llama a `editCase`), y era además uno de los dos
-       ítems que se iban bajo el borde en cuanto el menú se desplazaba. Sigue
-       alcanzable por la tarjeta y desde el expediente. */
+      'Documentos, estado y contenido de ' + termino, '', ACT_ACC) +
+    /* 2) El dossier, en su propia pantalla. NO vive dentro del expediente: es un
+       resumen para mandar por chat, no una pieza del caso. */
+    actItem('abrirDossierTexto', id, ACT_IC.wa, 'Dossier',
+      'Resumen del caso para enviar por WhatsApp o correo', '', ACT_OK) +
+    /* 3) Editar la captura — ahora la ÚNICA vía directa desde la lista. */
+    actItem('editCase', id, ACT_IC.edit, 'Editar captura',
+      'Abre el formulario para corregir o completar los datos') +
+    /* 4) Eliminar. */
     actItem('delCase', id, ACT_IC.del, 'Eliminar', 'Borra el registro de '+termino+' de forma permanente', ' danger'));
 }
 
@@ -5332,8 +5389,12 @@ function lcDescDoc(c) {
    «Enviar X» resultando ser «Descargar X» con un toque de ceremonia. Ahí se
    descarga directo y nadie pierde un toque. */
 function lcSalidaDoc(id) {
-  if (_docShareOk() || _capNative()) { abrirEnvioDoc(id); return; }
-  lcExportarCaso(id);
+  var c0 = (typeof id === 'object' && id) ? id : DB.getCase(id);
+  if (!c0) { toast('Caso no encontrado'); return; }
+  var esOJ = (c0.tipo === 'OJ' || c0.ojv === 2);
+  var quien = (c0.capturados && c0.capturados[0]) ? fullName(c0.capturados[0]) : '';
+  var lbl = lcNombreDoc(c0) + (quien ? ' — ' + quien : '');
+  lcGuardaOJ(c0, function(caso) { lcSalida(esOJ ? 'OJ' : 'FPJ', { caso:caso }, lbl); });
 }
 // Abre la pantalla de salidas del caso (dossier WhatsApp + FPJ-5) con el caso ya cargado.
 // Se conserva como vía alterna (hash #dossier); el sheet de la captura ahora ofrece
@@ -5359,17 +5420,9 @@ function lcExportarCaso(id) {
   });
 }
 function lcProducir(c, sel, esOJ) {
-  if (esOJ) {
-    var legado = ojEsLegado(c);
-    var caso = ojCasoParaDocumento(c);
-    var duras = ojBloqueoDoc(caso, legado);
-    if (duras.length) { ojModalFaltantes(c.id, duras, legado); return; }
-    // Misma advertencia de vigencia que la otra salida: descargar y enviar no
-    // pueden aplicar criterios distintos sobre el mismo caso.
-    ojConfirmarVigencia(caso, function(){ lcProducirAhora(caso, sel, true); });
-    return;
-  }
-  lcProducirAhora(c, sel, false);
+  // La guarda del oficio (validaciones duras + vigencia) es la MISMA que aplica
+  // el envío: vive en un solo sitio para que las dos salidas no discrepen.
+  lcGuardaOJ(c, function(caso){ lcProducirAhora(caso, sel, esOJ); });
 }
 function lcProducirAhora(c, sel, esOJ) {
   return lcProducirDoc(esOJ ? 'OJ' : 'FPJ', { caso:c }, sel);
@@ -6280,17 +6333,12 @@ async function simEditPending(){
    mismo selector nativo y, donde no lo hay (escritorio) o donde el equipo lo
    rechaza, el mismo sub-sheet de WhatsApp / correo. La diferencia a favor es que
    aquí sale lo que el funcionario acabe de editar. */
+/* El botón de la pantalla del dossier. Delega en la MISMA primitiva de envío
+   (`enviarDossierCaso`) en vez de repetir su lógica: eran dos copias idénticas
+   del selector nativo con su plan B, y la de aquí abría `wa.me` a secas. */
 function shareDosWA(){
-  var text=_dosTexto(_dosCasoId);
-  if(!text){toast('Nada que compartir');return;}
-  if(navigator.share){
-    navigator.share({text:text}).then(function(){toast('Dossier compartido ✓');}).catch(function(e){
-      if(e&&e.name==='AbortError') return;          // el usuario cerró el selector
-      _dossierChoiceSheet(_dosCasoId);
-    });
-    return;
-  }
-  _dossierChoiceSheet(_dosCasoId);
+  if(!_dosCasoId){toast('Sin captura seleccionada');return;}
+  enviarDossierCaso(_dosCasoId);
 }
 
 function openCamera(prefix){
@@ -6650,6 +6698,7 @@ function genDossier(caso) {
 }
 
 var _dosCasoId=null;
+var _dosTxtCasoId=null;      // el caso cuyo dossier está pintado en el editor
 var _dosSecEditorOpen=false;
 
 /* ═══ ESTADO DE LOS DOCUMENTOS DE UN CASO ══════════════════════════════════
@@ -6661,6 +6710,14 @@ var _dosSecEditorOpen=false;
    pantalla tiene que decir lo mismo que dirá el motor, o miente. */
 function lcEstadoDocs(c) {
   var docs = [];
+  /* ⚠️ Una captura por ORDEN JUDICIAL no produce los tres formatos del numeral 7.
+     No es que estén vacíos: es que no existen en ese procedimiento —se cumple una
+     decisión que otro funcionario ya tomó, no se documenta un delito que se acaba
+     de presenciar—. Si en la diligencia aparece algo incautable, eso es un delito
+     NUEVO y se documenta como captura en flagrancia aparte, con su FPJ-5, su acta
+     de incautación y su rótulo. Ofrecerlos aquí invitaría a diligenciar una cadena
+     de custodia que no corresponde a este expediente. */
+  var esOJ = (c.tipo === 'OJ' || c.ojv === 2);
 
   // 1 · El documento oficial del caso (FPJ-5 u oficio de orden judicial)
   var falta = [];
@@ -6700,15 +6757,30 @@ function lcEstadoDocs(c) {
     accion: 'abrirActaDerechos', tc: 'tc-neutro', ic: ACT_IC.acta
   });
 
-  /* 3 y 4 · Los dos formatos de cadena de custodia. Salen del numeral 7 del
-     informe, así que sin EMP ni EF registrados no hay nada que rotular ni que
-     custodiar — y se dice, en vez de ofrecer un documento en blanco.
+  if (esOJ) return docs;
+
+  /* 3, 4 y 5 · Los tres formatos del numeral 7 del informe —«DESCRIPCIÓN DE EMP
+     Y EF RECOLECTADOS»—, en el orden en que se diligencian. Sin EMP ni EF
+     registrados no hay nada que incautar, rotular ni custodiar, y se dice, en
+     vez de ofrecer un documento en blanco.
      ⚠️ Van AQUÍ y no en el menú ⋮ de la captura: es el punto de extensión que
      dejó abierto la auditoría del módulo Capturas para que el menú no vuelva a
      crecer un ítem por documento. */
   var emps = (typeof ccElementos === 'function') ? ccElementos(c) : [];
   var faltaEmp = emps.length ? [] : ['Ningún EMP o EF registrado en el numeral 7'];
   var cadenas = emps.length && typeof ccGrupos === 'function' ? ccGrupos(c).length : 0;
+
+  /* 3 · El acta de incautación. A diferencia de los otros dos es UNA por
+     captura —lleva todos los elementos juntos, numerados— y la firma la persona
+     a quien se le incautaron. Por eso además de elementos necesita capturado. */
+  docs.push({
+    lbl: 'Acta de incautación',
+    de: emps.length
+      ? 'Todos los elementos del numeral 7 (' + emps.length + ')'
+      : 'Los elementos del numeral 7',
+    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : (faltaEmp.length ? faltaEmp : ['Ninguna persona registrada']),
+    accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
+  });
   docs.push({
     lbl: 'Registro de cadena de custodia',
     de: cadenas > 1
@@ -6720,19 +6792,6 @@ function lcEstadoDocs(c) {
     lbl: 'Rótulo de EMP y EF',
     de: 'FPJ-7 · uno por cada elemento' + (emps.length ? ' (' + emps.length + ')' : ''),
     falta: faltaEmp, accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
-  });
-
-  /* 5 · El acta de incautación. Sale del mismo numeral 7, pero a diferencia de
-     los dos anteriores es UNA por captura —lleva todos los elementos juntos,
-     numerados— y la firma la persona a quien se le incautaron. Por eso además
-     de elementos necesita una persona capturada. */
-  docs.push({
-    lbl: 'Acta de incautación',
-    de: emps.length
-      ? 'Todos los elementos del numeral 7 (' + emps.length + ')'
-      : 'Los elementos del numeral 7',
-    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : (faltaEmp.length ? faltaEmp : ['Ninguna persona registrada']),
-    accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
   });
   return docs;
 }
@@ -6770,7 +6829,7 @@ function lcResumenCaso(c) {
 function _dosTexto(id) {
   var c = DB.getCase(id);
   if (!c) return '';
-  if (id && id === _dosCasoId) {
+  if (id && id === _dosTxtCasoId) {
     var ta = document.getElementById('dos-txt');
     if (ta && ta.value.trim()) return ta.value;
   }
@@ -6783,14 +6842,37 @@ function renderDossier() {
   // Expediente por-caso: se entra desde una captura (o al recargar con #dossier).
   if(!caso){
     if(emp) emp.style.display='block';
-    ['dos-preview-wrap','dos-actions','exp-estado','exp-docs','exp-contenido'].forEach(function(id){
+    ['exp-estado','exp-docs','exp-contenido'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.style.display='none';
     });
     var sub=document.getElementById('dos-sub'); if(sub) sub.textContent='Sin captura seleccionada';
     return;
   }
   if(emp) emp.style.display='none';
+  var sub2=document.getElementById('dos-sub');
+  if(sub2) sub2.textContent=(caso.capturados&&caso.capturados[0])?fullName(caso.capturados[0]):'Sin capturado';
   renderExpediente(caso);
+}
+
+/* El dossier, en su propia pantalla. ⚠️ NO se pinta desde `renderDossier`: son
+   dos pantallas distintas y entrar al expediente no tiene por qué regenerar —ni
+   pisar— el texto que el funcionario esté redactando para mandar por chat. */
+function abrirDossierTexto(id) {
+  _dosCasoId = id;
+  go('dossierwa');
+}
+function renderDossierWA() {
+  var emp=document.getElementById('dw-empty');
+  var caso=_dosCasoId?DB.getCase(_dosCasoId):null;
+  if(!caso){
+    if(emp) emp.style.display='block';
+    ['dos-preview-wrap','dos-actions'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.style.display='none';
+    });
+    var sub=document.getElementById('dw-sub'); if(sub) sub.textContent='Sin captura seleccionada';
+    return;
+  }
+  if(emp) emp.style.display='none';
   updateDosPreview(caso);
 }
 
@@ -6820,7 +6902,18 @@ function renderExpediente(caso) {
     hPlazo='<div class="oj-alert '+(pl.estado==='urgente'?'blanda':'ok')+'"><b>Plazo de 36 horas</b>'+
       'Quedan '+h+' h '+(mi<10?'0':'')+mi+' min para poner a disposición.</div>';
   }
-  est.innerHTML='<div class="st" style="margin-top:0">Estado</div>'+hPlazo+
+  /* Captura de orden judicial del formato anterior. La entrada vivía en el menú
+     ⋮ y su sitio es este: es un estado del caso —«este expediente todavía no
+     está en el módulo nuevo»—, no una de las cuatro cosas que se hacen con una
+     captura. Sin este bloque se habría quedado sin puerta. */
+  var hLegado='';
+  if((caso.tipo==='OJ') && caso.ojv!==2){
+    hLegado='<div class="oj-alert info"><b>Captura del formato anterior</b>'+
+      'Se registró antes del módulo de orden judicial. El oficio sale igual, con los datos que tiene; '+
+      'pasarla al formato nuevo permite diligenciar lo que aquel formulario no pedía.</div>'+
+      '<button class="btn bs bsm" style="margin-bottom:10px" onclick="ojCompletarCaso(\''+caso.id+'\')">Completar al formato nuevo</button>';
+  }
+  est.innerHTML='<div class="st" style="margin-top:0">Estado</div>'+hPlazo+hLegado+
     (pendientes.length
       ? '<div class="oj-alert blanda"><b>Faltan datos</b>'+
         pendientes.map(function(d){ return escHtml(d.lbl)+': '+escHtml(d.falta.join(' · ')); }).join('<br>')+
@@ -6858,16 +6951,17 @@ function renderExpediente(caso) {
 function updateDosPreview(caso) {
   var pre=document.getElementById('dos-txt'); if(!pre) return;
   pre.value=genDossier(caso);
-  var emp=document.getElementById('dos-empty'); if(emp) emp.style.display='none';
+  /* ⚠️ De QUÉ caso es el texto que hay ahora en el editor. Antes `_dosTexto`
+     lo deducía de `_dosCasoId`, pero con el dossier en su propia pantalla ese
+     id puede apuntar a un caso que el editor todavía no ha pintado: se habría
+     mandado el dossier del caso anterior con el nombre del nuevo. */
+  _dosTxtCasoId=caso.id;
+  var emp=document.getElementById('dw-empty'); if(emp) emp.style.display='none';
   document.getElementById('dos-preview-wrap').style.display='block';
   document.getElementById('dos-actions').style.display='flex';
-  var sub=document.getElementById('dos-sub');
+  var sub=document.getElementById('dw-sub');
   if(sub) sub.textContent=(caso.capturados&&caso.capturados[0])?fullName(caso.capturados[0]):'Sin capturado';
   lcDossierExtraHint(caso);
-  /* El botón «Enviar FPJ-5 / Oficio» que vivía aquí se retiró: la misma acción
-     está en el bloque de Documentos de esta misma pantalla, que es su sitio.
-     Ofrecerla dos veces en una pantalla es la duplicación que la auditoría
-     encontró entre «Enviar X» y «Descargar X», repetida a menor escala. */
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -8914,9 +9008,7 @@ async function f6Generar() {
   }
   closeModal();
   var ctxDoc = { caso:c, capturado:cap, acta:f6Acta(c, cap.id) || f6Estructura(cap.id) };
-  lcPedirExport('FPJ6', 'Acta de derechos ' + (menor ? 'del aprehendido' : 'del capturado') + ' — ' + fullName(cap), function(sel) {
-    lcProducirDoc('FPJ6', ctxDoc, sel);
-  });
+  lcSalida('FPJ6', ctxDoc, 'Acta de derechos ' + (menor ? 'del aprehendido' : 'del capturado') + ' — ' + fullName(cap));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -9953,7 +10045,7 @@ async function ccGenerar(n) {
   ccGrupos(c).forEach(function (x) { if (x.n === n) g = x; });
   if (!g) { toast('Esa cadena ya no tiene elementos'); return; }
   closeModal();
-  lcProducirDoc('FPJ8', { caso:c, grupo:g }, { fmt:'PDF', papel:'' });
+  lcSalida('FPJ8', { caso:c, grupo:g }, 'Registro de cadena de custodia — cadena ' + g.n);
 }
 
 /* ── Rótulo ── */
@@ -10082,7 +10174,7 @@ async function rtGenerar() {
   ccElementos(c).forEach(function (x) { if (x.id === ctx.empId) it = x; });
   if (!it) { toast('Ese elemento ya no está en la captura'); return; }
   closeModal();
-  lcProducirDoc('FPJ7', { caso:c, item:it }, { fmt:'PDF', papel:'' });
+  lcSalida('FPJ7', { caso:c, item:it }, 'Rótulo de EMP y EF — ' + (lcEmpLinea(it) || 'elemento'));
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -10912,9 +11004,7 @@ async function aiGenerar() {
   }
   closeModal();
   var m = aiMapa(c);
-  lcPedirExport('INCAU', 'Acta de incautación — ' + m.capNombre, function (sel) {
-    lcProducirDoc('INCAU', { caso: c }, sel);
-  });
+  lcSalida('INCAU', { caso: c }, 'Acta de incautación — ' + m.capNombre);
 }
 
 async function simShowDossier(){

@@ -633,6 +633,14 @@ async function elegirExport(fmt = 'DOCX', papel = 'CARTA') {
   if (await page.isVisible('#exp-papel-' + papel).catch(() => false)) await page.click('#exp-papel-' + papel);
   await page.click('#exp-go');
 }
+/* El canal (descargar o compartir) solo se ofrece donde el equipo puede
+   adjuntar de verdad; sin Web Share de archivos se descarga directo y no se
+   abre un sheet de un solo boton. Aqui se mide el sheet, asi que se declara la
+   capacidad que tiene cualquier telefono. */
+await page.evaluate(() => {
+  navigator.canShare = d => !!(d && d.files && d.files.length);
+  navigator.share = () => Promise.resolve();
+});
 await page.evaluate(id => abrirEnvioDoc(id), idCaso);
 await page.waitForTimeout(200);
 log(await page.isVisible('#exp-go'), 'Enviar pide primero formato y tamaño de papel');

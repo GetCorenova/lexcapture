@@ -147,12 +147,14 @@ const docs = await page.evaluate(id => lcEstadoDocs(DB.getCase(id)).map(d => d.l
 log(docs.includes('Registro de cadena de custodia') && docs.includes('Rótulo de EMP y EF'),
   'Los dos aparecen en el expediente, junto al informe y al acta', docs.join(' · '));
 
-/* ⚠️ Y NO en el menú ⋮ de la captura: el menú se quedó en cinco ítems, que es
-   la condición que la auditoría del módulo Capturas se puso a sí misma. */
+/* ⚠️ Y NO en el menú ⋮ de la captura, que quedó en las cuatro cosas que se
+   HACEN con una captura y no nombra un solo documento: esa es, llevada al
+   final, la condición que la auditoría del módulo Capturas se puso a sí misma. */
 await page.evaluate(id => openCaseSheet(id), idCaso);
 await page.waitForTimeout(200);
 const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent.trim()));
-log(items.length === 5, 'El menú de la captura sigue en 5 ítems: no creció un ítem por documento', items.join(' · '));
+log(items.length === 4 && !items.some(t => /FPJ|Oficio|Acta|custodia|Rótulo/i.test(t)),
+  'El menú de la captura no nombra ningún documento: no puede crecer con este formato', items.join(' · '));
 log(!items.some(t => /custodia|Rótulo/i.test(t)),
   '⚠️ Y ninguno de los dos formatos nuevos entró en él: viven en el expediente');
 await page.evaluate(() => closeSheet());

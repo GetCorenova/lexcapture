@@ -2461,12 +2461,12 @@ contra el build anterior. Anti-caché `?v=70` / `cache-v70`, `_BUILD=70`.
 - ~~**Acta de incautación**: sigue sin formato oficial en `Documentos/`.~~ **HECHA** (2026-08-25) y
   **rehecha sobre el formato oficial** (2026-08-26, el usuario aportó el archivo en blanco) — ver
   «El acta de incautación deja de dibujarse» al final. Ya no la recompone la app: la rellena.
-- ⚠️ **Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ
-  en vez de leer `LC_DOCS`, así que **el acta FPJ-6 no tiene ruta de envío** aunque esté registrada
-  como documento. Es el último resto de la cadena de `if (esOJ)` que `LC_DOCS` vino a sustituir.
-- ⚠️ **No existe vista de consulta de una captura**: tocar la tarjeta entra al **wizard en modo
-  edición**, con su foto inicial, su autoguardado y su diálogo al salir. Para responder «¿ya se firmó
-  el acta?» hay que abrir el caso para modificarlo.
+- ~~**Asimetría detectada y NO corregida**: `_pregenShareDoc` ramifica a mano entre FPJ-5 y oficio OJ,
+  así que el acta FPJ-6 no tiene ruta de envío.~~ **RESUELTA** (2026-08-28, Mejora 6): el sheet
+  describe su trabajo con una entrada de `LC_DOCS` y los seis documentos tienen canal.
+- ~~**No existe vista de consulta de una captura**: tocar la tarjeta entra al wizard en modo
+  edición.~~ **RESUELTO** (2026-08-28, Mejora 6): la tarjeta abre el **expediente**, y editar se pide
+  a propósito desde el menú ⋮ o desde el propio expediente.
 
 ## Cadena de custodia (FPJ-8) y rótulo de EMP y EF (FPJ-7) — 2026-08-25
 Los dos formatos que faltaban del apartado 7 del informe de captura. Pedidos en
@@ -3127,6 +3127,115 @@ dato que falta (lección de la auditoría de Ajustes → Estación).
 - Regresiones en verde: **despachos 53** · OJ 187 · mejora1 156 · mejora3 51 · fpj6 140 · custodia 99 ·
   simulador 41 · invitado 33 · personas 25 · orden 33 · expediente 13 · almacén 12 ·
   menú+expediente 15/16 (el fallo preexistente). Anti-caché `?v=81` / `cache-v81`, `_BUILD=81`.
+
+## Mejora 6 (2026-08-28) — el menú es lo que se HACE con la captura; los documentos viven en el expediente
+Cuatro observaciones de campo sobre el menú ⋮ de una captura (pantallazo con recuadro rojo sobre las
+cinco entradas). Verificado con `verify_mejora6.mjs` (**32 checks**, nuevo) sobre la app real en un
+teléfono (384×800, touch). Las 27 suites previas siguen en verde salvo los fallos preexistentes que
+se listan al final.
+
+- ⚠️ **El hilo que une las cuatro**: el menú era un **índice de salidas** —un documento, un ítem— y
+  por eso volvía a crecer con cada formato nuevo, que es justo lo que la auditoría del módulo
+  Capturas (2026-08-22) intentó frenar colapsando el canal. Colapsar el canal alargó la vida del
+  patrón; no lo corrigió. Ahora el menú lista **lo que se HACE con una captura** —abrirla, mandar su
+  resumen, corregirla, borrarla— y **ningún documento asoma**: los seis viven en el expediente, que
+  es donde caben y donde se diligencia lo que necesitan. **Medido: 4 ítems, 411 px de un presupuesto
+  de 640 y el 51 % de la pantalla** (eran 5 ítems / 476 px, y 7 / 625 px antes de la auditoría).
+  ⚠️ **El menú ya no puede crecer por un formato**: el siguiente entra en `lcEstadoDocs` y aparece
+  solo en el expediente. Hay un check que exige que el menú no nombre ni un documento.
+
+### Obs. 1 y 3 · Cuatro entradas, y «Editar captura» vuelve al menú
+`Expediente del caso` · `Dossier` · `Editar captura` · `Eliminar`.
+- ⚠️ **La tarjeta de la lista dejó de abrir el wizard** (*«muchas veces el toque se hace
+  involuntario»*): ahora abre el **expediente**, que es la vista de CONSULTA equivalente y no cambia
+  un dato. Entrar al wizard sin querer arrancaba la foto inicial, el autoguardado y el diálogo al
+  salir. Hay checks de que un toque no deja `wc` vivo ni un borrador fantasma en `lc_draft`.
+- ⚠️ **Por eso «Editar captura» REGRESA al menú.** La auditoría lo había retirado con el argumento de
+  que repetía el toque en la tarjeta; al quitarle esa función a la tarjeta, el argumento se cae y sin
+  esta entrada la edición se quedaría sin puerta directa desde la lista. Conserva dos:
+  el menú y el botón del expediente.
+- **«Completar al formato nuevo»** (captura OJ anterior al módulo) salió del menú y **está en el
+  bloque de Estado del expediente**, que es lo que de verdad es: un estado del caso, no una de las
+  cuatro cosas que se hacen con él. Sin reubicarlo se habría quedado sin puerta.
+
+### Obs. 4 · El dossier estrena módulo propio
+*«El dossier no debe aparecer dentro del expediente, para eso tiene su módulo aparte.»* Nueva pantalla
+`#screen-dossierwa` con **todo lo suyo**: editor del texto, «Datos del Dossier» (SPOA, No. de
+incidente y fiscal que recibe), editor de secciones y las dos salidas (WhatsApp y copiar).
+- ⚠️ **Mover el bloque no bastaba: había que mover su puerta.** Es exactamente el fallo de 2026-07-22
+  que este proyecto ya pagó una vez —la pantalla `#dossier` se quedó sin un solo llamador y con ella
+  se encerraron tres campos y dos editores—. Por eso `verify_expediente` [12] pasa a exigir puerta
+  también para `abrirDossierTexto`, `renderDossierWA` y `enviarDossierCaso`.
+- ⚠️ **`renderDossier` ya NO llama a `updateDosPreview`.** Son dos pantallas: entrar al expediente no
+  tiene por qué regenerar —ni pisar— el texto que el funcionario esté redactando para mandar por chat.
+- ⚠️ **`_dosTexto` se ata a `_dosTxtCasoId`, no a `_dosCasoId`.** Antes deducía de qué caso era el
+  texto del editor por el id «abierto»; con el dossier en pantalla aparte ese id puede apuntar a un
+  caso que el editor todavía no ha pintado, y se habría mandado **el dossier del caso anterior con el
+  nombre del nuevo**. Hay un check que lo mide con dos casos.
+- **`shareDosWA` delega en `enviarDossierCaso`** en vez de repetir su lógica: eran dos copias del
+  selector nativo con su plan B, y la de la pantalla abría `wa.me` a secas.
+
+### Obs. 2 · Cada documento da a elegir canal — y el acta de derechos por fin lo tiene
+⚠️ **Este era el defecto real detrás de la petición, y estaba anotado como pendiente en este archivo
+desde el 2026-08-22**: `_pregenShareDoc` ramificaba a mano entre FPJ-5 y oficio OJ (`if (esOJ)`), el
+último resto de la cadena de condicionales que `LC_DOCS` vino a sustituir, **así que el acta de
+derechos —registrada en el catálogo desde el primer día— no tenía ruta de envío: solo sabía
+descargar**. Igual la de incautación, la cadena de custodia y el rótulo.
+- **El trabajo pendiente del sheet se describe ahora con una entrada del catálogo** (`_shareJob =
+  {kind, ctx, sel, lbl, casoId}`) y `_pregenShareDoc()` llama a `lcDoc(kind).build`. **Un formato
+  nuevo hereda el envío sin tocar una línea** de esa mecánica.
+- **`lcSalida(kind, ctx, nombre)` es la puerta única**: pregunta lo que falte (formato, papel) y
+  después ofrece el canal. La usan los seis documentos. ⚠️ **Dos casos no abren el sheet**, y no por
+  ahorrar un toque sino porque no habría nada que elegir: **PDF por vista de impresión** (no existe
+  archivo hasta que el usuario lo guarda desde el diálogo del sistema) y **equipo sin Web Share de
+  archivos** (todo escritorio), donde el sheet enseñaría un único botón — la ceremonia que la
+  auditoría del menú vino a quitar.
+- **`lcGuardaOJ` es ahora el punto único** de la guarda del oficio (validaciones duras + vigencia
+  vencida), que estaba duplicada en `lcProducir` y en `_abrirEnvioSheet`. Descargar, imprimir y
+  enviar no pueden aplicar criterios distintos sobre el mismo caso.
+- **Los avisos del documento se dicen salga por donde salga** (`_shareAvisos`): el contenido que no
+  cupo en los renglones de un formato se avisaba solo en la rama de descarga. Nada se recorta en
+  silencio.
+- ⚠️ **El acta de derechos y la de incautación salen SOLO en Word — decisión del usuario, consultada
+  antes de escribir código.** Los dos se **rellenan sobre el archivo oficial** (FPJ-6 de la Fiscalía y
+  el acta que aportó el usuario) y usan `w:trHeight`, `w:vMerge`, `w:tcW` por celda y el escudo en
+  VML: las construcciones que el traductor OOXML→HTML no implementa y por las que el FPJ-5 quedó en
+  solo-Word («Exportación v2»). La guarda sigue siendo **estructural** (`out.noPDF` +
+  `LC_DOCS.soloWord`), no de interfaz. **El oficio OJ sí conserva PDF y Word** —lo compone la app,
+  dentro del subconjunto por construcción— y el rótulo y la cadena de custodia **ya son PDF oficial
+  nativo**, así que a ellos no se les pregunta formato: no hay dos opciones que ofrecer.
+
+### Los documentos del expediente: el orden del formato, y solo los que ese procedimiento produce
+`Informe FPJ-5` (u `Oficio de disposición`) · `Acta de derechos` · `Acta de incautación` ·
+`Registro de cadena de custodia` · `Rótulo de EMP y EF`.
+- ⚠️ **En una captura por ORDEN JUDICIAL los tres últimos NO existen** (regla del usuario, y es
+  correcta): ahí se cumple una decisión que otro funcionario ya tomó, no se documenta un delito que
+  se acaba de presenciar. Si en la diligencia aparece algo incautable, eso es un **delito nuevo** y se
+  documenta como captura en flagrancia aparte, con su FPJ-5, su acta de incautación y su rótulo.
+  Ofrecerlos invitaría a diligenciar una cadena de custodia que no corresponde a ese expediente.
+  `lcEstadoDocs` corta con `if (esOJ) return docs;` tras los dos primeros.
+- La pantalla **deriva del registro** lo que pinta: si usara una lista propia, mentiría. Hay un check.
+
+### Regresiones
+En verde: **mejora6 32** · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 · fpj6 140 ·
+incautación 141 · custodia 99 · OJ 186/187 · export 74 · firma 62 · editable 28 · tipografía OJ 42 ·
+fpj5 tipografía 48 · envío 39 · expediente 13 · menú+expediente 16 · almacén 12 · personas 25 ·
+invitado 34 · simulador 41 · orden 33 · despachos 53 · jurisdicción 67 · tema 39 · grados 31 ·
+dossier histórico 29 · ola1 38 · ola2 33/34 · ola3 33 · ola4 22 · multipersona · DS 9/10.
+⚠️ Suites adaptadas al recorrido nuevo **sin bajar su cuenta**: `verify_menu_expediente` (16, con el
+[3] invertido —la tarjeta ya no edita— y el [4] midiendo los dos toques por el expediente),
+`verify_expediente` (13), `verify_personas` (25), `verify_envio_doc` (39), `verify_fpj6` (140),
+`verify_custodia` (99), `verify_incautacion` (141), `verify_mejora1` (157), `verify_oj` (187) y
+`verify_ds`.
+⚠️ **Tres fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD**:
+`verify_oj` [18] y `verify_ola2` [12] (calendario: fuera de jornada hábil `ojResolverDestino` enruta
+correctamente a **R4-B**, juez de turno, C-042/2018 — las suites dan por hecho un día y una hora
+hábiles) y `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
+⚠️ **Corregido de paso un check OBSOLETO, no un bug**: `verify_menu_expediente` [9] exigía un badge
+«VENCIDO» en la tarjeta y llevaba fallando desde el commit que retiró esos badges de la lista
+(`b7e8e2d`) — medía una decoración que ya no existe. Ahora mide lo que dice su rótulo: que el plazo
+se calcula en **un solo sitio**.
+Anti-caché `?v=84` / `cache-v84`, `_BUILD=84`.
 
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |

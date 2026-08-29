@@ -559,7 +559,9 @@ log(!!g3 && g3.cajas[2].join('|') === '|', 'Con «Intersexual / no informa» las
 
 /* ═══════════ El Dossier conserva TODO su funcionamiento ═══════════ */
 sec('El Dossier no perdió nada');
-await page.evaluate((id) => { abrirDossierCaso(id); }, caso);
+/* El dossier tiene modulo propio: sale del expediente y se abre con su
+   entrada del menu de la captura. */
+await page.evaluate((id) => { abrirDossierTexto(id); }, caso);
 await page.waitForTimeout(300);
 const dos1 = await page.inputValue('#dos-txt');
 log(/SPOA: 110016000000202600001/.test(dos1), 'El dossier sigue imprimiendo el SPOA que ya tenía el caso');

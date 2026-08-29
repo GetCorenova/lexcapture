@@ -182,7 +182,8 @@ log(docs.includes('Acta de incautación'), 'Aparece en el expediente, junto a lo
 await page.evaluate(id => openCaseSheet(id), idCaso);
 await page.waitForTimeout(200);
 const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent.trim()));
-log(items.length === 5, 'El menú de la captura sigue en 5 ítems: no creció con este formato', items.join(' · '));
+log(items.length === 4 && !items.some(t => /FPJ|Oficio|Acta|custodia|Rótulo/i.test(t)),
+  'El menú de la captura no nombra ningún documento: no puede crecer con este formato', items.join(' · '));
 log(!items.some(t => /incauta/i.test(t)), '⚠️ Y el acta no entró en él: vive en el expediente');
 await page.evaluate(() => closeSheet());
 await page.waitForTimeout(150);

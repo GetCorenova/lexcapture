@@ -71,12 +71,13 @@ const SEL_DL = '#share-it-dl';
   await page.click('#cl .prow-more');
   await page.waitForTimeout(300);
   const actTxt = await page.$eval('#act-sheet', el => el.textContent);
-  /* El canal se colapso: un documento es UN item («Informe FPJ-5 URI»), y el
-     canal —descargar o compartir— se elige despues. «Copiar Dossier» y «Editar
-     captura» viven en el expediente y en la tarjeta respectivamente. */
-  log(/Informe FPJ-5 URI/.test(actTxt) && /Acta de derechos/.test(actTxt) && /Enviar Dossier/.test(actTxt)
-      && /Expediente del caso/.test(actTxt) && !/Descargar /.test(actTxt),
-    '[1] Menu de la captura: el documento en un solo item, acta, dossier y expediente', actTxt.replace(/\s+/g, ' ').slice(0, 90));
+  /* El menu quedo en las CUATRO cosas que se hacen con una captura; ningun
+     documento asoma aqui —todos viven en el expediente— asi que la lista deja de
+     crecer un item por formato nuevo. Enviar el documento sigue estando a dos
+     toques: tarjeta (o «Expediente del caso») y despues su tarjeta. */
+  log(/Expediente del caso/.test(actTxt) && /Dossier/.test(actTxt) && /Editar captura/.test(actTxt)
+      && !/Informe FPJ-5|Acta de derechos|Descargar /.test(actTxt),
+    '[1] Menu de la captura: expediente, dossier, editar y eliminar — ningun documento', actTxt.replace(/\s+/g, ' ').slice(0, 90));
   await page.evaluate(() => closeActionSheet());
   await page.waitForTimeout(250);
 

@@ -503,15 +503,19 @@ log(trasEditar === 'Mecánico|SI|AFRO|Camila Restrepo',
 /* ══ G · SIN EFECTOS COLATERALES ═══════════════════════════════════════════ */
 console.log('\n── G · El resto de la app no cambió ──');
 
-const sheet = await page.evaluate(id => { openCaseSheet(id); return document.getElementById('act-items').textContent; }, idUri);
+/* El acta se ofrece desde el EXPEDIENTE, como todos los documentos: el menú ⋮
+   quedó en las cuatro cosas que se hacen con una captura y no nombra ninguno
+   —así no crece un ítem por formato nuevo—. Lo que se mide sigue siendo lo
+   mismo: que el acta convive con las demás salidas sin duplicar ninguna. */
+const expDocs = await page.evaluate(id => { abrirDossierCaso(id);
+  return [...document.querySelectorAll('#exp-docs .type-card .tbt')].map(e => e.textContent.trim()); }, idUri);
+log(expDocs.includes('Acta de derechos'), 'El acta se ofrece desde el expediente del caso', expDocs.join(' | '));
+const sheet = await page.evaluate(id => { go('capturas'); openCaseSheet(id);
+  return document.getElementById('act-items').textContent; }, idUri);
 await page.evaluate(() => closeActionSheet());
-log(/Acta de derechos/.test(sheet), 'El acta se ofrece desde el sheet de la captura');
-/* El documento oficial pasó a ocupar UN solo ítem («Informe FPJ-5 URI»): el
-   canal —descargar o compartir— se elige después. Lo que importa aquí sigue
-   siendo lo mismo: que el acta convive con las demás salidas sin duplicar
-   ninguna, y que el documento oficial no ocupe dos entradas. */
-log(/Informe FPJ-5 URI/.test(sheet) && !/Descargar /.test(sheet) && /Enviar Dossier/.test(sheet),
-  'Y las salidas que ya existían siguen ahí, sin duplicarse');
+log(expDocs.includes('Informe FPJ-5 URI') && new Set(expDocs).size === expDocs.length
+    && !/Acta de derechos|FPJ-5|Descargar /.test(sheet),
+  'Y las salidas que ya existían siguen ahí, sin duplicarse ni asomar al menú');
 
 // Varias personas capturadas → hay que elegir de quién es el acta.
 await page.evaluate(async () => {

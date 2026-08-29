@@ -48,7 +48,7 @@ await page.evaluate(async () => {
 });
 await page.waitForTimeout(400);
 
-// ── [1] El menu baja a 5 items y cabe de sobra ──
+// ── [1] El menu baja a 4 items y cabe de sobra ──
 await page.click('.cc-wrap .prow-more');
 await page.waitForTimeout(400);
 const m = await page.evaluate(() => {
@@ -61,7 +61,7 @@ const m = await page.evaluate(() => {
     tit: [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim())
   };
 });
-log(m.n === 5 && !m.scroll, '[1] El menu baja a 5 items y no se desplaza',
+log(m.n === 4 && !m.scroll, '[1] El menu baja a 4 items y no se desplaza',
   m.n + ' items · ' + m.alto + 'px de ' + m.tope + 'px · tapa el ' + m.pct + '%');
 console.log('      ' + m.tit.join(' | '));
 
@@ -69,18 +69,35 @@ console.log('      ' + m.tit.join(' | '));
 const dobles = m.tit.filter(t => /^Enviar (FPJ|Oficio|Disposici)/.test(t) || /^Descargar /.test(t));
 log(dobles.length === 0, '[2] Ningun documento ocupa dos items (canal colapsado)', JSON.stringify(dobles));
 
-// ── [3] "Editar captura" salio del menu pero NO se perdio ──
-log(!m.tit.includes('Editar captura'), '[3] "Editar captura" ya no ocupa un item del menu');
+/* ── [3] "Editar captura" VOLVIO al menu, y la tarjeta dejo de editar ──
+   Un toque involuntario en la lista entraba a modificar la captura, con su
+   autoguardado y su dialogo al salir. Ahora la tarjeta abre el expediente —la
+   vista de consulta— y la edicion se pide a proposito. */
+log(m.tit.includes('Editar captura'), '[3] "Editar captura" es una entrada del menu');
 const editable = await page.evaluate(() => {
   const cc = document.querySelector('#cl .cc');
-  return /editCase/.test(cc.getAttribute('onclick') || '');
+  return /abrirDossierCaso/.test(cc.getAttribute('onclick') || '')
+      && !/editCase/.test(cc.getAttribute('onclick') || '');
 });
-log(editable, '[3] ...pero la tarjeta sigue abriendo la edicion de un toque');
+log(editable, '[3] ...y la tarjeta abre el expediente, no el formulario de edicion');
 
-// ── [4] Las TRES salidas urgentes siguen a dos toques ──
-const urgentes = ['Oficio de disposición', 'Informe FPJ-5 URI', 'Acta de derechos', 'Enviar Dossier'];
-const presentes = urgentes.filter(t => m.tit.includes(t));
-log(presentes.length === 3, '[4] Las tres salidas urgentes estan en el menu, a dos toques', JSON.stringify(presentes));
+/* ── [4] Las salidas urgentes siguen a DOS toques ──
+   Ya no desde el menu: los documentos viven todos en el expediente, y a el se
+   llega con un toque en la propia tarjeta. Tarjeta + documento = dos toques,
+   los mismos que costaban por el menu. */
+await page.evaluate(() => closeActionSheet());
+await page.waitForTimeout(250);
+await page.click('#cl .cc');
+await page.waitForTimeout(600);
+const urgentes = ['Informe FPJ-5 URI', 'Acta de derechos'];
+const enExpediente = await page.evaluate(() =>
+  [...document.querySelectorAll('#exp-docs .type-card .tbt')].map(e => e.textContent.trim()));
+log(urgentes.every(t => enExpediente.includes(t)),
+  '[4] Las salidas urgentes estan a dos toques: tarjeta y documento', JSON.stringify(enExpediente));
+await page.evaluate(() => go('capturas'));
+await page.waitForTimeout(400);
+await page.click('.cc-wrap .prow-more');
+await page.waitForTimeout(400);
 
 // ── [5] Proyeccion: el menu ya no crece con documentos nuevos ──
 const proy = await page.evaluate(() => {
@@ -89,15 +106,19 @@ const proy = await page.evaluate(() => {
   const sh = document.getElementById('act-sheet');
   return { itemsMenu: document.querySelectorAll('#act-items .sheet-item').length, altoMenu: sh.scrollHeight };
 });
-log(proy.itemsMenu === 5, '[5] El menu no depende del numero de formatos: los nuevos van al expediente');
+log(proy.itemsMenu === 4, '[5] El menu no depende del numero de formatos: los nuevos van al expediente');
 
 // ── [6] El documento oficial abre el sheet de canales donde SI hay eleccion ──
 await page.evaluate(() => {
   navigator.canShare = d => !!(d && d.files && d.files.length);
   navigator.share = () => Promise.resolve();
 });
+/* El documento se abre desde el expediente, que es donde vive: el primer item
+   del menu ya no es un documento sino la puerta a esa pantalla. */
 await page.click('#act-items .sheet-item:nth-child(1)');
-await page.waitForTimeout(1200);
+await page.waitForTimeout(600);
+await page.click('#exp-docs .type-card');
+await page.waitForTimeout(1400);
 const s6 = await page.evaluate(() => ({
   sheet: document.getElementById('share-sheet').classList.contains('on'),
   botones: [...document.querySelectorAll('#share-sheet .sheet-item')]
@@ -147,13 +168,16 @@ const s9 = await page.evaluate(() => {
   const c = DB.getCases()[0];
   const viejo = JSON.parse(JSON.stringify(c));
   c.created = Date.now() - 40 * 3600000;          // 40 h: vencido
-  const badge = lcPlazo36(c).badge;
   const est = lcPlazo36(c).estado;
   c.created = viejo.created;
-  return { badge, est, unaSolaFuente: !/hrs *>= *36/.test(renderCases.toString()) };
+  return { est, unaSolaFuente: !/hrs *>= *36/.test(renderCases.toString()) };
 });
-log(/VENCIDO/.test(s9.badge) && s9.est === 'vencido' && s9.unaSolaFuente,
-  '[9] Un unico lcPlazo36: la lista ya no calcula el plazo por su cuenta');
+/* ⚠️ Este check exigia un badge «VENCIDO» en la tarjeta y llevaba FALLANDO
+   desde el commit que retiro esos badges de la lista (b7e8e2d): media una
+   decoracion que ya no existe, no el calculo. Lo que sigue importando —y es lo
+   que dice su rotulo— es que el plazo se calcula en UN solo sitio. */
+log(s9.est === 'vencido' && s9.unaSolaFuente,
+  '[9] Un unico lcPlazo36: la lista ya no calcula el plazo por su cuenta', s9.est);
 
 // ── [10] El resumen muestra lo que la captura tiene, numerado como se imprime ──
 const s10 = await page.evaluate(() => {
