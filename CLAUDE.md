@@ -4175,3 +4175,72 @@ letra») y el pie del oficio, aplicada ahora a la **fuente** y al **color**.
   completo; 1 página y el formato intacto. El único Times New Roman que queda es el «/» del título,
   que es del propio formato y no lo escribe la app.
 - Anti-caché `?v=89` / `cache-v89`, `_BUILD=89`.
+
+### El NUNC recortado, el año que no cabía y las dos casillas que nadie preguntaba (2026-08-30)
+Tres observaciones de campo sobre el acta de entrega impresa, con dos pantallazos del defecto y uno
+señalando lo que falta. El usuario aportó además **el propio formato diligenciado a mano**
+(`Documentos/Otro/FPJ 30 Acta De Entrega.docx`) *«para que tengas los cálculos y no se genere estos
+errores»* — y esa fue la pieza que resolvió el diagnóstico. Verificado con `verify_entrega.mjs`
+(**90 checks**, antes 69) y midiendo los dos documentos en **Word real** (COM).
+
+- ⚠️ **Los dos defectos eran el mismo: una casilla del formato mide menos que el dato que se escribe
+  encima, y con la fila en `hRule="exact"` Word RECORTA sin avisar.** Ninguno era un valor mal
+  escrito; los dos venían de medidas del formato —pensadas para sus rótulos diminutos— que la app
+  daba por buenas para el dato. Es la misma familia del `w:sz` ausente del acta FPJ-6 y del `rPr`
+  ausente del pie del oficio: **lo que fallaba no era lo declarado, sino lo que se heredó sin
+  mirar.**
+- ⚠️ **Y el formato de referencia se MIDIÓ, no se leyó por encima.** Comparado contra la plantilla en
+  blanco, el archivo del usuario cambia **exactamente 24 celdas de texto y UN valor de geometría**:
+  el alto de la fila del NUNC, que subió de 149 a **297 twips**. Ese número es el cálculo que él
+  anunció.
+
+| Defecto | Causa medida | Corrección |
+|---|---|---|
+| Los 16 dígitos del NUNC salían cortados por la mitad | La fila mide **149 tw = 7,4 pt** en `exact`, y la línea de un dígito de 11 pt mide **12,65 pt**. Word recorta: no empuja | La fila sube a **297**, el valor del formato del usuario |
+| El año salía «202» | La casilla conserva el **`w:ind` de 119 tw** con que el formato coloca su guía «AAAA» de 7 pt. El ancho útil real era 448 y no 567: «2026» a 10 pt mide 445,9 — **cabía por 3 twips (0,05 mm)** y Word lo envolvió | Se retira la sangría de la guía y el año va a **11 pt**, como en la referencia |
+
+- **Reproducido en Word contra el build anterior**, no supuesto: en el `.docx` del build 89 el primer
+  carácter del año y el último caen en **líneas distintas** (y=96 y y=108) y la segunda se recorta;
+  los dígitos del NUNC piden 12,65 pt de línea en una casilla de 7,45. En el build nuevo el año va
+  en una sola línea y la casilla del NUNC mide 14,85 pt. **Las dos actas siguen en 1 página.**
+- ⚠️ **La prueba de que el arreglo es el correcto**: abiertos en Word el documento generado y el
+  formato que llenó el usuario, **cada dígito del NUNC cae en la misma posición horizontal, punto por
+  punto** (279,6 · 300,6 · 315 · 328,8 · 343,2 · 357…). No se parece: es el mismo.
+- **Dos primitivas genéricas nuevas**, en la capa `_doc*` que trabaja sobre cualquier plantilla y no
+  sobre índices de este formato:
+  - **`_docSinSangria(tc)`** — la sangría de una casilla es de la GUÍA, no del dato. Solo se llama
+    cuando hay dato: sin él la guía tiene que quedar donde el formato la puso.
+  - **`_docAltoFila(tc, twips)`** — sube el alto de la fila de una celda; **nunca la encoge y no toca
+    el `hRule`**, así que una fila que el formato declara exacta sigue siendo exacta, con el alto que
+    su contenido necesita. Se apoya en `_DOC_TRPR`, el orden de hijos de `w:trPr` que fija el esquema
+    (ponerlos donde caiga hace que Word abra el documento «dañado» — lección ya pagada en `ojx*`).
+- ⚠️ **Se corrige sobre el DOCUMENTO, no sobre la constante `TPL_F30`**, igual que
+  `_fpjTituloApartado4`: el motor ya es leer → modificar el DOM → rezip, y reescribir 467 KB de
+  base64 por un número arriesgaría que Word pida reparar el paquete. La consecuencia es que el
+  documento generado **ya no es geométricamente idéntico a la plantilla**, y la regresión lo dice
+  así: una sola diferencia, `trHeight`, con su valor y su porqué.
+
+### «Actos Urgentes» y «Orden a Policía Judicial»
+*«Muestra algo que la aplicación no solicita y lo debes de incorporar […] si se marca se genera una X
+en la casilla en blanco correspondiente a cualquiera de las dos afirmaciones.»*
+- Dos casillas nuevas en el formulario del acta (`caso.entrega.actosUrgentes` / `.ordenPJ`), en el
+  **orden en que el formato las imprime**: bajo la fecha y encima del numeral 1. Usan el control de
+  casilla que ya tiene la app (`ojwChk`, el de los anexos del oficio), no uno nuevo.
+- ⚠️ **Son INDEPENDIENTES.** El formato trae una casilla para cada una y no dice que se excluyan, así
+  que la app no inventa esa restricción: se marca lo que el funcionario marque.
+- ⚠️ **Lo que no se marca NO se toca** — ni la X ni el centrado—: esa celda sale **byte a byte** como
+  en el formato, para diligenciarla a mano si hace falta. Es la regla de siempre, y hay un check que
+  compara la celda cruda contra la plantilla.
+- **No bloquean**: un acta sin marcar ninguna se genera igual. Y lo marcado se guarda en el caso, así
+  que el acta se reimprime igual meses después.
+- Esto **revisa** lo que decía la sección anterior de este archivo («los llena el usuario a mano,
+  instrucción explícita»): era correcto hasta que el usuario pidió lo contrario. La nota del
+  formulario que anunciaba que se dejaban en blanco se retiró — decía algo que ya no es cierto.
+- Regresiones en verde: **entrega 90** · fpj6 140 · incautación 141 · custodia 111 · mejora1 157 ·
+  mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 · mejora6b 67 · OJ 187 · tipografía OJ 42 ·
+  fpj5 tipografía 48 · export 66 · firma 62 · editable 28 · envío 39 · almacén 12 · expediente 13 ·
+  menú+expediente 16 · personas 25 · invitado 34 · simulador 41 · orden 33 · despachos 53 ·
+  jurisdicción 67 · vía CR 41 · tema 39 · grados 31 · dossier histórico 29 · ola1 38 · ola2 34 ·
+  ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08). Anti-caché `?v=90` / `cache-v90`, `_BUILD=90`.

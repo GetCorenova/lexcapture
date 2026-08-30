@@ -2348,7 +2348,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 89;
+var _BUILD = 90;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -8154,6 +8154,8 @@ function _f6SangriaLugar(tc) {
 ═══════════════════════════════════════════════════════════════════════════ */
 var _DOC_TCPR = ('cnfStyle tcW gridSpan hMerge vMerge tcBorders shd noWrap tcMar ' +
                  'textDirection tcFitText vAlign hideMark').split(' ');
+var _DOC_TRPR = ('cnfStyle divId gridBefore gridAfter wBefore wAfter cantSplit trHeight ' +
+                 'tblHeader tblCellSpacing jc hidden').split(' ');
 var _DOC_PPR  = ('pStyle keepNext keepLines pageBreakBefore framePr widowControl numPr ' +
                  'suppressLineNumbers pBdr shd tabs suppressAutoHyphens kinsoku wordWrap ' +
                  'overflowPunct topLinePunct autoSpaceDE autoSpaceDN bidi adjustRightInd ' +
@@ -8204,6 +8206,54 @@ function _docCentrarCasilla(tc) {
 function _docApoyarEnLinea(tc) {
   if (!tc) return;
   _docProp(_docTcPr(tc), 'vAlign', 'bottom', _DOC_TCPR);
+}
+/* LA SANGRÍA DE LA CASILLA ES DE LA GUÍA, NO DEL DATO.
+   Una casilla que trae impresa su guía en letra diminuta («AAAA», «MM», «DD» a
+   7 pt en el FPJ-30) suele traer también un `w:ind` que coloca ESA palabra
+   donde queda bien. Al escribir el dato encima, la sangría sigue ahí y hace dos
+   cosas a la vez: descentra el valor dentro de su casilla y —lo grave— le
+   RESTA ancho útil al renglón, así que un dato que cabía deja de caber. Con la
+   fila en `hRule="exact"`, lo que Word envuelve SE RECORTA SIN AVISAR: es lo que
+   dejaba «202» en vez de «2026» en el acta de entrega (reportado en campo).
+   ⚠️ Solo se llama cuando HAY dato: sin él, la guía tiene que quedar donde el
+   formato la puso, y la celda byte a byte como en la plantilla. */
+function _docSinSangria(tc) {
+  if (!tc) return;
+  var W = FPJ_W, ps = tc.getElementsByTagNameNS(W, 'p'), i;
+  for (i = 0; i < ps.length; i++) {
+    var pr = ps[i].getElementsByTagNameNS(W, 'pPr')[0];
+    var ind = pr && pr.getElementsByTagNameNS(W, 'ind')[0];
+    if (ind && ind.parentNode === pr) pr.removeChild(ind);
+  }
+}
+/* ALTO MÍNIMO DE LA FILA A LA QUE PERTENECE UNA CELDA, en twips.
+   ⚠️ Una fila `hRule="exact"` más baja que la línea de texto NO empuja nada:
+   Word RECORTA el contenido y no avisa. Las casillas de un formato exportado
+   desde Excel vienen medidas para la letra diminuta de sus rótulos, no para el
+   dato que se escribe encima —la fila del NUNC del FPJ-30 mide 149 twips
+   (7,4 pt) y un dígito de 11 pt necesita ~12,7 pt de línea—, así que los
+   números salían cortados por la mitad («desajustados en cada casilla»,
+   reportado en campo).
+   Sube el valor y NO toca el `hRule`: una fila que el formato declara exacta
+   sigue siendo exacta, solo que con el alto que su contenido necesita. Si la
+   fila no declara altura se crea sin `hRule` (= `atLeast`), que es el
+   comportamiento seguro. Nunca la encoge. */
+function _docAltoFila(tc, twips) {
+  if (!tc) return 0;
+  var W = FPJ_W, tr = tc.parentNode;
+  while (tr && tr.localName !== 'tr') tr = tr.parentNode;
+  if (!tr) return 0;
+  var doc = tr.ownerDocument, pr = tr.getElementsByTagNameNS(W, 'trPr')[0];
+  if (!pr || pr.parentNode !== tr) {
+    pr = doc.createElementNS(W, 'w:trPr');
+    tr.insertBefore(pr, tr.firstChild);
+  }
+  var h = pr.getElementsByTagNameNS(W, 'trHeight')[0];
+  if (!h) { h = doc.createElementNS(W, 'w:trHeight'); _docPon(pr, h, _DOC_TRPR); }
+  var v = parseInt(h.getAttributeNS(W, 'val') || h.getAttribute('w:val') || '0', 10);
+  if (v >= twips) return v;
+  h.setAttributeNS(W, 'w:val', String(twips));
+  return twips;
 }
 // Tamaño de letra de un run, en medios puntos, respetando el orden del esquema.
 function _docSz(r, medios) {
@@ -11190,8 +11240,14 @@ var F30_C = {
   MUNI:  52,          // ⚠️ trae DENTRO la etiqueta «Municipio»: el valor se AÑADE
   ANO:   54, MES: 55, DIA: 56,        // las tres traen la guía «AAAA» «MM» «DD»
   HORA:  [58,59,60,61],
-  /* «Actos Urgentes» y «Orden a Policía Judicial»: los llena el usuario a mano
-     (instrucción explícita). No se tocan. */
+  /* Las dos casillas en blanco de «Actos Urgentes» y «Orden a Policía Judicial».
+     ⚠️ Antes se dejaban a mano; el usuario pidió marcarlas desde la app («si se
+     marca se genera una X en la casilla en blanco correspondiente a cualquiera
+     de las dos afirmaciones»). Son INDEPENDIENTES: el formato trae una casilla
+     para cada una y no dice que se excluyan, así que la app no inventa esa
+     restricción — se marca lo que el funcionario marque, y sin marcar la
+     casilla queda como la trae el formato. */
+  AU:    64, OPJ: 67,
   FISC:  72,          // Fiscalía / Institución
   DIR:   74,          // Dirección de la autoridad que ordena la entrega
   PROC:  75,          // «El servidor de Policía Judicial adscrito a … de lo siguiente:»
@@ -11213,15 +11269,32 @@ var F30_SZ = {
   cuerpo:   22,   // 11 pt — el párrafo «El servidor de Policía Judicial…»
   cabecera: 20,   // 10 pt — Departamento, Municipio y la fila de fecha, como sus etiquetas
   casilla:  22,   // 11 pt — las 21 del NUNC y las 4 de la hora, como en el FPJ-6
+  /* 11 pt — el año, el mes y el día. ⚠️ NO es el 10 pt de las etiquetas de su
+     fila: es el cuerpo con el que el propio usuario diligenció esas tres
+     casillas en el formato de referencia, y a 10 pt «2026» quedaba a DOS twips
+     de rozar el ancho útil de la suya (445,9 de 448) — un margen que Word no
+     respeta y que se pagaba con el año partido y recortado. */
+  fecha:    22,
   dato:     22,   // 11 pt — autoridad, elementos, observaciones y los dos bloques de firma
   elemento: 22
 };
+/* ⚠️ ALTO DE LA FILA DEL NUNC, EN TWIPS — el número lo dejó MEDIDO el usuario.
+   La plantilla trae esa fila en `hRule="exact"` con 149 twips = 7,4 pt, que es
+   el alto que necesitan sus rótulos diminutos («Departamento», «Municipio»…)
+   pero no un dígito de 11 pt, cuya línea mide ~12,7 pt: Word recortaba los
+   números por la mitad. Al diligenciar el formato a mano para dejar el cálculo,
+   el usuario subió esa fila a 297 — y es el ÚNICO valor de geometría que su
+   archivo cambia respecto de la plantilla en blanco. Se aplica sobre el
+   DOCUMENTO y no sobre la constante `TPL_F30`, igual que `_fpjTituloApartado4`:
+   el motor ya es leer → modificar el DOM → rezip, y reescribir 467 KB de base64
+   arriesgaría que Word pida reparar el paquete por un cambio de un número. */
+var F30_ALTO_NUNC = 297;
 /* Anchos útiles, leídos del `w:tcW` de la plantilla con un colchón: el canvas y
    Word no cortan las palabras en el mismo píxel, y pasarse por poco hace que
    Word envuelva el texto. En el recuadro de elementos eso sería inofensivo (sus
    filas son `atLeast` y crecen), pero en el apartado 3 las filas son
    `hRule="exact"` y lo que no cabe se RECORTA sin avisar. */
-var F30_AIRE = { desc: 140, obs: 200 };
+var F30_AIRE = { desc: 140, obs: 200, fecha: 60 };
 /* ⚠️ La fuente del formato. Se declara EXPLÍCITAMENTE en todo lo que escribe la
    app porque las casillas vacías de esta plantilla no la traen y el
    `docDefaults` resuelve a Times New Roman — ver `_f30RunDato`. */
@@ -11237,8 +11310,9 @@ var F30_X = 'X';
    elementos del numeral 7, y uno registrado después entra solo. Lo que el
    formulario no pregunta, no lo pisa. */
 function feEstructura() {
-  return { forma:'', dirAutoridad:'', entrega:null, recibeTipo:'VICTIMA', recibeIdx:0,
-           recibe:null, excluidos:[], obsElem:{}, obs:'', updated:0 };
+  return { forma:'', actosUrgentes:false, ordenPJ:false, dirAutoridad:'', entrega:null,
+           recibeTipo:'VICTIMA', recibeIdx:0, recibe:null, excluidos:[], obsElem:{},
+           obs:'', updated:0 };
 }
 /* ⚠️ LEER NO MUTA — misma regla que `aiActaLeer`: el expediente consulta esto
    solo para pintar la tarjeta, y si consultar creara la rama dejaría el caso
@@ -11353,6 +11427,8 @@ function feMapa(c) {
     dirAutoridad: feDireccionAutoridad(c),
     forma: e.forma || '',
     formaTexto: F30_FORMA[e.forma] || '',
+    actosUrgentes: !!e.actosUrgentes,
+    ordenPJ: !!e.ordenPJ,
     lineas: feLineas(c),
     obs: e.obs || '',
     entNombre: ent.nombre, entIdent: ent.cedula, entEntidad: ent.entidad,
@@ -11508,6 +11584,11 @@ function _f30Nunc(tcs, digitos) {
     _docCentrarCasilla(tcs[F30_C.NUNC[i]]);
   }
   F30_C.RAD.forEach(function (x) { _docCentrarCasilla(tcs[x]); });
+  /* ⚠️ Y LA FILA TIENE QUE DAR EL ALTO. Centrar un dígito dentro de una casilla
+     que mide menos que la línea de texto no lo centra: lo recorta. Las 21
+     casillas del NUNC y las 13 de «Entidad / Radicado Interno» viven en la
+     MISMA fila, así que este único ajuste vale para las 34. */
+  _docAltoFila(tcs[F30_C.NUNC[0]], F30_ALTO_NUNC);
 }
 /* El recuadro de elementos, con la regla que fijó el usuario:
      · cuando la descripción no cabe en la casilla se SIGUE EN EL RENGLÓN DE
@@ -11605,8 +11686,14 @@ async function buildActaEntregaBlob(ctx, papel) {
     /* ⚠️ Con su ancho útil: el año es el dato más largo de la fila y su casilla
        la más justa, y esta fila es `hRule="exact"` — lo que Word envuelva se
        pierde en el papel («202» en vez de «2026», reportado en campo). */
+    /* ⚠️ Y ANTES HAY QUE QUITAR LA SANGRÍA DE LA GUÍA (`w:ind` de 119, 37 y 52
+       twips): está puesta para colocar el «AAAA» de 7 pt, no el dato, y mientras
+       siguiera ahí el ancho útil REAL era 119 twips menor que el que se estaba
+       midiendo — el año cabía en la cuenta y no cabía en el papel. */
     [[F30_C.ANO, m.ano], [F30_C.MES, m.mes], [F30_C.DIA, m.dia]].forEach(function (x) {
-      _f30Celda(tcs, x[0], x[1], F30_SZ.cabecera, _docAnchoUtil(tcs[x[0]], 0, 60));
+      if (!x[1]) return;
+      _docSinSangria(tcs[x[0]]);
+      _f30Celda(tcs, x[0], x[1], F30_SZ.fecha, _docAnchoUtil(tcs[x[0]], 0, F30_AIRE.fecha));
       _docCentrarCasilla(tcs[x[0]]);
     });
     _f30Anadir(tcs[F30_C.MUNI], m.muni, F30_SZ.cabecera,
@@ -11614,6 +11701,20 @@ async function buildActaEntregaBlob(ctx, papel) {
     for (var i = 0; i < F30_C.HORA.length; i++) {
       _f30Celda(tcs, F30_C.HORA[i], m.horaCasillas.charAt(i) || '', F30_SZ.casilla);
       _docCentrarCasilla(tcs[F30_C.HORA[i]]);
+    }
+
+    /* «Actos Urgentes» y «Orden a Policía Judicial»: una X en la casilla en
+       blanco de lo que el funcionario haya marcado.
+       ⚠️ Sin marcar NO se toca la celda —ni la X, ni el centrado—, así que queda
+       byte a byte como en el formato y se diligencia a mano si hace falta: la
+       regla de siempre, un dato que no se registró no se inventa. */
+    if (m.actosUrgentes) {
+      _f30Celda(tcs, F30_C.AU, F30_X, F30_SZ.casilla);
+      _docCentrarCasilla(tcs[F30_C.AU]);
+    }
+    if (m.ordenPJ) {
+      _f30Celda(tcs, F30_C.OPJ, F30_X, F30_SZ.casilla);
+      _docCentrarCasilla(tcs[F30_C.OPJ]);
     }
 
     // 1 · Autoridad que ordena la entrega.
@@ -11853,6 +11954,11 @@ function feAbrir(id) {
         return '<option value="' + o[0] + '"' + (e.forma === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
       }).join('') + '</select></div>' +
 
+    '<div class="st">Actos urgentes u orden a policía judicial</div>' +
+    ojwChk('fe-au', e.actosUrgentes, 'Actos Urgentes') +
+    ojwChk('fe-opj', e.ordenPJ, 'Orden a Policía Judicial') +
+    '<p class="oj-hint">Lo que marques sale con una X en su casilla. Sin marcar, queda en blanco.</p>' +
+
     '<div class="st">Autoridad que ordena la entrega</div>' +
     lcCampo('Dirección', lcInput('fe-dir', m.dirAutoridad, 'Dirección del despacho',
       { extra:' onblur="feRefrescarAviso()"' }),
@@ -11878,8 +11984,8 @@ function feAbrir(id) {
 
     '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
     'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>«Actos Urgentes» y «Orden a Policía Judicial», las dos firmas y la huella se dejan ' +
-    'en blanco: se diligencian a mano sobre el formato impreso.</span></p>' +
+    '<span>Las dos firmas y la huella se dejan en blanco: se estampan a mano ' +
+    'sobre el formato impreso.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="feGenerar()">Generar acta</button>' +
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
@@ -11914,7 +12020,8 @@ function feLeer() {
     var v = inp.value.trim();
     if (v) obs[inp.getAttribute('data-id')] = v;
   });
-  return { forma:_feV('fe-forma'), dirAutoridad:_feV('fe-dir'), obs:el.value.trim(),
+  return { forma:_feV('fe-forma'), actosUrgentes:ojC('fe-au'), ordenPJ:ojC('fe-opj'),
+           dirAutoridad:_feV('fe-dir'), obs:el.value.trim(),
            entrega:feLeerEntrega(),
            recibeTipo:(tipo === 'OTRO') ? 'OTRO' : 'VICTIMA',
            recibeIdx:(tipo === 'OTRO') ? undefined : (parseInt(tipo.slice(1), 10) || 0),
@@ -11947,6 +12054,8 @@ async function feGuardar() {
   var c = DB.getCase(ctx.id); if (!c) return null;
   var e = feActa(c);
   e.forma = datos.forma;
+  e.actosUrgentes = datos.actosUrgentes;
+  e.ordenPJ = datos.ordenPJ;
   e.dirAutoridad = datos.dirAutoridad;
   e.obs = datos.obs;
   e.excluidos = datos.excluidos;

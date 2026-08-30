@@ -10,11 +10,13 @@
 
      A. Registro, expediente y menú.
      B. La plantilla — es el archivo del usuario, sin referencias de red.
-     C. Geometría INTACTA — cero diferencias contra la plantilla en blanco.
+     C. Geometría intacta salvo el ÚNICO ajuste medido: el alto de la fila del
+        NUNC, que en la plantilla recorta los dígitos.
      D. Mapeo del acta — cada casilla, con el dato que le toca.
      E. Los elementos: el «No.» se repite por renglón, y las filas se reproducen.
      F. Quién entrega y quién recibe.
-     G. Lo que NO se inventa: firmas, huella, consecutivo, actos urgentes.
+     G. Lo que NO se inventa: firmas, huella, consecutivo y la casilla que no
+        se marcó.
      H. Un solo cuerpo de letra para todo lo que rellena la app.
      I. El resumen de la captura: los seis bloques, y ni un dato inventado.
      J. Persistencia, perfil, modo invitado y consola limpia.
@@ -252,8 +254,41 @@ const gen = await page.evaluate(async id => {
 
 const gA = geometria(gen.tpl), gB = geometria(gen.doc);
 const dif = difGeom(gA, gB);
-log(dif.length === 0, '⚠️ CERO diferencias de geometría contra la plantilla en blanco',
-  dif.length ? dif.join(', ') : '1 tabla · 46 filas · 154 celdas · mismos anchos y altos');
+/* ⚠️ La ÚNICA diferencia admitida es el alto de la fila del NUNC, y no es un
+   retoque de gusto: la plantilla la trae en `hRule="exact"` con 149 twips
+   (7,4 pt), que es lo que necesitan sus rótulos diminutos pero no un dígito de
+   11 pt, cuya línea mide ~12,7 pt. Una fila exacta demasiado baja no empuja
+   nada: Word RECORTA y no avisa — los números salían cortados por la mitad
+   («desajustados en cada casilla», reportado en campo con el acta impresa).
+   El valor lo dejó MEDIDO el propio usuario: al diligenciar el formato de
+   referencia a mano subió esa fila a 297, y es el único dato de geometría que
+   su archivo cambia respecto de la plantilla en blanco. */
+log(dif.length === 1 && dif[0] === 'trHeight',
+  '⚠️ Ni una diferencia de geometría salvo el alto de la fila del NUNC',
+  dif.length ? dif.join(', ') : '1 tabla · 46 filas · 154 celdas · mismos anchos');
+/* El alto de cada fila, en el orden del documento. Se lee de la lista que ya
+   arma `geometria()`, así que la fila del NUNC es la entrada 1 (la 0 es la del
+   título «Número Único de Noticia Criminal»). */
+const altos = x => x.split(',').map(a => ({
+  regla: /exact/.test(a) ? 'exact' : 'atLeast',
+  val: +((/val="([0-9]+)"/.exec(a) || [0, 0])[1])
+}));
+const hTpl = altos(gA.trHeight)[1], hDoc = altos(gB.trHeight)[1];
+log(hTpl.val === 149 && hDoc.val === 297 && hDoc.regla === 'exact',
+  'Sube de 149 a 297 twips — el número exacto del formato que llenó el usuario',
+  hTpl.val + ' → ' + hDoc.val + ' (' + hDoc.regla + ')');
+/* La cuenta que hace falta: la línea de un dígito de 11 pt en Arial mide
+   ~1,15 em. Contra los 149 twips de la plantilla no cabe; contra 297, sí. */
+const lineaDigito = Math.round(11 * 1.15 * 20);
+log(lineaDigito > hTpl.val && lineaDigito <= hDoc.val,
+  '⚠️ Medido: el dígito NO cabía en la fila del formato y ahora sí',
+  'línea ' + lineaDigito + ' tw · antes ' + hTpl.val + ' · ahora ' + hDoc.val);
+/* ⚠️ Y no cuesta una hoja: el acta sigue en una página (comprobado además en
+   Word real). La fila crece 148 twips sobre un sobrante de ~6 500. */
+const restoIgual = altos(gA.trHeight).every((h, i) => i === 1 || h.val === altos(gB.trHeight)[i].val);
+log(restoIgual && altos(gB.trHeight).length === altos(gA.trHeight).length,
+  'Ninguna otra fila se toca: las 45 restantes conservan su alto del formato',
+  altos(gA.trHeight).length + ' filas con alto declarado');
 log(gen.noPDF === true, 'El documento viaja marcado noPDF: ninguna ruta futura puede imprimirlo por descuido');
 log(/^Acta_entrega_/.test(gen.fname) && /\.docx$/.test(gen.fname), 'Nombre de archivo con quien recibe', gen.fname);
 
@@ -412,9 +447,42 @@ const imgs = x => (x.match(/<w:drawing>|<w:pict>/g) || []).length;
 log(imgs(gen.doc) === imgs(gen.tpl),
   '⚠️ Y no se añade ninguna imagen: el documento trae las mismas que el formato',
   imgs(gen.doc) + ' = ' + imgs(gen.tpl));
-log(tc[63] === tplTc[63] && tc[64] === tplTc[64] && tc[66] === tplTc[66] && tc[67] === tplTc[67],
-  '⚠️ «Actos Urgentes» y «Orden a Policía Judicial» se dejan al usuario, como pidió');
 log(C.RAD.every(i => !tc[i]), 'El radicado interno queda en blanco: lo asigna la unidad receptora');
+
+/* ── «Actos Urgentes» y «Orden a Policía Judicial» ──
+   El usuario pidió incorporarlas: «simplemente si se marca se genera una X en la
+   casilla en blanco correspondiente a cualquiera de las dos afirmaciones».
+   ⚠️ Son INDEPENDIENTES —el formato trae una casilla para cada una y no dice
+   que se excluyan—, y lo que NO se marca no se toca: esa celda tiene que salir
+   byte a byte como en el formato, para diligenciarla a mano si hace falta. */
+const celdaCruda = (x, i) => celdasDe(x)[i];
+log(celdaCruda(gen.doc, C.AU) === celdaCruda(gen.tpl, C.AU) &&
+    celdaCruda(gen.doc, C.OPJ) === celdaCruda(gen.tpl, C.OPJ),
+  '⚠️ Sin marcar, las dos casillas salen BYTE A BYTE como en el formato');
+
+const marcado = await page.evaluate(async id => {
+  const c = DB.getCase(id), e = feActa(c);
+  e.actosUrgentes = true; e.ordenPJ = false;
+  await DB.saveCase(c);
+  const out = await buildActaEntregaBlob({ caso: DB.getCase(id) }, 'CARTA');
+  const doc = new TextDecoder().decode(out.files['word/document.xml']);
+  e.actosUrgentes = false;                       // se deja el caso como estaba
+  await DB.saveCase(DB.getCase(id));
+  return doc;
+}, idCaso);
+const tcM = tcTexto(marcado);
+log(tcM[C.AU] === 'X', 'Marcado «Actos Urgentes», sale una X en su casilla', tcM[C.AU]);
+log(celdaCruda(marcado, C.AU).includes('w:jc w:val="center"') &&
+    celdaCruda(marcado, C.AU).includes('w:vAlign w:val="center"'),
+  'Centrada en los dos ejes dentro de la casilla, como se marca a mano');
+log(celdaCruda(marcado, C.OPJ) === celdaCruda(gen.tpl, C.OPJ) && !tcM[C.OPJ],
+  '⚠️ Y la otra sigue intacta: marcar una no marca la otra');
+log(tcM[63] === tplTc[63] && tcM[66] === tplTc[66],
+  'Los dos rótulos del formato se conservan: la X va en la casilla, no encima');
+/* Y son dos preguntas del formulario, no un dato que se deduzca: el acta se
+   genera igual sin marcar ninguna (no bloquean). */
+log(await page.evaluate(id => feFaltantes(DB.getCase(id)).join('|'), idCaso) === '',
+  'No bloquean: un acta sin marcar ninguna de las dos se genera igual');
 
 /* ══ H · UN SOLO CUERPO DE LETRA ═══════════════════════════════════════════ */
 console.log('\n── H · Todo lo que rellena la app declara su tamaño ──');
@@ -458,24 +526,55 @@ log(grises.length === 0,
   '⚠️ Ni uno hereda el gris de la guía del formato: el dato va en color auto', grises.length + ' grises');
 log(!/<w:color[^>]*themeColor/.test(nuevos.join('')),
   'Y sin el `themeColor` de la guía, que mandaría sobre el color declarado');
-/* ⚠️ El año es el dato más largo de la fila y su casilla la más justa. Con el
-   `w:w 102` de la guía «AAAA» rozaba el ancho, y como la fila es
-   `hRule="exact"` lo que Word envuelve SE PIERDE: en el papel salía «202». */
+/* ⚠️ El año es el dato más largo de la fila y su casilla la más justa, y esta
+   fila es `hRule="exact"`: lo que Word envuelve SE PIERDE, y en el papel salía
+   «202». Dos cosas se lo comían a la vez y las dos eran del FORMATO, no del
+   dato: el `w:w 102` con que la guía «AAAA» va ensanchada (corregido en el
+   build anterior) y —lo que quedaba— el `w:ind` de 119 twips que COLOCA esa
+   guía dentro de la casilla. Mientras la sangría siguiera ahí, el ancho útil
+   REAL era 119 twips menor que el que la app estaba midiendo: «2026» a 10 pt
+   medía 446 twips contra 448 disponibles, dos twips de margen que Word no
+   respeta. El formato que el usuario llenó a mano no tiene esa sangría y
+   escribe la fecha a 11 pt: es lo que hace ahora la app.
+   Se comprueba en las dos dimensiones: que la sangría ya no está y que el
+   dato mide menos que el ancho útil de su casilla. */
 log(tc[C.ANO] === '2026' && tc[C.MES] === '05' && tc[C.DIA] === '13',
   '⚠️ El año sale COMPLETO: sin el ensanchado de la guía cabe en su casilla',
   [tc[C.ANO], tc[C.MES], tc[C.DIA]].join('-'));
+const anoTpl = celdasDe(gen.tpl)[C.ANO], anoDoc = celdasDe(gen.doc)[C.ANO];
+log(anoTpl.includes('<w:ind ') && !anoDoc.includes('<w:ind '),
+  '⚠️ La sangría de la guía se retira: está para colocar el «AAAA» de 7 pt, no el dato');
+log(!celdasDe(gen.doc)[C.MES].includes('<w:ind ') && !celdasDe(gen.doc)[C.DIA].includes('<w:ind '),
+  'Y en las tres casillas por igual, para que las tres queden centradas en la suya');
 const cabeAno = await page.evaluate(async id => {
   const out = await buildActaEntregaBlob({ caso: DB.getCase(id) }, 'CARTA');
   const doc = new DOMParser().parseFromString(
     new TextDecoder().decode(out.files['word/document.xml']), 'application/xml');
   const tcs = [...doc.getElementsByTagNameNS(FPJ_W, 'tc')];
   const c = tcs[F30_C.ANO];
-  const sz = +(/<w:sz w:val="(\d+)"/.exec(new XMLSerializer().serializeToString(c)) || [0, 20])[1];
-  return { ancho: lcAnchoTexto('2026', sz / 2), util: _docAnchoUtil(c, 0, 60) };
+  // El cuerpo del RUN QUE LLEVA EL DATO, no el primer w:sz de la celda: la
+  // marca de párrafo conserva el de la guía (7 pt) y mirarla no dice nada.
+  let sz = 0;
+  const rs = c.getElementsByTagNameNS(FPJ_W, 'r');
+  for (let i = 0; i < rs.length; i++) if (_getElText(rs[i], FPJ_W)) { sz = _docSzDe(rs[i], 0); break; }
+  return { sz: sz, ancho: lcAnchoTexto('2026', sz / 2), util: _docAnchoUtil(c, 0, F30_AIRE.fecha),
+           antes: lcAnchoTexto('2026', 10), aire: F30_AIRE.fecha };
 }, idCaso);
+log(cabeAno.sz === 22, 'El año va al cuerpo con que lo escribió el usuario en su formato: 11 pt',
+  (cabeAno.sz / 2) + ' pt');
 log(cabeAno.ancho <= cabeAno.util,
   'Medido: los cuatro dígitos caben en el ancho útil de la casilla, sin envolverse',
   cabeAno.ancho + ' ≤ ' + cabeAno.util + ' twips');
+/* ⚠️ Y la cuenta del build anterior, escrita para que quede claro por qué
+   fallaba: con la sangría puesta quedaban 448 twips y «2026» a 10 pt medía 445.
+   Cabía POR TRES TWIPS —0,05 mm— y el módulo se exige 60 de colchón justamente
+   porque el canvas y Word no cortan la palabra en el mismo píxel. Word lo
+   envolvió: medido sobre el documento del build anterior, el primer carácter
+   del año y el último caían en LÍNEAS DISTINTAS (y=96 y y=108), y la segunda
+   línea se recortaba por ser la fila `hRule="exact"`. */
+log((567 - 119) - cabeAno.antes < cabeAno.aire,
+  '⚠️ Antes cabía por 3 twips (0,05 mm), muy por debajo del colchón exigido',
+  'sobraban ' + ((567 - 119) - cabeAno.antes) + ' twips de los ' + cabeAno.aire + ' que pide el módulo');
 
 /* ══ I · EL RESUMEN DE LA CAPTURA ══════════════════════════════════════════ */
 console.log('\n── I · El resumen: los seis bloques que se pidieron ──');
@@ -557,6 +656,12 @@ await page.waitForTimeout(500);
 log(await page.$('#fe-obs') !== null, 'El formulario del acta abre desde el expediente');
 log(await page.$$eval('#fe-elementos .fe-el-c', e => e.length).then(x => x === 3),
   'Con los tres elementos del numeral 7, cada uno con su casilla y su observación');
+/* Las dos casillas que pidió el usuario se preguntan en el formulario, en el
+   mismo orden en que el formato las imprime: debajo de la fecha y encima del
+   numeral 1. */
+log(await page.$('#fe-au') !== null && await page.$('#fe-opj') !== null,
+  '«Actos Urgentes» y «Orden a Policía Judicial» se preguntan en el acta');
+await page.check('#fe-au');
 await page.fill('#fe-obs', 'Observación de prueba');
 await page.selectOption('#fe-forma', 'P');
 await page.uncheck('#fe-elementos .fe-el-c >> nth=2');
@@ -567,8 +672,12 @@ await page.evaluate(() => closeModal());
 await page.waitForTimeout(400);
 const guardado = await page.evaluate(() => {
   const e = DB.getCase('fe-uri').entrega || {};
-  return { obs: e.obs, forma: e.forma, ex: (e.excluidos || []).length };
+  return { obs: e.obs, forma: e.forma, ex: (e.excluidos || []).length,
+           au: e.actosUrgentes, opj: e.ordenPJ };
 });
+log(guardado.au === true && guardado.opj === false,
+  'Lo marcado se guarda en el caso, y lo no marcado sigue sin marcar',
+  'actosUrgentes=' + guardado.au + ' · ordenPJ=' + guardado.opj);
 log(guardado.obs === 'Observación de prueba' && guardado.forma === 'P' && guardado.ex === 1,
   '⚠️ Cerrar el modal guarda lo escrito, no lo tira (como el acta de derechos)',
   JSON.stringify(guardado));
@@ -579,6 +688,8 @@ await page.click('button[onclick="doUnlockPin()"]');
 await page.waitForTimeout(500);
 log(await page.evaluate(() => (DB.getCase('fe-uri').entrega || {}).obs === 'Observación de prueba'),
   'Y sobrevive a recargar la app');
+log(await page.evaluate(() => (DB.getCase('fe-uri').entrega || {}).actosUrgentes === true),
+  'La marca también: el acta se reimprime igual meses después');
 
 /* El perfil pide el teléfono y el correo del compañero: es el campo que pidió
    el usuario («un espacio dentro del perfil del usuario para colocar el correo
