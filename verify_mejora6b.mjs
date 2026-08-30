@@ -118,7 +118,8 @@ const expedCon = await page.evaluate(id => {
   return {
     estadoVisible: !!(est && est.style.display !== 'none' && est.innerHTML.trim()),
     txt: document.querySelector('#screen-dossier .pane').textContent,
-    docs: [...document.querySelectorAll('#exp-docs .tbt')].map(e => e.textContent)
+    docs: [...document.querySelectorAll('#exp-docs .tbt')].map(e => e.textContent),
+    reg: lcEstadoDocs(DB.getCase(id)).map(d => d.lbl)
   };
 }, ids.con);
 log(!/PLAZO VENCIDO|Plazo de 36 horas|Plazo vencido/i.test(expedCon.txt),
@@ -126,17 +127,26 @@ log(!/PLAZO VENCIDO|Plazo de 36 horas|Plazo vencido/i.test(expedCon.txt),
 log(!/FALTAN DATOS/i.test(expedCon.txt) || !expedCon.estadoVisible,
   '[9] Ni el bloque «Faltan datos» de Estado');
 log(expedCon.estadoVisible === false, '[10] Sin nada que decir, el bloque Estado no se pinta');
-log(expedCon.docs.length === 5, '[11] Con EMP registrados se ofrecen los cinco documentos', expedCon.docs.length);
+/* ⚠️ La cuenta se DERIVA del registro: escrita a mano, cada formato nuevo la
+   deja obsoleta (le pasó con el acta de entrega y el resumen, 2026-08-30) y el
+   check acaba midiendo un número en vez de la regla, que es que la pantalla
+   pinte exactamente lo que dice `lcEstadoDocs`. */
+log(expedCon.docs.length === expedCon.reg.length && expedCon.docs.length >= 5,
+  '[11] Con EMP registrados se ofrecen todos los documentos del registro', expedCon.docs.join(' · '));
 
 const expedSin = await page.evaluate(id => {
   abrirDossierCaso(id);
   return {
     docs: [...document.querySelectorAll('#exp-docs .tbt')].map(e => e.textContent),
+    reg: lcEstadoDocs(DB.getCase(id)).map(d => d.lbl),
     txt: document.getElementById('exp-docs').textContent
   };
 }, ids.sin);
-log(expedSin.docs.length === 2,
-  '[12] SIN EMP ni EF no se ofrecen acta de incautacion, cadena ni rotulo', expedSin.docs.join(' · '));
+/* ⚠️ El resumen de la captura SI se ofrece sin elementos: no es un formato del
+   numeral 7 sino la hoja de trabajo del expediente. Lo que se mide es que los
+   TRES del numeral 7 desaparezcan, no un numero fijo de tarjetas. */
+log(expedSin.docs.length === expedSin.reg.length && expedSin.docs.length < expedCon.docs.length,
+  '[12] SIN EMP ni EF no se ofrecen acta de incautacion, cadena, rotulo ni entrega', expedSin.docs.join(' · '));
 log(!/incautaci|custodia|tulo de EMP/i.test(expedSin.txt),
   '[13] No es que salgan bloqueadas: no salen — hay capturas sin elementos');
 log(!/Faltan datos/i.test(expedSin.txt),
@@ -146,7 +156,12 @@ const expedOJ = await page.evaluate(id => {
   abrirDossierCaso(id);
   return [...document.querySelectorAll('#exp-docs .tbt')].map(e => e.textContent);
 }, ids.oj);
-log(expedOJ.length === 2, '[15] Una captura por orden judicial sigue con sus dos documentos', expedOJ.join(' · '));
+/* ⚠️ El oficio y el acta de derechos son los únicos FORMATOS de un expediente
+   de orden judicial; el resumen se suma porque es la hoja de trabajo del
+   expediente, no un formato del numeral 7. Lo que no puede aparecer ahí es
+   ninguno de esos tres —lo mide el check [16]. */
+log(/Oficio de disposición/.test(expedOJ[0]) && expedOJ[1] === 'Acta de derechos',
+  '[15] Una captura por orden judicial sigue con sus dos documentos', expedOJ.join(' · '));
 
 console.log('\n══ Obs. 3, 4, 5 y 6 · el formulario de orden judicial, sin ruido ══');
 

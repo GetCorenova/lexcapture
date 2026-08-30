@@ -187,15 +187,25 @@ log(!mandado.ajenoEditado, '[3] Y el dossier de OTRO caso no hereda ese texto: s
 const docsU = await page.evaluate(i => { _dosCasoId = i; go('dossier');
   return [...document.querySelectorAll('#exp-docs .type-card .tbt')].map(e => e.textContent.trim()); }, ids.uri);
 await page.waitForTimeout(400);
-log(docsU.length === 5, '[4] Flagrancia: el expediente ofrece los cinco documentos', docsU.length + ' — ' + docsU.join(' | '));
-log(JSON.stringify(docsU) === JSON.stringify(['Informe FPJ-5 URI','Acta de derechos','Acta de incautación',
-    'Registro de cadena de custodia','Rótulo de EMP y EF']),
-  '[4] En el orden del numeral 7: informe, acta de derechos, incautacion, custodia, rotulo', docsU.join(' | '));
+/* ⚠️ La expectativa se DERIVA del registro, no se escribe a mano: si no, cada
+   formato nuevo la deja obsoleta —le pasó con el acta de entrega y el resumen
+   (2026-08-30)— y el check acaba midiendo un número en vez de la regla.
+   Lo que se comprueba es que la pantalla pinta EXACTAMENTE lo que dice
+   `lcEstadoDocs`, ni uno más ni uno menos, y en su mismo orden. */
+const regU = await page.evaluate(i => lcEstadoDocs(DB.getCase(i)).map(d => d.lbl), ids.uri);
+log(docsU.length === regU.length && docsU.length >= 5,
+  '[4] Flagrancia: el expediente ofrece todos los documentos del registro', docsU.length + ' — ' + docsU.join(' | '));
+log(JSON.stringify(docsU) === JSON.stringify(regU),
+  '[4] En el orden del numeral 7, tal como los devuelve el registro', docsU.join(' | '));
 const docsO = await page.evaluate(i => { _dosCasoId = i; renderDossier();
   return [...document.querySelectorAll('#exp-docs .type-card .tbt')].map(e => e.textContent.trim()); }, ids.oj);
 await page.waitForTimeout(300);
-log(docsO.length === 2 && /Oficio de disposición/.test(docsO[0]) && docsO[1] === 'Acta de derechos',
-  '[4] Orden judicial: SOLO el oficio y el acta de derechos', docsO.join(' | '));
+/* ⚠️ El resumen de la captura SÍ se ofrece en orden judicial: no es un formato
+   del numeral 7 sino la hoja de trabajo del expediente, y ahí imprime lo que
+   ese procedimiento sí tiene. Lo que no puede aparecer son los formatos del
+   numeral 7, que es lo que mide el check siguiente. */
+log(/Oficio de disposición/.test(docsO[0]) && docsO[1] === 'Acta de derechos',
+  '[4] Orden judicial: el oficio y el acta de derechos, en ese orden', docsO.join(' | '));
 log(!docsO.some(d => /incautaci|custodia|Rótulo/i.test(d)),
   '[4] Los tres formatos del numeral 7 NO existen en un expediente de orden judicial');
 /* La pantalla dice lo mismo que el registro: si usara un criterio propio, mentiria. */
@@ -203,10 +213,19 @@ const reg = await page.evaluate(o => lcEstadoDocs(DB.getCase(o)).map(d => d.lbl)
 log(JSON.stringify(reg) === JSON.stringify(docsO), '[4] Lo pintado sale del registro, no de una lista aparte');
 
 // ═══ 5 · Cada documento da a elegir canal: descargar o enviar ═══
-const abrirDoc = async (i, n) => {
+/* ⚠️ La tarjeta se busca POR SU ETIQUETA, no por su posición: insertar un
+   formato nuevo en el registro corre los índices de todos los que van detrás y
+   el test acabaría abriendo otro documento sin decirlo (le pasó con el resumen
+   de la captura, que entra en tercer lugar). */
+const abrirDoc = async (i, lbl) => {
   await page.evaluate(x => { _dosCasoId = x; go('dossier'); }, i);
   await page.waitForTimeout(350);
-  await page.click(`#exp-docs .type-card:nth-child(${n + 1})`);   // el primer hijo es el titulo
+  const n = await page.evaluate(t => {
+    const c = [...document.querySelectorAll('#exp-docs .type-card')];
+    return c.findIndex(e => new RegExp(t, 'i').test(e.querySelector('.tbt').textContent));
+  }, lbl);
+  if (n < 0) throw new Error('no hay tarjeta que case con ' + lbl);
+  await page.click(`#exp-docs .type-card >> nth=${n}`);
   await page.waitForTimeout(500);
 };
 /* Los documentos por-persona y por-elemento preguntan primero de cual se trata
@@ -235,7 +254,7 @@ const sheetCanal = () => page.evaluate(() => ({
   kind: (_shareJob || {}).kind
 }));
 
-await abrirDoc(ids.uri, 1);                       // 1 · Informe FPJ-5
+await abrirDoc(ids.uri, 'Informe FPJ-5');
 await elegir();
 await page.waitForTimeout(900);
 let sh = await sheetCanal();
@@ -249,7 +268,7 @@ log(!!env && /\.docx$/.test(env.name) && /wordprocessingml/.test(env.type),
 
 // 2 · Acta de derechos — el documento que hasta ahora NO tenia ruta de envio
 await page.evaluate(() => { window._shared = null; });
-await abrirDoc(ids.uri, 2);
+await abrirDoc(ids.uri, 'Acta de derechos');
 await generar();
 await elegir();
 await page.waitForTimeout(1600);
@@ -264,7 +283,7 @@ log(!!env && /^FPJ6_.*\.docx$/.test(env.name),
 
 // 3 · Cadena de custodia — es PDF oficial: se envia el PDF, no un .docx
 await page.evaluate(() => { window._shared = null; });
-await abrirDoc(ids.uri, 4);
+await abrirDoc(ids.uri, 'cadena de custodia');
 await generar();
 await page.waitForTimeout(1200);
 sh = await sheetCanal();

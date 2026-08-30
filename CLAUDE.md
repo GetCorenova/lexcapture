@@ -3982,3 +3982,156 @@ enruta **correctamente** a R4-B (juez de turno, C-042/2018); lo que está mal es
 hecho un día y una hora hábiles. `verify_ds` («favorito con estrella SVG») ya estaba documentado
 desde el 2026-08-08.
 Anti-caché `?v=86` / `cache-v86`, `_BUILD=86`.
+
+## Acta de entrega FPJ-30 y Resumen de la captura (2026-08-30)
+Dos documentos nuevos. El primero venía pedido en `Documentos/Otro/Implementación Acta Entrega.docx`
+(texto + 6 pantallazos con recuadro rojo numerado) sobre el formato en blanco que el usuario aportó
+en la misma carpeta, `FPJ 30 Acta De Entrega.docx`. El segundo, pedido en el mismo mensaje: «otro
+documento de Word donde aparezca un resumen de toda la captura» con seis datos. Verificado con
+`verify_entrega.mjs` (**69 checks**, nuevo) y abriendo los `.docx` en **Word real** (COM).
+
+### Acta de entrega — se RELLENA, no se dibuja
+⚠️ Aplica la regla que este archivo ya se dio con el acta de incautación: **si existe el formato en
+blanco, se rellena**. `TPL_F30` es ese archivo embebido en base64 (ZIP **stored**, 350 KB de partes
+y 467 KB de base64), y el motor escribe por índice plano de celda con `setTc` sobre sus **154 celdas
+(1 tabla, 46 filas, rejilla de 40 columnas)**. Ninguna tabla se reconstruye: la maquetación ES el
+archivo oficial. Medido: **cero diferencias de geometría** contra la plantilla en blanco —tablas,
+filas, `gridCol`, `tcW`, `trHeight`, `tblW`, `tblInd`, `gridSpan`, `vMerge`, bordes y `pgSz`—; lo
+único que cambia es el TEXTO.
+- ⚠️ **La plantilla llegó limpia y se comprobó ANTES de embeberla**: cero `TargetMode="External"` y
+  cero `INCLUDEPICTURE`. No es un detalle: el acta de incautación traía el escudo como un campo
+  apuntando a una URL de Google, y Word REFRESCA esos campos — en un teléfono sin datos el escudo
+  habría desaparecido y el documento habría viajado a un despacho con dos referencias de red dentro.
+- ⚠️ **SOLO WORD.** Usa `w:trHeight hRule="exact"` en casi todas sus filas, `w:vMerge`, `w:tcW` en
+  las 154 celdas y `w:gridSpan` sobre 40 columnas: las construcciones que el traductor OOXML→HTML no
+  implementa y por las que el FPJ-5, el FPJ-6 y el acta de incautación quedaron en solo-Word
+  («Exportación v2»). Guarda **estructural** (`out.noPDF` + `LC_DOCS.F30.soloWord`).
+- ⚠️ **No toca el flujo de captura**: ni un paso, ni un campo, ni una validación del wizard. Lee
+  `caso.elementos`, `caso.victimas` y `caso.capturados`, que ya existen, y guarda en `caso.entrega`
+  lo ÚNICO que el caso no tiene.
+
+### El mapeo, campo por campo — lo que pidió el usuario
+| Casilla del formato | De dónde sale |
+|---|---|
+| NUNC (21 casillas) | los 16 dígitos del caso; **las 5 del Consecutivo en blanco** (instrucción literal) |
+| Entidad + Radicado interno (13) | en blanco: los asigna la unidad receptora al radicar |
+| Departamento · Municipio · Fecha · Hora | del caso |
+| «Actos Urgentes» / «Orden a Policía Judicial» | **en blanco: los llena el usuario a mano** (instrucción) |
+| «Fiscalía / Institución» | **siempre «Fiscalía»** (instrucción literal), no el nombre del despacho |
+| «Dirección» | la del despacho al que se dejó la captura, **con opción de escribir otra** |
+| «adscrito a ___» | la entidad del perfil del usuario |
+| provisional ___ / definitiva ___ | **se pregunta siempre** y se marca con una **X** en su casilla |
+| «de lo siguiente: ___» | **en blanco** (instrucción): lo que se entrega va en el recuadro del 2 |
+| Recuadro de elementos | los del numeral 7, con la MISMA primitiva que los imprime (`lcEmpDesc`) |
+| 3 · Observaciones | las que escriba el usuario |
+| 4 · Quien entrega | perfil, **compañero de patrulla** u otro funcionario |
+| 5 · Quien recibe | **la víctima del procedimiento**, u otra persona |
+| Las dos FIRMAS y la HUELLA | en blanco: el acta se imprime para firmarse a mano |
+
+- ⚠️ **La celda «Municipio» NO tiene celda de valor propia**: la etiqueta impresa y el sitio donde se
+  escribe son la MISMA celda (medido sobre el archivo). `setTc` la habría sustituido y el formato
+  habría perdido su rótulo; `_f30Anadir` añade el valor detrás, en un run limpio **sin el
+  `w:spacing`/`w:w` con que la etiqueta va condensada** —esos valores están para que quepa la
+  etiqueta, no el dato— y reduce el cuerpo si con el valor ya no cabe (la fila es `exact`).
+- ⚠️ **Los cuatro renglones del apartado 1 se localizan con `_docBlancos`**, el mismo del acta de
+  incautación: este formulario dibuja sus renglones de DOS maneras y usa las dos en la misma frase
+  —guiones bajos («definitiva_____») y espacios SUBRAYADOS («adscrito a ______»)—, así que
+  `_f6Blancos`, que solo conoce los guiones, se habría saltado la mitad.
+- ⚠️ **Las guías «AAAA», «MM» y «DD» son texto impreso dentro de la casilla**: al escribir el dato
+  desaparecen, que es como queda al diligenciarlo a mano. Sin fecha se dejan intactas.
+
+### El recuadro de elementos — la regla que fijó el usuario
+«Si la casilla de descripción no es suficiente […] sigues en el siguiente renglón dentro del mismo
+espacio de descripción (nunca escribir en otro lado) […] rellenas con el 1 la casilla de No hasta el
+renglón 4 y después sigue la secuencia normal […] cuatro veces 1, 2, 3 y terminaría en 4.»
+- La descripción se parte por palabra con `_docPartirEnLinea` midiendo el ancho ÚTIL de la celda
+  (leído del `w:tcW`, no del `tblGrid`), y **el «No.» se repite en todos los renglones que ocupe** el
+  elemento. Medido en Word: 4 renglones para el primero, 2 para el segundo, 1 para el tercero.
+- ⚠️ **La cantidad y la observación van SOLO en el primer renglón** del elemento: repetir la cantidad
+  en cada renglón se leería como más unidades.
+- ⚠️ **Las filas que sobran quedan con su columna «No.» EN BLANCO.** El formato las trae numeradas
+  1..7, y un ordinal suelto en una fila vacía se lee como un elemento que faltó por escribir — misma
+  regla que las conductas del numeral 2 del FPJ-5. Sin ningún elemento no se toca el recuadro.
+- **Solo si no caben** se reproduce la fila, como autoriza el propio formato al pie. Comprobado con
+  12 elementos: 51 filas (46 + 5) y ni un elemento perdido.
+- ⚠️ **El apartado 3 NO reproduce filas**: esa nota del formato está al pie del recuadro de
+  elementos, no de las observaciones. Sus 7 renglones son `hRule="exact"` y **recortan sin avisar**,
+  así que el texto se reparte midiéndolo y **lo que no quepa se dice por toast** — nunca en silencio
+  (misma familia de fallo que los EMP que no se imprimían).
+
+### Quién entrega y quién recibe
+- **«Cualquiera de los dos integrantes de la patrulla puede hacer la entrega»**: se pregunta con las
+  MISMAS tres salidas de la cadena de custodia y del acta de incautación (**`ccResolverOrigen`**, no
+  un resolutor propio) — titular del perfil, compañero de patrulla u otro funcionario tecleado.
+  Dos criterios distintos acabarían nombrando a una persona en la cadena de custodia y a otra en el
+  acta de entrega del mismo procedimiento.
+- ⚠️ **El perfil gana el CORREO y el TELÉFONO del compañero de patrulla**, que es el campo que pidió
+  el usuario: el apartado 4 del formato los imprime y hasta ahora no se guardaban de él.
+  `ccResolverOrigen` los devuelve para los tres orígenes; los documentos que no los usan los ignoran,
+  así que ninguno cambia. Se preguntan una vez y `feRecordarContacto` los deja en el perfil.
+- **Quien recibe es la VÍCTIMA del procedimiento**, propuesta por la app con su documento, dirección
+  y teléfono; y se puede elegir otra víctima o teclear a otra persona («en ocasiones se le entrega a
+  otra persona. Entonces siempre pregunta esto»). Lo escrito a mano MANDA sobre lo que trae la
+  víctima.
+- ⚠️ **Lo que falta DEL CASO se separa de lo que se pregunta DENTRO del formulario**
+  (`feFaltantesCaso` / `feFaltantes`), y la distinción decide qué dice la tarjeta del expediente. Con
+  las dos preguntas del acta —la forma de la entrega y quién recibe— la tarjeta se habría quedado en
+  rojo en TODA captura con elementos, aunque la entrega no haya ocurrido y muchas veces no ocurre:
+  el ruido permanente que la Mejora 6 vino a quitar. Es el precedente de la cadena de custodia y el
+  rótulo, que también preguntan lo suyo dentro y no marcan la tarjeta. **Siguen bloqueando al
+  generar**, con el modal que las nombra. Lo detectó `verify_menu_expediente` [8], que pasaba contra
+  el build anterior.
+
+### Resumen de la captura — el único documento que NO es un formato oficial
+Una hoja de trabajo que reúne en una lectura lo que está repartido entre los pasos del wizard, con
+los **seis bloques que pidió el usuario y en su orden**: dirección de los hechos · capturados ·
+víctimas · testigos · EMP y EF · vehículos implicados. Lo compone la app en OOXML con las primitivas
+del oficio (`ojx*`), que ya respetan el orden de hijos que exige el esquema.
+- ⚠️ **NO inventa un dato**: todo sale del caso, con las MISMAS primitivas que lo imprimen en los
+  formatos oficiales (`lcEmpLineas` para los elementos, `lcArtCP` para el artículo del C.P.,
+  `lcPlaca` para las placas). Un dato sin registrar sale EN BLANCO — que es justamente para lo que
+  sirve antes de radicar. Con la captura vacía **dice qué no hay**, en vez de romperse.
+- ⚠️ **Va en ARIAL y no en la fuente del oficio**: no reproduce ningún formato aprobado, y Arial está
+  en todos los equipos. Paquete propio, **sin membrete, sin escudo y sin firma** —no se radica ante
+  nadie— y con pie de «Página N de M», que sí hace falta porque ocupa varias hojas.
+- ⚠️ **`ojxTablaDatos` se PARAMETRIZÓ (`o` opcional: font, sz, et) en vez de copiarla.** Sin `o` la
+  tabla sale byte a byte igual que antes (`verify_tipografia_oj` 42 en verde): dos tablas
+  «etiqueta/valor» que divergen es la duplicación que este proyecto lleva quitando.
+- En una captura de menores dice **«aprehendidos»** (Ley 1098 de 2006), resuelto con `f6EsMenor` y no
+  con un criterio propio.
+- **Medido en Word real**: 3 páginas, 6 tablas, Arial 14/11/10 pt, sin pedir reparar.
+
+### Dónde viven: el expediente, y el menú sigue en cuatro
+Los dos entran por `lcEstadoDocs` («Esto debe de quedar dentro de expedientes», instrucción
+explícita), **no por el menú ⋮ de la captura, que se queda en 4 ítems**: es el punto de extensión que
+dejó abierto la auditoría del módulo Capturas para que el menú no crezca un ítem por documento.
+Además el reparto de elementos y las observaciones son **contenido que se diligencia**, y un bottom
+sheet solo aloja verbos.
+- ⚠️ **El acta de entrega NO se ofrece en una captura por orden judicial** —es un formato del numeral
+  7, que ese procedimiento no produce—, pero **el resumen SÍ**: es la hoja de trabajo del expediente,
+  y ahí imprime lo que ese procedimiento tiene.
+
+### Verificación
+- **En Word real**: el acta abre sin pedir reparar, **1 página**, 1 tabla, el escudo del formato, y
+  **ninguna celda ocupa más de una línea** —medido carácter a carácter con la posición vertical—, así
+  que ni una fila `exact` se estira ni recorta. Todo lo que rellena la app a 11 pt salvo la cabecera
+  a 10, que es el cuerpo de sus etiquetas.
+- ⚠️ **La comprobación del cuerpo de letra es POR DIFERENCIA contra la plantilla**, no «cero runs sin
+  `w:sz`»: la mayoría de los runs son los del formato y no lo declaran. Lo que se exige es que todo
+  run que la APP escribe declare el suyo (46 runs nuevos, 0 sin tamaño).
+- ⚠️ **`ExportAsFixedFormat` volvió a colgarse** con el Word del usuario abierto, como ya estaba
+  documentado. No se insistió: la geometría se comprobó por comparación XML y las posiciones con
+  Word. Al limpiar, matar **solo** los `WINWORD.EXE` con `MainWindowTitle` vacío.
+- ⚠️ **Suites adaptadas al registro nuevo, sin bajar su cuenta**: `verify_mejora6` (32),
+  `verify_mejora6b` (67) y `verify_menu_expediente` (16). Sus checks traían el **número de documentos
+  escrito a mano** (5 y 2) y el **índice de la tarjeta** (`abrirDoc(id, 4)`); ahora derivan la
+  expectativa de `lcEstadoDocs` y buscan la tarjeta **por su etiqueta**, así que el siguiente formato
+  no las deja obsoletas ni les hace abrir otro documento sin decirlo.
+- Regresiones en verde: **entrega 69** · fpj6 140 · incautación 141 · custodia 111 · mejora1 157 ·
+  mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 · mejora6b 67 · menú+expediente 16 ·
+  expediente 13 · OJ 187 · tipografía OJ 42 · fpj5 tipografía 48 · export 66 · firma 62 ·
+  editable 28 · envío 39 · almacén 12 · personas 25 · invitado 34 · simulador 41 · orden 33 ·
+  despachos 53 · jurisdicción 67 · vía CR 41 · tema 39 · grados 31 · dossier histórico 29 ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08). Anti-caché `?v=88` / `cache-v88`, `_BUILD=88`.
