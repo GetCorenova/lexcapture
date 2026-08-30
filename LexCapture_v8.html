@@ -2348,7 +2348,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 90;
+var _BUILD = 91;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6723,19 +6723,11 @@ function lcEstadoDocs(c) {
     accion: 'abrirActaDerechos', tc: 'tc-neutro', ic: ACT_IC.acta
   });
 
-  /* 3 · El resumen de la captura. NO es un formato oficial: es la hoja de
-     trabajo que reúne en una lectura lo que está repartido entre los pasos del
-     wizard (dirección de los hechos, capturados, víctimas, testigos, EMP y EF,
-     vehículos). Por eso se ofrece SIEMPRE —también en orden judicial, donde
-     imprime lo que ese procedimiento sí tiene— y nunca dice «faltan datos»: un
-     dato sin registrar sale en blanco, que es justamente para lo que sirve
-     antes de radicar. */
-  docs.push({
-    lbl: 'Resumen de la captura',
-    de: 'Todo el expediente en una hoja — para consulta',
-    falta: [], accion: 'abrirResumenCaptura', tc: 'tc-neutro', ic: ACT_IC.resumen
-  });
-
+  /* ⚠️ EL RESUMEN NO SE OFRECE EN UNA CAPTURA POR ORDEN JUDICIAL (2026-08-30,
+     instrucción del usuario): reúne los hechos de una flagrancia —dirección,
+     personas, EMP y EF, vehículos— y ese procedimiento no los documenta. Se
+     sale AQUÍ, antes de añadirlo, por la misma razón que los cuatro formatos
+     del numeral 7. */
   if (esOJ) return docs;
 
   /* 3, 4 y 5 · Los tres formatos del numeral 7 del informe —«DESCRIPCIÓN DE EMP
@@ -6753,44 +6745,61 @@ function lcEstadoDocs(c) {
      EF**, y en ellas los tres formatos no existen. Un documento que no
      corresponde al procedimiento no se ofrece «bloqueado»: no se ofrece.
      En cuanto se registre un elemento en el numeral 7, las tres aparecen. */
-  if (!emps.length) return docs;
-  var cadenas = typeof ccGrupos === 'function' ? ccGrupos(c).length : 0;
+  /* ⚠️ El `return` que había aquí se convirtió en un `if`: el resumen va al
+     FINAL de la lista (instrucción del usuario) y una captura sin EMP ni EF
+     tiene que seguir ofreciéndolo. Con el return temprano se lo habría
+     saltado justo en las capturas más sencillas. */
+  if (emps.length) {
+    var cadenas = typeof ccGrupos === 'function' ? ccGrupos(c).length : 0;
 
-  /* 3 · El acta de incautación. A diferencia de los otros dos es UNA por
-     captura —lleva todos los elementos juntos, numerados— y la firma la persona
-     a quien se le incautaron. Por eso además de elementos necesita capturado. */
+    /* 3 · El acta de incautación. A diferencia de los otros dos es UNA por
+       captura —lleva todos los elementos juntos, numerados— y la firma la persona
+       a quien se le incautaron. Por eso además de elementos necesita capturado. */
+    docs.push({
+      lbl: 'Acta de incautación',
+      de: 'Todos los elementos del numeral 7 (' + emps.length + ')',
+      falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : ['Ninguna persona registrada'],
+      accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
+    });
+    docs.push({
+      lbl: 'Registro de cadena de custodia',
+      de: cadenas > 1
+        ? 'FPJ-8 · ' + cadenas + ' cadenas para ' + emps.length + ' elementos'
+        : 'FPJ-8 — ' + emps.length + (emps.length === 1 ? ' elemento' : ' elementos'),
+      falta: [], accion: 'abrirCadenaCustodia', tc: 'tc-neutro', ic: ACT_IC.custodia
+    });
+    docs.push({
+      lbl: 'Rótulo de EMP y EF',
+      de: 'FPJ-7 · uno por cada elemento (' + emps.length + ')',
+      falta: [], accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
+    });
+    /* El acta de entrega cierra el recorrido del numeral 7: la incautación
+       documenta que los elementos pasaron a poder de la autoridad y esta
+       documenta que vuelven a su dueño. Va al final porque es lo último que
+       ocurre, y en el mismo orden en que se diligencia. */
+    docs.push({
+      lbl: 'Acta de entrega',
+      de: 'FPJ-30 · devolución de elementos recuperados',
+      /* ⚠️ Solo lo que falta DEL CASO. La forma de la entrega y quién recibe se
+         preguntan dentro del propio formulario del acta —igual que la cadena de
+         custodia y el rótulo preguntan lo suyo—, así que ponerlas aquí dejaría la
+         tarjeta en rojo en toda captura con elementos aunque la entrega ni
+         siquiera haya ocurrido. Siguen bloqueando al generar. */
+      falta: feFaltantesCaso(c),
+      accion: 'abrirActaEntrega', tc: 'tc-neutro', ic: ACT_IC.entrega
+    });
+  }
+
+  /* El resumen de la captura CIERRA la lista (2026-08-30, instrucción del
+     usuario: «dentro del módulo de capturas debe de quedar de último»). No es
+     un formato oficial —es la hoja de trabajo que reúne en una lectura lo que
+     está repartido entre los pasos del wizard— y por eso va detrás de los seis
+     que sí se radican. ⚠️ Nunca dice «faltan datos»: un dato sin registrar sale
+     en blanco, que es justamente para lo que sirve antes de radicar. */
   docs.push({
-    lbl: 'Acta de incautación',
-    de: 'Todos los elementos del numeral 7 (' + emps.length + ')',
-    falta: (typeof aiFaltantes === 'function' && caps.length) ? aiFaltantes(c) : ['Ninguna persona registrada'],
-    accion: 'abrirActaIncautacion', tc: 'tc-neutro', ic: ACT_IC.incautacion
-  });
-  docs.push({
-    lbl: 'Registro de cadena de custodia',
-    de: cadenas > 1
-      ? 'FPJ-8 · ' + cadenas + ' cadenas para ' + emps.length + ' elementos'
-      : 'FPJ-8 — ' + emps.length + (emps.length === 1 ? ' elemento' : ' elementos'),
-    falta: [], accion: 'abrirCadenaCustodia', tc: 'tc-neutro', ic: ACT_IC.custodia
-  });
-  docs.push({
-    lbl: 'Rótulo de EMP y EF',
-    de: 'FPJ-7 · uno por cada elemento (' + emps.length + ')',
-    falta: [], accion: 'abrirRotuloEmp', tc: 'tc-neutro', ic: ACT_IC.rotulo
-  });
-  /* El acta de entrega cierra el recorrido del numeral 7: la incautación
-     documenta que los elementos pasaron a poder de la autoridad y esta
-     documenta que vuelven a su dueño. Va al final porque es lo último que
-     ocurre, y en el mismo orden en que se diligencia. */
-  docs.push({
-    lbl: 'Acta de entrega',
-    de: 'FPJ-30 · devolución de elementos recuperados',
-    /* ⚠️ Solo lo que falta DEL CASO. La forma de la entrega y quién recibe se
-       preguntan dentro del propio formulario del acta —igual que la cadena de
-       custodia y el rótulo preguntan lo suyo—, así que ponerlas aquí dejaría la
-       tarjeta en rojo en toda captura con elementos aunque la entrega ni
-       siquiera haya ocurrido. Siguen bloqueando al generar. */
-    falta: feFaltantesCaso(c),
-    accion: 'abrirActaEntrega', tc: 'tc-neutro', ic: ACT_IC.entrega
+    lbl: 'Resumen de la captura',
+    de: 'Todo el expediente en una hoja — para consulta',
+    falta: [], accion: 'abrirResumenCaptura', tc: 'tc-neutro', ic: ACT_IC.resumen
   });
   return docs;
 }
@@ -12106,16 +12115,47 @@ async function feGenerar() {
    RESUMEN DE LA CAPTURA
    ───────────────────────────────────────────────────────────────────────────
    El séptimo documento del expediente y el único que NO es un formato oficial:
-   es una hoja de trabajo que reúne en una sola lectura lo que hoy está repartido
-   entre nueve pasos del wizard —dirección de los hechos, capturados, víctimas,
+   es una hoja de trabajo que reúne en una sola lectura lo que está repartido
+   entre los pasos del wizard —dirección de los hechos, capturados, víctimas,
    testigos, EMP y EF, y vehículos implicados—, que son exactamente los seis
    bloques que pidió el usuario.
 
+   ⚠️ EL DOCUMENTO DE REFERENCIA ES `Documentos/Otro/Resumen de la Captura.docx`
+   (2026-08-30). El usuario lo diligenció a mano y pidió «exactamente los datos
+   que aparecen en este documento y exactamente como muestra la información».
+   Eso cambió tres cosas de raíz respecto a la primera versión:
+     · NO HAY TABLAS. Cada persona se describe en UN PÁRRAFO en línea continua,
+       con sus datos separados por comas. La versión anterior usaba una tabla de
+       etiqueta/valor por persona: «este resumen no el que estás generando en
+       tablas, eso no».
+     · SE QUITARON DATOS que el usuario no necesita en este informe: alias,
+       género, nombre de los padres y correo electrónico. También la tabla de
+       cabecera (tipo de procedimiento, NUNC, fecha, conductas y destino) y las
+       filas de zona, localidad, vereda, características y departamento del
+       lugar: ninguna aparece en su documento.
+     · EL LUGAR DE NACIMIENTO PIERDE SU ETIQUETA y va pegado a la fecha
+       («Fecha de nacimiento 2009-01-11 en Sabaneta, Antioquia»), sin el país
+       cuando es Colombia — «ya se supone que en Colombia». Con una persona
+       extranjera sí se informa el país. Eso ya lo resolvía `lcNacTexto`, que es
+       el punto único de esa composición en toda la app: no se reimplementa.
+
+   ⚠️ EN UN TEXTO CORRIDO, UN DATO QUE FALTA SE OMITE — no deja la etiqueta con
+   el hueco. Es la excepción a la regla del proyecto («un dato ausente deja su
+   renglón impreso y en blanco»), y solo vale aquí: esa regla protege las
+   CASILLAS de un formato oficial, donde el despacho tiene que poder ver qué
+   falta. Aquí no hay casilla, y «Estado civil , Escolaridad , Teléfono .» no
+   informa de nada: hace ilegible el párrafo.
+
    ⚠️ NO INVENTA NI UN DATO: todo sale del caso, con las MISMAS primitivas que
    lo imprimen en los formatos oficiales (`lcEmpLineas` para los elementos,
-   `lcDirComponer` ya aplicado, `lcArtCP` para el artículo del C.P.). Si un dato
-   no está registrado, su fila sale EN BLANCO — que es justamente para lo que
-   sirve un resumen antes de radicar: ver de un vistazo qué falta.
+   `lcNacTexto` para el lugar de nacimiento, `lcPlaca` para las placas).
+
+   ⚠️ SOLO PARA FLAGRANCIA (URI y CESPA). No se ofrece en una captura por orden
+   judicial: ahí no hay hechos que resumir —se cumple una decisión que otro
+   funcionario ya tomó— y ese expediente no tiene víctimas, testigos, EMP ni
+   vehículos que reunir. Es la misma exclusión que ya rige para los cuatro
+   formatos del numeral 7, y se aplica en `lcEstadoDocs` y en la propia puerta
+   (`abrirResumenCaptura`), para que las dos no puedan discrepar.
 
    ⚠️ Lo compone la app en OOXML, con las primitivas del oficio de puesta a
    disposición (`ojx*`), que ya respetan el orden de hijos que exige el esquema.
@@ -12124,80 +12164,100 @@ async function feGenerar() {
    ⚠️ SOLO WORD, como los demás: desde Mejora 6 la app entrega un único formato
    por documento, y el .docx es el que el funcionario puede corregir.
 ═══════════════════════════════════════════════════════════════════════════ */
-var RS_SZ = 20;                 // 10 pt — cuerpo de las tablas del resumen
-var RS_SZ_TIT = 28;             // 14 pt — título del documento
-var RS_SZ_PIE = 18;             // 9 pt  — pie de página
-var RS_ET = 3400;               // ancho de la columna de etiquetas, en Carta
-
+/* Cuerpos de letra MEDIDOS sobre el documento de referencia, en medios puntos. */
+var RS_SZ = 24;                 // 12 pt   — cuerpo
+var RS_SZ_TIT = 48;             // 24 pt   — título del documento
+var RS_SZ_SEC = 36;             // 18 pt   — título de apartado
+var RS_SZ_SUB = 27;             // 13,5 pt — nombre de cada persona
+var RS_SZ_PIE = 18;             // 9 pt    — pie de página
+/* ⚠️ Los emojis van en su PROPIO run con «Segoe UI Emoji», como en el documento
+   de referencia. Dentro del run de Arial saldrían como un cuadrito en Word. */
+var RS_EMOJI = 'Segoe UI Emoji';
+/* Iconografía. El usuario dejó la elección abierta («si crees tener una mejor
+   opción de iconos los puedes cambiar»); lo único que se cambió de la suya es
+   el de la sección de capturados, que era el mismo 👤 de cada persona y por eso
+   no distinguía el apartado de su contenido. El candado es privación de la
+   libertad, que es lo que ese apartado documenta.
+   ⚠️ Emojis clásicos a propósito: los de las últimas revisiones de Unicode
+   pueden no existir en la «Segoe UI Emoji» de un Windows sin actualizar, y ahí
+   se verían como un cuadrito en el documento impreso. */
+var RS_IC = {
+  tit:'📋', lugar:'📍', cap:'🔒', vic:'🩹', test:'👁️', emp:'📦', veh:'🚗', persona:'👤'
+};
 function rsTxt(v) { var s = String(v == null ? '' : v).trim(); return s; }
-function rsSexo(v) {
-  var s = lcSexo(v);
-  var d = { M:'Masculino', F:'Femenino', I:'Intersexual / no informa' };
-  return d[s] || '';
+/* Emoji + texto: dos runs con el mismo cuerpo y la misma negrita, cada uno con
+   su fuente. Es la construcción exacta del documento de referencia. */
+function rsIcoTxt(ico, txt, o) {
+  o = o || {};
+  return ojxRun(ico, { b:o.b, sz:o.sz, font:RS_EMOJI }) +
+         ojxRun(' ' + txt, { b:o.b, sz:o.sz, font:OJX_FUENTE_BASE });
 }
-/* Fecha y hora del procedimiento, con la misma lectura que el acta de derechos
-   y la de incautación (`f6Momento`): un solo criterio para toda la app. */
-function rsMomento(c) {
-  var m = f6Momento(c);
-  var f = (m.d && m.m && m.a) ? (m.d + '/' + m.m + '/' + m.a) : '';
-  var h = (m.h && m.mi) ? (m.h + ':' + m.mi + ' horas') : '';
-  return [f, h].filter(Boolean).join(' · ');
+function rsSeccion(ico, txt) {
+  return ojxP(rsIcoTxt(ico, txt, { b:true, sz:RS_SZ_SEC }),
+    { keepNext:true, before:200, after:80, font:OJX_FUENTE_BASE });
 }
-/* Las conductas con su artículo del Código Penal, como las imprime el numeral 2
-   del FPJ-5 (Mejora 5, obs. 2). */
-function rsConductas(c) {
-  var cd = (c && c.conductas) || [], ar = (c && c.articulosCP) || [], out = [];
-  cd.forEach(function (d, i) {
-    d = rsTxt(d); if (!d) return;
-    var a = lcArtCP(ar[i]);
-    out.push(out.length + 1 + '. ' + d + (a ? ' — ' + a : ''));
-  });
-  return out;
-}
-/* Las 16 filas con que se describe a una persona. Son las mismas para las tres
-   calidades procesales; solo el capturado añade las señales particulares, que
-   es la única fila que el formato oficial le reserva a él.
-   ⚠️ SIEMPRE se imprimen todas: un dato sin registrar sale en blanco, no se
-   omite la fila (misma regla que las 22 filas del oficio). */
-function rsPersona(p) {
-  p = p || {};
-  var nac = [p.nacMuni, p.nacDepto, p.nacPais].filter(Boolean).join(', ') || rsTxt(p.lugNac);
-  return [
-    ['Nombres y apellidos', mayus(fullName(p))],
-    ['Documento de identidad', [rsTxt(p.tipoDoc), sinPuntos(p.numDoc)].filter(Boolean).join(' ')],
-    ['Expedido en', rsTxt(p.expEn)],
-    ['Alias', rsTxt(p.alias)],
-    ['Sexo', rsSexo(p.sexo)],
-    ['Edad', rsTxt(p.edad)],
-    ['Fecha de nacimiento', rsTxt(p.fn)],
-    ['Lugar de nacimiento', nac],
-    ['Estado civil', rsTxt(p.ecivil)],
-    ['Grado de estudio', rsTxt(p.escol)],
-    ['Profesión u ocupación', rsTxt(p.ocup)],
-    ['Hijo de', rsTxt(p.padres)],
-    ['Dirección de residencia', rsTxt(p.dirRes)],
-    ['Teléfono', rsTxt(p.tel)],
-    ['Correo electrónico', rsTxt(p.correo)]
-  ];
-}
-/* Subtítulo de una persona o un vehículo dentro de su apartado. No lleva filete
-   —ese es el de los apartados— pero sí `keepNext`, para que no quede huérfano al
-   pie de una hoja con su tabla en la siguiente. */
-function rsSub(txt) {
-  return ojxP(ojxRun(txt, { b:true, sz:RS_SZ, font:OJX_FUENTE_BASE }),
+/* Subtítulo de cada persona. Lleva `keepNext` para que no quede huérfano al pie
+   de una hoja con su párrafo de datos en la siguiente. */
+function rsSub(n, nombre) {
+  return ojxP(rsIcoTxt(RS_IC.persona, n + '. ' + nombre, { b:true, sz:RS_SZ_SUB }),
     { keepNext:true, before:140, after:40, font:OJX_FUENTE_BASE });
 }
-function rsTabla(pares) {
-  return ojxTablaDatos(pares, { font:OJX_FUENTE_BASE, sz:RS_SZ, et:RS_ET });
+/* Párrafo de cuerpo. Los de persona van JUSTIFICADOS como en el documento de
+   referencia (son los largos); los demás, alineados a la izquierda. */
+function rsPar(txt, o) {
+  o = o || {};
+  return ojxP(ojxRun(txt, { sz:RS_SZ, font:OJX_FUENTE_BASE, i:o.i, color:o.color }),
+    { jc:o.jc || null, after:(o.after == null ? 100 : o.after), font:OJX_FUENTE_BASE });
 }
+/* Lo que un apartado dice cuando no tiene nada que enseñar. ⚠️ El documento de
+   referencia deja esos apartados en blanco, pero un apartado vacío es ambiguo
+   —¿no hubo, o se quedó sin diligenciar?— y este resumen se lee justo para
+   comprobar qué falta antes de radicar. Va en cursiva y en gris para que no se
+   confunda con un dato. */
 function rsNada(txt) {
-  return ojxP(ojxRun(txt, { i:true, sz:RS_SZ, font:OJX_FUENTE_BASE, color:'595959' }),
-    { after:80, font:OJX_FUENTE_BASE });
+  return rsPar(txt, { i:true, color:'595959', after:60 });
 }
-function rsSeccion(txt) {
-  return ojxP(ojxRun(txt, { b:true, sz:RS_SZ + 2, font:OJX_FUENTE_BASE }),
-    { keepNext:true, before:220, after:80, font:OJX_FUENTE_BASE,
-      bdr:'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="404040"/></w:pBdr>' });
+/* Los datos de una persona, en línea continua y separados por comas — la forma
+   que fijó el documento de referencia. Es la misma para las tres calidades
+   procesales: capturado/aprehendido, víctima y testigo. */
+function rsPersonaLinea(p) {
+  p = p || {};
+  var pt = [], nom = mayus(fullName(p));
+  if (nom) pt.push(nom);
+  var doc = [rsTxt(p.tipoDoc), sinPuntos(p.numDoc)].filter(Boolean).join(' ');
+  if (doc) pt.push('Documento de identidad ' + doc);
+  if (rsTxt(p.expEn)) pt.push('Expedido en ' + rsTxt(p.expEn));
+  if (rsTxt(p.edad)) pt.push('Edad ' + rsTxt(p.edad));
+  /* ⚠️ Fecha y lugar de nacimiento van JUNTOS y el lugar pierde su etiqueta:
+     «Fecha de nacimiento 2009-01-11 en Sabaneta, Antioquia». Sin fecha el lugar
+     necesita una etiqueta propia o quedaría suelto, y la del formato oficial es
+     «Natural de». `lcNacTexto` omite el país cuando es Colombia y lo imprime
+     cuando la persona es extranjera — es el punto único de esa composición. */
+  var fn = rsTxt(p.fn), nac = lcNacTexto(lcNacPartes(p));
+  if (fn && nac) pt.push('Fecha de nacimiento ' + fn + ' en ' + nac);
+  else if (fn) pt.push('Fecha de nacimiento ' + fn);
+  else if (nac) pt.push('Natural de ' + nac);
+  if (rsTxt(p.ecivil)) pt.push('Estado civil ' + rsTxt(p.ecivil));
+  if (rsTxt(p.escol)) pt.push('Escolaridad ' + rsTxt(p.escol));
+  if (rsTxt(p.ocup)) pt.push('Profesión u ocupación ' + rsTxt(p.ocup));
+  if (rsTxt(p.dirRes)) pt.push('Dirección de residencia ' + rsTxt(p.dirRes));
+  if (rsTxt(p.tel)) pt.push('Teléfono ' + rsTxt(p.tel));
+  return pt.length ? pt.join(', ') + '.' : '';
+}
+/* Un apartado de personas. `senas` solo lo pide el del capturado: las señales
+   particulares son la única fila que el formato oficial le reserva a él, y en
+   el documento de referencia solo aparecen ahí. */
+function rsApartadoPersonas(lista, senas) {
+  var out = '';
+  (lista || []).forEach(function (p, i) {
+    out += rsSub(i + 1, mayus(fullName(p)) || 'Sin nombre');
+    var l = rsPersonaLinea(p);
+    if (l) out += rsPar(l, { jc:'both' });
+    if (senas && rsTxt(p.senas)) {
+      out += rsPar('Señales particulares visibles ' + rsTxt(p.senas), { jc:'both' });
+    }
+  });
+  return out;
 }
 /* Nombre con que se llama a cada rol. ⚠️ En una captura de menores el término
    jurídico es «aprehendido» (Ley 1098 de 2006), la misma distinción que ya hacen
@@ -12206,8 +12266,8 @@ function rsSeccion(txt) {
 function rsTerminos(c) {
   var menor = (typeof f6EsMenor === 'function') ? f6EsMenor(c) : (c.tipo === 'CESPA');
   return menor
-    ? { uno:'aprehendido', varios:'APREHENDIDOS', proc:'aprehensión' }
-    : { uno:'capturado',   varios:'CAPTURADOS',   proc:'captura' };
+    ? { uno:'aprehendido', varios:'APREHENDIDO(s)' }
+    : { uno:'capturado',   varios:'CAPTURADO(s)'   };
 }
 function rsCuerpo(c) {
   var t = rsTerminos(c), out = '';
@@ -12215,92 +12275,64 @@ function rsCuerpo(c) {
   var caps = c.capturados || [], vics = c.victimas || [], tests = c.testigos || [];
   var vehs = c.hayVehiculos === false ? [] : (c.vehiculos || []);
   var emps = lcEmpLineas(ccElementos(c));
-  var cond = rsConductas(c);
 
-  // Encabezado: de qué captura es este resumen. Sin esto el documento no se
-  // podría archivar ni relacionar con el expediente.
-  out += ojxP(ojxRun('RESUMEN DE LA CAPTURA', { b:true, sz:RS_SZ_TIT, font:OJX_FUENTE_BASE }),
-    { jc:'center', after:60, font:OJX_FUENTE_BASE });
-  out += ojxP(ojxRun(mayus(fullName(caps[0])) || 'Sin ' + t.uno + ' registrado',
-    { sz:RS_SZ, font:OJX_FUENTE_BASE, color:'595959' }),
-    { jc:'center', after:200, font:OJX_FUENTE_BASE });
-  out += rsTabla([
-    ['Tipo de procedimiento', c.tipo === 'OJ' ? 'Captura por orden judicial'
-      : (c.tipo === 'CESPA' ? 'Aprehensión en flagrancia (CESPA · adolescente)'
-                            : 'Captura en flagrancia (URI · adulto)')],
-    ['N° Único de Noticia Criminal', rsTxt(c.nunc)],
-    ['Fecha y hora de la ' + t.proc, rsMomento(c)],
-    ['Conducta(s) punible(s)', cond.join('\n')],
-    ['Destino del informe', lcDestinoInforme(c)]
-  ]);
+  out += ojxP(rsIcoTxt(RS_IC.tit, 'RESUMEN DE LA CAPTURA', { b:true, sz:RS_SZ_TIT }),
+    { after:120, font:OJX_FUENTE_BASE });
 
-  // 1 · Dirección de los hechos
-  out += rsSeccion('1.  DIRECCIÓN DE LOS HECHOS');
-  out += rsTabla([
-    ['Dirección', rsTxt(lug.dir) || rsTxt(g.lugarDireccion)],
-    ['Barrio', rsTxt(lug.barrio) || rsTxt(g.lugarBarrio)],
-    ['Municipio', rsTxt(lug.muni) || rsTxt(g.lugarMunicipio)],
-    ['Departamento', rsTxt(lug.depto) || rsTxt(g.lugarDepartamento)],
-    ['Zona', rsTxt(lug.zona)],
-    ['Localidad / comuna', rsTxt(lug.localidad)],
-    ['Corregimiento o vereda', rsTxt(lug.vereda)],
-    ['Características del lugar', rsTxt(lug.caract)]
-  ]);
+  // 1 · Dirección de los hechos, en una línea continua como el resto
+  out += rsSeccion(RS_IC.lugar, '1. DIRECCIÓN DE LOS HECHOS');
+  var dl = [];
+  var dir = rsTxt(lug.dir) || rsTxt(g.lugarDireccion);
+  var bar = rsTxt(lug.barrio) || rsTxt(g.lugarBarrio);
+  var mun = rsTxt(lug.muni) || rsTxt(g.lugarMunicipio);
+  if (dir) dl.push('Dirección ' + dir);
+  if (bar) dl.push('Barrio ' + bar);
+  if (mun) dl.push('Municipio ' + mun);
+  out += dl.length ? rsPar(dl.join(', ') + '.') : rsNada('Sin dirección registrada.');
 
-  // 2 · Capturados
-  out += rsSeccion('2.  DATOS DEL O LOS ' + t.varios);
-  if (!caps.length) out += rsNada('No hay ninguna persona registrada.');
-  caps.forEach(function (p, i) {
-    if (caps.length > 1) out += rsSub((i + 1) + '. ' + (mayus(fullName(p)) || 'Sin nombre'));
-    out += rsTabla(rsPersona(p).concat([['Señales particulares visibles', rsTxt(p.senas)]]));
-  });
+  // 2 · Capturados o aprehendidos
+  out += rsSeccion(RS_IC.cap, '2. ' + t.varios);
+  out += caps.length ? rsApartadoPersonas(caps, true)
+                     : rsNada('No hay ninguna persona registrada.');
 
   // 3 · Víctimas
-  out += rsSeccion('3.  DATOS DE LA O LAS VÍCTIMAS');
-  if (c.sinVictima && !vics.length) out += rsNada('El procedimiento se registró sin víctima.');
-  else if (!vics.length) out += rsNada('No hay ninguna víctima registrada.');
-  vics.forEach(function (p, i) {
-    if (vics.length > 1) out += rsSub((i + 1) + '. ' + (mayus(fullName(p)) || 'Sin nombre'));
-    out += rsTabla(rsPersona(p));
-  });
+  out += rsSeccion(RS_IC.vic, '3. VÍCTIMA(s)');
+  if (vics.length) out += rsApartadoPersonas(vics, false);
+  else out += rsNada(c.sinVictima ? 'El procedimiento se registró sin víctima.'
+                                  : 'No hay ninguna víctima registrada.');
 
   // 4 · Testigos
-  out += rsSeccion('4.  TESTIGOS');
-  if (c.sinTestigo && !tests.length) out += rsNada('El procedimiento se registró sin testigos.');
-  else if (!tests.length) out += rsNada('No hay ningún testigo registrado.');
-  tests.forEach(function (p, i) {
-    if (tests.length > 1) out += rsSub((i + 1) + '. ' + (mayus(fullName(p)) || 'Sin nombre'));
-    out += rsTabla(rsPersona(p));
-  });
+  out += rsSeccion(RS_IC.test, '4. TESTIGO(s)');
+  if (tests.length) out += rsApartadoPersonas(tests, false);
+  else out += rsNada(c.sinTestigo ? 'El procedimiento se registró sin testigos.'
+                                  : 'No hay ningún testigo registrado.');
 
   /* 5 · EMP y EF. Se transcriben con `lcEmpLineas`, la misma primitiva que los
      imprime en el numeral 7 del informe: lo que dice el resumen es palabra por
-     palabra lo que dice el FPJ-5. */
-  out += rsSeccion('5.  ELEMENTOS MATERIALES PROBATORIOS Y EVIDENCIA FÍSICA');
-  if (!emps.length) out += rsNada('No se recolectaron EMP ni EF.');
-  emps.forEach(function (l) {
-    out += ojxP(ojxRun('•  ' + l, { sz:RS_SZ, font:OJX_FUENTE_BASE }),
-      { after:40, indL:200, font:OJX_FUENTE_BASE });
-  });
+     palabra lo que dice el FPJ-5. Van en un solo párrafo separados por comas,
+     como en el documento de referencia. */
+  out += rsSeccion(RS_IC.emp, '5. ELEMENTOS MATERIALES PROBATORIOS Y EVIDENCIA FÍSICA');
+  out += emps.length ? rsPar(emps.join(', ') + '.')
+                     : rsNada('No se recolectaron EMP ni EF.');
 
-  // 6 · Vehículos implicados
-  out += rsSeccion('6.  VEHÍCULOS IMPLICADOS');
+  // 6 · Vehículos implicados — un párrafo por vehículo, con el mismo patrón
+  out += rsSeccion(RS_IC.veh, '6. VEHÍCULOS IMPLICADOS');
   if (!vehs.length) out += rsNada('No hay vehículos implicados en el procedimiento.');
-  vehs.forEach(function (v, i) {
+  vehs.forEach(function (v) {
     v = v || {};
-    if (vehs.length > 1) out += rsSub('Vehículo ' + (i + 1) + (v.placas ? ' — ' + lcPlaca(v.placas) : ''));
-    out += rsTabla([
-      ['Clase', rsTxt(v.clase)],
-      ['Marca', rsTxt(v.marca)],
-      ['Color', rsTxt(v.color)],
-      ['Placas', lcPlaca(v.placas)],
-      ['Propietario', rsTxt(v.prop)]
-    ]);
+    var vl = [], pl = lcPlaca(v.placas);
+    if (rsTxt(v.clase)) vl.push('Clase ' + rsTxt(v.clase));
+    if (rsTxt(v.marca)) vl.push('Marca ' + rsTxt(v.marca));
+    if (rsTxt(v.color)) vl.push('Color ' + rsTxt(v.color));
+    if (pl) vl.push('Placas ' + pl);
+    if (rsTxt(v.prop)) vl.push('Propietario ' + rsTxt(v.prop));
+    if (vl.length) out += rsPar(vl.join(', ') + '.');
   });
 
   /* ⚠️ El cuerpo NO puede terminar en `<w:tbl>`: Word añade un párrafo implícito
      de tamaño normal y aparece una página en blanco al final. Se cierra con el
-     mismo párrafo de altura ~0 que el oficio. */
+     mismo párrafo de altura ~0 que el oficio. (Este resumen ya no lleva tablas,
+     pero el cierre no estorba y protege de una tabla futura.) */
   out += ojxCierre();
   return out;
 }
@@ -12335,6 +12367,13 @@ function rsPaquete() {
     '<w:font w:name="' + OJX_FUENTE_BASE + '"><w:panose1 w:val="020B0604020202020204"/><w:charset w:val="00"/>' +
     '<w:family w:val="swiss"/><w:pitch w:val="variable"/>' +
     '<w:sig w:usb0="E0002EFF" w:usb1="C000785B" w:usb2="00000009" w:usb3="00000000" w:csb0="000001FF" w:csb1="00000000"/></w:font>' +
+    /* ⚠️ La fuente de los emojis se DECLARA: los runs del documento la piden por
+       nombre y Word abre el paquete igual sin esta parte, pero declararla es lo
+       que hace el documento de referencia y evita que un visor la resuelva por su
+       cuenta. Sin ella, en un equipo que no la tenga el icono sale como cuadrito. */
+    '<w:font w:name="' + RS_EMOJI + '"><w:panose1 w:val="020B0502040204020203"/><w:charset w:val="00"/>' +
+    '<w:family w:val="swiss"/><w:pitch w:val="variable"/>' +
+    '<w:sig w:usb0="00000003" w:usb1="00000000" w:usb2="00000000" w:usb3="00000000" w:csb0="00000001" w:csb1="00000000"/></w:font>' +
     '</w:fonts>');
   f['word/styles.xml'] = ojBytes(OJ_XMLDECL +
     '<w:styles ' + OJ_NS_W + '><w:docDefaults><w:rPrDefault><w:rPr>' +
@@ -12399,9 +12438,19 @@ function buildResumenBlob(ctx, papel) {
     ojxSetPapel(OJX_PAPEL);
   }
 }
+/* ⚠️ La guarda de flagrancia se repite AQUÍ, y no es redundante: `lcEstadoDocs`
+   decide qué tarjeta se pinta, pero esta es la puerta por la que se genera el
+   documento. Dos criterios distintos sobre el mismo caso es el defecto que este
+   proyecto ya pagó entre descargar y enviar: si mañana se llega por otra vía,
+   una captura por orden judicial seguiría sin producir un resumen que no le
+   corresponde. */
 function abrirResumenCaptura(id) {
   var c = DB.getCase(id);
   if (!c) { toast('Caso no encontrado'); return; }
+  if (c.tipo === 'OJ' || c.ojv === 2) {
+    toast('El resumen es solo para capturas en flagrancia');
+    return;
+  }
   lcSalida('RESUMEN', { caso:c }, 'Resumen de la captura');
 }
 

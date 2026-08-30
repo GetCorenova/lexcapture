@@ -4244,3 +4244,77 @@ en la casilla en blanco correspondiente a cualquiera de las dos afirmaciones.»*
   ola3 33 · ola4 22 · multipersona.
   ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08). Anti-caché `?v=90` / `cache-v90`, `_BUILD=90`.
+
+### El resumen se rehace contra el documento del usuario (2026-08-30)
+El usuario aportó `Documentos/Otro/Resumen de la Captura.docx` —diligenciado a mano— y pidió «este
+resumen, no el que estás generando en tablas, eso no». Verificado con `verify_entrega.mjs`
+(**111 checks**, antes 105) y abriendo los `.docx` en **Word real** (COM).
+
+- ⚠️ **NO HAY TABLAS.** Cada persona se describe en **un párrafo en línea continua, separado por
+  comas**, con su nombre abriendo la frase. La primera versión usaba una tabla de etiqueta/valor por
+  persona (15 filas), que es lo que el usuario rechazó. Van justificados, como en su documento.
+- **Se quitaron los datos que él retiró**: alias, género, nombre de los padres y correo. Y con ellos
+  la **tabla de cabecera** entera (tipo de procedimiento, NUNC, fecha y hora, conductas con su
+  artículo del C.P. y destino del informe) y cuatro filas del lugar (departamento, zona, localidad,
+  vereda y características). ⚠️ **Sin cabecera el resumen ya no dice de qué captura es**: lo llevan
+  el nombre del archivo y el apartado 2. Es lo que pide su documento; reponerla es un cambio suyo.
+- ⚠️ **El lugar de nacimiento pierde su etiqueta y va pegado a la fecha** —«Fecha de nacimiento
+  2009-01-11 **en Sabaneta, Antioquia**»— **sin el país cuando es Colombia** («ya se supone»), y
+  **con él cuando la persona es extranjera**. Eso ya lo resolvía `lcNacTexto`, el punto único de esa
+  composición desde Mejora 5: **no se reimplementó**. Sin fecha, el lugar necesita una etiqueta o
+  quedaría suelto, y se usa la del formato oficial: «Natural de».
+- ⚠️ **En un texto corrido, un dato que falta SE OMITE.** Es la excepción a la regla del proyecto
+  («un dato ausente deja su renglón impreso y en blanco»), y solo vale aquí: esa regla protege las
+  **casillas de un formato oficial**, donde el despacho tiene que ver qué falta. Aquí no hay casilla,
+  y «Estado civil , Escolaridad , Teléfono .» no informa de nada — hace ilegible el párrafo.
+- **Las señales particulares siguen solo en el capturado** (es la fila que el formato le reserva a
+  él) y en párrafo aparte, como en su documento.
+- ⚠️ **Iconos.** Se conservan seis de los siete (📋 📍 🩹 👁️ 📦 🚗) y **solo cambia el del apartado de
+  capturados**: él usaba 👤, que es el mismo de cada persona, así que el apartado no se distinguía de
+  su contenido. Ahora es 🔒 —privación de la libertad, que es lo que ese apartado documenta— y 👤
+  queda para las personas de los tres apartados. Emojis clásicos a propósito: los de las últimas
+  revisiones de Unicode pueden faltar en la «Segoe UI Emoji» de un Windows sin actualizar y saldrían
+  como un cuadrito en el papel.
+- ⚠️ **Cada icono va en su PROPIO run con «Segoe UI Emoji»**, como en el documento de referencia:
+  dentro del run de Arial Word dibuja un cuadrito. La fuente se declara además en el `fontTable` del
+  paquete. Medido en Word carácter a carácter.
+- **Cuerpos de letra medidos sobre su documento, no elegidos a ojo**: 24 pt título · 18 pt apartado ·
+  13,5 pt nombre de cada persona · 12 pt cuerpo (antes 14 / 10,5 / 10 / 10). El pie de «Página N de
+  M» se conserva.
+- **Solo dos retoques de tipografía sobre su documento**, ambos porque él mismo escribió el dato de
+  dos formas: «escolaridad» pasa a **«Escolaridad»** (la única etiqueta que le quedó en minúscula) y
+  los tres apartados de personas comparten la forma **«(s)»** que usó en dos de los tres — el suyo
+  decía «2. APREHENDIDOS (S)» frente a «3. VÍCTIMA(s)».
+- ⚠️ **Un apartado vacío SÍ dice que está vacío** («No hay ninguna víctima registrada»), en cursiva
+  gris. Su documento los deja en blanco, pero un apartado en blanco no distingue «no hubo» de «se
+  quedó sin diligenciar», y este resumen se lee justo para comprobar qué falta antes de radicar.
+
+**Dónde vive.** ⚠️ **SOLO PARA FLAGRANCIA** (URI y CESPA): una captura por orden judicial ya no lo
+ofrece — ahí no hay hechos que resumir y ese expediente no tiene víctimas, testigos, EMP ni
+vehículos. La exclusión está en `lcEstadoDocs` **y en la propia puerta** (`abrirResumenCaptura`), que
+avisa y no genera: dos criterios distintos sobre el mismo caso es el defecto que este proyecto ya
+pagó entre descargar y enviar. Y **cierra la lista** del expediente, detrás de los seis formatos que
+sí se radican.
+- ⚠️ **El `return` temprano de «sin EMP ni EF» se convirtió en un `if`**: con él, una captura sin
+  elementos —las más sencillas— se habría saltado el resumen justo por ir ahora al final.
+
+**Verificación.** Los checks del resumen **derivan su expectativa del documento del usuario**
+(`verify_entrega` sección I): de él salen el número y el orden de los seis apartados, sus títulos
+literales, los cuatro cuerpos de letra y la comprobación de que las ocho etiquetas de persona están
+en su documento antes de exigirlas en el generado. Si él vuelve a ajustar el formato, la prueba lo
+dice sola.
+- ⚠️ **`leerDocx` no servía para leerlo**: da por hecho ZIP **stored**, que es como se reempaquetan
+  las plantillas embebidas, y un `.docx` que sale de Word va en **deflate**. La suite estrena
+  `leerEntrada`, con `inflateRawSync` (el mismo lector de `verify_mejora2`).
+- **Medido en Word real**: 0 tablas, 1 página con una persona por rol y 2 con varias, los cuatro
+  cuerpos exactos, los iconos en «Segoe UI Emoji» y Word abre sin pedir reparar.
+- ⚠️ `ojxTablaDatos` conserva su parámetro `o` (fuente, cuerpo y ancho de etiqueta) aunque el resumen
+  ya no la use: sin `o` emite byte a byte lo mismo, y `verify_tipografia_oj` lo comprueba.
+- Regresiones en verde: **entrega 111** · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 ·
+  mejora6 32 · mejora6b 67 · fpj6 140 · custodia 111 · incautación 141 · OJ 187 · export 66 ·
+  firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 · envío 39 · almacén 12 ·
+  expediente 13 · menú+expediente 16 · personas 25 · invitado 34 · simulador 41 · orden 33 ·
+  despachos 53 · jurisdicción 67 · vía CR 41 · tema 39 · grados 31 · dossier histórico 29 ·
+  ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08). Anti-caché `?v=91` / `cache-v91`, `_BUILD=91`.

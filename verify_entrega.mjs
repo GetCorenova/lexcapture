@@ -29,6 +29,7 @@ import http from 'http';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, extname } from 'path';
 import { tmpdir } from 'os';
+import { inflateRawSync } from 'zlib';
 
 const ROOT = 'd:/UsurarioDocumentos/Escritorio/Proyectos 2026/APP Capturas/Crear App';
 const SALIDA = join(tmpdir(), 'lc_entrega_' + Date.now().toString(36));
@@ -66,6 +67,23 @@ function leerDocx(buf) {
     i = ini + tam;
   }
   return partes;
+}
+/* ⚠️ `leerDocx` da por hecho ZIP STORED, que es como se reempaquetan las
+   plantillas embebidas. Un .docx que sale de Word va en DEFLATE y con ese lector
+   se lee como bytes basura: el documento de referencia del resumen hay que
+   inflarlo (mismo lector que verify_mejora2). */
+function leerEntrada(buf, nombre) {
+  for (let i = 0; i < buf.length - 3; i++) {
+    if (buf.readUInt32LE(i) !== 0x04034b50) continue;
+    const metodo = buf.readUInt16LE(i + 8), comp = buf.readUInt32LE(i + 18);
+    const nLen = buf.readUInt16LE(i + 26), eLen = buf.readUInt16LE(i + 28);
+    const nom = buf.slice(i + 30, i + 30 + nLen).toString('utf8').replace(/\\/g, '/');
+    const ini = i + 30 + nLen + eLen;
+    if (nom !== nombre) continue;
+    const datos = buf.slice(ini, ini + comp);
+    return (metodo === 8 ? inflateRawSync(datos) : datos).toString('utf8');
+  }
+  return '';
 }
 const texto = xml => xml.replace(/<[^>]+>/g, '').replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim();
 const celdasDe = xml => [...xml.matchAll(/<w:tc(?:\s[^>]*)?>([\s\S]*?)<\/w:tc>/g)].map(m => m[1]);
@@ -196,8 +214,9 @@ log(await page.evaluate(id => {
 }, idCaso), 'El resumen nunca bloquea: enseña lo que hay y deja en blanco lo que falta');
 
 /* ⚠️ En una captura por ORDEN JUDICIAL no existen los formatos del numeral 7, y
-   el acta de entrega es uno de ellos. El resumen sí se ofrece: es la hoja de
-   trabajo del expediente, no un formato del numeral 7. */
+   el acta de entrega es uno de ellos. El RESUMEN tampoco (2026-08-30): reúne los
+   hechos de una flagrancia —dirección, personas, EMP y EF, vehículos— y ese
+   procedimiento no los documenta. */
 const oj = await page.evaluate(async () => {
   const c = { id: 'fe-oj', tipo: 'OJ', ojv: 2, nunc: '', capturados: [{ id: 'p', priNom: 'X', priApe: 'Y' }],
               elementos: [], victimas: [], testigos: [] };
@@ -205,7 +224,31 @@ const oj = await page.evaluate(async () => {
   return lcEstadoDocs(DB.getCase('fe-oj')).map(d => d.lbl);
 });
 log(!oj.includes('Acta de entrega'), 'Una captura por orden judicial no ofrece el acta de entrega', oj.join(' · '));
-log(oj.includes('Resumen de la captura'), 'Pero sí ofrece el resumen: es del expediente, no del numeral 7');
+log(!oj.includes('Resumen de la captura'),
+  '⚠️ Ni el resumen: es solo para flagrancia, mayores y menores');
+/* ⚠️ Y la PUERTA aplica el mismo criterio que la pantalla. Dos criterios
+   distintos sobre el mismo caso es el defecto que este proyecto ya pagó entre
+   descargar y enviar. */
+log(await page.evaluate(async () => {
+  let salio = false;
+  const orig = window.lcSalida;
+  window.lcSalida = () => { salio = true; };
+  try { abrirResumenCaptura('fe-oj'); } finally { window.lcSalida = orig; }
+  return !salio;
+}), '⚠️ `abrirResumenCaptura` tampoco lo produce para una captura por orden judicial');
+
+/* «Dentro del módulo de capturas Resumen de la captura debe de quedar de
+   último» (instrucción del usuario). Se mide sobre la lista real, no sobre un
+   índice escrito a mano: el siguiente formato no deja el check obsoleto. */
+log(docs[docs.length - 1] === 'Resumen de la captura',
+  '⚠️ El resumen cierra la lista de documentos del expediente', docs.join(' · '));
+log(await page.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('fe-uri')));
+  c.id = 'fe-sinemp'; c.elementos = []; delete c.narracion.emp;
+  await DB.saveCase(c);
+  const l = lcEstadoDocs(DB.getCase('fe-sinemp')).map(d => d.lbl);
+  return l[l.length - 1] === 'Resumen de la captura';
+}), '⚠️ …también en una captura SIN EMP ni EF, donde antes el return temprano lo saltaba');
 
 /* ══ B · LA PLANTILLA ══════════════════════════════════════════════════════ */
 console.log('\n── B · Es el archivo oficial que aportó el usuario, sin red ──');
@@ -576,68 +619,207 @@ log((567 - 119) - cabeAno.antes < cabeAno.aire,
   '⚠️ Antes cabía por 3 twips (0,05 mm), muy por debajo del colchón exigido',
   'sobraban ' + ((567 - 119) - cabeAno.antes) + ' twips de los ' + cabeAno.aire + ' que pide el módulo');
 
-/* ══ I · EL RESUMEN DE LA CAPTURA ══════════════════════════════════════════ */
-console.log('\n── I · El resumen: los seis bloques que se pidieron ──');
+/* ══ I · EL RESUMEN DE LA CAPTURA ══════════════════════════════════════════
+   ⚠️ La expectativa se DERIVA del documento que diligenció el usuario
+   (`Documentos/Otro/Resumen de la Captura.docx`, 2026-08-30), no de una lista
+   escrita a mano: si él vuelve a ajustar el formato, la prueba lo dice sola.
+   Lo único que este módulo cambia de su documento es el icono del apartado de
+   capturados —que era el mismo de cada persona— y la capitalización de «(s)»,
+   que él escribió de dos formas distintas.                                    */
+console.log('\n── I · El resumen, contra el documento que diligenció el usuario ──');
+
+const refXml = leerEntrada(await readFile(join(ROOT, 'Documentos/Otro/Resumen de la Captura.docx')), 'word/document.xml');
+/* Párrafos del documento de referencia, con el cuerpo de letra de su primer run
+   con texto y la fuente de cada run: es lo que fija los cuatro niveles. */
+function parrafos(xml) {
+  return [...xml.matchAll(/<w:p[ >][\s\S]*?<\/w:p>/g)].map(m => m[0]).map(p => {
+    const runs = [...p.matchAll(/<w:r[ >][\s\S]*?<\/w:r>/g)].map(r => r[0]);
+    const conTexto = runs.filter(r => /<w:t[^>]*>[\s\S]*?<\/w:t>/.test(r));
+    return {
+      txt: texto(p),
+      sz: (conTexto[0] || '').match(/<w:sz w:val="(\d+)"/)?.[1] || '',
+      b: /<w:b\/>/.test(conTexto[0] || ''),
+      fuentes: conTexto.map(r => r.match(/w:ascii="([^"]+)"/)?.[1] || ''),
+      jc: p.match(/<w:jc w:val="(\w+)"/)?.[1] || ''
+    };
+  }).filter(p => p.txt);
+}
+const refP = parrafos(refXml);
+/* Los apartados del documento de referencia: número + su emoji + su cuerpo. */
+/* ⚠️ Se distinguen por su CUERPO de letra, no solo por empezar con «N.»: el
+   subtítulo de cada persona («👤 1. NOMBRE») también lo hace. */
+const szSec = refP.filter(p => /^\S+\s*\d\.\s[A-ZÁÉÍÓÚÑ]{4}/.test(p.txt))
+  .map(p => Number(p.sz)).sort((a, b) => b - a)[0];
+const refSec = refP.filter(p => Number(p.sz) === szSec && /^\S+\s*\d\.\s/.test(p.txt))
+  .map(p => ({ n: p.txt.match(/(\d)\./)[1], ico: p.txt.split(/\s/)[0], sz: p.sz, txt: p.txt }));
+log(refSec.length === 6, 'El documento de referencia trae seis apartados numerados',
+  refSec.map(s => s.n).join(','));
 
 const res = await page.evaluate(async id => {
   const out = await buildResumenBlob({ caso: DB.getCase(id) }, 'CARTA');
   return { fname: out.fname, noPDF: out.noPDF,
            doc: new TextDecoder().decode(out.files['word/document.xml']),
+           fonts: new TextDecoder().decode(out.files['word/fontTable.xml']),
            partes: Object.keys(out.files).sort() };
 }, idCaso);
 const rt = texto(res.doc);
-/* ⚠️ Un espacio, no dos: los títulos llevan dos tras el punto (como el oficio),
-   pero `texto()` colapsa el blanco — comparar con dos no encontraría ninguno. */
-const seis = ['1. DIRECCIÓN DE LOS HECHOS', '2. DATOS DEL O LOS CAPTURADOS',
-  '3. DATOS DE LA O LAS VÍCTIMAS', '4. TESTIGOS',
-  '5. ELEMENTOS MATERIALES PROBATORIOS Y EVIDENCIA FÍSICA', '6. VEHÍCULOS IMPLICADOS'];
-const faltan6 = seis.filter(s => rt.indexOf(s) < 0);
-log(faltan6.length === 0, 'Los seis bloques que pidió el usuario, en su orden',
-  faltan6.length ? 'faltan: ' + faltan6.join(' · ') : seis.length + ' apartados');
-/* Orden: el documento tiene que leerse en el orden en que se pidieron. */
-const pos = seis.map(s => rt.indexOf(s));
-log(pos.every((p, i) => i === 0 || p > pos[i - 1]), 'Y en ese orden exacto dentro del documento');
+const genP = parrafos(res.doc);
 
-log(rt.indexOf('CR 45 # 12-30') >= 0 && rt.indexOf('La Candelaria') >= 0,
-  '1 · La dirección de los hechos, con su barrio y su municipio');
-log(rt.indexOf('ROBINSON RAMÍREZ SALAZAR') >= 0 && rt.indexOf('1037949889') >= 0 &&
-    rt.indexOf('Cicatriz en el pómulo izquierdo') >= 0,
-  '2 · El capturado, con su documento y sus señales particulares');
-log(rt.indexOf('NATALIA ARDILA RAMÍREZ') >= 0, '3 · La víctima');
-log(rt.indexOf('JORGE PÉREZ') >= 0, '4 · El testigo');
-log(rt.indexOf('KL614883') >= 0 && rt.indexOf('cadena en metal amarillo') >= 0,
-  '5 · Los EMP y EF, con la misma redacción del numeral 7');
-log(rt.indexOf('Motocicleta') >= 0 && rt.indexOf('KMN12E') >= 0,
-  '⚠️ 6 · El vehículo, con la placa en mayúsculas como en el resto de la app');
-/* ⚠️ La misma primitiva que los imprime en el FPJ-5: lo que dice el resumen es
-   palabra por palabra lo que dice el informe. */
-const igualEmp = await page.evaluate(id => {
-  const c = DB.getCase(id);
-  return lcEmpLineas(ccElementos(c))[1];
-}, idCaso);
-log(rt.indexOf(igualEmp) >= 0, 'Transcritos con `lcEmpLineas`, no con una segunda redacción',
-  igualEmp.slice(0, 46) + '…');
-log(rt.indexOf('Hurto calificado y agravado — Art. 240 C.P.') >= 0,
-  'La conducta punible sale con su artículo del Código Penal, como en el numeral 2');
+/* ── 1 · La estructura: los seis apartados del usuario, en su orden ── */
+const genSec = genP.filter(p => Number(p.sz) === szSec && /^\S+\s*\d\.\s/.test(p.txt));
+const numsRef = refSec.map(s => s.n).join(',');
+const numsGen = genSec.map(p => p.txt.match(/(\d)\./)[1]).join(',');
+log(numsGen === numsRef, 'Los seis apartados salen en el orden del documento de referencia',
+  numsGen + ' vs ' + numsRef);
+/* Los títulos que el usuario NO tocó salen palabra por palabra como los escribió. */
+const literales = refSec.filter(s => /DIRECCIÓN|ELEMENTOS|VEHÍCULOS/.test(s.txt))
+  .map(s => s.txt.replace(/^\S+\s*/, ''));
+const faltanLit = literales.filter(t => rt.indexOf(t) < 0);
+log(faltanLit.length === 0, 'Y con el texto exacto de los apartados que él no flexionó',
+  faltanLit.length ? 'faltan: ' + faltanLit.join(' · ') : literales.join(' · '));
+log(/2\. CAPTURADO\(s\)/.test(rt) && /3\. VÍCTIMA\(s\)/.test(rt) && /4\. TESTIGO\(s\)/.test(rt),
+  '⚠️ Los tres apartados de personas comparten la forma «(s)» que él usó en dos de ellos');
+
+/* ── 2 · NI UNA TABLA: «este resumen, no el que estás generando en tablas» ── */
+log(!/<w:tbl>/.test(res.doc) && !/<w:tbl>/.test(refXml),
+  '⚠️ El documento NO lleva tablas, igual que el de referencia — era la petición de fondo');
+
+/* ── 3 · Cada persona, en UN párrafo en línea continua y separada por comas ── */
+const parCap = genP.find(p => p.txt.startsWith('ROBINSON RAMÍREZ SALAZAR,'));
+log(!!parCap, 'Los datos del capturado salen en un solo párrafo que abre con su nombre',
+  parCap ? parCap.txt.slice(0, 72) + '…' : '(no está)');
+log(!!parCap && parCap.jc === 'both' && refP.some(p => p.jc === 'both'),
+  'Justificado, como en el documento de referencia');
+/* Las etiquetas: las mismas, en el mismo orden, y comprobadas ANTES contra el
+   documento del usuario — si él quita una, el check lo dice en su mitad. */
+const ETIQ = ['Documento de identidad', 'Expedido en', 'Edad', 'Fecha de nacimiento',
+  'Estado civil', 'Profesión u ocupación', 'Dirección de residencia', 'Teléfono'];
+const refTxtTodo = refP.map(p => p.txt).join(' ');
+const noEnRef = ETIQ.filter(e => refTxtTodo.indexOf(e) < 0);
+log(noEnRef.length === 0, 'Las ocho etiquetas se leen del documento de referencia',
+  noEnRef.length ? 'no están en él: ' + noEnRef.join(' · ') : ETIQ.length + ' etiquetas');
+const posE = ETIQ.map(e => parCap ? parCap.txt.indexOf(e) : -1);
+log(posE.every((p, i) => p >= 0 && (i === 0 || p > posE[i - 1])),
+  'Y salen todas, en ese mismo orden dentro del párrafo');
+log(/Escolaridad Bachiller/.test(parCap ? parCap.txt : ''),
+  '⚠️ «Escolaridad» con mayúscula inicial: en su documento es la única etiqueta en minúscula');
+
+/* ── 4 · Lo que el usuario QUITÓ no puede volver ── */
+const fuera = [['El Flaco', 'el alias'], ['Masculino', 'el género'],
+  ['Mario y Rober', 'los padres'], ['rr@prueba.test', 'el correo'],
+  ['Lugar de nacimiento', 'la etiqueta del lugar de nacimiento'],
+  ['Tipo de procedimiento', 'la cabecera de tipo de procedimiento'],
+  ['0500160002062026', 'el NUNC'], ['Destino del informe', 'el destino'],
+  ['Hurto calificado', 'la conducta punible'], ['Vía pública', 'las características del lugar']];
+const cuela = fuera.filter(([v]) => rt.indexOf(v) >= 0).map(([, q]) => q);
+log(cuela.length === 0, '⚠️ Ninguno de los diez datos que él retiró vuelve al documento',
+  cuela.length ? 'se cuelan: ' + cuela.join(' · ') : 'ninguno');
+log(fuera.every(([v]) => refTxtTodo.indexOf(v) < 0 || /Medellín/.test(v)),
+  'Tampoco están en su documento: la exclusión se deriva de él, no se supone');
+
+/* ── 5 · El lugar de nacimiento, pegado a la fecha y sin país si es Colombia ── */
+log(/Fecha de nacimiento 1994-03-11 en Medellín, Antioquia,/.test(rt),
+  '⚠️ «Fecha de nacimiento … en Medellín, Antioquia» — sin la etiqueta y sin el país',
+  refTxtTodo.match(/Fecha de nacimiento [^,]+/)?.[0]);
+const extranjero = texto(await page.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('fe-uri')));
+  c.id = 'fe-ext';
+  c.capturados[0].nacMuni = 'Caracas'; c.capturados[0].nacDepto = 'Distrito Capital';
+  c.capturados[0].nacPais = 'Venezuela';
+  await DB.saveCase(c);
+  const out = await buildResumenBlob({ caso: DB.getCase('fe-ext') }, 'CARTA');
+  return new TextDecoder().decode(out.files['word/document.xml']);
+}));
+log(/en Caracas, Distrito Capital, Venezuela/.test(extranjero),
+  '⚠️ Con una persona extranjera SÍ se informa el país — la única excepción que fijó el usuario');
+
+/* ── 6 · Víctima y testigo con el mismo patrón; las señas solo del capturado ── */
+log(/NATALIA ARDILA RAMÍREZ, Documento de identidad CC 43111222/.test(rt) &&
+    /JORGE PÉREZ, Documento de identidad CC 71333444/.test(rt),
+  'Víctima y testigo se presentan igual que el capturado, en línea continua');
+log(rt.indexOf('Señales particulares visibles Cicatriz en el pómulo izquierdo') >= 0 &&
+    (rt.match(/Señales particulares/g) || []).length === 1,
+  '⚠️ Las señales particulares, solo en el capturado — es la fila que el formato le reserva a él');
+log(/👤 1\. ROBINSON RAMÍREZ SALAZAR/.test(rt) && /👤 1\. NATALIA ARDILA RAMÍREZ/.test(rt),
+  'Cada persona lleva su subtítulo numerado, también cuando es la única');
+
+/* ── 7 · EMP y EF, y vehículos ── */
+const empUno = await page.evaluate(id => lcEmpLineas(ccElementos(DB.getCase(id)))[1], idCaso);
+log(rt.indexOf(empUno) >= 0, 'Los EMP se transcriben con `lcEmpLineas`, no con una segunda redacción',
+  empUno.slice(0, 46) + '…');
+log(/KL614883[\s\S]*?, 01 \(uno\) celular marca Samsung/.test(rt),
+  '⚠️ En un solo párrafo separados por comas, como en el documento de referencia');
+log(/Clase Motocicleta, Marca Bajaj, Color Rojo, Placas KMN12E, Propietario Robinson Ramírez\./.test(rt),
+  '⚠️ El vehículo, en la misma forma y con la placa en mayúsculas',
+  refTxtTodo.match(/Clase [^.]+\./)?.[0]);
+log(/Dirección CR 45 # 12-30, Barrio La Candelaria, Municipio Medellín\./.test(rt),
+  'La dirección de los hechos, con su barrio y su municipio en una línea');
+
+/* ── 8 · Tipografía: los cuatro niveles del documento de referencia ── */
+const nivRef = {
+  tit: refP[0].sz,
+  sec: refSec[0].sz,
+  sub: refP.find(p => /^👤 1\./.test(p.txt))?.sz,
+  cuerpo: refP.find(p => /^Dirección /.test(p.txt))?.sz
+};
+const nivGen = {
+  tit: genP[0].sz,
+  sec: genSec[0].sz,
+  sub: genP.find(p => /^👤 1\./.test(p.txt))?.sz,
+  cuerpo: genP.find(p => /^Dirección /.test(p.txt))?.sz
+};
+log(JSON.stringify(nivGen) === JSON.stringify(nivRef),
+  '⚠️ Los cuatro cuerpos de letra, medidos sobre su documento y no elegidos a ojo',
+  JSON.stringify(nivGen));
+/* Estructural, no de valor: el defecto que se evita es la AUSENCIA de la
+   declaración — un run sin `w:sz` no sale con el cuerpo del formato que lo
+   rodea, sino con el del estilo por defecto (la lección del acta FPJ-6). */
+const runsSinSz = [...res.doc.matchAll(/<w:r>([\s\S]*?)<\/w:r>/g)]
+  .filter(m => /<w:t[^>]*>[\s\S]*?<\/w:t>/.test(m[1]) && !/<w:sz /.test(m[1])).length;
+const runsSinFuente = [...res.doc.matchAll(/<w:r>([\s\S]*?)<\/w:r>/g)]
+  .filter(m => /<w:t[^>]*>[\s\S]*?<\/w:t>/.test(m[1]) && !/<w:rFonts /.test(m[1])).length;
+log(runsSinSz === 0 && runsSinFuente === 0,
+  '⚠️ Cero runs con texto sin cuerpo ni fuente propios', runsSinSz + ' / ' + runsSinFuente);
+
+/* ── 9 · Los emojis, en su propio run con la fuente que los dibuja ── */
+const runsGen = [...res.doc.matchAll(/<w:r>([\s\S]*?)<\/w:r>/g)].map(m => m[1]);
+const emojiRuns = runsGen.filter(r => /[\u{1F300}-\u{1FAFF}]/u.test(r));
+/* Uno por apartado, uno en el título y uno por cada persona: la cuenta se
+   deriva del caso sembrado, no se escribe a mano. */
+const icosEsperados = 1 + refSec.length + 3;
+log(emojiRuns.length === icosEsperados && emojiRuns.every(r => /w:ascii="Segoe UI Emoji"/.test(r)),
+  '⚠️ Cada icono va en su propio run con «Segoe UI Emoji»: en el de Arial saldría como un cuadrito',
+  emojiRuns.length + ' de ' + icosEsperados + ' runs');
+log(!runsGen.some(r => /w:ascii="Arial"/.test(r) && /[\u{1F300}-\u{1FAFF}]/u.test(r)),
+  'Y ni un emoji dentro de un run de Arial');
+log(res.fonts.indexOf('Segoe UI Emoji') >= 0,
+  'La fuente de los iconos se declara en el fontTable del paquete');
+const icosRef = refSec.map(s => s.ico).join(' ');
+log(/📍/.test(rt) && /🩹/.test(rt) && /👁/.test(rt) && /📦/.test(rt) && /🚗/.test(rt) && /📋/.test(rt),
+  'Se conservan seis de los siete iconos del usuario', icosRef);
+log(/🔒 2\. CAPTURADO/.test(rt),
+  '⚠️ Solo cambia el del apartado de capturados: el suyo era el mismo 👤 de cada persona');
+
+/* ── 10 · Paquete y editabilidad ── */
 log(res.noPDF === true && res.partes.indexOf('word/footer1.xml') >= 0 && !res.partes.some(p => /media/.test(p)),
   '⚠️ Paquete propio: sin escudo ni membrete —no reproduce ningún formato aprobado— y con su pie de página',
   res.partes.length + ' partes');
 log(!/w:lineRule="exact"/.test(res.doc),
   '⚠️ Ni un `lineRule="exact"`: lo que el funcionario escriba encima CRECE, no se recorta');
-/* Un resumen de una captura vacía tiene que decir qué no hay, no romperse. */
-const vacio = await page.evaluate(async () => {
+
+/* ── 11 · Una captura vacía dice qué NO hay; una de menores, «aprehendido» ── */
+const vt = texto(await page.evaluate(async () => {
   const c = { id: 'fe-vacio', tipo: 'URI', nunc: '', capturados: [], victimas: [], testigos: [],
               elementos: [], vehiculos: [], lugar: {}, narracion: {} };
   await DB.saveCase(c);
   const out = await buildResumenBlob({ caso: DB.getCase('fe-vacio') }, 'CARTA');
   return new TextDecoder().decode(out.files['word/document.xml']);
-});
-const vt = texto(vacio);
+}));
 log(vt.indexOf('No hay ninguna persona registrada') >= 0 &&
     vt.indexOf('No se recolectaron EMP ni EF') >= 0 &&
-    vt.indexOf('No hay vehículos implicados') >= 0,
-  '⚠️ Con la captura vacía dice qué NO hay, en vez de inventarlo o de romperse');
-/* En una captura de menores el término jurídico es «aprehendido» (Ley 1098). */
+    vt.indexOf('No hay vehículos implicados') >= 0 &&
+    vt.indexOf('Sin dirección registrada') >= 0,
+  '⚠️ Con la captura vacía dice qué NO hay: un apartado en blanco no distingue «no hubo» de «falta»');
 const menor = texto(await page.evaluate(async () => {
   const c = JSON.parse(JSON.stringify(DB.getCase('fe-uri')));
   c.id = 'fe-cespa'; c.tipo = 'CESPA';
@@ -645,8 +827,8 @@ const menor = texto(await page.evaluate(async () => {
   const out = await buildResumenBlob({ caso: DB.getCase('fe-cespa') }, 'CARTA');
   return new TextDecoder().decode(out.files['word/document.xml']);
 }));
-log(menor.indexOf('DATOS DEL O LOS APREHENDIDOS') >= 0 && menor.indexOf('CAPTURADOS') < 0,
-  '⚠️ En una aprehensión de menores dice «aprehendidos», como el resto de la app');
+log(menor.indexOf('2. APREHENDIDO(s)') >= 0 && menor.indexOf('CAPTURADO') < 0,
+  '⚠️ En una aprehensión de menores dice «aprehendido», como el resto de la app');
 
 /* ══ J · PERSISTENCIA, PERFIL E INVITADO ═══════════════════════════════════ */
 console.log('\n── J · Persistencia, perfil, invitado y consola ──');
