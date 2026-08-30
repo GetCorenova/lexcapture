@@ -4318,3 +4318,68 @@ dice sola.
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
   ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08). Anti-caché `?v=91` / `cache-v91`, `_BUILD=91`.
+
+## El NUNC entra solo al año nuevo (2026-08-30)
+Reportado en campo: *«los SPOA o Número Único de Noticia Criminal (16 dígitos para capturas en
+flagrancia) deben de actualizarse cada año como corresponda. Por ejemplo el 1 de enero de 2027, en el
+espacio de año, en todos los despachos se debe de actualizar automáticamente. Esto para captura en
+flagrancia ya que las de OJ se aplica diferente»*. Verificado con `verify_nunc_ano.mjs` (**39
+checks**, nuevo) y con las 30 suites previas.
+
+- ⚠️ **Los 4 ÚLTIMOS dígitos del NUNC son el año**, y eran el único tramo del número que la app no
+  sabía mantener. Desde «Despachos: el registro es del usuario» (2026-08-28) el NUNC vive en el
+  despacho porque sus dígitos 8-12 identifican la unidad receptora; los doce primeros son fijos, pero
+  el año cambia el 1 de enero **de golpe y en todos los despachos a la vez**, y había que corregirlo
+  a mano uno por uno. Un NUNC que sigue terminando en el año pasado, impreso en un FPJ-5, es un
+  número que el SPOA no reconoce.
+- **Un solo punto: la LECTURA de la configuración.** `lcNuncSyncCfg(cfg)` corre dentro de
+  `_cfgConDefaults`, al lado de la migración de «KR»→«CR» y con su mismo criterio: se ajusta al leer,
+  sobre la copia en memoria, **sin forzar ninguna escritura** —se persiste con el guardado
+  siguiente—. Así la pantalla de Despachos, el paso 1 del wizard, `lcDespNunc` y los seis documentos
+  no pueden discrepar sobre cuál es el número vigente. Cubre también `nuncUri`/`nuncCespa`, las dos
+  claves legadas que aún se leen como respaldo.
+- ⚠️ **DOS operaciones distintas, y ahí está todo el diseño:**
+  - el **REGISTRO** de despachos (la plantilla del equipo) va al año del **reloj** y **SOLO AVANZA**.
+    Un teléfono con la fecha mal puesta —en campo pasa— no puede degradar el número de todas las
+    unidades a un año anterior.
+  - una **CAPTURA** va al año de **su procedimiento** (`fechaProc`), en cualquier dirección, porque
+    ese año es un hecho declarado y no una lectura del reloj. `lcNuncDeCaso` se aplica en los tres
+    puntos por los que un número del registro entra en un caso (`lcDespSync`,
+    `lcUsarDespachoEnCaso` y el respaldo de `f6Nunc`). **Sin eso, abrir en enero una captura de
+    diciembre para corregir un dato le habría cambiado el NUNC al año nuevo**: `lcDespSync` reasigna
+    el número del despacho cada vez que se pinta el paso. Es la misma integridad histórica de
+    `lcCongelarDossier`.
+- ⚠️ **NUNCA se fabrica un número.** Si no hay 16 dígitos, o si esos cuatro no son un año plausible
+  (`LC_NUNC_ANO_MIN`–`MAX`), el valor se devuelve **tal cual**: un NUNC a medio teclear o escrito con
+  otro criterio no se reinterpreta — la misma regla que rige `lcDirParsear`, donde inventar es peor
+  que no entender.
+- ⚠️ **La orden judicial no se toca, y la separación es ESTRUCTURAL.** Ahí el número que encabeza los
+  formatos es el **radicado del proceso** (`oj.proceso.radicado`), que identifica un proceso que otro
+  despacho ya abrió: su año es el del proceso. `f6Nunc` ya ramificaba antes, `lcDespSync` sale
+  temprano con `ojv===2`, y `lcNuncSyncCfg` **ni siquiera nombra el radicado** — hay un check que lo
+  mide sobre el cuerpo de la función, no sobre una condición que alguien pueda invertir.
+- **Se ve y se dice.** Un número que cambia solo es indistinguible de uno mal escrito si no se ve
+  cambiar: la tarjeta del despacho **marca el año** (`.nunc-ano`, con su `title`), el formulario y el
+  paso 1 lo explican en una línea, y al desbloquear se avisa **una vez al año** con la cifra real de
+  despachos ajustados (`lcNuncAvisoAno`, `cfg.nuncAno` = año del último ajuste persistido). ⚠️ El
+  conteo sale de `_lcNuncCambios`, que cada lectura recalcula mientras el cambio no se haya guardado:
+  por eso el aviso puede dar la cifra exacta sin guardar nada de más.
+- ⚠️ **`lcDespNuncAjeno` pasa a comparar los 12 dígitos ESTABLES**, no los 16. Ese aviso dice de qué
+  unidad es un NUNC que quedó de otra jurisdicción; con el año actualizándose solo, comparar la
+  cadena entera habría empezado a llamar «de otra jurisdicción» a un número de la misma unidad.
+- **El simulador arma el NUNC con su estructura** (Dpto 2 + Municipio 3 + Entidad 2 + Unidad 5 +
+  Año 4). El inventado ponía el año **en medio**, así que el caso de demostración enseñaba un número
+  que no se lee como un NUNC y del que la app no sabría actualizar el año.
+- ⚠️ **`verify_nunc_ano.mjs` no corre contra el build anterior**: muere en el primer `evaluate`
+  porque `lcNuncAno` no existía. El escenario central sí se ejerce de verdad — la suite mueve el
+  reloj del navegador al **1 de enero de 2027** (`page.clock.setFixedTime`) y comprueba sobre la app
+  real que los despachos pasan a 2027, que se persiste, que se avisa una vez y que la captura de
+  diciembre conserva su año.
+- Regresiones en verde: **NUNC año 39** · despachos 53 · jurisdicción 67 · simulador 41 · fpj6 140 ·
+  mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 · mejora6b 67 · custodia 111 ·
+  incautación 141 · entrega 111 · OJ 187 · export 66 · firma 62 · editable 28 · tipografía OJ 42 ·
+  fpj5 tipografía 48 · envío 39 · almacén 12 · expediente 13 · menú+expediente 16 · personas 25 ·
+  invitado 34 · orden 33 · vía CR 41 · tema 39 · grados 31 · dossier histórico 29 · ola1 38 ·
+  ola2 34 · ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08). Anti-caché `?v=92` / `cache-v92`, `_BUILD=92`.

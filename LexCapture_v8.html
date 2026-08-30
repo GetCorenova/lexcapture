@@ -1215,6 +1215,14 @@ body.guest{padding-top:38px}
 }
 .desp-nunc b{font-family:var(--m);font-size:12.5px;font-weight:600;color:var(--text);letter-spacing:.02em}
 .desp-nunc.falta{color:var(--text-3);font-style:italic}
+/* Los 4 últimos dígitos del NUNC son el AÑO, y es lo único que cambia con el
+   tiempo (se actualiza solo cada 1 de enero). Va marcado para que se pueda
+   comprobar de un vistazo que el número está al día: un dato que cambia solo y
+   no se ve cambiar es indistinguible de uno mal escrito. */
+.nunc-ano{
+  font-style:normal;color:var(--acc);font-weight:700;
+  border-bottom:1px dotted var(--acc);
+}
 .desp-act{
   padding:8px 12px;min-height:38px;border-radius:10px;
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
@@ -2348,7 +2356,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 91;
+var _BUILD = 92;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -2948,6 +2956,10 @@ async function doUnlockPin() {
     await _lcLoadCaches();
     _pinHide();
     renderCases();
+    /* Una vez al año: el NUNC de los despachos ya entró al año en curso en la
+       lectura de la configuración; aquí se persiste y se anuncia. Un número que
+       cambia solo tiene que verse cambiar. */
+    lcNuncAvisoAno();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
 
@@ -3196,6 +3208,10 @@ function _lcPurgarPlantillas() {
 /* Claves de formatos que la app ya no produce. Se retiran de la configuración
    para que dejen de viajar en cada guardado y en cada «Exportar config»: no las
    lee ni las escribe nadie (comprobado clave por clave sobre todo el archivo). */
+/* Cuántos NUNC le puso al día la última lectura de la configuración. Mientras
+   no se persista, cada lectura lo vuelve a calcular — que es justo lo que
+   permite anunciar el cambio de año una sola vez y con la cifra real. */
+var _lcNuncCambios=0;
 var _CFG_MUERTAS=['despachosFavoritos',
   'ojConsecutivo','ojCodigoFormato','ojVersionFormato','ojClasificacion',
                   'ojUbicacionTRD','ojReviso',
@@ -3221,7 +3237,7 @@ function _cfgConDefaults(stored) {
        desactivado la validación dura V29 (lección del 2026-07-30). Sin default,
        el nombre de la unidad es UN dato del usuario y lo pueden leer los tres
        documentos que lo imprimen — ver lcUnidadNombre(). */
-    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,perfilesRegionales:[],perfilRegionalActivo:null,
+    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',nuncAno:0,destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,perfilesRegionales:[],perfilRegionalActivo:null,
       /* Registro ÚNICO de despachos (ver el módulo Despachos).
          `despachoDefecto` guarda el id del que se propone como destino de cada
          tipo de captura, y con él viaja el NUNC: los dígitos de unidad
@@ -3311,6 +3327,15 @@ function _cfgConDefaults(stored) {
        configuración: los despachos ya registrados, el lugar de custodia y la
        fiscalía destinataria. Al leer, sin forzar un guardado. */
     lcDirCRCfg(out);
+    /* ⚠️ EL AÑO DEL NUNC, AL LEER. Los 4 últimos dígitos son el año de la
+       noticia criminal y cambian el 1 de enero en TODOS los despachos a la vez.
+       Se ajustan aquí —no en cada pantalla— para que el registro, el formulario
+       del wizard y los documentos no puedan discrepar sobre cuál es el número
+       vigente. No se fuerza ninguna escritura: se persiste con el guardado
+       siguiente, y lcNuncAvisoAno() lo anuncia una vez al año al desbloquear.
+       Solo flagrancia: el radicado del proceso de una orden judicial no se toca
+       (ver el bloque «EL AÑO DEL NUNC»). */
+    _lcNuncCambios=lcNuncSyncCfg(out);
     return out;
 }
 /* ── ÚNICO punto donde se resuelve el nombre de la unidad ──────────────────
@@ -4697,7 +4722,8 @@ function rStep1(){
     '<div class="fg"><label class="fl">NUNC</label>'+
     '<input class="fi mono" id="w-nunc" value="'+(c.nunc||'')+'" maxlength="16" inputmode="numeric" pattern="\\d{16}" placeholder="16 dígitos" oninput="validateNunc(this)">'+
     '<div class="nunc-err" id="nunc-err"></div>'+
-    '<div class="oj-hint" style="margin:5px 0 0">Los 16 dígitos los fija la unidad receptora: cambian con el despacho de arriba.</div></div>'+
+    '<div class="oj-hint" style="margin:5px 0 0">Los 16 dígitos los fija la unidad receptora: cambian con el despacho de arriba. '+
+    'Los 4 últimos son el año, y salen de la fecha del procedimiento.</div></div>'+
     '<div class="st">Conductas punibles</div>'+
     '<div id="w-conds">'+lcCondHtml()+'</div>'+
     '<div id="w-conds-add">'+lcCondBoton()+'</div>'+
@@ -4767,7 +4793,7 @@ function lcDespBloque(cfg){
         '<div class="oj-dest-nom">'+escHtml(d.nombre||'')+'</div>'+
         (dir?'<div class="oj-dest-dir">'+escHtml(dir)+'</div>':'')+
         (d.telefono?'<div class="oj-dest-dir">Tel. '+escHtml(d.telefono)+'</div>':'')+
-        (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+escHtml(d.nunc)+'</b></div>'
+        (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+lcNuncHtml(d.nunc)+'</b></div>'
                :'<div class="desp-nunc falta">Sin NUNC registrado — revísalo abajo</div>')+
         (src?'<div class="oj-dest-src">'+escHtml(src)+'</div>':'')+
       '</div>'+acciones+'</div>';
@@ -4789,7 +4815,7 @@ function lcDespBloque(cfg){
         return '<div class="lc-desp-op" onclick="lcDespDelBloque(\''+d.id+'\')">'+
           '<div class="oj-dest-nom">'+escHtml(d.nombre||'')+'</div>'+
           (dir?'<div class="oj-dest-dir">'+escHtml(dir)+'</div>':'')+
-          (d.nunc?'<div class="oj-hint mono" style="margin:4px 0 0">NUNC '+escHtml(d.nunc)+'</div>':'')+
+          (d.nunc?'<div class="oj-hint mono" style="margin:4px 0 0">NUNC '+lcNuncHtml(d.nunc)+'</div>':'')+
         '</div>';
       }).join('')+avisoNunc+
       acciones+'</div>';
@@ -5920,11 +5946,16 @@ var SIM={
     return this.r(L.split(''))+this.r(L.split(''))+this.r(L.split(''))+this.pad(this.ri(0,999),3);
   },
   /* NUNC: 16 dígitos exactos, o el FPJ-5 se niega a generarse (issue M3).
-     Si Ajustes ya trae uno válido, se respeta; si no, se inventa. */
+     Si el registro de despachos ya trae uno válido, se respeta; si no, se
+     inventa CON SU ESTRUCTURA: Dpto(2) + Municipio(3) + Entidad(2) + Unidad
+     receptora(5) + Año(4). ⚠️ El año va AL FINAL — el inventado lo ponía en
+     medio, así que el caso de demostración enseñaba un número que no se lee
+     como un NUNC y del que la app no sabría actualizar el año. */
   rNunc:function(cfgVal){
     var v=String(cfgVal||'').replace(/\D/g,'');
     if(v.length===16) return v;
-    return this.pad(this.ri(1,99999),5)+String(new Date().getFullYear())+this.pad(this.ri(1,99999),5)+this.pad(this.ri(1,99),2);
+    return this.pad(this.ri(1,99),2)+this.pad(this.ri(1,999),3)+this.pad(this.ri(1,99),2)+
+           this.pad(this.ri(1,99999),5)+String(lcAnoHoy());
   },
   rRadicado:function(){
     return this.pad(this.ri(1,99999),5)+this.pad(this.ri(1,999),3)+this.pad(this.ri(1,99999),5)+
@@ -7996,7 +8027,10 @@ function f6Nunc(c) {
     return { digitos: String(rad).replace(/\D/g,''), fuente: 'RADICADO' };
   }
   var n = String((c && c.nunc) || '').replace(/\D/g,'');
-  if (n.length !== 16) n = String(lcDespNunc((c && c.tipo === 'CESPA') ? 'CESPA' : 'URI', cfg) || '').replace(/\D/g,'');
+  /* ⚠️ El respaldo sale del registro, que va al año del reloj, así que se lleva
+     al año DEL PROCEDIMIENTO antes de entrar: el acta de una captura de
+     diciembre no puede imprimir casillas terminadas en el año siguiente. */
+  if (n.length !== 16) n = String(lcNuncDeCaso(c, lcDespNunc((c && c.tipo === 'CESPA') ? 'CESPA' : 'URI', cfg)) || '').replace(/\D/g,'');
   return { digitos: n.length === 16 ? n : '', fuente: 'NUNC' };
 }
 
@@ -13464,6 +13498,125 @@ function lcDestinoInforme(c,cfg){
   return [_lcSinCola(nom,d.municipio),dir].filter(Boolean).join(' ');
 }
 
+/* ── EL AÑO DEL NUNC (2026-08-30) ──────────────────────────────────────────
+   Los 4 ÚLTIMOS dígitos del NUNC son el AÑO de la noticia criminal: la
+   estructura es Dpto(2) + Municipio(3) + Entidad(2) + Unidad receptora(5) +
+   Año(4). Los doce primeros son fijos de la unidad —por eso el NUNC vive en el
+   despacho—, pero el año NO: cambia el 1 de enero, de golpe y en TODOS los
+   despachos, y hasta ahora había que corregirlo a mano uno por uno. Un NUNC que
+   sigue terminando en el año pasado, impreso en un FPJ-5, es un número que el
+   SPOA no reconoce.
+
+   ⚠️ SOLO APLICA A FLAGRANCIA. En una captura por orden judicial el número que
+   encabeza los formatos es el RADICADO DEL PROCESO (`oj.proceso.radicado`), que
+   identifica un proceso que otro despacho ya abrió: su año es el del proceso y
+   no se toca jamás. `f6Nunc` ya distingue los dos casos y esa rama no cambia.
+
+   ⚠️ DOS OPERACIONES DISTINTAS, y la diferencia es lo que hace correcta esta
+   función:
+     · el REGISTRO de despachos (la plantilla del equipo) va al año del RELOJ, y
+       SOLO AVANZA. Un teléfono con la fecha mal puesta no puede degradar el
+       número de todas las unidades a un año anterior — y en campo eso pasa.
+     · una CAPTURA va al año de SU procedimiento (`fechaProc`), en cualquier
+       dirección, porque ese año es un hecho declarado y no una lectura del
+       reloj. Así una captura de diciembre que se edita en enero conserva el año
+       con el que se radicó — la misma integridad histórica que
+       `lcCongelarDossier`.
+
+   ⚠️ NUNCA se fabrica un número: si no hay 16 dígitos, o si esos cuatro no son
+   un año plausible, el valor se devuelve TAL CUAL. Un NUNC a medio teclear o
+   escrito con otro criterio se queda como está — reinterpretarlo sería la misma
+   familia de error que reinterpretar una dirección (`lcDirParsear`). */
+var LC_NUNC_ANO_MIN=1990, LC_NUNC_ANO_MAX=2199;
+function lcAnoHoy(){ return new Date().getFullYear(); }
+function lcNuncDigitos(n){
+  var d=String(n==null?'':n).replace(/\D/g,'');
+  return d.length===16?d:'';
+}
+function lcNuncAnoValido(a){ a=parseInt(a,10); return (a>=LC_NUNC_ANO_MIN&&a<=LC_NUNC_ANO_MAX)?a:0; }
+/* El año que trae escrito; 0 si esos cuatro dígitos no son un año plausible. */
+function lcNuncAno(n){ var d=lcNuncDigitos(n); return d?lcNuncAnoValido(d.slice(12)):0; }
+/* Los doce dígitos ESTABLES —departamento, municipio, entidad y unidad
+   receptora—. Es lo que identifica de verdad a la unidad, y por eso es lo que
+   hay que comparar para saber de quién es un número: el año cambia solo. */
+function lcNuncUnidad(n){ var d=lcNuncDigitos(n); return d?d.slice(0,12):''; }
+/* Primitiva: el mismo NUNC con otro año. */
+function lcNuncConAno(n,ano){
+  var d=lcNuncDigitos(n), a=lcNuncAnoValido(ano);
+  if(!d||!a||!lcNuncAno(d)) return String(n==null?'':n);
+  return d.slice(0,12)+String(a);
+}
+/* El NUNC del REGISTRO, al año en curso. ⚠️ Solo avanza (ver arriba). */
+function lcNuncVigente(n,ano){
+  var act=lcNuncAno(n); if(!act) return String(n==null?'':n);
+  var a=lcNuncAnoValido(ano===undefined?lcAnoHoy():ano);
+  return (!a||a<=act)?String(n==null?'':n):lcNuncConAno(n,a);
+}
+/* El año de ESTA captura: el del procedimiento que el funcionario declaró. Sin
+   fecha se cae a la de creación del registro y, en último término, al reloj. */
+function lcAnoDeCaso(c){
+  c=c||{};
+  var m=String(c.fechaProc||'').match(/(\d{4})/), a;
+  if(m&&(a=lcNuncAnoValido(m[1]))) return a;
+  if(c.created){
+    var t=new Date(c.created);
+    if(!isNaN(t.getTime())&&(a=lcNuncAnoValido(t.getFullYear()))) return a;
+  }
+  return lcAnoHoy();
+}
+/* El NUNC que le corresponde a ESTA captura. Se usa siempre que un número del
+   registro entra en un caso: el registro va por el reloj y el caso por su
+   propia fecha, así que sin este paso una captura vieja se llevaría el año
+   nuevo con solo abrirla para corregir un dato. */
+function lcNuncDeCaso(c,n){ return lcNuncConAno(n,lcAnoDeCaso(c)); }
+/* Pone al año en curso el NUNC de TODOS los despachos registrados y el de las
+   dos claves legadas que aún se leen como respaldo. Se llama AL LEER la
+   configuración (`_cfgConDefaults`), igual que la migración de «KR»→«CR»: así
+   ninguna pantalla, ningún formulario y ningún documento pueden discrepar sobre
+   cuál es el número vigente. No fuerza ninguna escritura —se persiste con el
+   guardado siguiente— y devuelve cuántos ajustó. */
+function lcNuncSyncCfg(cfg,ano){
+  if(!cfg) return 0;
+  var a=lcNuncAnoValido(ano===undefined?lcAnoHoy():ano), n=0;
+  if(!a) return 0;
+  (cfg.despachosPropios||[]).forEach(function(d){
+    if(!d) return;
+    var v=lcNuncVigente(d.nunc,a);
+    if(v!==d.nunc){ d.nunc=v; n++; }
+  });
+  ['nuncUri','nuncCespa'].forEach(function(k){
+    var v=lcNuncVigente(cfg[k],a);
+    if(v!==cfg[k]){ cfg[k]=v; n++; }
+  });
+  return n;
+}
+/* ⚠️ Un número que cambia solo TIENE que verse cambiar: si no, es
+   indistinguible de un número mal escrito. El aviso sale UNA vez por año, al
+   desbloquear, y en ese mismo momento se persiste lo que la lectura ya venía
+   ajustando en memoria. `cfg.nuncAno` es el año del último ajuste guardado; se
+   compara contra el reloj y solo avanza, así que un equipo con la fecha
+   atrasada no vuelve a avisar de nada. */
+function lcNuncAvisoAno(){
+  var ano=lcAnoHoy(), cfg;
+  try{ cfg=DB.getConfig(); }catch(e){ return 0; }     // la lectura deja _lcNuncCambios al día
+  if(!cfg||lcNuncAnoValido(cfg.nuncAno)>=ano) return 0;
+  var n=_lcNuncCambios;
+  cfg.nuncAno=ano;
+  try{ DB.saveConfig(cfg); }catch(e){ return 0; }
+  if(n&&typeof toast==='function')
+    toast('Año '+ano+': el NUNC de '+n+(n===1?' despacho pasa':' despachos pasa')+' a terminar en '+ano+' ✓',5000);
+  return n;
+}
+/* El NUNC con su AÑO a la vista. Los cuatro últimos dígitos son lo único que
+   cambia con el tiempo: marcarlos es lo que permite comprobar de un vistazo que
+   el número está al día. */
+function lcNuncHtml(n){
+  var d=lcNuncDigitos(n);
+  if(!d||!lcNuncAno(d)) return escHtml(String(n==null?'':n));
+  return escHtml(d.slice(0,12))+'<i class="nunc-ano" title="Año de la noticia criminal — se actualiza solo cada 1 de enero">'+
+    escHtml(d.slice(12))+'</i>';
+}
+
 /* ── Lectura ──────────────────────────────────────────────────────────────── */
 function lcDespachos(cfg){ cfg=cfg||DB.getConfig(); return cfg.despachosPropios||[]; }
 function lcDespachoPorId(id,cfg){
@@ -13557,9 +13710,14 @@ function lcDespResolver(tipo,lugar,cfg,actualId){
 function lcDespNuncAjeno(c,r){
   var n=String((c&&c.nunc)||'').replace(/\D/g,'');
   if(!n||!r||r.despacho) return '';
-  if(r.candidatos.some(function(d){ return String(d.nunc||'')===n; })) return '';
+  /* ⚠️ Se comparan los 12 dígitos ESTABLES, no los 16: el año se actualiza solo
+     cada 1 de enero, así que un NUNC del año pasado sigue siendo de su misma
+     unidad y llamarlo «de otra jurisdicción» sería falso. */
+  var u=lcNuncUnidad(n)||n;
+  var mismo=function(d){ var v=String(d.nunc||''); return !!v&&(lcNuncUnidad(v)||v)===u; };
+  if(r.candidatos.some(mismo)) return '';
   var due=null;
-  r.otros.forEach(function(d){ if(!due&&String(d.nunc||'')===n) due=d; });
+  r.otros.forEach(function(d){ if(!due&&mismo(d)) due=d; });
   return due?(due.nombre||''):'';
 }
 /* Un topónimo que termina en punto («Bogotá D.C.») dentro de una frase que
@@ -13589,7 +13747,11 @@ function lcDespSync(c,cfg){
   if(r.despacho){
     c.despachoId=r.despacho.id;
     if(r.despacho.nombre) c.destino=r.despacho.nombre;
-    if(r.despacho.nunc)   c.nunc=r.despacho.nunc;
+    /* ⚠️ Con el AÑO DEL PROCEDIMIENTO, no con el del registro: el registro va
+       por el reloj y este bloque se repinta cada vez que se abre el caso, así
+       que sin esto una captura de diciembre se llevaría el año nuevo con solo
+       abrirla en enero para corregir un dato. */
+    if(r.despacho.nunc)   c.nunc=lcNuncDeCaso(c,r.despacho.nunc);
   } else if(r.motivo==='varios'){
     c.despachoId=''; c.despachoElegido=false;   // hay que preguntar: destino y NUNC se quedan
   }
@@ -13677,7 +13839,7 @@ function renderDespachos(tab){
       '<h3>Tus despachos</h3>'+
       '<p>Registra las fiscalías, URI, CESPA y juzgados con los que trabajas: nombre, dirección, barrio y <b>ciudad</b>. Se usan como destino del informe de captura y del oficio de orden judicial, y no hay que volver a escribirlos.</p>'+
       '<p>La <b>ciudad</b> es la que decide cuál se propone: la captura la recibe el despacho del municipio donde ocurrió el hecho. Si en un municipio tienes más de uno, marca cuál es el <b>predeterminado</b> y la app deja de preguntar.</p>'+
-      '<p class="desp-vacio-nunc">Cada fiscalía y cada CESPA guarda además su <b>NUNC de 16 dígitos</b>, porque ese número cambia con la unidad que recibe la captura.</p>'+
+      '<p class="desp-vacio-nunc">Cada fiscalía y cada CESPA guarda además su <b>NUNC de 16 dígitos</b>, porque ese número cambia con la unidad que recibe la captura. Sus 4 últimos dígitos son el <b>año</b>, y la app los actualiza sola cada 1 de enero.</p>'+
       '<button class="btn bp" onclick="lcDespForm()">Agregar el primero</button>'+
     '</div>';
     return;
@@ -13716,7 +13878,7 @@ function renderDespachos(tab){
       '<div class="desp-nombre">'+escHtml(d.nombre||'(sin nombre)')+'</div>'+
       (dir?'<div class="desp-dir">'+escHtml(dir)+'</div>':'')+
       (d.telefono?'<div class="desp-dir">Tel. '+escHtml(d.telefono)+'</div>':'')+
-      (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+escHtml(d.nunc)+'</b></div>'
+      (d.nunc?'<div class="desp-nunc"><span>NUNC</span><b>'+lcNuncHtml(d.nunc)+'</b></div>'
              :(def.nunc?'<div class="desp-nunc falta">Sin NUNC registrado</div>':''))+
       '<div class="desp-acts">'+
         (def.slot&&!esDef
@@ -13810,7 +13972,8 @@ function lcDespNuncHtml(clase,val){
     '<input class="fi mono" id="dp-nunc" value="'+escAttr(val||'')+'" maxlength="16" inputmode="numeric" '+
       'placeholder="16 dígitos" oninput="validateNunc(this)">'+
     '<div class="nunc-err" id="nunc-err"></div>',
-    'Los 16 dígitos fijos de esta unidad receptora. Al elegir este despacho en una captura, el NUNC se rellena solo.');
+    'Los 16 dígitos de esta unidad receptora. Al elegir este despacho en una captura, el NUNC se rellena solo. '+
+    'Los <b>4 últimos son el año</b> y la app los actualiza sola cada 1 de enero: no hay que corregirlos a mano.');
 }
 function lcDespClaseChg(){
   var cl=(document.getElementById('dp-clase')||{}).value||'FISCALIA';
@@ -13921,7 +14084,7 @@ function lcUsarDespachoEnCaso(d){
      de contar como destino escrito a mano. */
   wc.despachoId=d.id||''; wc.despachoElegido=true; wc.destinoManual=false;
   var aviso='Destino: '+String(d.nombre||'').substring(0,32);
-  if(d.nunc){ wc.nunc=d.nunc; aviso+=' · NUNC '+d.nunc; }
+  if(d.nunc){ wc.nunc=lcNuncDeCaso(wc,d.nunc); aviso+=' · NUNC '+wc.nunc; }
   else aviso+=' — sin NUNC registrado, revísalo';
   _lcDestEdit=false;
   renderWiz();
