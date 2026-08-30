@@ -2336,7 +2336,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 86;
+var _BUILD = 87;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -9458,7 +9458,8 @@ function ccCustodia(c) {
   return c.custodia;
 }
 function rtEstructura(empId) {
-  return { empId:empId || '', cantidad:'', direccion:'', ubicacion:'', capIdx:0, hora:'', dil:0, updated:0 };
+  return { empId:empId || '', cantidad:'', direccion:'', ubicacion:'', capIdx:0, hora:'', dil:0,
+    firmante:null, updated:0 };
 }
 function rtRotulo(c, empId) {
   var a = (c && c.rotulos) || [], i;
@@ -9713,14 +9714,86 @@ function buildRotuloBlob(ctx) {
   }
 }
 
+/* ── QUIÉN FIRMA EL RÓTULO ──────────────────────────────────────────────────
+   El apartado 7 del formato —«RÓTULO DILIGENCIADO POR»— lo suscribe uno de los
+   dos policías de la patrulla, y no tiene por qué ser el mismo que diligencia
+   la cadena de custodia.
+   ⚠️ Hasta ahora solo se podía elegir entre los funcionarios registrados EN LA
+   CADENA, y únicamente si había más de uno: con una cadena de un solo
+   funcionario —que es lo corriente— el rótulo lo firmaba ese, sin preguntar y
+   sin forma de decir que lo firma el compañero.
+   Ahora se pregunta con las MISMAS TRES SALIDAS del acta de incautación y de la
+   cadena de custodia (`ccResolverOrigen`): el titular del perfil, su compañero
+   de patrulla —ya registrado en el perfil, no hay que reescribirlo— o cualquier
+   otro funcionario, tecleado a mano. Reutilizar ese resolutor, y no escribir uno
+   propio, es lo que evita que el mismo procedimiento nombre a una persona en la
+   cadena de custodia y a otra en el rótulo del mismo elemento.
+   ⚠️ Lo que el usuario escriba MANDA sobre lo que resuelva el origen: así puede
+   corregir un cargo o una cédula sin ir a cambiar el perfil. */
+
+/* Los datos de un origen, con el mismo formato con el que se imprimen.
+   ⚠️ La comparación de «esto lo puso la app» se hace contra ESTE valor, no
+   contra el crudo de `ccResolverOrigen`: el campo se pinta en mayúsculas, así
+   que comparar contra el nombre tal cual está en el perfil daría siempre
+   distinto y cambiar de origen dejaría de traer los datos del nuevo. */
+function rtOrigenDatos(origen) {
+  var d = ccResolverOrigen(origen);
+  return { nombre:mayus(d.nombre), cedula:sinPuntos(d.cedula), entidad:d.entidad, cargo:d.cargo };
+}
+/* El valor por DEFECTO sigue siendo quien suscribe la cadena de custodia de
+   este elemento: es lo corriente y es lo que evita reteclear.
+   ⚠️ Se copian los valores YA RESUELTOS de esa fila —no solo su origen—: la
+   cadena admite datos escritos a mano, y derivar solo del origen le cambiaría
+   el nombre al rótulo de un funcionario que se tecleó allí.
+   ⚠️ Se lee `c.custodia` sin pasar por `ccCustodia()`, que la CREA si no
+   existe: consultar quién firma no puede dejar el caso «sucio» (misma regla que
+   `aiActaLeer` en el acta de incautación). */
+function rtFirmanteBase(c, r) {
+  var fs = (c && c.custodia && c.custodia.funcionarios) || [];
+  var f = fs[(r && r.dil) || 0] || fs[0] || ccFuncVacio();
+  var d = ccFuncDatos(f);
+  return { origen:f.origen || 'PERFIL', nombre:d.nombre, cedula:d.cedula, entidad:d.entidad, cargo:d.cargo };
+}
+/* ⚠️ El firmante solo se GUARDA cuando difiere del que propone la cadena. Si se
+   guardara siempre, el rótulo quedaría con una COPIA congelada y corregir un
+   cargo o una cédula en la cadena de custodia dejaría de reflejarse aquí — dos
+   documentos del mismo procedimiento diciendo cosas distintas del mismo
+   funcionario. Lo que se guarda es la DECISIÓN de que lo firme otro, no el valor
+   derivado; la integridad histórica ya la da la cadena, que sí guarda sus
+   valores resueltos. */
+function rtFirmanteCambiado(c, r, f) {
+  if (!f) return false;
+  var base = rtFirmanteBase(c, r);
+  return ['origen', 'nombre', 'cedula', 'entidad', 'cargo'].some(function (k) {
+    return (f[k] || '') !== (base[k] || '');
+  });
+}
+/* Lo escrito a mano manda; lo que esté vacío se rellena desde el origen elegido.
+   ⚠️ Un rótulo guardado ANTES de que esto existiera no trae `firmante` y sigue
+   saliendo con el funcionario de su cadena, byte a byte igual: el documento no
+   cambia por haberse añadido la pregunta. */
+function rtFirmanteDatos(c, r) {
+  var f = r && r.firmante;
+  if (!f) return rtFirmanteBase(c, r);
+  var d = rtOrigenDatos(f.origen);
+  return {
+    origen: f.origen || 'PERFIL',
+    /* `mayus` solo al SALIR, como en el FPJ-5, el acta de derechos y la cadena
+       de custodia: por concordancia con la cédula y el SPOA. */
+    nombre: mayus(f.nombre || d.nombre),
+    cedula: sinPuntos(f.cedula || d.cedula),
+    entidad: f.entidad || d.entidad,
+    cargo: f.cargo || d.cargo
+  };
+}
+
 /* Todo lo que imprime el rótulo, resuelto en un solo objeto: quien quiera saber
    de dónde sale un campo lo lee aquí. Lo diligenciado manda; lo demás se deriva
    del caso y de la cadena de custodia. */
 function rtMapa(c, it) {
   var r = rtRotulo(c, it.id) || rtEstructura(it.id);
   var g = ccGrupoDe(c, it.id), m = f6Momento(c);
-  var cu = ccCustodia(c);
-  var dil = ccFuncDatos((cu.funcionarios || [])[r.dil || 0] || (cu.funcionarios || [])[0] || ccFuncVacio());
+  var dil = rtFirmanteDatos(c, r);
   /* ⚠️ «Nombres y apellidos de la persona a quien se le encontró el EMP y EF»
      es SIEMPRE una persona capturada del caso: no se teclea. Con una sola, se
      deriva; con varias, se elige cuál — que es lo único que la app no puede
@@ -9995,10 +10068,11 @@ function rtAbrir(id, empId) {
   var it = null;
   ccElementos(c).forEach(function (x) { if (x.id === empId) it = x; });
   if (!it) { toast('Ese elemento ya no está en la captura'); return; }
-  _rtCtx = { id:id, empId:empId };
   var m = rtMapa(c, it), r = rtRotulo(c, empId) || rtEstructura(empId);
-  var g = ccGrupoDe(c, empId), cu = ccCustodia(c);
-  var funcs = (cu.funcionarios || []).map(ccFuncDatos);
+  var g = ccGrupoDe(c, empId);
+  /* El origen con el que se pintó, para que `rtCambiarFirmante` sepa qué
+     valores había puesto la app y cuáles escribió el funcionario. */
+  _rtCtx = { id:id, empId:empId, origen:m.dil.origen || 'PERFIL' };
 
   function kv(k, v) { return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>'; }
 
@@ -10012,7 +10086,6 @@ function rtAbrir(id, empId) {
       kv('Número del EMP y EF', m.numero + (g && g.grupo.items.length > 1 ? ' de ' + g.grupo.items.length + ' en la cadena ' + g.grupo.n : '')) +
       kv('Descripción', m.desc) +
       kv('Se le encontró a', m.persona) +
-      kv('Rótulo diligenciado por', m.dil.nombre) +
     '</details>' +
 
     '<div class="st">4. Hallazgo</div>' +
@@ -10044,14 +10117,12 @@ function rtAbrir(id, empId) {
           }).join('') + '</select></div>'
       : '<input type="hidden" id="rt-cap" value="0">') +
 
-    (funcs.length > 1
-      ? '<div class="st">7. Rótulo diligenciado por</div>' +
-        '<div class="fg"><select class="fs" id="rt-dil">' +
-          funcs.map(function (f, i) {
-            return '<option value="' + i + '"' + ((r.dil || 0) === i ? ' selected' : '') + '>' + escHtml(f.nombre || ('Funcionario ' + (i + 1))) + '</option>';
-          }).join('') + '</select></div>' +
-        '<p class="oj-hint">Quien suscribe la cadena de custodia de este elemento es quien firma su rótulo.</p>'
-      : '<input type="hidden" id="rt-dil" value="0">') +
+    '<div class="st">7. Rótulo diligenciado por</div>' +
+    '<div id="rt-firmante">' + rtFirmanteHtml(m.dil) + '</div>' +
+    '<p class="oj-hint">Se propone quien suscribe la cadena de custodia de este elemento.</p>' +
+    /* ⚠️ El índice de la fila de la cadena se conserva: es de donde sale el
+       valor por defecto de un rótulo que todavía no tiene firmante propio. */
+    '<input type="hidden" id="rt-dil" value="' + (r.dil || 0) + '">' +
 
     '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
       'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
@@ -10062,11 +10133,59 @@ function rtAbrir(id, empId) {
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
   );
 }
+/* El bloque de «quién firma». Se repinta SOLO a sí mismo al cambiar de origen:
+   volver a pintar el modal entero borraría la ubicación de hallazgo que el
+   funcionario esté escribiendo (misma regla que `aiCambiarFirmante`). */
+function rtFirmanteHtml(f) {
+  var co = ccCompanero(), p = ccPerfilActivo();
+  var opts = [
+    ['PERFIL', 'Yo — el titular del perfil' + (p && p.nombre ? ' (' + p.nombre + ')' : '')],
+    ['COMPANERO', 'Mi compañero de patrulla' + (co && co.nombre ? ' (' + co.nombre + ')' : ' — sin registrar')],
+    ['OTRO', 'Otro funcionario']
+  ];
+  return '<div class="fg"><label class="fl">¿Quién firma el rótulo?</label>' +
+    '<select class="fs" id="rt-fun-origen" onchange="rtCambiarFirmante()">' +
+    opts.map(function (o) {
+      return '<option value="' + o[0] + '"' + (f.origen === o[0] ? ' selected' : '') + '>' +
+        escHtml(o[1]) + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="fg"><label class="fl">Nombres y apellidos</label>' +
+    '<input class="fi" id="rt-fun-nom" value="' + escAttr(f.nombre) + '"></div>' +
+    '<div class="fr3">' +
+    '<div class="fg"><label class="fl">Cédula</label>' +
+    '<input class="fi mono" id="rt-fun-ced" inputmode="numeric" value="' + escAttr(f.cedula) + '"></div>' +
+    '<div class="fg"><label class="fl">Entidad</label>' +
+    '<input class="fi" id="rt-fun-ent" value="' + escAttr(f.entidad) + '" placeholder="Institución"></div>' +
+    '<div class="fg"><label class="fl">Cargo</label>' +
+    '<input class="fi" id="rt-fun-car" value="' + escAttr(f.cargo) + '"></div>' +
+    '</div>';
+}
+/* Cambiar de origen trae los datos del nuevo funcionario, pero NO pisa lo que el
+   usuario haya escrito a mano — solo lo que seguía siendo del origen anterior.
+   Mismo criterio que `ccCambiarOrigen` y `aiCambiarFirmante`. */
+function rtCambiarFirmante() {
+  var caja = document.getElementById('rt-firmante'); if (!caja) return;
+  var f = rtLeerFirmante(); if (!f) return;
+  var antes = rtOrigenDatos((_rtCtx && _rtCtx.origen) || 'PERFIL');
+  var ahora = rtOrigenDatos(f.origen);
+  ['nombre', 'cedula', 'entidad', 'cargo'].forEach(function (k) {
+    if (!f[k] || f[k] === antes[k]) f[k] = ahora[k] || '';
+  });
+  if (_rtCtx) _rtCtx.origen = f.origen;
+  caja.innerHTML = rtFirmanteHtml(f);
+}
+function rtLeerFirmante() {
+  var el = document.getElementById('rt-fun-origen'); if (!el) return null;
+  function v(id) { var x = document.getElementById('rt-fun-' + id); return x ? x.value.trim() : ''; }
+  return { origen:el.value || 'PERFIL', nombre:v('nom'), cedula:sinPuntos(v('ced')),
+    entidad:v('ent'), cargo:v('car') };
+}
 function rtLeer() {
   if (!document.getElementById('rt-ubic')) return null;
   function v(id) { var el = document.getElementById('rt-' + id); return el ? el.value.trim() : ''; }
   return { cantidad:v('cant'), hora:v('hora'), direccion:v('dir'), ubicacion:v('ubic'),
-    capIdx:parseInt(v('cap'), 10) || 0, dil:parseInt(v('dil'), 10) || 0 };
+    capIdx:parseInt(v('cap'), 10) || 0, dil:parseInt(v('dil'), 10) || 0,
+    firmante:rtLeerFirmante() };
 }
 async function rtGuardar() {
   if (!_rtCtx) return null;
@@ -10075,6 +10194,7 @@ async function rtGuardar() {
   var r = rtRotulo(c, _rtCtx.empId) || rtEstructura(_rtCtx.empId);
   r.cantidad = d.cantidad; r.hora = d.hora; r.direccion = d.direccion;
   r.ubicacion = d.ubicacion; r.capIdx = d.capIdx; r.dil = d.dil;
+  r.firmante = rtFirmanteCambiado(c, r, d.firmante) ? d.firmante : null;
   rtPoner(c, r);
   try { await DB.saveCase(c); }
   catch (e) {

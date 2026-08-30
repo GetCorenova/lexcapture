@@ -587,6 +587,126 @@ log(eq1 === 2 && eq2 === 1,
 log(fila(ov8c, 533, 539).some(t => /JUAN PABLO MEJIA/.test(t.t)),
   'El segundo funcionario ocupa la segunda fila del formato');
 
+/* ⚠️ El RÓTULO también pregunta quién lo firma, con las MISMAS TRES SALIDAS.
+   Antes solo se podía elegir entre los funcionarios registrados EN LA CADENA, y
+   únicamente si había más de uno: con una cadena de un solo funcionario —que es
+   lo corriente— el rótulo lo firmaba ese, sin preguntar y sin forma de decir que
+   lo firma el compañero de patrulla. */
+await page.evaluate(() => { const its = ccElementos(DB.getCase('cc-uri')); rtAbrir('cc-uri', its[1].id); });
+await page.waitForTimeout(300);
+const opcRot = await page.$$eval('#rt-fun-origen option', els => els.map(e => e.textContent));
+log(opcRot.length === 3 && opcRot.some(o => /titular del perfil/.test(o)) &&
+    opcRot.some(o => /JUAN PABLO MEJIA/.test(o)) && opcRot.some(o => /Otro funcionario/.test(o)),
+  '⚠️ El rótulo pregunta quién lo firma: el titular del perfil, su compañero de patrulla u otro funcionario',
+  opcRot.join(' · '));
+const rotPre = await page.evaluate(() => ({
+  origen: document.getElementById('rt-fun-origen').value,
+  nom: document.getElementById('rt-fun-nom').value,
+  car: document.getElementById('rt-fun-car').value
+}));
+log(rotPre.origen === 'PERFIL' && /NELSON DAVID GOMEZ/.test(rotPre.nom) && /Comandante de Cuadrante/.test(rotPre.car),
+  'Nace proponiendo a quien suscribe la cadena de custodia de ese elemento: no hay que reteclear nada',
+  rotPre.nom + ' · ' + rotPre.car);
+
+/* ⚠️ Al cambiar de origen se repinta SOLO el bloque del firmante: si se volviera
+   a pintar el modal entero se perdería lo que el funcionario esté escribiendo. */
+await page.selectOption('#rt-fun-origen', 'COMPANERO');
+await page.waitForTimeout(200);
+const trasCambio = await page.evaluate(() => ({
+  nom: document.getElementById('rt-fun-nom').value,
+  ced: document.getElementById('rt-fun-ced').value,
+  car: document.getElementById('rt-fun-car').value,
+  ubic: document.getElementById('rt-ubic').value
+}));
+log(/JUAN PABLO MEJIA/.test(trasCambio.nom) && trasCambio.ced === '1098765432' &&
+    /Patrullero de Cuadrante/.test(trasCambio.car),
+  'Al elegir al compañero, sus datos salen del perfil — donde ya se registraron una vez',
+  trasCambio.nom + ' · ' + trasCambio.ced);
+log(/pretina del pantalón/.test(trasCambio.ubic),
+  '⚠️ Y la ubicación de hallazgo que ya estaba escrita no se pierde: se repinta solo el bloque del firmante',
+  trasCambio.ubic);
+
+/* Lo escrito a mano manda: cambiar de origen por error no borra una corrección. */
+await page.fill('#rt-fun-car', 'Jefe de Grupo de Reacción');
+await page.selectOption('#rt-fun-origen', 'PERFIL');
+await page.waitForTimeout(200);
+const manoCargo = await page.$eval('#rt-fun-car', e => e.value);
+const manoNom = await page.$eval('#rt-fun-nom', e => e.value);
+log(manoCargo === 'Jefe de Grupo de Reacción' && /NELSON DAVID GOMEZ/.test(manoNom),
+  '⚠️ Cambiar de origen solo pisa lo que había puesto la app: el cargo escrito a mano se conserva',
+  manoNom + ' · ' + manoCargo);
+await page.selectOption('#rt-fun-origen', 'COMPANERO');
+await page.waitForTimeout(200);
+await page.fill('#rt-fun-car', 'Patrullero de Cuadrante');
+
+const [dl7b] = await Promise.all([
+  page.waitForEvent('download', { timeout: 20000 }),
+  page.evaluate(async () => { await rtGenerar(); })
+]);
+const ov7b = overlay(Buffer.from(await readFile(await dl7b.path())));
+const dil7b = fila(ov7b, 190, 195).map(t => t.t).join(' ');
+log(/JUAN PABLO MEJIA/.test(dil7b) && /1098765432/.test(dil7b) && /Patrullero de Cuadrante/.test(dil7b),
+  '⚠️ Y el apartado 7 del formato sale con el compañero: nombre, cédula y cargo', dil7b);
+
+const cadenaIntacta = await page.evaluate(id =>
+  (DB.getCase(id).custodia.funcionarios || []).map(f => (f.origen || '') + ':' + (f.nombre || '')), idCaso);
+log(/NELSON/i.test(cadenaIntacta[0] || ''),
+  '⚠️ Elegir quién firma el rótulo NO reescribe la cadena de custodia: son dos documentos distintos',
+  cadenaIntacta.join(' · '));
+
+const firmRot = await page.evaluate(id => {
+  const c = DB.getCase(id), its = ccElementos(c);
+  return ((c.rotulos || []).filter(x => x.empId === its[1].id)[0] || {}).firmante || null;
+}, idCaso);
+log(firmRot && firmRot.origen === 'COMPANERO' && /JUAN PABLO MEJIA/.test(firmRot.nombre || ''),
+  'Queda guardado EN EL RÓTULO, con los valores ya resueltos: se reimprime igual meses después',
+  JSON.stringify(firmRot));
+/* ⚠️ Y si NO se elige a nadie no se guarda copia: el rótulo sigue derivando de
+   su cadena. Guardar siempre lo congelaría, y corregir un cargo en la cadena de
+   custodia dejaría de reflejarse aquí — dos documentos del mismo procedimiento
+   diciendo cosas distintas del mismo funcionario. */
+const noCongela = await page.evaluate(id => {
+  const c = DB.getCase(id), its = ccElementos(c);
+  const r = (c.rotulos || []).filter(x => x.empId === its[1].id)[0];
+  const guardado = r.firmante;
+  const cambia = rtFirmanteCambiado(c, r, rtFirmanteBase(c, r));
+  r.firmante = null;
+  const antes = rtMapa(c, its[1]).dil.cargo;
+  c.custodia.funcionarios[0].cargo = 'Jefe de Vigilancia';
+  const despues = rtMapa(c, its[1]).dil.cargo;
+  c.custodia.funcionarios[0].cargo = antes;
+  r.firmante = guardado;
+  return { cambia, antes, despues };
+}, idCaso);
+log(noCongela.cambia === false && noCongela.despues === 'Jefe de Vigilancia',
+  '⚠️ Lo que se guarda es la DECISIÓN de que firme otro, no el valor derivado: sin elección, el rótulo sigue a su cadena',
+  noCongela.antes + ' → ' + noCongela.despues);
+
+
+/* ⚠️ Retrocompatibilidad: un rótulo guardado ANTES de que esto existiera no trae
+   firmante propio, y tiene que seguir saliendo con el funcionario de su cadena.
+   El documento no puede cambiar por haberse añadido la pregunta. */
+const legado = await page.evaluate(id => {
+  const c = DB.getCase(id), its = ccElementos(c);
+  const r = (c.rotulos || []).filter(x => x.empId === its[1].id)[0];
+  const guardado = r.firmante; delete r.firmante;
+  const m = rtMapa(c, its[1]);
+  r.firmante = guardado;
+  return { nom: m.dil.nombre, ced: m.dil.cedula };
+}, idCaso);
+log(/NELSON DAVID GOMEZ/.test(legado.nom) && legado.ced === '1035302775',
+  '⚠️ Un rótulo sin firmante propio sigue saliendo con el de su cadena: byte a byte lo de antes',
+  legado.nom + ' · ' + legado.ced);
+
+/* La garantía es estructural: el rótulo NO tiene un resolutor propio. Dos
+   criterios distintos acabarían nombrando a una persona en la cadena de custodia
+   y a otra en el rótulo del mismo elemento. */
+const fuenteHtml = await readFile(join(ROOT, 'LexCapture_v8.html'), 'utf8');
+log(/function rtOrigenDatos\([\s\S]{0,240}?ccResolverOrigen/.test(fuenteHtml),
+  '⚠️ El rótulo reutiliza ccResolverOrigen, el mismo resolutor del acta de incautación y de la cadena');
+log(!/function rt(Perfil|Companero)/.test(fuenteHtml),
+  'Y no escribe uno propio para el perfil ni para el compañero');
+
 /* ══ H · PERSISTENCIA, IDs, INVITADO Y CONSOLA ═════════════════════════════ */
 console.log('\n── H · Persistencia, ids de los elementos, invitado y consola ──');
 

@@ -3295,6 +3295,50 @@ nuevo). Las 28 suites previas siguen en verde salvo los dos fallos preexistentes
   hora hábiles) y `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
   Anti-caché `?v=85` / `cache-v85`, `_BUILD=85`.
 
+## El rótulo también elige quién lo firma (2026-08-29)
+Reportado en campo: *«la aplicación debe dar la opción de si el rótulo lo firma el titular del perfil
+o su compañero de patrulla, así como funciona el acta de incautación y la cadena de custodia»*.
+Verificado con `verify_custodia.mjs` (**111 checks**, antes 99).
+
+- ⚠️ **El apartado 7 del FPJ-7 —«RÓTULO DILIGENCIADO POR»— era el único de los tres formatos del
+  numeral 7 que no preguntaba.** Salía de `cu.funcionarios[r.dil]`, es decir **solo se podía elegir
+  entre los funcionarios registrados EN LA CADENA de custodia, y únicamente si había más de uno**:
+  con una cadena de un solo funcionario —que es lo corriente— el rótulo lo firmaba ese, sin
+  preguntar y sin ninguna forma de decir que lo firma el compañero. El acta de incautación
+  (2026-08-26) y la cadena ya tenían las tres salidas; al rótulo no se le extendieron.
+- **Mismas tres salidas y mismo resolutor**: `rtOrigenDatos` → **`ccResolverOrigen`**, el de
+  `ccFuncDatos` y `aiFirmanteDatos`. ⚠️ **No se escribió un resolutor propio**: dos criterios
+  distintos acabarían nombrando a una persona en la cadena de custodia y a otra en el rótulo **del
+  mismo elemento**. Hay dos checks estructurales que lo miden sobre el código fuente.
+- ⚠️ **Lo que se guarda es la DECISIÓN, no el valor derivado.** `rtFirmanteCambiado` compara con lo
+  que propone la cadena y `r.firmante` solo se escribe si difiere. Un primer intento guardaba
+  siempre los valores resueltos —que es lo que hacen la cadena y el acta— y eso **congelaba** el
+  rótulo: corregir después un cargo en la cadena de custodia dejaba de reflejarse aquí, y los dos
+  documentos del mismo procedimiento decían cosas distintas del mismo funcionario. **Lo detectó el
+  check [77] de la propia suite**, que fuerza un cargo desmesurado en la cadena y espera el aviso de
+  reducción de cuerpo: dejó de llegar. La integridad histórica no se pierde — la da la cadena, que
+  sí guarda sus valores resueltos.
+- ⚠️ **Retrocompatibilidad exacta**: un rótulo guardado antes no trae `firmante` y sigue saliendo con
+  el funcionario de su cadena, byte a byte igual. `r.dil` **se conserva en el modelo** y es de donde
+  sale el valor por defecto; el documento no cambia por haberse añadido la pregunta.
+- **El valor por defecto sigue siendo quien suscribe la cadena de ese elemento**, y se copian sus
+  valores **ya resueltos** —no solo su origen—: la cadena admite datos escritos a mano, y derivar
+  solo del origen le cambiaría el nombre al rótulo de un funcionario que se tecleó allí.
+- ⚠️ **El bloque se repinta SOLO a sí mismo** (`rtCambiarFirmante`, misma regla que
+  `aiCambiarFirmante` y `ojRefrescarFirmaWiz`): volver a pintar el modal entero borraría la
+  ubicación de hallazgo que el funcionario esté escribiendo. Hay un check que lo mide.
+- ⚠️ **La comparación de «esto lo puso la app» usa `rtOrigenDatos`, no el crudo de
+  `ccResolverOrigen`.** El campo se pinta en MAYÚSCULAS (convención de los formatos de la Fiscalía),
+  así que comparar contra el nombre tal como está en el perfil daría siempre distinto y cambiar de
+  origen dejaría de traer los datos del nuevo funcionario. Lo escrito a mano sigue sin pisarse.
+- ⚠️ **`rtFirmanteBase` lee `c.custodia` sin pasar por `ccCustodia()`**, que la CREA si no existe:
+  consultar quién firma no puede dejar el caso «sucio» — misma regla que `aiActaLeer`.
+- «Rótulo diligenciado por» **sale del bloque «lo que ya trae el sistema»**: dejó de ser un dato
+  derivado y pasó a ser una pregunta.
+- Regresiones en verde: **custodia 111** · incautación 141 · expediente 13 · menú+expediente 16 ·
+  mejora6 32 · mejora6b 67 · personas 25 · invitado 34 · export 66 · envío 39.
+  Anti-caché `?v=87` / `cache-v87`, `_BUILD=87`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|
