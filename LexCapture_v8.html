@@ -2348,7 +2348,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 88;
+var _BUILD = 89;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -11222,6 +11222,10 @@ var F30_SZ = {
    filas son `atLeast` y crecen), pero en el apartado 3 las filas son
    `hRule="exact"` y lo que no cabe se RECORTA sin avisar. */
 var F30_AIRE = { desc: 140, obs: 200 };
+/* ⚠️ La fuente del formato. Se declara EXPLÍCITAMENTE en todo lo que escribe la
+   app porque las casillas vacías de esta plantilla no la traen y el
+   `docDefaults` resuelve a Times New Roman — ver `_f30RunDato`. */
+var F30_FUENTE = 'Arial';
 // La casilla se marca con una X, como se diligencia a mano.
 var F30_X = 'X';
 
@@ -11413,21 +11417,67 @@ function feNombreArchivo(m) {
    `w:w`): esos valores están puestos para que quepa la etiqueta impresa, no
    para el dato. */
 function _f30RunLimpio(base, texto, medios) {
-  var W = FPJ_W, r = _docRunSobre(base, texto, false);
+  var r = _docRunSobre(base, texto, false);
+  _f30RunDato(r, medios || F30_SZ.dato);
+  return r;
+}
+/* ⚠️ UN DATO ESCRITO POR LA APP DECLARA SU FUENTE, SU CUERPO Y SU COLOR — LOS
+   TRES. Reportado en campo sobre el primer build de este formato: el NUNC, la
+   hora y el departamento salían en TIMES NEW ROMAN y la fecha en GRIS CLARO y
+   con el año recortado («202» en vez de «2026»). No era un valor mal escrito en
+   ninguna parte: era, otra vez, la AUSENCIA de la declaración, y por dos vías
+   distintas que este formato tiene a la vez —la misma familia de fallo que sacó
+   el acta FPJ-6 a tres cuerpos de letra y el FPJ-5 a 24 y 90 runs
+   sobredimensionados, aplicada ahora a la fuente y al color:
+
+     · Las casillas del NUNC, las de la hora y las de valor de la cabecera
+       vienen VACÍAS en la plantilla —sin `w:p` siquiera—, así que `setTc` crea
+       el run desde cero y, sin `rFonts`, hereda el de `docDefaults`, que en este
+       formato es **Times New Roman**. Medido en Word sobre el documento
+       generado: 20 celdas.
+     · Las casillas de fecha traen su GUÍA impresa («AAAA», «MM», «DD») en
+       `w:color 808080` y con `w:w 102`. `setTc` escribe dentro de ese run, así
+       que el dato salía gris —indistinguible de una casilla sin diligenciar— y
+       ensanchado un 2 %, lo justo para que «2026» rozara el ancho de su casilla:
+       si se pasa, Word lo envuelve, y como la fila es `hRule="exact"` la segunda
+       línea SE RECORTA SIN AVISAR y en el papel queda «202».
+
+   Por eso el color se pone en AUTO (no en un negro escrito a mano: así sigue
+   siendo el del documento) y se retiran el `w:w` y el `w:spacing`, que están
+   puestos para que quepa la etiqueta impresa, no el dato. */
+function _f30RunDato(r, medios) {
+  var W = FPJ_W, doc = r.ownerDocument;
   var rPr = r.getElementsByTagNameNS(W, 'rPr')[0];
-  if (rPr) ['spacing', 'w'].forEach(function (k) {
+  if (!rPr) { rPr = doc.createElementNS(W, 'w:rPr'); r.insertBefore(rPr, r.firstChild); }
+  // El condensado/expandido de la etiqueta no vale para el dato.
+  ['spacing', 'w'].forEach(function (k) {
     var el = rPr.getElementsByTagNameNS(W, k)[0];
     if (el && el.parentNode === rPr) rPr.removeChild(el);
   });
-  if (medios) _docSz(r, medios);
-  return r;
+  var f = rPr.getElementsByTagNameNS(W, 'rFonts')[0];
+  if (!f) { f = doc.createElementNS(W, 'w:rFonts'); _fpjRprPon(rPr, f); }
+  ['ascii', 'hAnsi', 'eastAsia', 'cs'].forEach(function (a) { f.setAttributeNS(W, 'w:' + a, F30_FUENTE); });
+  var c = rPr.getElementsByTagNameNS(W, 'color')[0];
+  if (!c) { c = doc.createElementNS(W, 'w:color'); _fpjRprPon(rPr, c); }
+  c.setAttributeNS(W, 'w:val', 'auto');
+  // El tema del color de la guía viaja aparte y mandaría sobre el `val`.
+  ['themeColor', 'themeShade', 'themeTint'].forEach(function (a) {
+    if (c.hasAttributeNS(W, a)) c.removeAttributeNS(W, a);
+  });
+  _docSz(r, medios);
 }
-/* Escribe una celda declarando SIEMPRE el cuerpo de letra. Sin dato NO se toca:
-   la celda queda byte a byte como en la plantilla. */
-function _f30Celda(tcs, i, txt, medios) {
+/* Escribe una celda declarando SIEMPRE fuente, cuerpo y color. Sin dato NO se
+   toca: la celda queda byte a byte como en la plantilla.
+   `anchoTw` (opcional) es el ancho útil de la casilla: con él se comprueba que
+   el dato quepa en una línea y, si no, se reduce el cuerpo — porque en las filas
+   `hRule="exact"` de este formato lo que se envuelve se pierde. */
+function _f30Celda(tcs, i, txt, medios, anchoTw) {
   if (!(i >= 0) || !tcs[i] || !txt) return;
   setTc(tcs, i, txt);
-  _docSzTexto(tcs[i], medios || F30_SZ.dato);
+  var W = FPJ_W, rs = tcs[i].getElementsByTagNameNS(W, 'r');
+  for (var j = 0; j < rs.length; j++)
+    if (_getElText(rs[j], W)) _f30RunDato(rs[j], medios || F30_SZ.dato);
+  if (anchoTw) _docCabeEnUnaLinea(tcs[i], anchoTw, 12);
 }
 /* AÑADE el valor detrás de la etiqueta que la celda ya trae, sin borrarla.
    ⚠️ Lo necesita la casilla «Municipio», que en este formato NO tiene celda de
@@ -11494,8 +11544,11 @@ function _f30Elementos(tcs, lineas, anchoDesc) {
   // 2 · Los siete renglones del formato.
   for (var i = 0; i < n; i++) {
     var b = F30_C.E0 + i * cols, r = renglones[i];
+    /* La columna «No.» se limpia SIEMPRE (el formato la trae numerada 1..7 y las
+       filas que sobran no pueden quedar con un ordinal suelto), así que la
+       escritura no puede pasar por `_f30Celda`, que sin dato no toca nada. */
     setTc(tcs, b, r ? r.no : '');
-    if (r) _docSzTexto(tcs[b], F30_SZ.elemento);
+    if (r) _f30Celda(tcs, b, r.no, F30_SZ.elemento);
     _f30Celda(tcs, b + 1, r ? r.cant : '', F30_SZ.elemento);
     _f30Celda(tcs, b + 2, r ? r.desc : '', F30_SZ.elemento);
     _f30Celda(tcs, b + 3, r ? r.obs : '', F30_SZ.elemento);
@@ -11509,10 +11562,7 @@ function _f30Elementos(tcs, lineas, anchoDesc) {
     ultima = tr;
     var cs = Array.prototype.slice.call(tr.getElementsByTagNameNS(W, 'tc'));
     var v = [renglones[i].no, renglones[i].cant, renglones[i].desc, renglones[i].obs];
-    for (var j = 0; j < v.length && j < cs.length; j++) {
-      setTc(cs, j, v[j]);
-      if (v[j]) _docSzTexto(cs[j], F30_SZ.elemento);
-    }
+    for (var j = 0; j < v.length && j < cs.length; j++) _f30Celda(cs, j, v[j], F30_SZ.elemento);
     extra++;
   }
   return extra;
@@ -11552,10 +11602,13 @@ async function buildActaEntregaBlob(ctx, papel) {
     /* ⚠️ Las guías «AAAA», «MM» y «DD» son texto impreso dentro de la casilla:
        al escribir el dato desaparecen, que es como queda al diligenciarlo a
        mano. Sin fecha se dejan intactas. */
-    _f30Celda(tcs, F30_C.ANO, m.ano, F30_SZ.cabecera);
-    _f30Celda(tcs, F30_C.MES, m.mes, F30_SZ.cabecera);
-    _f30Celda(tcs, F30_C.DIA, m.dia, F30_SZ.cabecera);
-    [F30_C.ANO, F30_C.MES, F30_C.DIA].forEach(function (x) { _docCentrarCasilla(tcs[x]); });
+    /* ⚠️ Con su ancho útil: el año es el dato más largo de la fila y su casilla
+       la más justa, y esta fila es `hRule="exact"` — lo que Word envuelva se
+       pierde en el papel («202» en vez de «2026», reportado en campo). */
+    [[F30_C.ANO, m.ano], [F30_C.MES, m.mes], [F30_C.DIA, m.dia]].forEach(function (x) {
+      _f30Celda(tcs, x[0], x[1], F30_SZ.cabecera, _docAnchoUtil(tcs[x[0]], 0, 60));
+      _docCentrarCasilla(tcs[x[0]]);
+    });
     _f30Anadir(tcs[F30_C.MUNI], m.muni, F30_SZ.cabecera,
                _docAnchoUtil(tcs[F30_C.MUNI], 0, 120));
     for (var i = 0; i < F30_C.HORA.length; i++) {

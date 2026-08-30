@@ -4135,3 +4135,43 @@ sheet solo aloja verbos.
   ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
   ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08). Anti-caché `?v=88` / `cache-v88`, `_BUILD=88`.
+
+### El NUNC en Times New Roman y la fecha gris y recortada (2026-08-30, mismo día)
+Reportado en campo con el pantallazo del acta impresa: el número de 16 dígitos «aparece así» y la
+fecha «incompleta y en ese color» — el año salía **«202»** en vez de «2026», en **gris claro**.
+Medido en Word sobre el documento generado, los dos defectos resultaron ser **la misma familia de
+fallo por dos vías distintas, y ninguno era un valor mal escrito: era la AUSENCIA de la
+declaración** — la misma lección que ya dejaron el acta FPJ-6 («El acta, en un solo cuerpo de
+letra») y el pie del oficio, aplicada ahora a la **fuente** y al **color**.
+`verify_entrega.mjs` sube a **75 checks** (antes 69).
+
+- ⚠️ **Las casillas del NUNC, las de la hora y las de valor de la cabecera vienen VACÍAS en la
+  plantilla — sin `w:p` siquiera.** `setTc` crea entonces el run desde cero y, sin `w:rFonts`,
+  hereda el de `docDefaults`, que en este formato es **Times New Roman**. Medido en Word:
+  **20 celdas** salían con otra letra que el formato que las rodea — los 16 dígitos del NUNC, los 4
+  de la hora y el departamento. `_docSzTexto` les ponía el tamaño y nada más, así que el defecto era
+  invisible para las comprobaciones que solo miraban `w:sz`.
+- ⚠️ **Las casillas de fecha traen su GUÍA impresa** («AAAA», «MM», «DD») en `w:color 808080` con
+  `w:themeColor`, y `setTc` escribe DENTRO de ese run: el dato salía gris, indistinguible de una
+  casilla sin diligenciar. Y con el `w:w val="102"` de la misma guía el año se ensanchaba un 2 %,
+  lo justo para rozar el ancho de su casilla; **como la fila es `hRule="exact"`, lo que Word envuelve
+  se pierde** y en el papel quedaba «202». Es la trampa del recorte silencioso, otra vez.
+- **`_f30RunDato` es el punto único**: declara `rFonts` (Arial), `sz` y `color` **auto** —no un negro
+  escrito a mano, así sigue siendo el del documento— y **retira el `w:w` y el `w:spacing`** de la
+  guía, que están puestos para que quepa la etiqueta impresa, no el dato. También quita el
+  `themeColor`/`themeShade`, que mandarían sobre el `val` declarado. Lo aplica `_f30Celda`, por el
+  que pasa TODA escritura de celda del acta, así que una casilla nueva queda cubierta por
+  construcción — mismo criterio que la pasada final del FPJ-5.
+- **Las tres casillas de fecha se escriben además con su ancho útil**, así `_docCabeEnUnaLinea`
+  reduce el cuerpo antes de dejar que Word envuelva. Medido: «2026» ocupa 311 twips de los 507
+  útiles, con holgura.
+- ⚠️ **Comprobado que NO afecta a los otros formatos**: el acta de incautación imprime sus 25
+  casillas en Arial porque su plantilla sí trae runs con `rFonts` ahí. Es un defecto propio de esta
+  plantilla, no una regresión general.
+- **Los checks nuevos son estructurales**, no de valor: cero runs escritos por la app sin `w:rFonts`,
+  cero con un `w:color` distinto de `auto` y cero con `themeColor`. Mirar «qué fuentes hay» no habría
+  detectado nada, porque el defecto era que no había ninguna declarada.
+- **Medido en Word real tras el arreglo**: las 20 casillas en **Arial**, la fecha en negro y «2026»
+  completo; 1 página y el formato intacto. El único Times New Roman que queda es el «/» del título,
+  que es del propio formato y no lo escribe la app.
+- Anti-caché `?v=89` / `cache-v89`, `_BUILD=89`.

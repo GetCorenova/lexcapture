@@ -438,6 +438,45 @@ log(tam.every(t => t === '20' || t === '22'),
   'Y todos al cuerpo del formato que los rodea: 10 pt en la cabecera, 11 pt en el resto',
   tam.map(t => t / 2 + ' pt').join(' · '));
 
+/* ⚠️ REPORTADO EN CAMPO sobre el primer build de este formato: el NUNC, la hora
+   y el departamento salían en TIMES NEW ROMAN. La causa no era un valor mal
+   escrito: esas casillas vienen VACÍAS en la plantilla —sin `w:p` siquiera—, así
+   que `setTc` crea el run desde cero y sin `rFonts` hereda el de `docDefaults`,
+   que en este formato es Times New Roman. Mirar «qué fuentes hay» no lo habría
+   detectado, porque el defecto ERA la ausencia de la declaración. */
+const sinFuente = nuevos.filter(r => !/<w:rFonts /.test(r));
+log(sinFuente.length === 0,
+  '⚠️ Cero runs escritos por la app sin `w:rFonts`: las casillas vacías del formato heredaban TIMES NEW ROMAN',
+  nuevos.length + ' runs nuevos · ' + sinFuente.length + ' sin fuente');
+log(nuevos.every(r => /w:ascii="Arial"/.test(r)),
+  'Y todos en Arial, la fuente del formato');
+/* ⚠️ Y el otro extremo del mismo defecto: las casillas de fecha traen su guía
+   («AAAA», «MM», «DD») en `w:color 808080`, así que el dato salía GRIS CLARO —
+   indistinguible de una casilla sin diligenciar. */
+const grises = nuevos.filter(r => /<w:color w:val="(?!auto)/.test(r));
+log(grises.length === 0,
+  '⚠️ Ni uno hereda el gris de la guía del formato: el dato va en color auto', grises.length + ' grises');
+log(!/<w:color[^>]*themeColor/.test(nuevos.join('')),
+  'Y sin el `themeColor` de la guía, que mandaría sobre el color declarado');
+/* ⚠️ El año es el dato más largo de la fila y su casilla la más justa. Con el
+   `w:w 102` de la guía «AAAA» rozaba el ancho, y como la fila es
+   `hRule="exact"` lo que Word envuelve SE PIERDE: en el papel salía «202». */
+log(tc[C.ANO] === '2026' && tc[C.MES] === '05' && tc[C.DIA] === '13',
+  '⚠️ El año sale COMPLETO: sin el ensanchado de la guía cabe en su casilla',
+  [tc[C.ANO], tc[C.MES], tc[C.DIA]].join('-'));
+const cabeAno = await page.evaluate(async id => {
+  const out = await buildActaEntregaBlob({ caso: DB.getCase(id) }, 'CARTA');
+  const doc = new DOMParser().parseFromString(
+    new TextDecoder().decode(out.files['word/document.xml']), 'application/xml');
+  const tcs = [...doc.getElementsByTagNameNS(FPJ_W, 'tc')];
+  const c = tcs[F30_C.ANO];
+  const sz = +(/<w:sz w:val="(\d+)"/.exec(new XMLSerializer().serializeToString(c)) || [0, 20])[1];
+  return { ancho: lcAnchoTexto('2026', sz / 2), util: _docAnchoUtil(c, 0, 60) };
+}, idCaso);
+log(cabeAno.ancho <= cabeAno.util,
+  'Medido: los cuatro dígitos caben en el ancho útil de la casilla, sin envolverse',
+  cabeAno.ancho + ' ≤ ' + cabeAno.util + ' twips');
+
 /* ══ I · EL RESUMEN DE LA CAPTURA ══════════════════════════════════════════ */
 console.log('\n── I · El resumen: los seis bloques que se pidieron ──');
 
