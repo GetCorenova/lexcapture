@@ -2156,7 +2156,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
           <p class="aj-nota" id="aj-con-auto"></p>
 
           <div class="fg" style="margin-top:22px"><label class="fl fl-p">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
-          <p class="aj-nota">Marcadores: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
+          <p class="aj-nota">Se reemplazan automáticamente en el oficio: {{TERMINO}}, {{ORD_NUMERO}}, {{REQ_NOMBRE}}, {{RADICADO}}, {{DESPACHO}}.</p>
         </div>
       </div>
 
@@ -14728,15 +14728,11 @@ function loadAjustesFields() {
 }
 
 /* Quién va a firmar el «Conocieron el caso» del dossier. Ya no es un formulario
-   (obs. 12): son el titular del perfil y su compañero de patrulla. Se enseña
-   resuelto —un dato que se hereda en silencio es indistinguible de un dato que
-   falta— y se dice dónde se cambia. */
+   (obs. 12): son el titular del perfil y su compañero de patrulla. Se resuelve
+   desde Perfil sin mostrar la lista en Ajustes. */
 function renderAjConocieron(cfg){
   var el=document.getElementById('aj-con-auto'); if(!el) return;
-  var lista=getConocieronList(cfg||DB.getConfig());
-  el.textContent=lista.length
-    ? 'Conocieron el caso: '+lista.join(' / ')+' — salen de Perfil, por orden de rango.'
-    : 'Conocieron el caso: se toman de Perfil (titular y compañero de patrulla).';
+  el.textContent='Se toman de Perfil (titular y compañero de patrulla).';
 }
 
 /* Completa el tipo de dependencia AL SALIR DEL CAMPO, no en silencio al
