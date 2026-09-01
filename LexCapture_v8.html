@@ -678,6 +678,19 @@ body.guest{padding-top:38px}
 /* ═══ FORMULARIOS ═══ */
 .fg{margin-bottom:14px}
 .fl{display:block;font-size:13px;line-height:18px;font-weight:550;color:var(--text-2);margin-bottom:6px}
+/* ═══ JERARQUÍA ENTIDAD → ATRIBUTO (Mejora 7, 3.er pase) ═══
+   El usuario marcó la pantalla con dos colores: los campos de nivel superior y
+   los atributos que cuelgan de cada uno. Esto lo dibuja, y nada más — la sangría
+   y la guía vertical SON la relación; no hacen falta títulos, cajas ni un solo
+   renglón de texto que la explique.
+   ⚠️ El padre solo sube de peso y de color: pasa a --text (lleno) frente al
+   --text-2 del atributo. Una diferencia de jerarquía, no un adorno. */
+.fl-p{font-weight:650;color:var(--text)}
+.lc-hijos{
+  margin:0 0 4px;padding-left:14px;
+  border-left:2px solid var(--border);
+}
+.lc-hijos>.fg:last-child,.lc-hijos>.fr:last-child>.fg{margin-bottom:10px}
 .fi,.fs,.ft{
   width:100%;padding:12px 14px;
   background:var(--field);
@@ -2048,62 +2061,85 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
                es necesario y lo que hace es llenar de información innecesaria».
                Lo que separa un nivel del siguiente es la etiqueta de su primer
                campo y el aire, no un rótulo más. -->
-          <div class="fr">
-            <div class="fg"><label class="fl">Sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece"></div>
-            <div class="fg"><label class="fl">Institución</label><input class="fi" id="aj-oj-inst" placeholder="Tu institución"></div>
+          <!-- ⚠️ MEJORA 7, 3.er pase — ENTIDAD → ATRIBUTO. El usuario marcó la
+               pantalla con dos colores: los campos de nivel superior y los
+               atributos que cuelgan de cada uno. La estructura de abajo es
+               exactamente esa lectura, y se dibuja con `.fl-p` (la etiqueta del
+               padre) y `.lc-hijos` (sangría + guía vertical). Sin títulos, sin
+               cajas y sin una línea de texto que la explique: la relación se ve.
+                 Sector
+                 Institución → sitio web
+                 Unidad
+                 Distrito   → indicativo · comandante · rango del saludo
+                 Estación   → indicativo · comandante · dirección · barrio ·
+                              municipio · teléfono · correo
+                 Asunto del oficio
+               ⚠️ Los dos campos que el usuario NO llegó a marcar —«Dirección» y
+               «Rango del saludo del dossier»— se colocan como atributos por su
+               posición y por lo que son: la dirección es la de la estación, y el
+               rango es el del comandante del distrito con el que abre el saludo. -->
+          <div class="fg"><label class="fl fl-p">Sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece"></div>
+
+          <div class="fg"><label class="fl fl-p">Institución</label><input class="fi" id="aj-oj-inst" placeholder="Tu institución"></div>
+          <div class="lc-hijos">
+            <!-- El sitio web es de la institución: así lo señala la flecha de la
+                 maqueta. Antes cerraba el bloque, a cuatro campos de distancia
+                 del dato al que pertenece. -->
+            <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-web" placeholder="Sitio web"></div>
           </div>
-          <!-- El sitio web va PEGADO a la institución: es suyo, y así lo señala
-               la flecha de la maqueta. Antes cerraba el bloque, a cuatro campos
-               de distancia del dato al que pertenece. -->
-          <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-web" placeholder="Sitio web"></div>
-          <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento o dirección"></div>
+
+          <div class="fg"><label class="fl fl-p">Unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento o dirección"></div>
 
           <!-- ── DISTRITO ─────────────────────────────────────────────────────
-               ⚠️ Es un campo PROPIO desde este pase. Hasta ahora `ojDependencia`
-               era un espejo del nombre de la estación, así que la línea 4 del
-               membrete del oficio imprimía la estación; el usuario la dibujó
-               como el distrito y aquí se separan los dos niveles.
+               ⚠️ Es un campo PROPIO desde el 2.º pase. Hasta entonces
+               `ojDependencia` era un espejo del nombre de la estación, así que la
+               línea 4 del membrete del oficio imprimía la estación; el usuario la
+               dibujó como el distrito y aquí están separados.
                ⚠️ Lo ya guardado NO se toca: el campo se abre con el valor que el
                equipo tenga, y el oficio sigue imprimiendo exactamente eso hasta
                que el usuario lo corrija. Nada se inventa por él. -->
-          <div class="fg" style="margin-top:24px"><label class="fl">Distrito de policía, seccional, dirección, grupo, etc.</label><input class="fi" id="aj-oj-dep" placeholder="Distrito tres de policía"></div>
-          <div class="fr">
-            <!-- El indicativo es la ETIQUETA con la que la sección sale en el
-                 dossier; el comandante, su contenido: grado abreviado + nombre
-                 completo, que es como lo pidió la maqueta («T.C - Teniente
-                 Coronel»). ⚠️ El nº del distrito ya NO se pide: se lee del
-                 nombre de arriba (lcNumDistrito). -->
-            <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-dis" placeholder="DIAMANTE 3"></div>
-            <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-diamante3" placeholder="T.C William Quintero"></div>
+          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Distrito de policía, seccional, dirección, grupo, etc.</label><input class="fi" id="aj-oj-dep" placeholder="Distrito tres de policía"></div>
+          <div class="lc-hijos">
+            <div class="fr">
+              <!-- El indicativo es la ETIQUETA con la que la sección sale en el
+                   dossier; el comandante, su contenido: grado abreviado + nombre
+                   completo, que es como lo pidió la maqueta («T.C - Teniente
+                   Coronel»). ⚠️ El nº del distrito ya NO se pide: se lee del
+                   nombre del padre (lcNumDistrito). -->
+              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-dis" placeholder="DIAMANTE 3"></div>
+              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-diamante3" placeholder="T.C William Quintero"></div>
+            </div>
+            <!-- Rango con el que el dossier abre su saludo. Es un dato distinto
+                 del comandante de arriba —el dossier se dirige a quien lo
+                 recibe— y por eso la etiqueta lo dice. -->
+            <div class="fg"><label class="fl">Rango del saludo del dossier</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="Coronel" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
           </div>
-          <!-- Rango con el que el dossier abre su saludo. Es un dato distinto del
-               comandante de arriba —el dossier se dirige a quien lo recibe— y por
-               eso la etiqueta lo dice. -->
-          <div class="fg"><label class="fl">Rango del saludo del dossier</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="Coronel" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
 
           <!-- ── ESTACIÓN ────────────────────────────────────────────────────
                Misma dinámica, y aquí cuelgan la dirección y el contacto: es la
                unidad donde el capturado queda a disposición. -->
-          <div class="fg" style="margin-top:24px"><label class="fl">Estación de policía</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
+          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Estación de policía</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
           <p class="aj-nota">Escribe solo el nombre y la app completa «Estación de Policía …».</p>
-          <div class="fr">
-            <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="VERDE 3"></div>
-            <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="TC Jin Eduardo Moreno"></div>
-          </div>
-          <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="CL 48 # 55 - 50"></div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="La Candelaria"></div>
-            <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
-          </div>
-          <div class="fr">
-            <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="3126543210"></div>
-            <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
+          <div class="lc-hijos">
+            <div class="fr">
+              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="VERDE 3"></div>
+              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="T.C Jin Eduardo Moreno"></div>
+            </div>
+            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="CL 48 # 55 - 50"></div>
+            <div class="fr">
+              <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="La Candelaria"></div>
+              <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
+            </div>
+            <div class="fr">
+              <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="3126543210"></div>
+              <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
+            </div>
           </div>
           <!-- ⚠️ Obs. 12: «Conocieron el caso» no se pide: son el titular del
                perfil y su compañero de patrulla, ya registrados en Perfil. -->
           <p class="aj-nota" id="aj-con-auto"></p>
 
-          <div class="fg" style="margin-top:24px"><label class="fl">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
+          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="aj-nota">Marcadores: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
         </div>
       </div>
@@ -2493,7 +2529,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 95;
+var _BUILD = 96;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.

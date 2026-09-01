@@ -155,6 +155,38 @@ log(orden.lbl['aj-ind-dis'] === 'Indicativo' && orden.lbl['aj-diamante3'] === 'C
 log(orden.st.length === 0,
   '[A8d] ⚠️ Y no queda ningun titulo de seccion: «solo hace ruido»', orden.st.join(' / ') || 'ninguno');
 
+/* ⚠️ ENTIDAD → ATRIBUTO. El usuario marco la pantalla con dos colores: campos de
+   nivel superior y atributos que cuelgan de cada uno. Aqui se mide la RELACION,
+   no la apariencia: de que padre cuelga cada campo, leido del DOM. */
+const arbol = await page.evaluate(() => {
+  const out = [];
+  let padre = null;
+  [...document.querySelectorAll('#aj-body-unidad-sec .fg')].forEach(fg => {
+    const inp = fg.querySelector('input,select'); if (!inp) return;
+    const lbl = fg.querySelector('.fl');
+    const hijo = !!fg.closest('.lc-hijos');
+    if (!hijo) { padre = inp.id; out.push({ id: inp.id, de: null, p: lbl && lbl.classList.contains('fl-p') }); }
+    else out.push({ id: inp.id, de: padre, p: lbl && lbl.classList.contains('fl-p') });
+  });
+  const guia = document.querySelector('#aj-body-unidad-sec .lc-hijos');
+  const gs = guia ? getComputedStyle(guia) : null;
+  return { out, bloques: document.querySelectorAll('#aj-body-unidad-sec .lc-hijos').length,
+           borde: gs ? gs.borderLeftWidth : '', sangria: gs ? gs.paddingLeft : '' };
+});
+const de = id => (arbol.out.find(x => x.id === id) || {}).de;
+const esPadre = id => { const x = arbol.out.find(y => y.id === id); return !!x && x.de === null && x.p; };
+log(['aj-oj-min','aj-oj-inst','aj-oj-uni','aj-oj-dep','aj-estacion','aj-oj-asunto'].every(esPadre),
+  '[A8e] Los seis campos que el usuario marco como PADRE son de nivel superior');
+log(de('aj-web') === 'aj-oj-inst',
+  '[A8f] El sitio web cuelga de la institucion', de('aj-web'));
+log(de('aj-ind-dis') === 'aj-oj-dep' && de('aj-diamante3') === 'aj-oj-dep' && de('aj-rango') === 'aj-oj-dep',
+  '[A8g] Indicativo, comandante y rango del saludo cuelgan del DISTRITO');
+log(['aj-ind-est','aj-verde3','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor'].every(i => de(i) === 'aj-estacion'),
+  '[A8h] Indicativo, comandante, direccion, barrio, municipio, telefono y correo cuelgan de la ESTACION');
+log(arbol.bloques === 3 && arbol.borde !== '0px' && parseFloat(arbol.sangria) > 0,
+  '[A8i] La relacion se DIBUJA con sangria y guia vertical — sin titulos ni una linea de texto',
+  arbol.bloques + ' bloques · borde ' + arbol.borde + ' · sangria ' + arbol.sangria);
+
 sec('A · EL CARET: > cerrado, ⌄ abierto');
 
 /* ⚠️ La rotacion se mide DESPUES de la transicion: getComputedStyle durante los

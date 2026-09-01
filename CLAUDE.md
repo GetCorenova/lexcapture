@@ -4637,3 +4637,46 @@ casillas. `lcNumDistrito(cfg)` lo **deriva** del nombre y el campo desapareció.
 solo campo para cada uno y que el distrito **no** se pise— y `verify_mejora6b` [48]/[49], que
 buscaban un `.st` dentro de «Mi unidad» y ahora miden el componente donde sigue usándose.
 Anti-caché `?v=95` / `cache-v95`, `_BUILD=95`.
+
+### 3.er pase (2026-09-01) — entidad → atributo: la pantalla dibuja la jerarquía
+El usuario devolvió la pantalla marcada con **dos colores**: en verde los campos de nivel superior
+(las entidades) y en naranja los atributos que cuelgan de cada uno, con la instrucción de «agrupar la
+información manteniendo la relación entidad → atributo». `verify_mejora7.mjs` sube a **67 checks**
+(antes 62).
+
+**El árbol, leído de sus colores:**
+
+```
+Sector
+Institución
+  └ Sitio web institucional
+Unidad
+Distrito de policía, seccional, dirección, grupo, etc.
+  ├ Indicativo            → DIAMANTE 3
+  ├ Comandante            → T.C William Quintero
+  └ Rango del saludo del dossier
+Estación de policía
+  ├ Indicativo            → VERDE 3
+  ├ Comandante            → T.C Jin Eduardo Moreno Padilla
+  ├ Dirección
+  ├ Barrio · Municipio (Ciudad)
+  └ Teléfono · Correo electrónico
+Asunto del oficio
+```
+
+- ⚠️ **Dos campos no venían marcados y se colocaron por lo que SON, no por descarte**: «Dirección»
+  (queda entre atributos de la estación y es la suya) y «Rango del saludo del dossier» (es el rango
+  del comandante del distrito con el que abre el encabezado). Queda anotado por si alguno de los dos
+  pertenecía a otro sitio.
+- **La relación se DIBUJA, no se explica**: `.fl-p` da a la etiqueta del padre el peso y el color
+  llenos (`--text` frente al `--text-2` del atributo) y `.lc-hijos` envuelve a sus hijos con sangría
+  y una guía vertical de 2 px en `--border`. **Ni un título, ni una caja, ni un renglón de texto** —
+  es la misma instrucción que retiró los cuatro subtítulos en el 2.º pase.
+- ⚠️ **Cero cambios de modelo, de claves y de documentos.** Este pase es solo de composición: los
+  mismos ids, el mismo `loadAjustesFields`, el mismo `saveAjustes`. Las 30 suites siguen en verde sin
+  tocar una expectativa.
+- ⚠️ **La regresión mide la RELACIÓN, no la apariencia**: recorre el DOM y responde «de qué padre
+  cuelga cada campo» ([A8e]–[A8i]). Un cambio de color no la haría pasar; mover un campo de padre,
+  sí la haría fallar.
+- Comprobado en los **dos temas**: la guía usa el token `--border`, que ya se redefine en claro.
+  Anti-caché `?v=96` / `cache-v96`, `_BUILD=96`.
