@@ -4680,3 +4680,135 @@ Asunto del oficio
   sí la haría fallar.
 - Comprobado en los **dos temas**: la guía usa el token `--border`, que ya se redefine en claro.
   Anti-caché `?v=96` / `cache-v96`, `_BUILD=96`.
+
+## Auditoría jerárquica de toda la aplicación (2026-09-01)
+Encargo de cuatro puntos —jerarquía padre/hijo en las etiquetas, depuración de los textos de
+orientación, caret `>` / `⌄` en los desplegables y acordeones solo donde hagan falta— con una regla
+que gobierna todo lo demás: *«esta reorganización debe mejorar la estructura y comprensión de la
+aplicación sin alterar su funcionalidad ni la información que genera»*. La auditoría se **midió sobre
+la app real** en un teléfono (384×800, touch) recorriendo las 17 pantallas y formularios, no sobre
+esta documentación. Verificado con `verify_jerarquia.mjs` (**66 checks**, nuevo).
+
+### Lo que encontró la medición
+| Hallazgo | Cifra |
+|---|---|
+| Pantallas y formularios con jerarquía entidad→atributo | **1 de 16** (solo Ajustes) |
+| Padres (`.fl-p`) fuera de Ajustes | **0** |
+| Campos del modal de persona · scroll | 27 campos · **3,1 pantallas**, sin un solo panel |
+| Textos de ayuda por encima del umbral de 110 caracteres | **8** (el mayor, 213) |
+| Carets distintos para el mismo gesto | **2** (`>`/`⌄` en Ajustes y Perfil · `+`/`–` en OJ y actas) |
+
+⚠️ **El defecto de fondo: el patrón jerárquico existía, estaba probado y solo lo usaba una pantalla.**
+La Mejora 7 (3.er pase) estrenó `.fl-p` + `.lc-hijos` como **HTML escrito a mano** en Ajustes; el
+resto de la aplicación se pinta con JS y **no tenía cómo expresar la relación**. Por eso la primera
+corrección no es de interfaz sino de primitivas: `lcPadre`, `lcAtribs` y `lcEntidad` emiten
+exactamente el mismo marcado que Ajustes ya usaba, y `ojwP` es su alias para el módulo de orden
+judicial.
+- ⚠️ **`lcAtribs` se llama así y NO `lcHijos`, que era el nombre natural.** Ese ya existe más abajo
+  como utilidad del **motor OOXML** —los hijos de un nodo XML con cierto nombre— y lo usan
+  `lcTablaHtml`, `lcParHtml` y la resolución de encabezados. Al declararse después, **ganaba la del
+  motor**: la primitiva de la jerarquía habría devuelto `[]` en silencio. Se detectó porque la app
+  reventó al pintar Perfil, no leyendo el código. Es la lección ya pagada con el escudo del acta de
+  incautación: **reutilizar un nombre sin mirar qué contiene es lo mismo que inventárselo.** La clase
+  CSS sí sigue siendo `.lc-hijos`, que es la que ya usa el HTML de Ajustes.
+
+### Punto 1 · Entidad → atributo, en las quince pantallas que faltaban
+| Pantalla | Padre | Atributos que ahora cuelgan de él |
+|---|---|---|
+| Flagrancia · Lugar | **Municipio** (decide la jurisdicción) | dirección, barrio, características, localidad, zona, vereda |
+| Flagrancia · Servidor | **Nombres y apellidos** | grado, identificación, entidad, cargo, teléfono, correo |
+| Persona (modal) | **Nombre completo** | sus 4 partes y el alias |
+| Despacho | **Nombre del despacho** | dirección, barrio, municipio, departamento, teléfono, correo |
+| Perfil · Mi jurisdicción | **Patrulla** / **Lugar por defecto** | CAI · zona, localidad, vereda |
+| OJ · proceso | **No. de la orden** / **SPOA** | fecha de expedición · nº interno y las dos fechas |
+| OJ · proceso | **Nombre del despacho** | municipio, departamento |
+| OJ · materialización | **Lugar de la captura** | barrio, municipio, departamento, tipo de lugar |
+| OJ · revisión | **Unidad de custodia** / **firmante** / **destinatario** | su dirección y su contacto |
+| Acta FPJ-6 | **Persona a quien se comunica** | parentesco, documento, teléfono, hora |
+| Rótulo FPJ-7 | **Dirección del hallazgo** | ubicación exacta |
+
+- ⚠️ **EL MISMO DATO SE PEDÍA CON DOS NOMBRES SEGÚN LA PANTALLA, y es el hallazgo más grave.** El
+  membrete se pide en Ajustes por su nombre —Sector · Institución · Unidad · Distrito de policía…— y
+  en el paso de revisión del wizard se pedía **por su número de renglón** («Línea 1 — ministerio o
+  sector», «Línea 4 — estación o dependencia»), escribiendo en las **mismas claves**
+  (`ojMinisterio`, `ojInstitucion`, `ojUnidad`, `ojDependencia`). Quien configuró Ajustes no
+  reconocía sus propios campos al llegar al oficio. Peor: la línea 4 seguía diciendo «estación o
+  dependencia» cuando el 2.º pase de la Mejora 7 **separó el distrito de la estación** precisamente
+  porque el membrete imprime el distrito — las dos pantallas decían cosas contrarias del mismo campo.
+- ⚠️ **«Nombres padres» estaba en el nivel equivocado**: se pedía bajo «Contacto», entre el teléfono
+  y el correo. La filiación no es un canal de contacto; sube a «Datos personales».
+- **Vocabulario normalizado** donde había tres etiquetas para un dato: «Ciudad»→**Municipio**,
+  «Correo»→**Correo electrónico**, «Abonado telefónico»/«Celular»→**Teléfono**. Y la capitalización
+  de los subtítulos propios («Datos del Caso»→«Datos del caso»).
+  ⚠️ **NO se tocaron las etiquetas del numeral 2 del oficio** —«Delito(s) Imputado(s)», «Marco
+  Procesal», «Motivo de la Captura», «Fecha Decisión»—: su capitalización es la del formato oficial y
+  el formulario es su preimagen deliberada (Mejora 2). Cambiarlas rompería esa correspondencia.
+
+### Punto 2 · Los textos: once fuera, y el criterio de por qué
+Se retiraron los que **describían un automatismo**, **repetían el título de encima** o **señalaban un
+paso que está a la vista**. Los tres peores:
+- La nota del paso 2 de OJ (**143 caracteres**) avisaba de que la constancia de verificación «no hay
+  que escribirla otra vez» — sobre un campo retirado un mes antes. **Nadie echa de menos un campo que
+  nunca ha visto.** La constancia se sigue derivando y se sigue imprimiendo (hay check).
+- El NUNC se explicaba **dos veces**, con textos distintos: 213 caracteres en el registro del
+  despacho y 144 en el paso 1 del wizard.
+- «Sin elementos registrados… **continúa al siguiente paso**», con el botón *Siguiente* a un dedo.
+- ⚠️ **Lo que NO se toca**: fundamento legal (art. 303.1 C.P.P.), advertencias (el archivo sin
+  cifrar, la orden vencida) y **vistas previas de lo que va impreso**, que no son explicaciones.
+- ⚠️ **Y un texto que se repuso tras quitarlo de más**: que los 4 últimos dígitos del NUNC son el año
+  y se actualizan solos. Sin él, quien vea el año pasado lo corrige a mano cada enero sin saber que
+  la app ya lo hizo — es «lo estrictamente necesario para evitar un error», y cabe en un renglón. Lo
+  atrapó `verify_nunc_ano` [34].
+- **La regla de 110 caracteres deja de vigilarse solo en Ajustes**: `verify_jerarquia` la mide en las
+  **17 pantallas**, sobre la app ya pintada.
+
+### Punto 3 · Un solo caret en toda la aplicación
+`.oj-mas > summary::before` marcaba con **`+` / `–`** mientras Ajustes y Perfil marcaban el mismo
+gesto con el chevron rotatorio. Ahora es el mismo, dibujado con `border` porque `::before` no admite
+marcado, con el mismo trazo y el mismo giro de 90°. ⚠️ **Es CSS y nada más**: no se tocó ni un
+`<details>` ni una línea de JS, y las 23 apariciones de `.oj-mas` —módulo OJ, actas, cadena de
+custodia— heredan el caret sin que su código se entere.
+
+### Punto 4 · Acordeones: el modal de persona, y solo él
+Era el formulario más largo de la app después de la revisión del oficio: **27 campos y 3,1 pantallas
+de scroll sin un solo panel**. Sus cuatro grupos —que ya existían como `.st` planos— pasan a paneles
+con resumen.
+- ⚠️ **Se pliegan AL EDITAR, no al crear**, y esa es la decisión que separa un acordeón que ayuda de
+  uno que estorba. Al **agregar** una persona hay que diligenciar los tres bloques —el FPJ-5 los
+  imprime en los apartados 4, 5 y 6—, así que plegarlos escondería trabajo obligatorio y costaría dos
+  toques. Al **editar** se viene a corregir una cosa, y ahí colapsar lo ya completo es justo lo que
+  pide el punto 4. Un panel **vacío nace abierto**: lo que falta siempre se ve. La regla la fijó la
+  Mejora 5 (obs. 6) — se pliega lo excepcional o lo ya resuelto, nunca lo corriente que está por hacer.
+- ⚠️ **PLEGAR NO ES BORRAR**: `lcAccHtml` oculta con `display`, así que los campos siguen en el DOM y
+  `savePersonModal` los encuentra cerrados. Hay un check que cierra los tres paneles **antes** de
+  guardar y comprueba que los cinco campos llegan al modelo.
+- ⚠️ **Y no se sembraron acordeones por todas partes**: Capturas, Personas, Despachos, Estadísticas y
+  el expediente siguen con **cero**. Hay un check que lo mide.
+
+### Verificación
+- ⚠️ **La comprobación que protege este trabajo es [B1]**: se genera un FPJ-5 **antes** de tocar nada
+  y se compara **carácter a carácter** con el de después. Salen **7 170 caracteres idénticos**.
+- Y [B2]–[B9] diligencian el mismo caso **por los formularios reorganizados** —que es lo que de
+  verdad prueba que anidar un campo no lo desconectó de su recolector—: el paso «Lugar» (8 campos),
+  «Servidor» (7), la custodia de OJ (7), «Mi jurisdicción» (5 claves) y el despacho (6 atributos)
+  guardan exactamente lo mismo que antes.
+- La suite **mide la RELACIÓN en el DOM**, no la apariencia: responde «de qué padre cuelga cada
+  campo». Un cambio de color no la haría pasar; mover un campo de padre sí la haría fallar.
+  ⚠️ En el paso de revisión de OJ se mide **por id y no por etiqueta**: ese paso tiene dos campos
+  «Dirección» y dos «Municipio» —del destinatario y de la custodia—, que es exactamente la ambigüedad
+  que la jerarquía viene a resolver.
+- Comprobado en los **dos temas**.
+- ⚠️ **Un check adaptado, sin bajar la cuenta**: `verify_mejora3` [12] exigía la nota de 143
+  caracteres del paso 2 de OJ. Ahora mide lo que de verdad protegía —que el paso no gaste un párrafo
+  en explicar un campo retirado— y la constancia impresa la sigue verificando su check [13].
+- Regresiones en verde (**32 suites**): **jerarquía 66** · mejora7 67 · mejora6b 67 · mejora6 32 ·
+  mejora5 78 · mejora3 51 · mejora2 38 · mejora1 157 · OJ 187 · fpj6 140 · custodia 111 ·
+  incautación 141 · entrega 111 · export 66 · firma 62 · editable 28 · tipografía OJ 42 ·
+  fpj5 tipografía 48 · envío 39 · almacén 12 · expediente 13 · menú+expediente 16 · personas 25 ·
+  invitado 34 · simulador 41 · orden 33 · grados 31 · dossier histórico 29 · despachos 53 ·
+  jurisdicción 67 · vía CR 41 · NUNC año 39 · tema 39 · estadísticas 58 · ola1 38 · ola2 34 ·
+  ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Dos fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD**:
+  `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08) y `verify_mejora7`
+  [B23], que es **intermitente** — falla 2 de cada 5 corridas también sin ninguno de estos cambios.
+  Anti-caché `?v=97` / `cache-v97`, `_BUILD=97`.

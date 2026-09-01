@@ -184,7 +184,15 @@ const p2 = await page.evaluate(() => {
   const ver = ojVerificacion(wc);
   return {
     presentes: ids.filter(i => !!document.getElementById(i)),
-    nota: !!panel.querySelector('.oj-auto'),
+    /* ⚠️ AUDITORIA 2026-09-01 (punto 2) — este check exigia una nota .oj-auto de
+       143 caracteres al pie del paso, avisando de que la constancia de
+       verificacion «no hay que escribirla otra vez». La nota se retiro: nadie
+       echa de menos un campo que nunca ha visto, y un mes despues de que Mejora
+       3 lo quitara lo unico que quedaba era una advertencia sobre algo que no
+       esta. Lo que el check protege de verdad —que la constancia se derive y
+       SIGA IMPRIMIENDOSE— no dependia de ese parrafo, asi que ahora se mide
+       donde tiene efecto: en el oficio. */
+    parrafos: panel.querySelectorAll('.oj-auto').length,
     ver, dil: { f: wc.oj.diligencia.fecha, h: wc.oj.diligencia.hora,
       fun: [wc.oj.diligencia.funcionarios[0].grado, wc.oj.diligencia.funcionarios[0].nombre].join(' ') }
   };
@@ -195,7 +203,7 @@ log(p2.presentes.length === 0,
 log(p2.ver.fecha === p2.dil.f && p2.ver.hora === p2.dil.h && p2.ver.funcionario === p2.dil.fun,
   'Se derivan de la diligencia: quien verifica la orden es quien hace la captura',
   p2.ver.funcionario + ' · ' + p2.ver.fecha + ' ' + p2.ver.hora);
-log(p2.nota, 'Y el formulario lo dice en un renglón, para que nadie busque el dato');
+log(p2.parrafos === 0, 'Y el paso no gasta un párrafo en explicar un campo retirado', p2.parrafos + ' notas');
 
 const docBase = await texto(await page.evaluate(() => window.__caso));
 log(/Verificada la informaci[oó]n en el sistema de informaci[oó]n institucional/.test(docBase) &&
