@@ -4383,3 +4383,51 @@ checks**, nuevo) y con las 30 suites previas.
   ola2 34 · ola3 33 · ola4 22 · multipersona.
   ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08). Anti-caché `?v=92` / `cache-v92`, `_BUILD=92`.
+
+## Estadísticas — reingeniería completa (2026-08-31)
+Encargo explícito: dejar de ser «una lista de números dentro de tarjetas» y pasar a ser un
+**centro de análisis operativo**. Las cinco `.stat-card` (Total/Este mes/URI/CESPA + una tarjeta
+suelta de Orden Judicial) y los dos bloques «Top conductas»/«Top barrios» —cuyas barras salían
+siempre al 100 % porque con pocos registros todos los valores empatan en 1— se sustituyeron por
+tres niveles: **KPI + distribución** (una sola unidad analítica) → **rankings** (conductas,
+sectores) → **actividad en el tiempo**. Verificado con `verify_estadisticas.mjs` (**58 checks**,
+nuevo) y `verify_ds.mjs` (9/10, el fallo es el preexistente de siempre).
+
+- ⚠️ **El hallazgo que gobierna todo el rediseño**: una barra es una promesa de comparación, y con
+  pocos datos casi todo empata. `lcStatsRankingHtml` solo pinta la barra proporcional cuando hay
+  **variación real** entre las filas visibles (`max>min`); empatadas, la fila muestra su cifra y su
+  porcentaje **sin ninguna barra** — nunca cinco barras al 100 % fingiendo un ranking que no existe.
+  Medido con datos reales: conductas con variación real (Hurto 4, el resto 1-2) sí pinta barra;
+  9 barrios todos en 1 no pinta ninguna. Es el defecto más grave de la versión anterior y el que más
+  se pidió corregir.
+- **Multi-conducta, corregido de paso**: el ranking anterior solo miraba `conductas[0]` y
+  subcontaba cualquier caso con más de un delito. `lcStatsFrecuencia` cuenta **todas** las
+  conductas de `c.conductas[]`, no solo la primera — sigue siendo el mismo campo, ninguna conducta
+  nueva se inventa, solo se deja de ignorar la mitad del arreglo.
+- **Color semántico, no decorativo**: la distribución usa `--uriT`/`--cspT`/`--oj-2`, los MISMOS
+  tokens que ya usan las insignias de la lista (`.b-uri`/`.b-csp`/`.b-oj`) — cero paleta nueva. Los
+  rankings no tienen categoría de color propia (un delito no es «azul»), así que toda barra que
+  exista usa `--acc`, el único color de énfasis del sistema — nunca un color distinto por fila.
+- **Selector de período** (`Todo` / `Este mes` / `Últimos 3 meses`, `.tabs`/`.tab` ya existentes en
+  la app — despachos usa el mismo patrón). Filtra qué se cuenta, nunca qué hay guardado
+  (`lcStatsFiltrar`, de solo lectura sobre `c.fechaProc`, con `c.created` de respaldo). Sin
+  coincidencias en el período elegido se explica cuántas hay en el historial completo, en vez de
+  dejar la pantalla en blanco.
+- **Actividad en el tiempo**: histograma real, sin curvas fabricadas. La granularidad se adapta —
+  días dentro de un mes, semanas en el trimestre, meses cuando «Todo» cubre más de uno (y días si,
+  aun en «Todo», los casos caen dentro de un solo mes) — y cada barra responde al tacto actualizando
+  el pie con la fecha y la cifra exactas. Con 7-11 casos de una app nueva no tenía sentido fabricar
+  una serie compleja; el propio dato decide su forma.
+- **Nombres largos sin romper el layout**: cada fila de ranking es un grid de 3 columnas
+  (rango·nombre·cifra) donde el nombre puede ocupar 2-3 líneas sin desplazar la cifra ni desbordar
+  la tarjeta — medido con «Fabricación, tráfico y porte de armas de fuego» en 360-430px.
+- ⚠️ **Cero dependencias nuevas**: el histograma es HTML/CSS puro (columnas flex con altura en `%`),
+  sin canvas, SVG ni librería de gráficas — coherente con que el resto de la app tampoco usa
+  ninguna. Se reutilizan `.card`, `.st` (título de sección con barra de acento, ya usado en el
+  expediente) y `.tabs`/`.tab`: no se estrena un lenguaje visual paralelo.
+- **Ningún otro módulo se tocó**: la reingeniería vive dentro de `renderEstadisticas()` y sus
+  funciones `lcStats*` nuevas, más el bloque CSS `/* ═══ ESTADÍSTICAS ═══ */` — mismo criterio de
+  aislamiento que ya usan los demás módulos. `DB.getCases()` se sigue leyendo tal cual; ningún campo
+  se agrega al modelo del caso.
+- Regresiones en verde: **estadísticas 58** (nuevo) · DS 9/10 (el fallo preexistente de siempre).
+  Anti-caché `?v=93` / `cache-v93`, `_BUILD=93`.

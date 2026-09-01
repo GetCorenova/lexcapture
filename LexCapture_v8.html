@@ -390,17 +390,71 @@ body.guest{padding-top:38px}
 .choice.flag .lic{background:var(--flag-bg);color:var(--flag-2)}
 .choice.oj .lic{background:var(--oj-bg);color:var(--oj-2)}
 
-/* ═══ STATS ═══ */
-.stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.stat-card{
-  background:var(--surface-1);border:1px solid var(--border);
-  border-radius:var(--radius);padding:16px;box-shadow:var(--sh-1);
+/* ═══ ESTADÍSTICAS — centro de análisis operativo (2026-08-31) ═══
+   Reingeniería completa: de «tarjetas con un número cada una» a una lectura
+   por niveles (KPI → distribución → ranking → tiempo). Reglas que gobiernan
+   todo el módulo:
+   · El color es semántico, no decorativo: --uriT/--cspT/--oj-2 son los MISMOS
+     tokens que ya usan las insignias de la lista de capturas (.b-uri/.b-csp/
+     .b-oj) — ninguna paleta nueva. Los rankings (conductas, barrios) no tienen
+     categoría de color propia, así que usan --acc, el único color de énfasis.
+   · Ninguna barra sugiere una comparación que los datos no tienen: el
+     indicador proporcional de un ranking SOLO se pinta cuando hay variación
+     real entre las filas visibles (ver lcStatsRankingHtml). Empatados, la fila
+     muestra su cifra y su porcentaje, nunca una barra al 100 %.
+   · Reutiliza `.card`, `.st` y `.tabs`/`.tab`, que ya existen en el sistema —
+     no se estrena un lenguaje visual paralelo para este módulo. */
+.stat-per{margin-bottom:2px}
+.stat-empty-mini{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:4px;padding:28px 16px;color:var(--text-2);
 }
-.stat-card .lab{font-size:11px;line-height:15px;font-weight:650;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
-.stat-card .val{font-size:28px;line-height:34px;font-weight:700;color:var(--text);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.stat-card .sub{font-size:12px;color:var(--text-3);margin-top:2px}
-.stat-card.flag .val{color:var(--flag-2)}
-.stat-card.oj .val{color:var(--oj-2)}
+.stat-empty-mini b{color:var(--text);font-size:14.5px;font-weight:650}
+.stat-empty-mini span{font-size:13px;color:var(--text-3);max-width:280px}
+
+/* ── KPI principal + distribución: UNA unidad analítica, no dos tarjetas ── */
+.stat-hero{padding:20px 18px 18px;animation:fadeIn var(--d2) var(--ease)}
+.stat-hero-lbl{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
+.stat-hero-num{font-size:46px;line-height:1.04;font-weight:750;letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums;margin-top:6px}
+.stat-hero-ctx{font-size:13.5px;color:var(--text-2);margin-top:4px}
+.stat-dist{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.stat-dist-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--surface-3);margin-bottom:12px}
+.stat-dist-seg{height:100%;flex:0 0 auto;transition:width var(--d3) var(--ease)}
+.stat-dist-seg+.stat-dist-seg{margin-left:1.5px}
+.stat-dist-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.stat-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.stat-dist-lbl{font-size:13.5px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-dist-n{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:18px;text-align:right}
+.stat-dist-pct{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
+
+/* ── Rankings (conductas / sectores): fila = rango + nombre + cifra ── */
+.stat-rank-2col{display:flex;flex-direction:column;gap:16px}
+.stat-rank-card{animation:fadeIn var(--d2) var(--ease)}
+.stat-rank-sub{font-size:12px;color:var(--text-3);margin:-6px 0 10px}
+.stat-rank-row{display:grid;grid-template-columns:20px 1fr auto;column-gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border)}
+.stat-rank-row:last-of-type{border-bottom:none}
+.stat-rank-n{font-family:var(--m);font-size:11.5px;font-weight:700;color:var(--text-3);padding-top:2px;font-variant-numeric:tabular-nums}
+.stat-rank-row.r1 .stat-rank-n{color:var(--acc)}
+.stat-rank-name{font-size:13.5px;line-height:1.4;color:var(--text-2);overflow-wrap:break-word;padding-top:1px}
+.stat-rank-row.r1 .stat-rank-name{font-weight:650;color:var(--text)}
+.stat-rank-count{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
+.stat-rank-count b{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.stat-rank-count span{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.stat-rank-bartrack{grid-column:2/4;height:4px;border-radius:2px;background:var(--surface-3);margin-top:7px;overflow:hidden}
+.stat-rank-barfill{height:100%;border-radius:2px;background:var(--acc)}
+.stat-rank-more{font-size:11.5px;color:var(--text-3);text-align:center;padding-top:10px}
+
+/* ── Actividad en el tiempo: histograma real, sin curvas fabricadas ── */
+.stat-act-card{animation:fadeIn var(--d2) var(--ease)}
+.stat-act-bars{display:flex;align-items:stretch;gap:2px;margin-top:2px}
+.stat-act-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;padding:0}
+.stat-act-track{width:100%;height:64px;display:flex;align-items:flex-end;justify-content:center}
+.stat-act-bar{width:58%;max-width:15px;min-height:3px;border-radius:2px 2px 1px 1px;background:var(--border-strong);transition:background var(--d1) var(--ease)}
+.stat-act-col.has .stat-act-bar{background:var(--acc)}
+.stat-act-col.now .stat-act-bar{background:var(--acc)}
+.stat-act-lbl{font-size:9.5px;line-height:12px;color:var(--text-3);margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat-act-col.now .stat-act-lbl{color:var(--acc);font-weight:700}
+.stat-act-cap{font-size:12.5px;color:var(--text-2);margin-top:10px;min-height:16px}
 
 /* ═══ PLANTILLAS (grid) ═══ */
 .tpl-grid{display:grid;grid-template-columns:1fr;gap:12px}
@@ -1558,7 +1612,9 @@ body.guest{padding-top:38px}
   .topbar{padding:20px 0 16px;min-height:76px;background:color-mix(in srgb,var(--bg) 88%,transparent)}
   .topbar h1{font-size:22px;line-height:28px;letter-spacing:-.015em}
   .topbar .sub{font-size:13px}
-  .stat-grid{grid-template-columns:repeat(4,1fr)}
+  /* Estadísticas: en pantalla ancha los dos rankings caben lado a lado — el
+     móvil (foco real de la app) los apila, que es lo que ya hace `.stack`. */
+  .stat-rank-2col{display:grid;grid-template-columns:1fr 1fr;align-items:start}
   .tpl-grid{grid-template-columns:repeat(2,1fr)}
   .toast{bottom:32px}
   .share-grid{grid-template-columns:repeat(4,1fr);max-width:480px}
@@ -2356,7 +2412,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 92;
+var _BUILD = 93;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -14381,63 +14437,281 @@ async function _unzipBufAsync(buf){
 function escapeXml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-function renderEstadisticas(){
-  var cases=DB.getCases();
-  var now=new Date();
-  var thisMonth=cases.filter(function(c){
-    if(!c.fechaProc)return false;
-    var d=new Date(c.fechaProc);
-    return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
-  });
-  var uri=cases.filter(function(c){return c.tipo==='URI';}).length;
-  var cespa=cases.filter(function(c){return c.tipo==='CESPA';}).length;
-  var oj=cases.filter(function(c){return c.tipo==='OJ';}).length;
-  var sub=document.getElementById('stats-sub');
-  if(sub)sub.textContent=cases.length+' total · '+thisMonth.length+' este mes';
-  // Top conductas
-  var condMap={};
-  cases.forEach(function(c){var cd=(c.conductas||[])[0];if(cd){condMap[cd]=(condMap[cd]||0)+1;}});
-  var topCond=Object.entries(condMap).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-  var maxCond=topCond.length?topCond[0][1]:1;
-  // Top barrios
-  var barrMap={};
-  cases.forEach(function(c){var b=c.lugar&&c.lugar.barrio;if(b){barrMap[b]=(barrMap[b]||0)+1;}});
-  var topBarr=Object.entries(barrMap).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
-  var maxBarr=topBarr.length?topBarr[0][1]:1;
-  var colors=['#8A94F8','#5FA8F5','#F2879D','#E8A54F','#5BC98C'];
-  function barRow(lbl,count,max,color){
-    var pct=(count/max*100).toFixed(0);
-    return '<div style="margin-bottom:10px">'+
-      '<div style="display:flex;justify-content:space-between;margin-bottom:4px">'+
-        '<span style="font-size:.78rem;color:var(--tx)">'+lbl+'</span>'+
-        '<span style="font-size:.78rem;color:var(--txD);font-variant-numeric:tabular-nums">'+count+'</span>'+
-      '</div>'+
-      '<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.07)">'+
-        '<div style="height:6px;border-radius:3px;width:'+pct+'%;background:'+color+'"></div>'+
-      '</div></div>';
+/* ═══════════════════════════════════════════════════════════════════════════
+   ESTADÍSTICAS — centro de análisis operativo (2026-08-31)
+   Reingeniería completa: de «cinco tarjetas con un número cada una» a una
+   lectura por niveles — KPI + distribución → rankings → actividad en el
+   tiempo. Todo se deriva de los MISMOS campos que ya usan los demás módulos
+   (c.tipo, c.conductas[], c.lugar.barrio, c.fechaProc/created); no se agrega
+   ni un campo al modelo del caso ni se toca ningún otro módulo.
+   El filtro de período es de solo lectura: decide qué casos se cuentan, nunca
+   qué hay guardado — mismo criterio que los filtros «Todas/Flagrancia/OJ» de
+   la lista de Capturas.
+═══════════════════════════════════════════════════════════════════════════ */
+var _statsPeriodo = (typeof _statsPeriodo !== 'undefined' && _statsPeriodo) || 'todo';
+var LC_STATS_PER = [
+  {id:'todo', lbl:'Todo'},
+  {id:'mes',  lbl:'Este mes'},
+  {id:'3m',   lbl:'Últimos 3 meses'}
+];
+function lcStatsSetPeriodo(id){
+  _statsPeriodo = id;
+  renderEstadisticas();
+}
+/* Fecha del HECHO (fechaProc), no del registro. `created` es respaldo para el
+   puñado de casos legados que pudieran no traer fechaProc. */
+function lcStatsFecha(c){
+  if (c && c.fechaProc) {
+    var d = new Date(c.fechaProc+'T00:00:00');
+    if (!isNaN(d)) return d;
   }
-  var el=document.getElementById('stats-content');if(!el)return;
-  if(!cases.length){
+  if (c && c.created) {
+    var d2 = new Date(c.created);
+    if (!isNaN(d2)) return d2;
+  }
+  return null;
+}
+function lcStatsRango(periodo){
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  if (periodo==='mes') return {desde:new Date(hoy.getFullYear(),hoy.getMonth(),1), hasta:hoy};
+  if (periodo==='3m')  return {desde:new Date(hoy.getFullYear(),hoy.getMonth()-2,1), hasta:hoy};
+  return null; // 'todo' — sin límite, lo fija el propio dato
+}
+function lcStatsFiltrar(cases, periodo){
+  var r=lcStatsRango(periodo);
+  if (!r) return cases.slice();
+  var fin=new Date(r.hasta.getFullYear(),r.hasta.getMonth(),r.hasta.getDate(),23,59,59,999);
+  return cases.filter(function(c){ var d=lcStatsFecha(c); return d && d>=r.desde && d<=fin; });
+}
+function lcStatsTitulo(periodo){
+  if (periodo==='mes') { var h=new Date(); return OJ_MESES[h.getMonth()]+' de '+h.getFullYear(); }
+  if (periodo==='3m') return 'últimos 3 meses';
+  return 'todo el historial';
+}
+function lcStatsPlural(n, sing, plur){ return n+' '+(n===1?sing:plur); }
+/* Distribución por tipo de captura — MISMOS tokens semánticos que ya usan las
+   insignias de la lista (.b-uri/.b-csp/.b-oj): ni un color nuevo, ni uno por
+   fila. Los tres tipos se muestran siempre, también en 0 — la ausencia de un
+   tipo en el período es un dato, no un hueco que ocultar. */
+function lcStatsDistribucion(cases){
+  var tipos=[
+    {id:'URI',   lbl:'URI',            color:'var(--uriT)'},
+    {id:'CESPA', lbl:'CESPA',          color:'var(--cspT)'},
+    {id:'OJ',    lbl:'Orden judicial', color:'var(--oj-2)'}
+  ];
+  var total=cases.length;
+  return tipos.map(function(t){
+    var n=cases.filter(function(c){ return c.tipo===t.id; }).length;
+    return {lbl:t.lbl, color:t.color, n:n, pct: total?Math.round(n/total*100):0};
+  });
+}
+/* Cuenta ocurrencias reales. El extractor puede devolver un arreglo (p.ej.
+   TODAS las conductas de un caso, no solo la primera —la versión anterior
+   solo miraba conductas[0] y subcontaba cada captura con más de un delito). */
+function lcStatsFrecuencia(cases, extractor){
+  var map={}, total=0;
+  cases.forEach(function(c){
+    var v=extractor(c);
+    (Array.isArray(v)?v:[v]).forEach(function(x){
+      x=String(x||'').trim();
+      if (x) { map[x]=(map[x]||0)+1; total++; }
+    });
+  });
+  var arr=Object.keys(map).map(function(k){ return {lbl:k, n:map[k]}; });
+  arr.sort(function(a,b){ return b.n-a.n || lcCmpTxt(a.lbl,b.lbl); });
+  return {arr:arr, total:total};
+}
+/* Ranking genérico: rango + nombre + cifra + % de participación. La barra
+   proporcional SOLO se pinta si hay variación real entre las filas visibles
+   — con todo empatado (lo más común cuando hay pocos registros) mostrar cinco
+   barras al 100% fabricaría una comparación que los datos no sostienen. */
+function lcStatsRankingHtml(arr, total, limite){
+  limite=limite||5;
+  var top=arr.slice(0, limite);
+  if (!top.length) return '';
+  var max=top[0].n, min=top[top.length-1].n;
+  var showBar = top.length>1 && max>min;
+  var rows=top.map(function(r,i){
+    var pct = total?Math.round(r.n/total*100):0;
+    var barPct = showBar ? Math.max(6, Math.round(r.n/max*100)) : 0;
+    return '<div class="stat-rank-row'+(i===0?' r1':'')+'">'+
+      '<span class="stat-rank-n">'+String(i+1).padStart(2,'0')+'</span>'+
+      '<span class="stat-rank-name">'+escHtml(r.lbl)+'</span>'+
+      '<span class="stat-rank-count"><b>'+r.n+'</b><span>'+pct+'%</span></span>'+
+      (showBar?'<div class="stat-rank-bartrack"><div class="stat-rank-barfill" style="width:'+barPct+'%"></div></div>':'')+
+    '</div>';
+  }).join('');
+  var more = arr.length>limite ? '<div class="stat-rank-more">+'+(arr.length-limite)+' más</div>' : '';
+  return rows+more;
+}
+/* Serie temporal — solo fechas reales, ni un punto interpolado. La
+   granularidad se adapta al período: días dentro de un mes, semanas en un
+   trimestre, meses cuando el historial cubre más de uno (y días si, aun en
+   «Todo», los casos caen dentro de un solo mes). */
+function lcStatsBuckets(cases, periodo){
+  var pts=cases.map(function(c){ return {d:lcStatsFecha(c)}; }).filter(function(p){ return p.d; });
+  if (!pts.length) return null;
+  var hoy=new Date(); hoy.setHours(0,0,0,0);
+  var desde, hasta, gran;
+  if (periodo==='mes') {
+    desde=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+    hasta=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);
+    gran='day';
+  } else if (periodo==='3m') {
+    desde=new Date(hoy.getFullYear(),hoy.getMonth()-2,1);
+    hasta=hoy;
+    gran='week';
+  } else {
+    var ts=pts.map(function(p){ return p.d.getTime(); });
+    var minD=new Date(Math.min.apply(null,ts)), maxD=new Date(Math.max.apply(null,ts));
+    desde=new Date(minD.getFullYear(),minD.getMonth(),1);
+    hasta=new Date(maxD.getFullYear(),maxD.getMonth()+1,0);
+    var meses=(maxD.getFullYear()-minD.getFullYear())*12+(maxD.getMonth()-minD.getMonth());
+    gran = meses>=1 ? 'month' : 'day';
+  }
+  function ymd(d){ return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
+  var buckets=[], cur;
+  if (gran==='day') {
+    cur=new Date(desde);
+    while (cur<=hasta) {
+      buckets.push({key:ymd(cur), n:0, lbl:cur.getDate()+' de '+OJ_MESES[cur.getMonth()], corto:String(cur.getDate())});
+      cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+1);
+    }
+    pts.forEach(function(p){
+      var k=ymd(p.d);
+      for (var i=0;i<buckets.length;i++) if (buckets[i].key===k) { buckets[i].n++; break; }
+    });
+  } else if (gran==='week') {
+    cur=new Date(desde);
+    while (cur<=hasta) {
+      var finSem=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+6);
+      if (finSem>hasta) finSem=new Date(hasta);
+      buckets.push({desde:new Date(cur), hasta:finSem, n:0,
+        lbl:cur.getDate()+' '+_DOS_MESES[cur.getMonth()].toLowerCase()+' – '+finSem.getDate()+' '+_DOS_MESES[finSem.getMonth()].toLowerCase(),
+        corto:cur.getDate()+'/'+(cur.getMonth()+1)});
+      cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+7);
+    }
+    pts.forEach(function(p){
+      for (var i=0;i<buckets.length;i++) if (p.d>=buckets[i].desde && p.d<=buckets[i].hasta) { buckets[i].n++; break; }
+    });
+  } else { // month
+    cur=new Date(desde.getFullYear(),desde.getMonth(),1);
+    while (cur<=hasta) {
+      buckets.push({y:cur.getFullYear(), m:cur.getMonth(), n:0,
+        lbl:OJ_MESES[cur.getMonth()]+' de '+cur.getFullYear(), corto:_DOS_MESES[cur.getMonth()].toLowerCase()});
+      cur=new Date(cur.getFullYear(),cur.getMonth()+1,1);
+    }
+    pts.forEach(function(p){
+      for (var i=0;i<buckets.length;i++) if (buckets[i].y===p.d.getFullYear() && buckets[i].m===p.d.getMonth()) { buckets[i].n++; break; }
+    });
+  }
+  return {gran:gran, buckets:buckets};
+}
+function lcStatsActTap(btn){
+  var el=document.getElementById('stat-act-cap'); if (!el) return;
+  var lbl=btn.getAttribute('data-lbl')||'', n=parseInt(btn.getAttribute('data-n'),10)||0;
+  el.textContent=lbl+' — '+lcStatsPlural(n,'caso registrado','casos registrados');
+}
+function lcStatsActividadHtml(b){
+  if (!b) return '<p class="txs txd" style="padding:2px 0 4px">Sin fechas suficientes para trazar una serie temporal.</p>';
+  var n=b.buckets.length, max=1;
+  b.buckets.forEach(function(x){ if (x.n>max) max=x.n; });
+  var hoy=new Date(), hoyKey=hoy.getFullYear()+'-'+hoy.getMonth()+'-'+hoy.getDate();
+  var everyLbl = n<=8 ? 1 : Math.ceil(n/6);
+  var peak=null;
+  b.buckets.forEach(function(x){ if (x.n && (!peak||x.n>peak.n)) peak=x; });
+  var bars=b.buckets.map(function(x,i){
+    var hpct = x.n ? Math.max(Math.round(x.n/max*100), 12) : 0;
+    var isToday = b.gran==='day' && x.key===hoyKey;
+    var showLbl = i===0 || i===n-1 || i%everyLbl===0;
+    return '<button type="button" class="stat-act-col'+(x.n?' has':'')+(isToday?' now':'')+
+      '" title="'+escAttr(x.lbl+': '+lcStatsPlural(x.n,'caso','casos'))+
+      '" data-lbl="'+escAttr(x.lbl)+'" data-n="'+x.n+'" onclick="lcStatsActTap(this)">'+
+      '<span class="stat-act-track"><span class="stat-act-bar" style="height:'+hpct+'%"></span></span>'+
+      '<span class="stat-act-lbl">'+(showLbl?escHtml(x.corto):' ')+'</span>'+
+    '</button>';
+  }).join('');
+  var capInicial = peak ? escHtml(peak.lbl)+' — '+lcStatsPlural(peak.n,'caso registrado','casos registrados')
+                        : 'Sin actividad registrada en el período';
+  return '<div class="stat-act-bars">'+bars+'</div><div class="stat-act-cap" id="stat-act-cap">'+capInicial+'</div>';
+}
+
+function renderEstadisticas(){
+  var all=DB.getCases();
+  var el=document.getElementById('stats-content'); if (!el) return;
+  var sub=document.getElementById('stats-sub');
+
+  if (!all.length) {
+    if (sub) sub.textContent='Sin datos aún';
     el.innerHTML='<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg></div><h3>Sin datos aún</h3><p>Registra capturas para ver estadísticas aquí</p></div>';
     return;
   }
-  el.innerHTML=
-    '<div class="stat-grid">'+
-      '<div class="stat-card"><div class="lab">Total</div><div class="val">'+cases.length+'</div><div class="sub">casos registrados</div></div>'+
-      '<div class="stat-card"><div class="lab">Este mes</div><div class="val">'+thisMonth.length+'</div><div class="sub">'+now.toLocaleString('es-CO',{month:'long'})+'</div></div>'+
-      '<div class="stat-card flag"><div class="lab">URI</div><div class="val">'+uri+'</div><div class="sub">flagrancia adultos</div></div>'+
-      '<div class="stat-card" style="--val-color:var(--cspT)"><div class="lab">CESPA</div><div class="val" style="color:var(--cspT)">'+cespa+'</div><div class="sub">menores de edad</div></div>'+
-    '</div>'+
-    '<div class="card"><div class="lab" style="font-size:.72rem;letter-spacing:.05em;color:var(--txD);text-transform:uppercase;margin-bottom:2px">Orden Judicial</div>'+
-      '<div style="font-size:26px;font-weight:700;color:var(--oj-2)">'+oj+'</div></div>'+
-    (topCond.length?
-      '<div class="card"><div class="sec-title" style="margin:0 0 12px">Top conductas</div>'+
-      topCond.map(function(c,i){return barRow(c[0],c[1],maxCond,colors[i%5]);}).join('')+
-      '</div>':'')+
-    (topBarr.length?
-      '<div class="card"><div class="sec-title" style="margin:0 0 12px">Top barrios</div>'+
-      topBarr.map(function(b,i){return barRow(b[0],b[1],maxBarr,colors[i%5]);}).join('')+
-      '</div>':'');
+
+  var periodo=_statsPeriodo;
+  var cases=lcStatsFiltrar(all, periodo);
+  var ctx = lcStatsPlural(cases.length,'caso','casos') +
+    ((periodo!=='todo' && all.length!==cases.length) ? ' de '+all.length+' en total · '+lcStatsTitulo(periodo)
+                                                       : ' · '+lcStatsTitulo(periodo));
+  if (sub) sub.textContent=ctx;
+
+  var tabsHtml='<div class="tabs stat-per">'+LC_STATS_PER.map(function(p){
+    return '<button class="tab'+(p.id===periodo?' on':'')+'" onclick="lcStatsSetPeriodo(\''+p.id+'\')">'+p.lbl+'</button>';
+  }).join('')+'</div>';
+
+  if (!cases.length) {
+    el.innerHTML = tabsHtml+
+      '<div class="card stat-empty-mini"><b>Sin capturas en este período</b>'+
+      '<span>Hay '+lcStatsPlural(all.length,'captura registrada','capturas registradas')+
+      ' en el historial completo — cambia el período arriba para verlas.</span></div>';
+    return;
+  }
+
+  // ── Nivel 1: KPI principal + distribución por tipo (una sola unidad analítica) ──
+  var dist=lcStatsDistribucion(cases);
+  var heroHtml=
+    '<div class="card stat-hero">'+
+      '<div class="stat-hero-lbl">Casos registrados</div>'+
+      '<div class="stat-hero-num">'+cases.length+'</div>'+
+      '<div class="stat-hero-ctx">'+ctx+'</div>'+
+      '<div class="stat-dist">'+
+        '<div class="stat-dist-bar">'+dist.filter(function(d){return d.pct>0;}).map(function(d){
+          return '<span class="stat-dist-seg" style="width:'+d.pct+'%;background:'+d.color+'"></span>';
+        }).join('')+'</div>'+
+        dist.map(function(d){
+          return '<div class="stat-dist-row">'+
+            '<span class="stat-dot" style="background:'+d.color+'"></span>'+
+            '<span class="stat-dist-lbl">'+escHtml(d.lbl)+'</span>'+
+            '<span class="stat-dist-n">'+d.n+'</span>'+
+            '<span class="stat-dist-pct">'+d.pct+'%</span>'+
+          '</div>';
+        }).join('')+
+      '</div>'+
+    '</div>';
+
+  // ── Nivel 2: rankings — qué conductas y qué sectores aparecen más ──
+  var cond=lcStatsFrecuencia(cases, function(c){ return c.conductas||[]; });
+  var barr=lcStatsFrecuencia(cases, function(c){ return c.lugar&&c.lugar.barrio; });
+  function rankCard(titulo, subEtq, frec){
+    if (!frec.arr.length) {
+      return '<div class="card stat-rank-card"><div class="st" style="margin-top:0">'+titulo+'</div>'+
+        '<p class="txs txd">Sin datos suficientes en este período.</p></div>';
+    }
+    return '<div class="card stat-rank-card"><div class="st" style="margin-top:0">'+titulo+'</div>'+
+      '<div class="stat-rank-sub">'+subEtq+'</div>'+
+      lcStatsRankingHtml(frec.arr, frec.total)+
+    '</div>';
+  }
+  var rankHtml='<div class="stat-rank-2col">'+
+    rankCard('Conductas más frecuentes', lcStatsPlural(cond.arr.length,'conducta','conductas')+' registrada'+(cond.arr.length===1?'':'s'), cond)+
+    rankCard('Sectores con más registros', lcStatsPlural(barr.arr.length,'barrio','barrios')+' con captura'+(barr.arr.length===1?'':'s'), barr)+
+  '</div>';
+
+  // ── Nivel 3: actividad en el tiempo — solo lo que las fechas reales cuentan ──
+  var actHtml='<div class="card stat-act-card"><div class="st" style="margin-top:0">Actividad en el tiempo</div>'+
+    lcStatsActividadHtml(lcStatsBuckets(cases, periodo))+
+  '</div>';
+
+  el.innerHTML = tabsHtml+heroHtml+rankHtml+actHtml;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
