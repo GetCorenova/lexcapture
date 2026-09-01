@@ -102,11 +102,13 @@ await page.waitForTimeout(300);
 // Toda sección de Ajustes debe traer su icono SVG (el DS v2 no usa emojis en UI).
 const ajSvg = await page.$$eval('.aj-sec-lbl svg', els => els.length);
 const ajHdr = await page.$$eval('.aj-sec-hdr', els => els.length);
-/* ⚠️ El umbral baja de 8 a 5 el 2026-08-28: Ajustes se consolidó de DIEZ
+/* ⚠️ El umbral baja de 5 a 4 el 2026-08-31 (Mejora 7): «Dossier» dejó de ser
+   una sección de Ajustes — el módulo sigue intacto, lo que desapareció es su
+   entrada en esta jerarquía. Antes bajó de 8 a 5 el 2026-08-28: Ajustes se consolidó de DIEZ
    secciones a CINCO (Mejora 6, 2.º documento, obs. 17). Lo que este check
    protege no cambia y no se relaja — que NINGÚN encabezado se quede sin su icono
    SVG, porque el Design System v2 no admite emojis en la interfaz. */
-log(ajSvg === ajHdr && ajHdr >= 5, 'Cada encabezado de Ajustes tiene su SVG', ajSvg + '/' + ajHdr);
+log(ajSvg === ajHdr && ajHdr >= 4, 'Cada encabezado de Ajustes tiene su SVG', ajSvg + '/' + ajHdr);
 await page.screenshot({ path: OUT('11_ajustes_dark') });
 
 // 11. Personas

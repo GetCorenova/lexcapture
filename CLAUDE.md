@@ -4431,3 +4431,138 @@ nuevo) y `verify_ds.mjs` (9/10, el fallo es el preexistente de siempre).
   se agrega al modelo del caso.
 - Regresiones en verde: **estadísticas 58** (nuevo) · DS 9/10 (el fallo preexistente de siempre).
   Anti-caché `?v=93` / `cache-v93`, `_BUILD=93`.
+
+## Mejora 7 (2026-08-31) — reorganización de Ajustes y Perfil (arquitectura de información)
+Requerimiento en `Documentos/Otro/Mejora 7.docx`: una maqueta de las dos pantallas más dieciocho
+puntos de instrucción, con una regla que gobierna todo lo demás —«REORGANIZAR LA ARQUITECTURA DE
+INFORMACIÓN, NO REPROGRAMAR LA FUNCIONALIDAD… la aplicación debe producir exactamente los mismos
+resultados que produce actualmente»—. Verificado con `verify_mejora7.mjs` (**49 checks**, nuevo) y
+las 30 suites previas.
+
+- ⚠️ **El documento manda hacer una auditoría y DETENERSE antes de implementar** (puntos 12 y 15).
+  Se hizo, y de ella salió el reparto de abajo. Lo que se implementó son **solo los cambios que el
+  propio documento enumera** (puntos 4, 5, 6, 9 y 10); todo lo demás que la auditoría encontró queda
+  como **propuesta**, que es lo que ordena el punto 14 — «si detectas oportunidades adicionales de
+  mejora, NO las implementes directamente».
+
+### Lo que cambió de sitio, y lo que NO cambió de sitio
+| Elemento | Antes | Ahora | Clave en `cfg` |
+|---|---|---|---|
+| Patrulla · CAI | Ajustes → Dossier | **Perfil → Mi jurisdicción** | `patrullaNum` · `patrullaUnidad` — **sin mover** |
+| Vereda · Zona · Localidad | Ajustes → Mi unidad | **Perfil → Mi jurisdicción** | `veredaDefault` · `zonaDefault` · `localidadDefault` — **sin mover** |
+| VERDE 3 · DIAMANTE 3 | Ajustes → Dossier | **Ajustes → Mi unidad → Mando** | `dosVerde3` · `dosDiamante3` — **sin mover** |
+| Entidad | Perfil (campo propio) | **no se pide**: se resuelve | `p.entidad` — **viva, y manda si existe** |
+
+- ⚠️ **NINGUNA clave cambió de estructura de almacenamiento, y es deliberado.** El punto 11 advierte
+  contra el cambio destructivo `settings.patrulla` → `profile.patrulla`; el punto 4 lo zanja: «el
+  traslado es exclusivamente de ubicación dentro de la interfaz». Las cinco claves de «Mi
+  jurisdicción» siguen en `cfg` porque de ahí las leen el paso «Lugar» del wizard, `patrullaLabel()`
+  y `ojNuevoCaso()`. **Bajarlas a `cfg.perfiles[i]` habría obligado a reescribir todos sus
+  consumidores** —que es exactamente lo que la regla final prohíbe— y a migrar datos ya guardados.
+  Por eso el bloque vive en la PANTALLA de Perfil y no dentro del formulario de cada perfil.
+- ⚠️ **Y por eso «Mi jurisdicción» tiene su propio botón de guardar**: el «Guardar ajustes» de la
+  otra pantalla ya no ve esos campos.
+
+### La trampa de `v()`, otra vez — el defecto que este trabajo tenía que no introducir
+`saveAjustes` escribía `cfg.patrullaNum`, `cfg.patrullaUnidad`, `cfg.localidadDefault`,
+`cfg.zonaDefault` y `cfg.veredaDefault` **incondicionalmente**, y `savePerfilForm` escribía
+`p.entidad` igual. `v()` devuelve `''` para un elemento que no existe, así que dejar esas seis
+asignaciones tras retirar sus campos **habría borrado la configuración del equipo en el primer
+guardado**. Es la misma trampa que ya costó un incidente con `ojDependencia` y con el NUNC, y estaba
+advertida por escrito encima de esas dos funciones. Las seis asignaciones se retiraron.
+- `verify_mejora7` [B1]–[B7] la miden sobre un equipo **ya configurado**: con una instalación en
+  blanco, borrar una clave no se notaría.
+
+### La entidad: se deja de pedir, no de usarse
+El punto 5 pide eliminarla del Perfil «por repetitiva», con una condición explícita: *«si está siendo
+utilizada internamente, no eliminar la variable… simplemente debe dejar de mostrarse si su valor
+puede obtenerse de otra fuente existente»*. Se auditó consumidor por consumidor —`lcServidorDefecto`
+(celda 299 del FPJ-5), `ccResolverOrigen` (cadena de custodia, rótulo, actas de incautación y
+entrega) y `aiEntidadDefecto`— y sí puede: es el mismo dato que **la institución del membrete**
+(`cfg.ojInstitucion`), que el usuario ya escribe una vez.
+- **`ccEntidadDefecto` y `lcServidorDefecto` encadenan ahora perfil → última captura → institución.**
+  ⚠️ **El ORDEN importa**: lo que el equipo ya tenía guardado **sigue mandando**, así que una
+  configuración anterior produce el MISMO documento al carácter; lo único que cambia es que un equipo
+  que nunca la escribió deja de imprimir ese renglón en blanco. Hay un check por cada mitad
+  ([B14]–[B17]).
+- `aiRecordarEntidad` (acta de incautación) sigue siendo el único sitio que la ESCRIBE, y por eso un
+  perfil puede tener todavía una entidad propia distinta de la institución.
+- ⚠️ Sigue sin haber ninguna institución escrita en el código: las dos fuentes son campos del
+  usuario. Es la regla del filtro de Play Store.
+
+### El dossier: desaparece de Ajustes, no de la aplicación
+El punto 10 lo subraya dos veces y la auditoría lo trató como el riesgo principal del encargo. Lo
+que se retiró es **la sección de Ajustes**, no el módulo: `verify_mejora7` [B19]–[B21] exige que sus
+nueve funciones sigan existiendo, que `#screen-dossierwa` siga ahí con sus **diez** secciones y que
+la navegación no pierda una entrada. Sus cuatro campos se repartieron —los dos oficiales al mando de
+la unidad, la patrulla al perfil— porque un contenedor llamado «Dossier» dentro de Ajustes era
+justamente lo que confundía: parecía configuración de la app y lo que había dentro eran datos de la
+unidad y del funcionario.
+
+### El acordeón y el caret
+Un solo componente para las dos pantallas: las clases `aj-sec-*` se conservan **tal cual** —varias
+regresiones cuentan por ellas los encabezados de Ajustes— y `lc-acc-*` es el mismo bloque de reglas
+con otro nombre, para que un `.aj-sec-hdr` contado por una suite siga siendo solo de Ajustes.
+- ⚠️ **El caret pasa de carácter a SVG.** `▶`/`▼` eran los dos únicos glifos de la app que hacían de
+  icono, contra el Design System v2. Ahora es un chevron stroke al que se le pone la clase `open` y
+  el CSS lo gira 90°: cerrado apunta a la derecha (**>**) y abierto hacia abajo (**⌄**), que es lo
+  que pide el punto 6, y el giro deja claro que es el MISMO control. `toggleAjSec` **no puede seguir
+  escribiendo el glifo con `textContent`**: borraría el SVG en el primer clic.
+- ⚠️ **La rotación se mide DESPUÉS de la transición.** `getComputedStyle` durante los 180 ms del giro
+  devuelve el valor interpolado —al empezar, la identidad—, así que el check [A11] pasaba por el
+  motivo equivocado hasta que se le puso la espera.
+- **Acordeones con criterio, no en todas partes** (punto 7): tres en Ajustes que ya existían, uno
+  nuevo en Perfil («Mi jurisdicción») y dos en el formulario del perfil. Ni uno más.
+- ⚠️ **PLEGAR NO ES BORRAR**: el panel del compañero de patrulla nace plegado cuando está vacío, y
+  sus campos siguen en el DOM — `savePerfilForm` los recoge con el panel cerrado ([A23]–[A24]). Es
+  la misma regla de los `<details>` de la Ola 4.
+
+### El formulario del perfil, en el orden de la maqueta
+`pfmCampos(pre, d)` compone **el mismo bloque** para el titular y para el compañero —«luego los datos
+del compañero de patrulla en el mismo orden y con la misma lógica»—: nombres y apellidos · correo ·
+teléfono · cédula · grado · cargo.
+- ⚠️ Eso dejó de escribir literalmente `lcGradoInput('pfm-grado'` en el archivo, y `verify_grados`
+  [26] lo comprobaba por grep. El check pasa a medirlo **en el DOM**, que es más fuerte: la firma de
+  `lcGradoInput` es un `<input list="dl-grado">` con su pista `<id>-ab` al lado, y nada más la
+  produce.
+
+### «Mi unidad», con los nombres del usuario
+Las cuatro líneas del membrete se piden ya por su nombre —**Sector · Institución · Unidad ·
+Dependencia o estación**— en vez de por su número de renglón, y el rango del comandante usa el
+catálogo de grados (`Coronel` → «Se abrevia CR»), que es la representación que pidió la maqueta.
+Solo cambia la ETIQUETA: las claves, el orden y lo que imprime el oficio son los mismos.
+- ⚠️ **La maqueta separa DEPENDENCIA («Distrito tres de policía») de ESTACIÓN («Candelaria») y la app
+  hoy tiene un solo nivel**: `lcUnidadNombre` es a la vez la línea 4 del membrete, el encabezado del
+  dossier y el bloque de contacto. Separarlas **cambiaría lo que imprime el oficio**, así que queda
+  como propuesta y no se tocó.
+- ⚠️ **VERDE 3 y DIAMANTE 3 conservan su nombre propio como etiqueta** y no se reparten entre
+  «comandante del distrito» y «comandante de la estación»: cuál es cuál es una correspondencia que la
+  app no tiene por qué suponer.
+
+### Lo que queda PROPUESTO y no se hizo (punto 14)
+1. **Separar DEPENDENCIA de ESTACIÓN en dos campos** (el distrito y la estación), como los dibuja la
+   maqueta. *Impacto*: la línea 4 del membrete del oficio, el encabezado del dossier y el bloque de
+   contacto. *Riesgo*: **medio-alto** — cambia un documento que va a un despacho judicial. Requiere
+   decidir cuál de los dos niveles imprime cada salida.
+2. **Un campo de comandante por nivel** (el del distrito y el de la estación), que es lo que las dos
+   flechas de la maqueta piden. Hoy existen `rangoComandante` (solo el grado, sin nombre) y los dos
+   indicativos. *Riesgo*: bajo, pero son **campos nuevos**, no reorganización.
+3. **`cfg.dosDir` y `cfg.dosTel`** siguen escribiéndose en espejo y **ningún documento los lee**: son
+   respaldo de una configuración exportada antes de 2026-08-13. Podrían pasar a `_CFG_MUERTAS` tras
+   comprobar que ninguna exportación en uso los necesita. *Riesgo*: bajo.
+4. **`cfg.conocieronFuncionarios` y `cfg.conocieronCaso`** conservan lector y ningún escritor de UI
+   (son el respaldo de un equipo sin perfiles). No son claves muertas; se dejan.
+
+- Regresiones en verde: **mejora 7 49** (nuevo) · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 ·
+  mejora6 32 · mejora6b 67 · OJ 187 · fpj6 140 · custodia 111 · incautación 141 · entrega 111 ·
+  export 66 · firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 · envío 39 · almacén 12 ·
+  expediente 13 · menú+expediente 16 · personas 25 · invitado 34 · simulador 41 · orden 33 ·
+  despachos 53 · jurisdicción 67 · vía CR 41 · tema 39 · grados 31 · dossier histórico 29 ·
+  NUNC año 39 · estadísticas 58 · ola1 38 · ola2 34 · ola3 33 · ola4 22 · multipersona.
+  ⚠️ **Suites adaptadas al cambio, ninguna baja su cuenta**: `verify_mejora6b` [37] (cinco secciones
+  → cuatro, y se le añade que «Dossier» no volvió), `verify_ds` (umbral 5 → 4), `verify_grados` [26]
+  (mide el DOM en vez del grep), `verify_mejora1` (obs. 10, la entidad se hereda en vez de pedirse) y
+  `verify_custodia` (despliega el panel del compañero antes de rellenarlo).
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
+  2026-08-08) — **comprobado ejecutando la suite contra el HTML de HEAD: falla idéntico**.
+  Anti-caché `?v=94` / `cache-v94`, `_BUILD=94`.

@@ -217,7 +217,22 @@ console.log('\n── VIII · El modelo no cambió ──\n');
      comprobación lo dice. */
   const html = await readFile(join(ROOT, 'LexCapture_v8.html'), 'utf8');
   const ids = ['pfm-grado', 'pfm-cgrado', 'w-sGrado', 'oj-f-gra'];
-  const viaHelper = ids.every(id => html.includes("lcGradoInput('" + id + "'"));
+  /* ⚠️ Adaptado en la Mejora 7 (2026-08-31): el formulario del perfil pasó a
+     componer sus campos una sola vez (`pfmCampos`) para el titular y para el
+     compañero, así que sus dos ids ya no aparecen escritos literalmente — se
+     forman con el prefijo. Lo que este check protege NO cambia: que los cuatro
+     salgan del MISMO helper. Se mide donde de verdad se ve, en el DOM: la firma
+     de `lcGradoInput` es un <input list="dl-grado"> con su pista `<id>-ab` al
+     lado, y nada más la produce. */
+  await page.evaluate(() => { go('perfil'); openPerfilForm(null); });
+  await page.waitForTimeout(450);
+  const enDom = await page.evaluate(ids2 => ids2.map(id => {
+    const i = document.getElementById(id);
+    return !!(i && i.getAttribute('list') === 'dl-grado' && document.getElementById(id + '-ab'));
+  }), ['pfm-grado', 'pfm-cgrado']);
+  await page.evaluate(() => closeModal());
+  const viaHelper = enDom.every(Boolean) &&
+    ['w-sGrado', 'oj-f-gra'].every(id => html.includes("lcGradoInput('" + id + "'"));
   log(viaHelper, 'Los cuatro campos con id fijo se construyen por el MISMO punto', ids.join(' · '));
   log(/\{k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a',lista:'dl-grado'\}/.test(html),
     'Y el de la lista de funcionarios usa el soporte de datalist que el motor ya tenía', "lista:'dl-grado'");

@@ -580,16 +580,31 @@ log(await page.evaluate((id) => DB.getCase(id).spoa, caso) === '999888777', 'Y q
 
 /* ═══════════ OBSERVACIÓN 10 · entidad por defecto ═══════════ */
 sec('OBS 10 — entidad por defecto en el perfil');
+/* ⚠️ ADAPTADO en la Mejora 7 (2026-08-31). El campo «Entidad» se retiró del
+   formulario del perfil por instrucción del usuario: era el mismo dato que la
+   institución del membrete del oficio, escrito dos veces. Lo que esta
+   observación protege NO cambia —que la entidad llegue puesta a una captura
+   nueva y se pueda cambiar en ese caso concreto—; lo que cambia es de dónde
+   sale. La clave `p.entidad` sigue viva y MANDA cuando existe: eso lo mide el
+   primer check, sembrándola como lo haría una configuración ya guardada. */
 await page.evaluate(() => { go('perfil'); openPerfilForm(''); });
 await page.waitForTimeout(250);
-log(await page.isVisible('#pfm-entidad'), 'El perfil del usuario tiene un espacio para la entidad');
+log(!(await page.$('#pfm-entidad')),
+  'El perfil ya no PIDE la entidad: es el mismo dato que la institución del membrete');
 await page.fill('#pfm-nombre', 'Juan Pérez');
 await page.fill('#pfm-grado', 'Subteniente');
-await page.fill('#pfm-entidad', 'ENTIDAD POR DEFECTO');
 await page.evaluate(() => savePerfilForm(''));
 await page.waitForTimeout(300);
+// Una configuración YA GUARDADA la trae; se siembra como la tendría ese equipo.
+await page.evaluate(() => {
+  const c = DB.getConfig();
+  const p = c.perfiles.find(x => x.id === c.perfilActivo);
+  if (p) p.entidad = 'ENTIDAD POR DEFECTO';
+  DB.saveConfig(c);
+});
+await page.waitForTimeout(300);
 log(await page.evaluate(() => { const c = DB.getConfig(); const p = c.perfiles.find(x => x.id === c.perfilActivo); return p && p.entidad; }) === 'ENTIDAD POR DEFECTO',
-  'Se guarda en el perfil activo');
+  '…y la que el perfil ya tenía guardada sigue ahí, intacta');
 await page.evaluate(() => startWizard('URI'));
 await page.waitForTimeout(250);
 await page.evaluate(() => { ws = getWizConfig().steps.indexOf('Servidor'); renderWiz(); });

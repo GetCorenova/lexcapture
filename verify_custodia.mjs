@@ -546,6 +546,14 @@ console.log('\n── G · Compañero de patrulla y entidad ──');
 
 await page.evaluate(() => { go('perfil'); openPerfilForm('pf-1'); });
 await page.waitForTimeout(250);
+/* ⚠️ Desde la Mejora 7 (2026-08-31) el compañero vive en su propio panel del
+   formulario, que nace PLEGADO mientras esté vacío — que es el caso aquí. Se
+   despliega antes de rellenarlo, igual que haría el funcionario. */
+await page.evaluate(() => {
+  const b = document.getElementById('acc-body-pfm-comp');
+  if (b && b.style.display === 'none') lcAccToggle('pfm-comp');
+});
+await page.waitForTimeout(200);
 log(await page.isVisible('#pfm-cnombre'),
   '⚠️ El compañero de patrulla se registra UNA vez en el perfil: un procedimiento lo hace una patrulla de dos');
 await page.fill('#pfm-cgrado', 'Patrullero');

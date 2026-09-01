@@ -280,8 +280,12 @@ const aj = await page.evaluate(() => ({
   linea4: !!document.getElementById('aj-oj-dep-eco'),
   ciudadEco: !!document.getElementById('aj-oj-ciu-eco')
 }));
-log(aj.secciones.length === 5,
-  '[37] Ajustes pasa de diez secciones a cinco', aj.secciones.join(' · '));
+/* ⚠️ Adaptado en la Mejora 7 (2026-08-31): «Dossier» dejó de ser una sección de
+   Ajustes por instrucción del usuario, así que las cinco de esta observación son
+   ahora cuatro. Lo que el check protege —que Ajustes no vuelva a llenarse de
+   secciones— no se relaja, y se le añade que la que se fue no volvió. */
+log(aj.secciones.length === 4 && !aj.secciones.some(s => /dossier/i.test(s)),
+  '[37] Ajustes pasa de diez secciones a cinco, y con la Mejora 7 a cuatro', aj.secciones.join(' · '));
 log(!aj.papel, '[38] Obs. 9: la seccion «Documentos» (tamano del papel) ya no existe');
 log(!aj.regionales, '[39] Obs. 16: «Perfiles Regionales» tampoco');
 log(!aj.fiscalia, '[40] Obs. 14: la fiscalia destinataria sale de Despachos, no de Ajustes');
