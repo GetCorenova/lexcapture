@@ -68,9 +68,12 @@ await page.evaluate(() => {
   // Lo que la Mejora 7 mueve de pantalla: tiene que sobrevivir intacto.
   cfg.patrullaNum = '32'; cfg.patrullaUnidad = 'CAI Parque Bolivar';
   cfg.localidadDefault = '10'; cfg.zonaDefault = 'Urbana'; cfg.veredaDefault = 'La Loma';
+  // Comandante de cada nivel. ⚠️ Los indicativos se dejan a propósito SIN tocar:
+  // así se mide que sus valores por defecto reproducen el dossier de siempre.
   cfg.dosVerde3 = 'TC Jin Eduardo Moreno'; cfg.dosDiamante3 = 'TC William Quintero';
   cfg.rangoComandante = 'CORONEL'; cfg.numDistrito = 'TRES';
-  cfg.nombreEstacion = 'CANDELARIA'; cfg.ojCustCiudad = 'Medellin';
+  cfg.nombreEstacion = 'CANDELARIA'; cfg.ojDependencia = 'Distrito tres de policia';
+  cfg.ojCustCiudad = 'Medellin';
   cfg.ojMinisterio = 'Ministerio de prueba (DEMO)';
   cfg.ojInstitucion = 'Institucion de prueba (DEMO)';
   cfg.ojUnidad = 'Metropolitana de prueba (DEMO)';
@@ -121,19 +124,36 @@ log(!aj.localidad && !aj.zona && !aj.vereda,
 log(aj.verde3 && aj.diamante3,
   '[A5] ⚠️ Pero VERDE 3 y DIAMANTE 3 NO se pierden: son el mando de la unidad y se quedan en «Mi unidad»');
 
-/* Las cuatro lineas del membrete, con su nombre. */
-const etiq = await page.evaluate(() => {
+/* ⚠️ LA PANTALLA ES LA JERARQUIA. Se mide el ORDEN REAL de los campos en el
+   DOM, no que existan: el usuario devolvio el primer intento porque los campos
+   estaban, pero repartidos a criterio propio —el sitio web al final, el distrito
+   inexistente, y un bloque «Mando» que nadie pidio—. */
+const orden = await page.evaluate(() => {
+  const ids = ['aj-oj-min','aj-oj-inst','aj-web','aj-oj-uni',
+               'aj-oj-dep','aj-ind-dis','aj-diamante3','aj-rango',
+               'aj-estacion','aj-ind-est','aj-verde3','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor',
+               'aj-oj-asunto'];
+  const campos = [...document.querySelectorAll('#aj-body-unidad-sec input,#aj-body-unidad-sec select')]
+    .map(e => e.id).filter(Boolean);
   const t = id => { const i = document.getElementById(id); const l = i && i.closest('.fg') && i.closest('.fg').querySelector('.fl'); return l ? l.textContent.trim() : ''; };
-  return { min: t('aj-oj-min'), inst: t('aj-oj-inst'), uni: t('aj-oj-uni'), dep: t('aj-estacion'),
+  return { esperado: ids, real: campos,
+           lbl: Object.fromEntries(ids.map(i => [i, t(i)])),
            st: [...document.querySelectorAll('#aj-body-unidad-sec .st')].map(e => e.textContent.trim()) };
 });
-log(/^Sector$/i.test(etiq.min) && /^Institucion|^Institución/i.test(etiq.inst) && /^Unidad$/i.test(etiq.uni),
-  '[A6] El membrete se pide por su NOMBRE (sector · institucion · unidad), no por numero de renglon',
-  [etiq.min, etiq.inst, etiq.uni].join(' | '));
-log(/dependencia/i.test(etiq.dep),
-  '[A7] Y la cuarta linea se llama ya «Dependencia o estacion»', etiq.dep);
-log(etiq.st.some(s => /MANDO/i.test(s)) && etiq.st.some(s => /DIRECCI/i.test(s)),
-  '[A8] «Mi unidad» agrupa jerarquia · mando · direccion · oficio', etiq.st.join(' / '));
+log(orden.real.join(',') === orden.esperado.join(','),
+  '[A6] Los campos van en el ORDEN de la maqueta: sector · institucion+web · unidad · DISTRITO · ESTACION · asunto',
+  orden.real.join(' → '));
+log(orden.real.indexOf('aj-web') === orden.real.indexOf('aj-oj-inst') + 1,
+  '[A7] El sitio web va PEGADO a la institucion, como marca la flecha del documento');
+log(/distrito de polic/i.test(orden.lbl['aj-oj-dep']) && /seccional/i.test(orden.lbl['aj-oj-dep']),
+  '[A8] El distrito tiene campo propio y se llama como pidio el usuario', orden.lbl['aj-oj-dep']);
+log(orden.real.indexOf('aj-oj-dep') < orden.real.indexOf('aj-estacion'),
+  '[A8b] Y va ANTES de la estacion');
+log(orden.lbl['aj-ind-dis'] === 'Indicativo' && orden.lbl['aj-diamante3'] === 'Comandante' &&
+    orden.lbl['aj-ind-est'] === 'Indicativo' && orden.lbl['aj-verde3'] === 'Comandante',
+  '[A8c] Cada nivel lleva SU indicativo y SU comandante — no hay un bloque «Mando» aparte');
+log(orden.st.length === 0,
+  '[A8d] ⚠️ Y no queda ningun titulo de seccion: «solo hace ruido»', orden.st.join(' / ') || 'ninguno');
 
 sec('A · EL CARET: > cerrado, ⌄ abierto');
 
@@ -413,6 +433,73 @@ log(persistido.patrulla === '47' && persistido.cai === 'CAI Prado' && persistido
   '[B22] Lo diligenciado en «Mi jurisdiccion» sobrevive a cerrar y reabrir la app', JSON.stringify(persistido.patrulla));
 log(/PATRULLA 32 CAI Parque Bolivar/.test(persistido.dossier),
   '[B23] ⚠️ Y el dossier de la captura VIEJA sigue diciendo PATRULLA 32: su foto no se reescribe');
+
+sec('B · EL INDICATIVO ES LA ETIQUETA; EL COMANDANTE, EL CONTENIDO');
+
+/* Con los valores por defecto, el dossier sale con las etiquetas de siempre —
+   por eso [B8] pudo comparar carácter por carácter. Aquí se mide la otra mitad:
+   que escribir otro indicativo SÍ cambia la etiqueta, que es lo que se pidió. */
+const ind = await page.evaluate(async () => {
+  const antes = genDossier(DB.getCase('caso-fijo-m7'));
+  const c = DB.getConfig();
+  c.indicativoDistrito = 'HALCON 2'; c.indicativoEstacion = 'CENTAURO 5';
+  DB.saveConfig(c);
+  const despues = genDossier(DB.getCase('caso-fijo-m7'));
+  const sec = getDosierSecciones().find(s => s.tipo === 'diamante3');
+  const enEditor = dosSecLabel(sec, DB.getConfig());
+  // Se restaura para no arrastrar el cambio al resto del recorrido.
+  const c2 = DB.getConfig(); c2.indicativoDistrito = 'DIAMANTE 3'; c2.indicativoEstacion = 'VERDE 3';
+  DB.saveConfig(c2);
+  return { antes, despues, enEditor };
+});
+log(/\*VERDE 3\*/.test(ind.antes) && /\*DIAMANTE 3\*/.test(ind.antes),
+  '[B25] Por defecto el dossier imprime las dos etiquetas de siempre');
+log(/\*CENTAURO 5\*/.test(ind.despues) && /\*HALCON 2\*/.test(ind.despues) &&
+    !/\*VERDE 3\*/.test(ind.despues) && !/\*DIAMANTE 3\*/.test(ind.despues),
+  '[B26] Y con otro indicativo, la seccion sale con ÉL — que es para lo que se pidió el campo');
+log(/TC William Quintero/.test(ind.despues) && /TC Jin Eduardo Moreno/.test(ind.despues),
+  '[B27] El comandante sigue siendo el contenido de su seccion');
+log(ind.enEditor === 'HALCON 2',
+  '[B28] El editor de secciones enseña la etiqueta resuelta, no el nombre por defecto', ind.enEditor);
+
+/* El distrito es un campo propio: lo que se escriba ahí es la línea 4 del
+   membrete, y el nombre de la estación ya no lo pisa al guardar. */
+const dep = await page.evaluate(() => {
+  const c = DB.getConfig();
+  return { dep: c.ojDependencia, est: c.nombreEstacion, cust: c.ojCustEstacion };
+});
+log(dep.dep === 'Distrito tres de policia' && dep.est === 'CANDELARIA',
+  '[B29] ⚠️ El distrito y la estacion son ya DOS datos: guardar Ajustes no los colapsa',
+  dep.dep + ' | ' + dep.est);
+log(dep.cust === 'CANDELARIA',
+  '[B30] Y el lugar de custodia sigue siendo la estacion, no el distrito', dep.cust);
+
+/* ⚠️ Darle campo propio al distrito creó un duplicado nuevo —«Distrito tres de
+   policía» y «No. del distrito: TRES» eran el mismo dato—, así que el número se
+   deriva y su campo desapareció. Aquí se mide que el encabezado del dossier sale
+   igual en los dos casos: cuando el nombre se deja leer y cuando no. */
+const num = await page.evaluate(() => {
+  const c = DB.getConfig();
+  const guardado = c.ojDependencia;
+  const out = {};
+  out.sinCampo = !document.getElementById('aj-distrito');
+  out.derivado = lcNumDistrito(c);
+  c.ojDependencia = 'Distrito octavo de policia'; DB.saveConfig(c);
+  out.otro = lcNumDistrito(DB.getConfig());
+  out.dossier = genDossier(DB.getCase('caso-fijo-m7'));
+  // Un nombre que NO se deja leer (una seccional): manda la clave guardada.
+  const c2 = DB.getConfig(); c2.ojDependencia = 'Seccional de investigacion criminal'; DB.saveConfig(c2);
+  out.respaldo = lcNumDistrito(DB.getConfig());
+  const c3 = DB.getConfig(); c3.ojDependencia = guardado; DB.saveConfig(c3);
+  return out;
+});
+log(num.sinCampo, '[B31] El «No. del distrito» dejó de pedirse: era el mismo dato que su nombre');
+log(num.derivado === 'TRES' && num.otro === 'OCTAVO',
+  '[B32] Se lee del nombre del distrito', num.derivado + ' / ' + num.otro);
+log(/DISTRITO OCTAVO DE POLIC/.test(num.dossier),
+  '[B33] Y es lo que encabeza el dossier');
+log(num.respaldo === 'TRES',
+  '[B34] ⚠️ Con un nombre que no se deja leer (una seccional) manda la clave guardada: el encabezado no se rompe', num.respaldo);
 
 log(errs.length === 0, '[B24] Consola limpia', errs.slice(0, 3).join(' | '));
 

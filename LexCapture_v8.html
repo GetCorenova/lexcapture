@@ -2034,64 +2034,76 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         </div>
         <div class="aj-sec-body" id="aj-body-unidad-sec" style="padding-top:12px">
 
-          <!-- ⚠️ MEJORA 7 — las cuatro líneas del membrete se piden ya con SU
-               NOMBRE (sector · institución · unidad · dependencia), que es como
-               las nombra el usuario y como salen impresas, en vez de por su
-               número de renglón. Solo cambia la ETIQUETA: las claves, el orden y
-               lo que imprime el oficio son exactamente los mismos.
-               ⚠️ La cuarta línea la escribe UN solo campo, «Dependencia o
-               estación», porque en esta app dependencia y estación son el mismo
-               dato (lcUnidadNombre): el que sale en la línea 4 del membrete, en
-               el encabezado del dossier y en el bloque de contacto. Separarlas
-               en dos niveles cambiaría lo que imprime el membrete, así que queda
-               como propuesta, no como cambio de una reorganización. -->
-          <div class="st" style="margin-top:0">Jerarquía institucional</div>
+          <!-- ⚠️ MEJORA 7, 2.º pase — LA PANTALLA ES LA JERARQUÍA, y se sigue en
+               el orden en que la dibujó el usuario:
+                 sector → institución (+ su sitio web) → unidad →
+                 DISTRITO (nombre · indicativo · comandante) →
+                 ESTACIÓN (nombre · indicativo · comandante · contacto)
+               Cada nivel lleva SU indicativo y SU comandante, en vez de un
+               bloque «Mando» aparte: «quiero que el mando vaya donde
+               corresponde, un mando para el distrito y un mando para estación».
+               ⚠️ SIN TÍTULOS DE SECCIÓN. Los cuatro que había («jerarquía
+               institucional», «mando», «dirección y contacto», «oficio de orden
+               judicial») los señaló el usuario uno a uno: «solo hace ruido, no
+               es necesario y lo que hace es llenar de información innecesaria».
+               Lo que separa un nivel del siguiente es la etiqueta de su primer
+               campo y el aire, no un rótulo más. -->
           <div class="fr">
             <div class="fg"><label class="fl">Sector</label><input class="fi" id="aj-oj-min" placeholder="Ministerio al que pertenece"></div>
             <div class="fg"><label class="fl">Institución</label><input class="fi" id="aj-oj-inst" placeholder="Tu institución"></div>
           </div>
-          <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento o dirección"></div>
-          <!-- ⚠️ UN SOLO campo para el nombre de la unidad. Llegó a pedirse tres
-               veces (aquí, «Nombre para el oficio» y «Línea 4 del membrete»).
-               Ver lcUnidadNombre(). -->
-          <div class="fg"><label class="fl">Dependencia o estación</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
-          <p class="aj-nota">Escribe solo el nombre y la app completa «Estación de Policía …». Si es otra dependencia, escríbela completa.</p>
+          <!-- El sitio web va PEGADO a la institución: es suyo, y así lo señala
+               la flecha de la maqueta. Antes cerraba el bloque, a cuatro campos
+               de distancia del dato al que pertenece. -->
           <div class="fg"><label class="fl">Sitio web institucional</label><input class="fi" id="aj-web" placeholder="Sitio web"></div>
+          <div class="fg"><label class="fl">Unidad</label><input class="fi" id="aj-oj-uni" placeholder="Metropolitana, departamento o dirección"></div>
 
-          <!-- Mando de la unidad. Los cuatro campos son del MISMO bloque del
-               dossier —el encabezado «DIOS Y PATRIA MI …» y sus dos secciones
-               finales—, así que se piden juntos. VERDE 3 y DIAMANTE 3 llegan
-               aquí desde la sección «Dossier», retirada de Ajustes: son
-               oficiales del mando de esta unidad, no una preferencia de la app.
-               ⚠️ Conservan su NOMBRE PROPIO como etiqueta y no se reparten entre
-               «comandante del distrito» y «comandante de la estación»: cuál es
-               cuál es una correspondencia que la app no tiene por qué suponer. -->
-          <div class="st">Mando</div>
+          <!-- ── DISTRITO ─────────────────────────────────────────────────────
+               ⚠️ Es un campo PROPIO desde este pase. Hasta ahora `ojDependencia`
+               era un espejo del nombre de la estación, así que la línea 4 del
+               membrete del oficio imprimía la estación; el usuario la dibujó
+               como el distrito y aquí se separan los dos niveles.
+               ⚠️ Lo ya guardado NO se toca: el campo se abre con el valor que el
+               equipo tenga, y el oficio sigue imprimiendo exactamente eso hasta
+               que el usuario lo corrija. Nada se inventa por él. -->
+          <div class="fg" style="margin-top:24px"><label class="fl">Distrito de policía, seccional, dirección, grupo, etc.</label><input class="fi" id="aj-oj-dep" placeholder="Distrito tres de policía"></div>
           <div class="fr">
-            <div class="fg"><label class="fl">Rango del comandante</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="CORONEL" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
-            <div class="fg"><label class="fl">No. del distrito (en texto)</label><input class="fi" id="aj-distrito" placeholder="TRES"></div>
+            <!-- El indicativo es la ETIQUETA con la que la sección sale en el
+                 dossier; el comandante, su contenido: grado abreviado + nombre
+                 completo, que es como lo pidió la maqueta («T.C - Teniente
+                 Coronel»). ⚠️ El nº del distrito ya NO se pide: se lee del
+                 nombre de arriba (lcNumDistrito). -->
+            <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-dis" placeholder="DIAMANTE 3"></div>
+            <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-diamante3" placeholder="T.C William Quintero"></div>
           </div>
-          <div class="fr">
-            <div class="fg"><label class="fl">VERDE 3 — oficial</label><input class="fi" id="aj-verde3" placeholder="TC Jin Eduardo Moreno"></div>
-            <div class="fg"><label class="fl">DIAMANTE 3 — oficial</label><input class="fi" id="aj-diamante3" placeholder="TC William Quintero"></div>
-          </div>
-          <!-- ⚠️ Obs. 12: «Conocieron el caso» no se pide: son el titular del
-               perfil y su compañero de patrulla, ya registrados en Perfil. -->
-          <p class="aj-nota" id="aj-con-auto"></p>
+          <!-- Rango con el que el dossier abre su saludo. Es un dato distinto del
+               comandante de arriba —el dossier se dirige a quien lo recibe— y por
+               eso la etiqueta lo dice. -->
+          <div class="fg"><label class="fl">Rango del saludo del dossier</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="Coronel" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
 
-          <div class="st">Dirección y contacto</div>
+          <!-- ── ESTACIÓN ────────────────────────────────────────────────────
+               Misma dinámica, y aquí cuelgan la dirección y el contacto: es la
+               unidad donde el capturado queda a disposición. -->
+          <div class="fg" style="margin-top:24px"><label class="fl">Estación de policía</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
+          <p class="aj-nota">Escribe solo el nombre y la app completa «Estación de Policía …».</p>
+          <div class="fr">
+            <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="VERDE 3"></div>
+            <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="TC Jin Eduardo Moreno"></div>
+          </div>
           <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="CL 48 # 55 - 50"></div>
           <div class="fr">
             <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="La Candelaria"></div>
-            <div class="fg"><label class="fl">Ciudad</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
+            <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
           </div>
           <div class="fr">
             <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="3126543210"></div>
             <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
           </div>
+          <!-- ⚠️ Obs. 12: «Conocieron el caso» no se pide: son el titular del
+               perfil y su compañero de patrulla, ya registrados en Perfil. -->
+          <p class="aj-nota" id="aj-con-auto"></p>
 
-          <div class="st">Oficio de orden judicial</div>
-          <div class="fg"><label class="fl">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
+          <div class="fg" style="margin-top:24px"><label class="fl">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
           <p class="aj-nota">Marcadores: {{TERMINO}} · {{ORD_NUMERO}} · {{REQ_NOMBRE}} · {{RADICADO}} · {{DESPACHO}}</p>
         </div>
       </div>
@@ -2481,7 +2493,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 94;
+var _BUILD = 95;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3362,7 +3374,13 @@ function _cfgConDefaults(stored) {
        desactivado la validación dura V29 (lección del 2026-07-30). Sin default,
        el nombre de la unidad es UN dato del usuario y lo pueden leer los tres
        documentos que lo imprimen — ver lcUnidadNombre(). */
-    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',nuncAno:0,destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,perfilesRegionales:[],perfilRegionalActivo:null,
+    var def={rangoComandante:'CORONEL',numDistrito:'TRES',nombreEstacion:'',nuncUri:'',nuncCespa:'',nuncAno:0,destUri:'Fiscalía URI',destCespa:'CESPA',localidadDefault:'10',zonaDefault:'Urbana',veredaDefault:'N/A',dosDir:'',dosTel:'',dosVerde3:'',dosDiamante3:'',
+      /* Indicativo de cada nivel (Mejora 7, 2.º pase). Es la ETIQUETA con la que
+         su sección sale en el dossier; el comandante es el contenido. Los dos
+         valores por defecto son los que el dossier venía imprimiendo escritos a
+         pelo, así que un equipo ya configurado no cambia una coma. */
+      indicativoDistrito:'DIAMANTE 3',indicativoEstacion:'VERDE 3',
+      conocieronCaso:'',conocieronFuncionarios:[],patrullaNum:'',patrullaUnidad:'',perfiles:[],perfilActivo:null,perfilesRegionales:[],perfilRegionalActivo:null,
       /* Registro ÚNICO de despachos (ver el módulo Despachos).
          `despachoDefecto` guarda el id del que se propone como destino de cada
          tipo de captura, y con él viaja el NUNC: los dígitos de unidad
@@ -3477,6 +3495,21 @@ function _cfgConDefaults(stored) {
    ⚠️ El valor se guarda «en crudo» (CANDELARIA, LAURELES…): el tipo de
    dependencia lo antepone ojEstacionLabel() en cada salida, que es idempotente y
    respeta lo que ya venga completo (SECCIONAL…, CAI…, DIRECCIÓN…). */
+/* Nº del distrito para el encabezado del dossier («DISTRITO TRES DE POLICÍA»).
+   ⚠️ Se DERIVA del nombre del distrito en vez de pedirse: al darle campo propio
+   al distrito (Mejora 7, 2.º pase), «Distrito tres de policía» y «No. del
+   distrito: TRES» pasaron a ser el mismo dato en dos casillas — un duplicado que
+   introdujo ese cambio y que no puede quedarse.
+   ⚠️ La clave `numDistrito` NO se toca y es la que manda cuando el nombre no se
+   deja leer (una seccional, un grupo, o el valor en espejo que tenía un equipo
+   anterior a este pase). Así el encabezado sale idéntico en los dos casos. */
+function lcNumDistrito(cfg){
+  cfg=cfg||DB.getConfig();
+  var m=/distrito\s+(.+?)\s+de\s+polic/i.exec(String(cfg.ojDependencia||'').trim());
+  if(m&&m[1]) return m[1].toUpperCase();
+  return cfg.numDistrito||'TRES';
+}
+
 function lcUnidadNombre(cfg){
   cfg=cfg||DB.getConfig();
   return cfg.nombreEstacion||cfg.ojCustEstacion||cfg.ojDependencia||cfg.ojPieDependencia||'';
@@ -6556,6 +6589,25 @@ function getDefaultSecciones() {
   ];
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   INDICATIVO → ETIQUETA DE LA SECCIÓN DEL DOSSIER (Mejora 7, 2.º pase)
+   «VERDE 3» y «DIAMANTE 3» estaban escritos a pelo en `getDefaultSecciones`,
+   como si todas las unidades usaran los mismos. Son el INDICATIVO de la
+   estación y del distrito, y ahora cada uno se escribe en su nivel de Ajustes:
+   el indicativo es la etiqueta, el comandante es el contenido.
+   ⚠️ Los valores por defecto son los dos que el dossier venía imprimiendo, así
+   que un equipo ya configurado no ve cambiar una coma. Solo si escribe otro
+   indicativo cambia su dossier — que es justo lo que pidió.
+   ⚠️ Punto ÚNICO: lo usan el dossier generado y el editor de secciones, para que
+   lo que se ve en la lista sea lo que va a salir. */
+function dosSecLabel(sec, cfg) {
+  if (!sec) return '';
+  cfg = cfg || DB.getConfig() || {};
+  if (sec.tipo === 'verde3')    return String(cfg.indicativoEstacion || '').trim() || sec.label;
+  if (sec.tipo === 'diamante3') return String(cfg.indicativoDistrito || '').trim() || sec.label;
+  return sec.label;
+}
+
 function getDosierSecciones() {
   var cfg=DB.getConfig();
   if(cfg.dossierSecciones&&cfg.dossierSecciones.length) return JSON.parse(JSON.stringify(cfg.dossierSecciones));
@@ -6805,7 +6857,7 @@ function genDossier(caso) {
      dos renglones a uno que nombre una estación que no es la del usuario. */
   var uniDos=mayus(ojEstacionLabel(lcUnidadNombre(cfg),true));
   var enc='*DIOS Y PATRIA MI '+(cfg.rangoComandante||'CORONEL')+' '+dosGreeting()+'*\n'+
-    '*DISTRITO '+(cfg.numDistrito||'TRES')+' DE POLICÍA*'+
+    '*DISTRITO '+lcNumDistrito(cfg)+' DE POLICÍA*'+
     (uniDos?'\n*'+uniDos+'*':'');
   var sorted=secciones.filter(function(s){return s.activa;}).sort(function(a,b){return a.orden-b.orden;});
   var lines=[];
@@ -6813,7 +6865,7 @@ function genDossier(caso) {
     var content=genSeccionContent(sec,caso,cfg);
     if(content===null||content===undefined||content==='') return;
     /* Etiqueta en negrilla y SIN dos puntos; el contenido siempre en la línea de abajo. */
-    lines.push('✅ *'+sec.label+'*\n'+content);
+    lines.push('✅ *'+dosSecLabel(sec,cfg)+'*\n'+content);
   });
   if(caso.tipo==='OJ'&&caso.recibe) lines.push('✅ *Recibe*\n'+caso.recibe);
   return enc+'\n\n'+lines.join('\n\n');
@@ -12649,11 +12701,14 @@ function toggleSecEditor() {
 function renderSecEditor() {
   var secs=getDosierSecciones();
   var el=document.getElementById('dos-sec-inner'); if(!el) return;
+  var _cfg=DB.getConfig();
   secs.sort(function(a,b){return a.orden-b.orden;});
   var rows=secs.map(function(sec){
     return '<div class="sec-row">'+
       '<button class="sec-tog'+(sec.activa?' on':'')+'" onclick="toggleSecItem(\''+sec.id+'\')" title="'+(sec.activa?'Desactivar':'Activar')+'"></button>'+
-      '<span class="sec-lbl">'+sec.label+'</span>'+
+      /* Etiqueta RESUELTA: las dos secciones del mando salen con el indicativo
+         que el equipo tenga configurado, no con el nombre por defecto. */
+      '<span class="sec-lbl">'+escHtml(dosSecLabel(sec,_cfg))+'</span>'+
       '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',-1)" title="Subir">▲</button>'+
       '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',1)" title="Bajar">▼</button>'+
       (sec.tipo==='texto_fijo'?'<button class="sec-ord" onclick="delSecItem(\''+sec.id+'\')" style="color:var(--danger);border-color:rgba(239,68,68,.4)">✕</button>':'')+
@@ -14454,7 +14509,7 @@ function loadAjustesFields() {
   /* El nombre de la unidad y su ciudad se muestran RESUELTOS: si el equipo los
      tenía escritos en una de las claves del oficio (membrete o custodia) y no
      en esta, el usuario los ve aquí y no los vuelve a teclear. */
-  var map={'aj-rango':cfg.rangoComandante,'aj-distrito':cfg.numDistrito,'aj-estacion':lcUnidadNombre(cfg),
+  var map={'aj-rango':cfg.rangoComandante,'aj-estacion':lcUnidadNombre(cfg),
     /* Contacto de la unidad. Se edita AQUÍ y se guarda en las claves `ojCust*`,
        que son las que lee el oficio. Las legadas (`dosDir`/`dosTel`) se siguen
        leyendo para que una config guardada antes no pierda lo ya escrito. */
@@ -14465,6 +14520,11 @@ function loadAjustesFields() {
        NO se pintan aquí: viven en Perfil → «Mi jurisdicción» (lcJurisRender).
        Sus claves de `cfg` no se movieron; solo cambió la pantalla que las pide. */
     'aj-oj-min':cfg.ojMinisterio,'aj-oj-inst':cfg.ojInstitucion,'aj-oj-uni':cfg.ojUnidad,
+    /* El distrito es ya un campo propio: se muestra TAL CUAL está guardado. Si
+       el equipo venía con el espejo del nombre de la estación, verá eso y podrá
+       corregirlo — el oficio sigue imprimiendo lo mismo hasta que lo haga. */
+    'aj-oj-dep':cfg.ojDependencia||'',
+    'aj-ind-dis':cfg.indicativoDistrito,'aj-ind-est':cfg.indicativoEstacion,
     'aj-oj-asunto':cfg.ojAsunto,
     /* ⚠️ Obs. 11 — vuelven a ser texto plano. `lcRefTexto` resuelve una
        referencia `{pid}` guardada por la versión anterior, así que un equipo que
@@ -14503,7 +14563,10 @@ function ojCompletarEstacion(el,caps){
 function saveAjustes() {
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
   var cfg=DB.getConfig();
-  cfg.rangoComandante=v('aj-rango'); cfg.numDistrito=v('aj-distrito');
+  cfg.rangoComandante=v('aj-rango');
+  /* ⚠️ `numDistrito` ya no se escribe: perdió su campo y `v()` devolvería '',
+     borrando el respaldo del que vive un equipo cuyo distrito no se deja leer.
+     Lo lee `lcNumDistrito`, que deriva del nombre y cae a esta clave. */
   /* ── Nombre de la unidad: una clave editable, dos legadas en espejo ──
      `ojCustEstacion` (custodia) y `ojDependencia` (línea 4 del membrete) se
      consultan POR DELANTE en sus cadenas, así que si el usuario cambia el nombre
@@ -14515,9 +14578,15 @@ function saveAjustes() {
          seccional que retiene en la estación) no se colapsa por abrir Ajustes y
          pulsar Guardar. Ese caso se sigue diligenciando por captura. */
   var uniNueva=v('aj-estacion').trim(), uniCambio=(uniNueva!==(cfg.nombreEstacion||''));
-  if(uniCambio){ cfg.ojCustEstacion=uniNueva; cfg.ojDependencia=uniNueva; }
-  else { if(!cfg.ojCustEstacion) cfg.ojCustEstacion=uniNueva; if(!cfg.ojDependencia) cfg.ojDependencia=uniNueva; }
+  if(uniCambio){ cfg.ojCustEstacion=uniNueva; }
+  else { if(!cfg.ojCustEstacion) cfg.ojCustEstacion=uniNueva; }
   cfg.nombreEstacion=uniNueva;
+  /* ⚠️ MEJORA 7, 2.º pase — el nombre de la estación YA NO se propaga a
+     `ojDependencia`. Eran el mismo dato en espejo, y por eso la línea 4 del
+     membrete del oficio imprimía la estación; desde este pase el distrito tiene
+     su propio campo y su propio valor. La propagación a `ojCustEstacion` (el
+     lugar de custodia) sí se queda: ese sigue siendo la estación. */
+  if(document.getElementById('aj-oj-dep')) cfg.ojDependencia=v('aj-oj-dep').trim();
   /* Contacto de la unidad → las claves que lee el oficio. `dosDir`/`dosTel` se
      mantienen en espejo para no romper una configuración ya exportada. */
   cfg.ojCustDireccion=v('aj-dir');
@@ -14533,7 +14602,12 @@ function saveAjustes() {
      haberse pintado, y v() devuelve '' para un elemento que no existe, así que
      escribir a ciegas borraría lo que el equipo ya tenía configurado. */
   if(document.getElementById('aj-verde3')){
+    /* Comandante de cada nivel: `dosVerde3` es el de la estación y
+       `dosDiamante3` el del distrito — que es exactamente lo que esas dos claves
+       ya contenían, así que no hay migración. Lo que se estrena es el
+       INDICATIVO, la etiqueta con la que cada uno sale en el dossier. */
     cfg.dosVerde3=v('aj-verde3').trim(); cfg.dosDiamante3=v('aj-diamante3').trim();
+    cfg.indicativoEstacion=v('aj-ind-est').trim(); cfg.indicativoDistrito=v('aj-ind-dis').trim();
   }
   /* ⚠️ MEJORA 7 — `patrullaNum` y `patrullaUnidad` SALEN de aquí: sus campos se
      fueron a Perfil → «Mi jurisdicción». Dejar la asignación habría BORRADO la

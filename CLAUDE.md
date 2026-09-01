@@ -4539,7 +4539,9 @@ Solo cambia la ETIQUETA: las claves, el orden y lo que imprime el oficio son los
   «comandante del distrito» y «comandante de la estación»: cuál es cuál es una correspondencia que la
   app no tiene por qué suponer.
 
-### Lo que queda PROPUESTO y no se hizo (punto 14)
+### Lo que quedó PROPUESTO en el primer pase (punto 14)
+⚠️ **Las dos primeras se EJECUTARON en el 2.º pase, más abajo**: el usuario las pidió expresamente
+y tenía razón — estaban en su maqueta desde el principio.
 1. **Separar DEPENDENCIA de ESTACIÓN en dos campos** (el distrito y la estación), como los dibuja la
    maqueta. *Impacto*: la línea 4 del membrete del oficio, el encabezado del dossier y el bloque de
    contacto. *Riesgo*: **medio-alto** — cambia un documento que va a un despacho judicial. Requiere
@@ -4566,3 +4568,72 @@ Solo cambia la ETIQUETA: las claves, el orden y lo que imprime el oficio son los
   ⚠️ **Un fallo PREEXISTENTE**: `verify_ds` («favorito con estrella SVG», mecanismo retirado el
   2026-08-08) — **comprobado ejecutando la suite contra el HTML de HEAD: falla idéntico**.
   Anti-caché `?v=94` / `cache-v94`, `_BUILD=94`.
+
+### 2.º pase (2026-09-01) — la pantalla ES la jerarquía, y el mando va en su nivel
+El usuario devolvió el primer intento: *«no me gustó para nada lo que hiciste en ajustes, la verdad
+todo lo hiciste a tu gusto y criterio, así no»*. Tenía razón, y el fallo no fue de ejecución sino de
+criterio: **dejé como “propuesta” justo lo que la maqueta ya especificaba** —separar el distrito de
+la estación y poner un comandante en cada nivel— y en su lugar inventé un bloque «Mando» y cuatro
+subtítulos que nadie pidió. `verify_mejora7.mjs` sube a **62 checks** (antes 49).
+
+- ⚠️ **Lección de método, y es la misma que este archivo ya tiene escrita dos veces**: cuando el
+  usuario dibuja una maqueta, la maqueta ES el requerimiento. «No lo hago porque cambiaría el
+  documento» es una razón para *avisar*, no para sustituirlo por otra cosa. Lo que sí seguía siendo
+  correcto era no inventar campos nuevos sin preguntar; lo incorrecto fue rellenar el hueco con una
+  estructura propia en vez de dejarlo como estaba.
+
+**Lo que quedó, en el orden exacto de la maqueta y SIN un solo título de sección** (los cuatro los
+señaló uno a uno: *«solo hace ruido… llena de información innecesaria»*):
+
+| Campo | Clave |
+|---|---|
+| Sector | `ojMinisterio` |
+| Institución | `ojInstitucion` |
+| **Sitio web institucional** | `ojPieWeb` — **pegado a la institución**, que es de donde sale su flecha en el documento. Antes cerraba el bloque, a cuatro campos del dato al que pertenece |
+| Unidad | `ojUnidad` |
+| **Distrito de policía, seccional, dirección, grupo, etc.** | `ojDependencia` |
+| Indicativo | `indicativoDistrito` (nuevo, «DIAMANTE 3») |
+| Comandante | `dosDiamante3` |
+| Rango del saludo del dossier | `rangoComandante` |
+| **Estación de policía** | `nombreEstacion` |
+| Indicativo | `indicativoEstacion` (nuevo, «VERDE 3») |
+| Comandante | `dosVerde3` |
+| Dirección · Barrio · Municipio (Ciudad) · Teléfono · Correo | `ojCust*` |
+| Asunto del oficio | `ojAsunto` |
+
+- ⚠️ **El distrito estrena campo propio, y eso cambia la línea 4 del membrete.** Hasta ahora
+  `ojDependencia` era un **espejo** de `nombreEstacion` —`saveAjustes` lo propagaba—, así que el
+  oficio imprimía la **estación** donde el formato lleva el **distrito**. Era el defecto que la
+  maqueta señalaba desde el primer documento. La propagación se retiró.
+- ⚠️ **Nada se migra ni se inventa**: el campo se abre con el valor que el equipo tenga guardado (el
+  del espejo, si venía de antes) y el oficio imprime exactamente eso **hasta que el usuario lo
+  corrija**. `ojCustEstacion` (lugar de custodia) sigue siendo la estación y se sigue propagando.
+
+**El indicativo es la ETIQUETA; el comandante, el contenido.** «VERDE 3» y «DIAMANTE 3» estaban
+escritos a pelo en `getDefaultSecciones`, como si todas las unidades usaran los mismos. Ahora cada
+nivel escribe el suyo y `dosSecLabel(sec,cfg)` —**punto único**, lo usan el dossier generado y el
+editor de secciones— lo resuelve.
+- ⚠️ Los valores por defecto son los dos que el dossier venía imprimiendo, así que **un equipo ya
+  configurado no ve cambiar una coma**; solo cambia si escribe otro indicativo, que es para lo que
+  pidió el campo. Hay un check de cada mitad ([B25]–[B28]).
+- ⚠️ **Cero migración de datos**: `dosVerde3` ya contenía el comandante de la estación y
+  `dosDiamante3` el del distrito — la correspondencia que en el primer pase me negué a suponer y que
+  el usuario zanjó («verde 3 … es el indicativo de la estación»).
+- ⚠️ El indicativo **no** se congela en `dossierSnap`: es configuración de la unidad, no un dato del
+  caso. Lo que la Fase F protege son los nombres de los oficiales, y esos se siguen congelando.
+
+**El duplicado que el propio cambio creó, y que no podía quedarse.** Con el distrito escrito
+(«Distrito tres de policía»), el campo «No. del distrito: TRES» pasó a ser el mismo dato en dos
+casillas. `lcNumDistrito(cfg)` lo **deriva** del nombre y el campo desapareció.
+- ⚠️ La clave `numDistrito` **no se toca** y es la que manda cuando el nombre no se deja leer (una
+  seccional, un grupo, o el espejo de un equipo anterior a este pase): el encabezado del dossier sale
+  idéntico en los dos casos ([B31]–[B34]). Y `saveAjustes` **dejó de escribirla** — sin campo, `v()`
+  devolvería `''` y habría borrado ese respaldo.
+- **«Rango del saludo del dossier»** conserva su clave y su función («DIOS Y PATRIA MI CORONEL»), y
+  solo cambia de etiqueta: junto a un campo «Comandante» tenía que quedar claro que es otro dato.
+
+**Suites adaptadas, ninguna baja su cuenta**: `verify_oj` (187) —tres checks medían la consolidación
+`ojDependencia = nombreEstacion`, que este pase deshace a propósito; ahora exigen lo contrario: un
+solo campo para cada uno y que el distrito **no** se pise— y `verify_mejora6b` [48]/[49], que
+buscaban un `.st` dentro de «Mi unidad» y ahora miden el componente donde sigue usándose.
+Anti-caché `?v=95` / `cache-v95`, `_BUILD=95`.

@@ -308,11 +308,15 @@ const largos = await page.evaluate(() => {
 });
 log(largos.length === 0, '[47] Obs. 10: ningun aviso pasa de 110 caracteres en Ajustes', largos.join(' | '));
 
-// El titulo de seccion pesa mas que el aviso que tiene al lado (obs. 10).
+/* El titulo de seccion pesa mas que el aviso que tiene al lado (obs. 10).
+   ⚠️ Adaptado en la Mejora 7 (2026-08-31): «Mi unidad» se quedo SIN titulos de
+   seccion —el usuario senalo los cuatro uno a uno: «solo hace ruido»—, asi que
+   el componente se mide donde sigue usandose. Lo que el check protege es la
+   jerarquia visual de `.st`, no que exista uno en esa pantalla concreta. */
 const jerarquia = await page.evaluate(() => {
   toggleAjSec('unidad-sec');
-  const st = [...document.querySelectorAll('#aj-body-unidad-sec .st')]
-    .find(e => /DIRECCI/i.test(e.textContent));
+  const st = [...document.querySelectorAll('.st')].find(e => e.offsetParent !== null)
+    || document.querySelector('.st');
   const nota = document.querySelector('#aj-body-unidad-sec .aj-nota');
   if (!st || !nota) return null;
   const a = getComputedStyle(st), b = getComputedStyle(nota);

@@ -1095,26 +1095,39 @@ const est = await page.evaluate(async () => {
     rescate, vistos, hay,
     guardado: { est: cfg.ojCustEstacion, dir: cfg.ojCustDireccion, bar: cfg.ojCustBarrio,
                 ciu: cfg.ojCustCiudad, tel: cfg.ojCustTelefono, cor: cfg.ojCustCorreo, web: cfg.ojPieWeb },
-    // El nombre de la unidad y su ciudad llegan a las TRES claves que los
-    // imprimen: una sola pantalla, sin que ninguna quede rezagada y gane luego.
+    /* El nombre de la unidad y su ciudad llegan a las claves que los imprimen:
+       una sola pantalla, sin que ninguna quede rezagada y gane luego.
+       ⚠️ MEJORA 7, 2.º pase (2026-08-31): la línea 4 del membrete YA NO es el
+       nombre de la unidad. Era su espejo, y por eso el oficio imprimía la
+       estación donde el formato lleva el distrito. Ahora el distrito es un dato
+       propio (`ojDependencia`) con su propio campo, así que aquí se comprueban
+       las dos cosas: que el nombre de la unidad sigue llegando a custodia y
+       dossier escrito UNA vez, y que el distrito NO lo pisa. */
     unaSolaVez: { nombre: cfg.nombreEstacion, membrete: cfg.ojDependencia,
                   custodia: cfg.ojCustEstacion, ciudadOficio: cfg.ojCiudad },
     espejo: { dosDir: cfg.dosDir, dosTel: cfg.dosTel },
     // La sección del oficio ya no vuelve a preguntar lo mismo
     duplicados: ['aj-oj-cest','aj-oj-cdir','aj-oj-cbar','aj-oj-cciu','aj-oj-ctel','aj-oj-ccor','aj-oj-pweb',
-                 'aj-cest','aj-oj-dep','aj-oj-ciu']
+                 'aj-cest','aj-oj-ciu']
       .filter(id => document.getElementById(id)),
+    // Un solo campo para cada uno de los dos datos, y son distintos.
+    unNombre: document.querySelectorAll('#screen-ajustes #aj-estacion').length,
+    unDistrito: document.querySelectorAll('#screen-ajustes #aj-oj-dep').length,
     cierre: ps.slice(-4),
     narr: ps.find(p => /bajo custodia/.test(p)) || ''
   };
 });
 log(est.hay, 'Ajustes → Estación pide los siete datos de la unidad (nombre + contacto)');
-log(est.duplicados.length === 0,
+log(est.duplicados.length === 0 && est.unNombre === 1 && est.unDistrito === 1,
   '⚠️ Ni esta sección ni la del oficio los vuelven a pedir: sin segundo «Barrio», sin segundo nombre de unidad y sin segunda ciudad',
   est.duplicados.join(', '));
-log(est.unaSolaVez.nombre === 'La Candelaria' && est.unaSolaVez.membrete === 'La Candelaria' &&
+/* ⚠️ El membrete NO se compara con el nombre de la unidad: desde la Mejora 7 son
+   dos datos distintos (el distrito y la estación). Lo que se exige es que el
+   nombre escrito una vez llegue a la custodia y al dossier, y que el distrito
+   conserve el suyo — antes esta misma línea guardaba el espejo. */
+log(est.unaSolaVez.nombre === 'La Candelaria' && est.unaSolaVez.membrete !== 'La Candelaria' &&
     est.unaSolaVez.custodia === 'La Candelaria' && est.unaSolaVez.ciudadOficio === 'Medellín',
-  '⚠️ Escrito UNA vez, llega a las tres claves que lo imprimen (dossier, membrete y bloque de contacto)',
+  '⚠️ Escrito UNA vez, llega a las claves que lo imprimen (dossier y bloque de contacto) sin pisar el distrito',
   JSON.stringify(est.unaSolaVez));
 log(est.guardado.est === 'La Candelaria' && est.guardado.dir === 'Calle 48 # 55–50' &&
     est.guardado.bar === 'La Candelaria' && est.guardado.ciu === 'Medellín' &&
@@ -1182,7 +1195,11 @@ log(limpio.escudo.embebido && limpio.escudo.sinCampo,
    dirección y ciudad ya se piden ahí — y la línea 4 salía justamente de ese
    nombre. Los demás campos se retiraron por instrucción del usuario (fiscalía
    destinataria → registro de Despachos; jornada hábil → no es relevante). */
-log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-asunto',
+/* ⚠️ MEJORA 7, 2.º pase: `aj-oj-dep` VUELVE, pero no como el duplicado que se
+   retiró en 2026-08-13 —aquel repetía el nombre de la unidad— sino como el campo
+   propio del DISTRITO, que es lo que el formato imprime en su línea 4 y lo único
+   que no se pedía en ninguna parte. */
+log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep,aj-oj-asunto',
   'El membrete se queda solo con lo que el documento imprime Y no se pide en otra parte',
   limpio.campos.join(', '));
 
