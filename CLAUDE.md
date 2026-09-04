@@ -5037,3 +5037,132 @@ clave en la descripción ENTERA, y `/\bpesos\b/` es de la categoría DINERO.
   simulador 41 · custodia 111 · incautación 141 · entrega 111 · fpj6 140 · personas 25 · invitado 34.
   Siguen los **cinco fallos preexistentes** ya listados arriba.
   Anti-caché `?v=99` / `cache-v99`, `_BUILD=99`.
+
+## Modo Patrulla — Fase 1 (2026-09-04) — identidad, reloj y registro de cambios
+Encargo de ampliación: que **dos funcionarios de la misma patrulla diligencien un mismo
+procedimiento desde sus dos teléfonos**, sin internet, sin servidores y sin alterar nada de lo que
+existe. Se entregó primero la auditoría y la arquitectura completa (A–J), como pedía el encargo, y
+solo después se implementó. Verificado con `verify_patrulla.mjs` (**28 checks**, nuevo).
+
+### La decisión tecnológica: WebRTC con emparejamiento por QR
+⚠️ **El envoltorio condiciona la respuesta más que cualquier otra cosa.** La app corre en un WebView
+de Capacitor con **carga remota** (`server.url = getcorenova.github.io/lexcapture`), así que **no
+tiene acceso a la radio del teléfono**: Bluetooth clásico y Wi-Fi Direct no tienen API web, Web
+Bluetooth no está en el WebView (y un teléfono no puede hacer de periférico BLE), y un WebView no
+puede escuchar en un puerto. Todas ellas exigirían un **complemento nativo**, o sea recompilar y
+volver a subir el `.aab` — que hoy no hace falta para nada, porque el código web se despliega con un
+`git push`.
+- **Medido, no supuesto:** sin ningún servidor STUN el navegador produce un descriptor de conexión de
+  **587 bytes**, y **con el permiso de cámara concedido sube a 668 y expone la IP local real**
+  (`192.168.1.11`) en vez del `.local` ofuscado. ⚠️ **Ahí está la sinergia que decidió la elección**:
+  el QR se escanea con la cámara, y ese mismo permiso es lo que hace que ICE dé direcciones reales y
+  la conexión directa sea fiable. Además el descriptor **cabe en un QR** (el tope de un QR denso son
+  unos 2 953 bytes), así que la señalización no necesita ningún intermediario.
+- ⚠️ **La contrapartida, dicha entera:** los dos teléfonos deben estar **en la misma red Wi-Fi**. En
+  campo eso es que uno active su punto de acceso — **no hace falta cobertura ni datos móviles**, solo
+  la red que los une. Automatizarlo exige el complemento nativo (Nearby Connections) y queda como
+  fase 6 opcional, decidible **después** de publicar en Play Store, porque además arrastra permiso de
+  ubicación en Android 12 o anterior y su declaración en Play Console.
+
+### Tres decisiones del usuario, tomadas antes de escribir código
+1. **Punto de acceso manual en esta primera versión** — a cambio de no recompilar el `.aab`.
+2. **El caso compartido queda guardado también en el teléfono del compañero**: B necesita el caso
+   para generar la cadena de custodia, el rótulo y el acta de incautación también después. La
+   consecuencia (aparece en su lista y en sus estadísticas) es aceptada.
+3. **La firma manuscrita NUNCA viaja.** Es un rasgo biométrico y con ella se suscriben documentos
+   judiciales: enviarla permitiría que un funcionario firmara un oficio como el otro. Es el mismo
+   criterio que la app ya aplica en `lcFirmaDe`.
+
+### ⚠️ El hallazgo que gobierna toda la arquitectura
+Las **seis salidas documentales ya escriben bien**: leen el caso fresco (`DB.getCase`), tocan **solo
+su rama** y guardan. **El wizard no.** Al abrirlo hace `wc = JSON.parse(JSON.stringify(raw))` —una
+copia completa—, el funcionario trabaja media hora sobre ella y `wizSave` **reemplaza el caso
+entero**. Con una regla de «gana el último» sobre el caso completo, el reparto real de la patrulla
+—A en el capturado, B en la víctima, que es literalmente el caso de uso del encargo— **perdería el
+trabajo de B de forma garantizada, no ocasional**. De ahí que lo que viaje sea una operación por
+**ruta** (`victimas/#a3f9c1/tel`) y no un caso.
+- **Y la pieza que hace barata la corrección ya existía**: `_wizBase`, la foto de cómo nació el caso,
+  creada en la Ola 1 para saber si el borrador está sucio, es exactamente la base contra la que hay
+  que calcular *qué cambió* en vez de *qué hay ahora*. El autoguardado a los 2,5 s de la última tecla
+  también existe ya: es el disparador natural del «casi en tiempo real», sin inventar nada.
+- **Igual de favorable:** toda persona nace con `id` (`savePersonModal`), los elementos también
+  (`lcEmpIds`), las actas se indexan por `personaId` y los rótulos por `empId`. **Las listas del caso
+  ya son direccionables**, que es lo que permite fusionar elemento a elemento. Decisiones tomadas en
+  su momento para que un rótulo no le robara la procedencia a otro elemento, y que resuelven por
+  adelantado la mitad del problema.
+
+### Lo que entra en esta fase (`pt*`, bloque aislado al final del script)
+- **Identidad del equipo** (`ptDeviceId`, clave `lc_device`): opaca, sin ningún dato del funcionario.
+  ⚠️ **Vive en clave propia y NO en `lc_cfg`**: la configuración se exporta e importa entre equipos, y
+  dos teléfonos con la misma identidad harían que la fusión se comiera cambios en silencio. En modo
+  invitado se genera en memoria y no escribe un byte.
+- **Reloj lógico híbrido** (`ptSello` / `ptObservar` / `ptCmp`, clave `lc_hlc`). ⚠️ **La hora del
+  teléfono no sirve** para decidir quién escribió último: con unos minutos de desfase «gana el más
+  reciente» elegiría el cambio equivocado. El sello combina hora física y un contador que **se
+  adelanta al ver un sello del compañero**. Se persiste, o tras un reinicio lo nuevo parecería
+  anterior a lo viejo. El desempate por identificador de equipo es arbitrario **a propósito**: lo que
+  importa es que los dos lados apliquen la misma regla y **converjan**.
+- **Aplanado a rutas** (`ptAplanar`) con `PT_LISTAS` (qué ramas se fusionan por elemento) y
+  **degradación segura**: si a un elemento de una lista con id le falta el id, la lista entera se
+  trata como valor único — fusionar a medias una lista de personas es peor que fusionarla entera.
+- **`ptDiff` / `ptPonerRuta` / `ptQuitarId` / `ptFusionar`**: la última escritura gana **por campo**,
+  no por rama (que A corrija el barrio no revierte el municipio de B), con descarte de lo anterior y
+  rechazo de las rutas de `PT_SOLO_DUENO` (`servidor`, `dossierSnap`, `oj/firma`, `oj/encabezado`):
+  el compañero no puede reescribir quién suscribe el informe.
+- ⚠️ **`ptHuella` / `ptConvergen` — serialización CANÓNICA, y no es comodidad.** Lo destapó la propia
+  regresión: dos réplicas que reciben los mismos cambios en distinto orden acaban con el mismo
+  contenido pero **con las claves en distinta secuencia**, y `JSON.stringify` las ve distintas. Con
+  esa comparación, en la fase 3 los dos equipos se creerían eternamente desincronizados y volverían a
+  mandarse todo una y otra vez. Las listas **sin** id conservan su orden, que ahí es contenido (las
+  conductas se imprimen numeradas en el apartado 2 del FPJ-5).
+- ⚠️ **`PT_LISTAS` no incluye `conductas`, `articulosCP` ni `vehiculos`**: son listas posicionales sin
+  identificador y se tratan como valor único (gana la última). Darles id tocaría `lcCondFilas` y
+  `_fpjConductas`, calibrados aparte, y en el reparto real solo un funcionario escribe ahí. Es una
+  **limitación declarada**, no un descuido.
+
+### ⚠️ El modo individual no paga ni un byte — la regla del punto 20
+Las marcas de versión (`caso._m`) **solo existen en un caso que se haya compartido**. Un caso que
+nunca entró en una sesión se guarda **idéntico** a como se guardaba antes de esta fase.
+- **`ptLimpio` / `ptLimpioJSON` son la capa de compatibilidad**, y los **dos únicos puntos** que se
+  tocaron fuera del módulo: `wizMarcarBase` y `wizSucio`. El wizard decide si hay trabajo sin guardar
+  comparando `JSON.stringify(wc)` con la foto inicial; las marcas cambian en cada tecla, así que sin
+  descontarlas **el formulario se creería sucio siempre** y preguntaría al salir sin que nadie
+  hubiera tocado nada. En un caso sin marcas devuelve el **mismo objeto**: cero copias, cero coste.
+- **Ni un motor documental se tocó.** Hay un check que genera el **FPJ-5 de un caso sellado y lo
+  compara byte a byte** con el del mismo caso sin sellar: idénticos (447 673 B).
+- ⚠️ **Lecciones que salieron de la propia regresión** (tres checks fallaron y **ninguno era del
+  código**): (a) el test que comprueba que el reloj se adelanta al recibir un sello del futuro **deja
+  el reloj lógico 10 minutos por delante de la hora física** —que es su comportamiento correcto—, así
+  que los tests posteriores **no pueden fabricar sellos con `Date.now()`**: hay que derivarlos de
+  `ptSello()`; (b) la convergencia es **semántica, no textual** (ver `ptHuella`); (c) un check que
+  contaba usos por nombre contaba también **las menciones dentro de un comentario**.
+
+### Mediciones de la auditoría
+| Medición | Valor |
+|---|---|
+| Caso de flagrancia completo (2 capturados, 2 víctimas, 1 testigo, 2 EMP) | **5 245 B** |
+| Caso por orden judicial completo | **6 517 B** |
+| Puntos del archivo que escriben un caso — **todos** por `DB.saveCase` | **14** |
+| Descriptor WebRTC sin servidor / con permiso de cámara | 587 B / **668 B** |
+| Operación de sincronización | 100–300 B |
+
+### Fases siguientes (no implementadas)
+**2** motor de fusión aplicado al wizard (que deje de reemplazar) · **3** transporte, QR, cifrado de
+aplicación y cola de pendientes · **4** interfaz (entrada en el menú, pantalla de sesión, franja de
+estado) · **5** recuperación y reanudación · **6** complemento nativo, **opcional y posterior a
+publicar**. ⚠️ Las capas de datos **no dependen del transporte**: si mañana el canal cambia, la
+lógica no se toca.
+
+- Regresiones en verde (**36 suites**): **patrulla 28** (nueva) · ola1 38 · invitado 34 · almacén 12 ·
+  personas 25 · expediente 13 · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 ·
+  mejora8 72 · fpj6 140 · custodia 111 · incautación 141 · entrega 111 · OJ 187 · simulador 41 ·
+  export 66 · firma 62 · editable 28 · menú+expediente 16 · envío 39 · multipersona ·
+  fpj5 tipografía 48 · tipografía OJ 42 · ola2 34 · ola3 33 · ola4 22 · orden 33 · tema 39 ·
+  grados 31 · despachos 53 · jurisdicción 67 · vía CR 41 · NUNC año 39 · estadísticas 58.
+  **Ninguna bajó su cuenta y ninguna expectativa se tocó** — que es la prueba de la regla del punto 20.
+  ⚠️ **Fallos PREEXISTENTES, no de este trabajo**: `verify_jerarquia` 65/66 —**comprobado ejecutando
+  la suite contra el HTML de HEAD: falla idéntico**—, `verify_mejora6b` [47] y [53],
+  `verify_dossier_historico` [20] y [21] (los cuatro miden textos de Ajustes que cambiaron en el
+  commit `21ae35b`), `verify_ds` 9/10 («favorito con estrella SVG») y `verify_mejora7` [B23], que es
+  **intermitente** (falló 1 de 3 corridas aquí, y ya estaba documentado como tal).
+  Anti-caché `?v=100` / `cache-v100`, `_BUILD=100`.
