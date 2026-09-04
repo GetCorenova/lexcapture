@@ -4812,3 +4812,176 @@ con resumen.
   `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08) y `verify_mejora7`
   [B23], que es **intermitente** — falla 2 de cada 5 corridas también sin ninguno de estos cambios.
   Anti-caché `?v=97` / `cache-v97`, `_BUILD=97`.
+
+## Mejora 8 (2026-09-04) — el dossier, dato por dato
+Requerimiento en `Documentos/Otro/Mejora 8.docx`: cuatro pantallazos del dossier con recuadro rojo
+numerado y, junto a cada uno, **de dónde tiene que salir cada dato y cómo se escribe**. Verificado con
+`verify_mejora8.mjs` (**60 checks**, nuevo). Las 33 suites previas siguen en verde salvo los fallos
+preexistentes que se listan al final.
+
+⚠️ **El hilo que une las observaciones**: en ninguna faltaba el dato. O salía de la fuente equivocada
+(el saludo, del reloj en vez de la hora de la captura; la línea 2 del encabezado, compuesta a mano en
+vez de leída de su campo), o salía con datos de más y en otro orden (los diez renglones de generales
+de ley donde el usuario quiere seis), o **no salía en absoluto** —los EMP y EF recolectados, que el
+dossier nunca mencionó—. **Ni un campo se añadió al wizard**: todo lo que imprime la sección nueva ya
+estaba registrado.
+
+### Obs. 1 · El encabezado, línea por línea
+| Línea | Antes | Ahora |
+|---|---|---|
+| `DIOS Y PATRIA MI <rango> <saludo>` | saludo por la hora del ENVÍO, franjas 06/12/19 | saludo por la **hora de la captura**, franjas **01/12/18** |
+| `DISTRITO TRES DE POLICÍA` | compuesta: `'DISTRITO '+lcNumDistrito(cfg)+' DE POLICÍA'` | **el campo de Ajustes tal cual**, en mayúsculas |
+| `ESTACIÓN DE POLICÍA CANDELARIA` | `lcUnidadNombre(cfg)` | `cfg.nombreEstacion`, con `ojEstacionLabel` |
+
+- ⚠️ **El saludo se calculaba con `new Date()`.** Un dossier redactado a las 22:00 sobre una captura
+  de las 09:00 abría con «BUENAS NOCHES» un procedimiento de la mañana, y **el mismo caso reenviado
+  al día siguiente saludaba distinto**: el encabezado describía el momento en que alguien tocó el
+  botón, no el procedimiento. Ahora lo decide `narracion.horaCapH`; sin hora registrada se cae al
+  reloj, que es el comportamiento anterior. Hay un check que genera dos dossieres **en el mismo
+  instante** y exige que saluden distinto.
+- ⚠️ **Franjas nuevas: DÍAS 01:00–11:59 · TARDES 12:00–17:59 · NOCHES 18:00–00:59.** La nota del
+  usuario dice «TARDES (de 12 horas a 18), NOCHES (de 18 horas a 00)»: las 18 se nombran en las dos,
+  y cada franja empieza donde acaba la anterior, así que **las 18:00 en punto ya son NOCHES**.
+- ⚠️ **La línea 2 se COMPONÍA, y por eso mentía en toda unidad que no fuera un distrito.**
+  `lcNumDistrito` extrae el ordinal de `cfg.ojDependencia` y la línea se rearmaba como «DISTRITO … DE
+  POLICÍA»: una seccional, un grupo o una dirección salían **nombrados como distrito**. Ahora se
+  imprime el campo entero, que es lo que pidió el usuario («lo que el usuario colocó ahí, eso es lo
+  que sale»). El compuesto se conserva **solo** como respaldo de un equipo que aún no lo haya escrito
+  — sin él, ese equipo perdería una línea que hoy sí imprime. Hay un check con una seccional.
+- ⚠️ **La línea 3 deja de usar `lcUnidadNombre`, y no es un descuido.** Esa función cae a
+  `ojDependencia` cuando no hay estación, y `ojDependencia` es justo lo que ahora imprime la línea 2:
+  el encabezado habría dicho **dos veces lo mismo**. Sigue siendo el punto único para el oficio y el
+  bloque de contacto; el dossier es el que ahora distingue los dos niveles.
+
+### Obs. 2 · QUÉ, y el artículo del Código Penal
+La app ya distinguía captura de aprehensión. Lo que faltaba: **el delito podía llegar con el artículo
+pegado** («Hurto simple Art. 239 C.P.») desde un caso importado, del simulador o escrito así a mano en
+el campo libre. `dosDelito()` lo retira, solo en el dossier.
+- ⚠️ Solo se quita lo que se anuncia **como** artículo o código: «Hurto calificado» no pierde una
+  palabra. El artículo se sigue pidiendo y el numeral 2 del FPJ-5 lo sigue imprimiendo (Mejora 5).
+
+### Obs. 2 y 3 · QUIÉN y VÍCTIMA — seis renglones, no diez
+Nombres y apellidos · `CC 1122598923 de La Estrella` · **`F.N 11/Ene/1999 en Sabaneta, Antioquia`**
+(la fecha de nacimiento y el lugar **en la misma línea**) · Edad · Estado civil · Ocupación.
+- **Salen del dossier**: «Lugar de nacimiento» como renglón propio (se funde en la línea de la
+  fecha), **Escolaridad**, **Correo** y **Alias**. ⚠️ **Ninguno se borra del modelo**: los cuatro se
+  siguen pidiendo, se siguen guardando y el FPJ-5 los sigue imprimiendo en sus apartados 4, 5 y 6. Lo
+  que cambia es qué se manda por chat, que es un resumen operativo y no el informe.
+- ⚠️ **Sin fecha de nacimiento el lugar NO se pierde**: pasa a su propio renglón con la etiqueta del
+  formato oficial («Natural de»). Colgarlo de una línea «F.N » vacía, o no imprimirlo, son las dos
+  formas de estropearlo.
+- **Numeración solo con más de una persona** (`dosPersonas`): «Capturado 1 / Capturado 2»,
+  «Aprehendido 1 / Aprehendido 2» en una captura de menores, «Víctima 1 / Víctima 2». Con una sola no
+  se antepone nada — numerar lo que no tiene con qué confundirse es el ruido que quitó la Mejora 6.
+- ⚠️ **`dosEsMenor` NO reimplementa el criterio del SRPA**: llama a `ojEsAdolescente` para la orden
+  judicial, que es el que decide la terminología del oficio. Dos criterios distintos darían un oficio
+  que dice «aprehendido» y un dossier del mismo procedimiento que dice «capturado».
+- **VÍCTIMA sube por delante de CÓMO** («después de QUIÉN debe de ir la o las víctima(s)»). Tiene
+  sentido operativo: QUIÉN y VÍCTIMA son el mismo bloque de generales de ley, y partirlos con el
+  relato obligaba a leerlo dos veces.
+
+### La sección que no existía · INCAUTACIONES Y RECUPERACIONES
+⚠️ **Los EMP y EF nunca llegaron al dossier.** Se recolectan en el paso 7 del wizard, se imprimen en
+el numeral 7 del FPJ-5 y alimentan la cadena de custodia, el rótulo y el acta de incautación — y el
+mensaje que se manda al comandante no los mencionaba. Ahora van **después de CÓMO**, una frase por
+renglón y contiguas (así las escribió el usuario), y la sección **no se imprime si no hay elementos**:
+el dossier de una captura sin EMP sale exactamente como salía.
+
+**Las dos decisiones que gobiernan la sección:**
+1. **QUÉ SE NOMBRA.** No la descripción del numeral 7 —«01 (uno) celular marca Samsung color negro
+   IMEI…», que es lo que necesita el informe— sino el **tipo** en una frase corta, que es lo que se
+   lee en un chat. Las frases repetidas se funden: dos armas de fuego son una línea.
+   ⚠️ **Lo que la app NO reconoce conserva SU PROPIA descripción** (primer segmento, máximo cinco
+   palabras) en vez de caer en un genérico. Un elemento probatorio que se convierte en «OTROS
+   ELEMENTOS» es un elemento que desaparece.
+2. **INCAUTACIÓN o RECUPERACIÓN** — el punto que el usuario pidió analizar con cuidado. La distinción
+   es jurídica: se **incauta** lo que es objeto o instrumento del delito, se **recupera** lo que la
+   víctima había perdido.
+   - **Armas, munición, sustancias e instrumentos** (ganzúa, gramera, pasamontañas…) → **siempre
+     incautación**, en cualquier delito. Nunca hay una víctima a la que devolverle un arma o un
+     estupefaciente.
+   - **Vehículos y bienes apropiables** (celular, joyas, dinero, mercancía, equipo de cómputo…) →
+     **recuperación solo si el caso es por un delito de apoderamiento** (`LC_DOS_APROP`: hurto,
+     receptación, abigeato, apropiación, estafa, extorsión), porque entonces el bien es producto del
+     delito; en cualquier otro caso, incautación.
+   - Es exactamente la distinción del requerimiento: **la moto que se usó para hurtar se incauta; la
+     moto que se hurtó se recupera.** Hay un check que genera el mismo vehículo bajo dos delitos, y
+     otro que en un solo caso de hurto saca «INCAUTACIÓN DE ARMA DE FUEGO» junto a «RECUPERACIÓN DE
+     CELULAR / DE JOYAS / DE DINERO».
+- ⚠️ **EL LÍMITE, DICHO EN VOZ ALTA**: la app no puede saber con certeza si un elemento concreto es lo
+  hurtado o lo que se usó para hurtar — eso está en la cabeza del funcionario, no en el modelo. Se
+  resuelve por el delito del caso, que es la mejor inferencia disponible, y **el resultado queda a la
+  vista en un texto editable antes de mandarse**. Añadir un campo por elemento para preguntarlo habría
+  metido trabajo nuevo en el formulario a cambio de un dato que se corrige en dos segundos sobre el
+  mensaje.
+- Las sustancias salen **con su nombre propio** (MARIHUANA, BASE DE COCA, BASUCO, CLORHIDRATO DE
+  COCAÍNA, HEROÍNA, ÉXTASIS), no como un genérico: es lo que el requerimiento enumera.
+- **Los vehículos implicados entran por su propia rama** (`caso.vehiculos[]`, paso 8 del wizard). Si
+  el funcionario respondió que **no** hay vehículos, no se listan.
+- ⚠️ **Cada frase se lee sola y NO lleva etiqueta contenedora encima.** En el editor de secciones sí
+  aparece con un rótulo («Incautaciones y recuperaciones»), pero ese `label` existe solo para
+  identificarla ahí, donde se activa y se reordena como cualquier otra.
+
+### Obs. 4 · Conocieron el caso · VERDE 3 · DIAMANTE 3
+```
+✅ *Conocieron el caso*
+CAI Parque Bolívar, Patrulla 32
+S.I Nelson David David
+P.T Juan Córdoba García
+```
+- Antes era **una línea corrida**: `PATRULLA 32 CAI Parque Bolívar — SI Nelson / PT Juan`. Ahora la
+  unidad y la patrulla encabezan y **cada funcionario ocupa su renglón**, el de mayor rango primero.
+- ⚠️ **El orden por rango ya lo resolvía `getConocieronList`** (la pirámide es el índice de
+  `LC_GRADOS`, Fase E): no se escribió una segunda tabla. Lo que cambia es la presentación.
+- ⚠️ **El grado se abrevia CON PUNTO — «S.I», «T.C» — SOLO en el dossier.** `lcAbrevGrado` y
+  `lcGradoNombre` **no se tocan**: las leen el FPJ-5 (celda del servidor), el oficio de orden
+  judicial, la cadena de custodia, el rótulo y las dos actas, todos verificados carácter a carácter
+  contra su formato oficial. La forma con puntos es una convención del mensaje de chat.
+  `dosGradoPuntos` prueba con **tres palabras, luego dos, luego una** —hay grados de varias
+  («Teniente Coronel», «Patrullero de Policía»)— y **si el grado no está en el catálogo lo deja tal
+  cual**: no se inventa una abreviatura.
+- **VERDE 3 y DIAMANTE 3** pasan por la misma función, así que su campo de Ajustes sigue siendo texto
+  libre y da igual que el usuario escriba «Teniente Coronel Jin…» o «TC Jin…».
+- ⚠️ **`patrullaLabel` tampoco se toca** (la usan el oficio OJ y el resumen de la diligencia): el
+  dossier **reformatea** con `dosPatrullaFmt`. Eso es además lo que hace que **una captura guardada
+  antes de esta mejora salga con el formato nuevo**: su foto del dossier (Fase F) congeló la patrulla
+  con el formato viejo, y lo que esa foto guarda es el DATO, no su presentación. Hay dos checks de
+  integridad histórica.
+
+### El relato ya no se recorta
+`CÓMO` hacía `texto.substring(0,300)+'...'` y salía **cortado a media palabra** («…se ubicó a And…»).
+Ese apartado es justamente lo que el comandante lee para saber qué pasó, y aquí **no hay ninguna
+casilla que proteger**: es un mensaje de chat, no un formato de tamaño fijo. Un texto que desaparece
+sin avisar es el peor resultado — la regla que este proyecto lleva aplicada desde los EMP que nunca se
+imprimían (Mejora 1) y las personas que no se reproducían (FPJ-5 v3).
+
+### La migración del orden guardado
+Un equipo que ya usó el editor de secciones tiene su lista en `cfg.dossierSecciones`, con el orden
+anterior y sin la sección nueva. Respetarla tal cual habría dejado el orden nuevo **sin verse
+justamente en los equipos que llevan más tiempo**.
+- `_dosMigrarSecciones` adopta el ORDEN y las secciones NUEVAS, y **conserva la decisión del usuario**
+  sobre qué mostrar (`activa`) y sus secciones personalizadas, que se quedan al final con su texto
+  intacto. Ni una decisión suya se pierde y ninguna sección desaparece.
+- ⚠️ Corre **una vez** (`dossierSeccionesV`): si no, reordenar a mano volvería a quedar deshecho en la
+  lectura siguiente.
+
+### Regresiones
+En verde: **mejora8 60** (nuevo) · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 ·
+mejora7 67 · OJ 187 · fpj6 140 · custodia 111 · incautación 141 · entrega 111 · export 66 · firma 62 ·
+editable 28 · tipografía OJ 42 · fpj5 tipografía 48 · envío 39 · almacén 12 · expediente 13 ·
+menú+expediente 16 · personas 25 · invitado 34 · simulador 41 · orden 33 · despachos 53 ·
+jurisdicción 67 · vía CR 41 · NUNC año 39 · tema 39 · grados 31 · estadísticas 58 · ola1 38 · ola2 34 ·
+ola3 33 · ola4 22 · multipersona.
+⚠️ **Suites adaptadas al formato nuevo, ninguna baja su cuenta** — cada una con el porqué anotado en
+el propio check: `verify_dossier_historico` (los grados con punto y «Patrulla 32»), `verify_mejora3`
+[40], `verify_mejora6b` [54], `verify_mejora7` [B10]/[B11]/[B27], y `verify_mejora7` [B20] +
+`verify_expediente` [8], que **derivan ahora la cuenta de secciones del registro** en vez de llevarla
+escrita a mano: un número fijo las dejaba obsoletas con la siguiente sección que se sume.
+⚠️ **Cinco fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD**:
+`verify_dossier_historico` [20] y [21] y `verify_mejora6b` [47] y [53] —los cuatro miden textos de la
+pantalla de Ajustes que cambiaron en el commit `21ae35b`—, más `verify_jerarquia`, que mide el mismo
+aviso de más de 110 caracteres que `verify_mejora6b` [47]. Y `verify_ds` («favorito con estrella SVG»,
+mecanismo retirado el 2026-08-08).
+⚠️ **La suite nueva no es vacía**: contra el build anterior fallan **17 de sus primeros 32 checks** y
+después aborta, porque `dosEmpFrases` y `dosGradoPuntos` no existían.
+Anti-caché `?v=98` / `cache-v98`, `_BUILD=98`.

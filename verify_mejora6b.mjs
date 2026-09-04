@@ -356,7 +356,10 @@ const dossier = await page.evaluate(async () => {
   await DB.saveCase(c);
   return genDossier(DB.getCase(c.id));
 });
-log(/IT Ana Maria Perez \/ SI Nelson David David/.test(dossier),
+/* ⚠️ Mejora 8: un funcionario POR RENGLON y el grado abreviado con punto, en vez
+   de la linea corrida separada por barras. Lo que este check mide —que los dos
+   lleguen al dossier y que el de mayor rango encabece— no cambia. */
+log(/I\.T Ana Maria Perez\nS\.I Nelson David David/.test(dossier),
   '[54] El dossier imprime a los dos, en orden de rango');
 
 console.log('\n══ Obs. 14 · la fiscalia destinataria sale del registro de despachos ══');

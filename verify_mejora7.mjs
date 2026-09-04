@@ -352,9 +352,12 @@ log(despues.dossier === antes.dossier,
   '[B8] ⚠️ El dossier de una captura guardada sale CARACTER POR CARACTER igual que antes de la reorganizacion');
 log(despues.servidor === antes.servidor,
   '[B9] Y los datos del servidor del FPJ-5, tambien', despues.servidor === antes.servidor ? '' : despues.servidor);
-log(/PATRULLA 32 CAI Parque Bolivar/.test(despues.dossier),
+/* ⚠️ Mejora 8: la patrulla se escribe «CAI …, Patrulla 32» y el grado abreviado
+   lleva punto. Lo que estos dos checks protegen —que el traslado de campos de la
+   Mejora 7 no dejara ningun dato sin imprimir— no cambia. */
+log(/CAI Parque Bolivar, Patrulla 32/.test(despues.dossier),
   '[B10] La patrulla sigue encabezando «Conocieron el caso» desde su pantalla nueva');
-log(/TC Jin Eduardo Moreno/.test(despues.dossier) && /TC William Quintero/.test(despues.dossier),
+log(/T\.C Jin Eduardo Moreno/.test(despues.dossier) && /T\.C William Quintero/.test(despues.dossier),
   '[B11] Y VERDE 3 y DIAMANTE 3 se siguen imprimiendo');
 log(/DIOS Y PATRIA MI CORONEL/.test(despues.dossier) && /DISTRITO TRES DE POLIC/.test(despues.dossier),
   '[B12] El encabezado del dossier no cambia una coma');
@@ -430,11 +433,16 @@ const dos = await page.evaluate(() => {
   return { existen: puertas.every(f => typeof window[f] === 'function'),
            pantalla: !!document.getElementById('screen-dossierwa'),
            secciones: getDosierSecciones().length,
+           esperadas: getDefaultSecciones().length,
            enNav: [...document.querySelectorAll('.sb-item')].map(e => e.dataset.screen).filter(Boolean) };
 });
 log(dos.existen, '[B19] ⚠️ El modulo del dossier sigue completo: ninguna de sus nueve funciones se retiro');
-log(dos.pantalla && dos.secciones === 10,
-  '[B20] Su pantalla y sus diez secciones siguen ahi', 'secciones: ' + dos.secciones);
+/* ⚠️ La expectativa se DERIVA del registro (`getDefaultSecciones`) en vez de
+   escribirse a mano: la Mejora 8 anadio la seccion de incautaciones y un numero
+   fijo dejaria esta prueba obsoleta con la siguiente. Lo que mide sigue siendo
+   que el traslado de la Mejora 7 no se llevara ninguna por delante. */
+log(dos.pantalla && dos.secciones === dos.esperadas && dos.secciones >= 10,
+  '[B20] Su pantalla y todas sus secciones siguen ahi', 'secciones: ' + dos.secciones);
 log(dos.enNav.includes('perfil') && dos.enNav.includes('ajustes'),
   '[B21] Y la navegacion no perdio ninguna entrada', dos.enNav.join(' · '));
 
@@ -489,7 +497,7 @@ log(/\*VERDE 3\*/.test(ind.antes) && /\*DIAMANTE 3\*/.test(ind.antes),
 log(/\*CENTAURO 5\*/.test(ind.despues) && /\*HALCON 2\*/.test(ind.despues) &&
     !/\*VERDE 3\*/.test(ind.despues) && !/\*DIAMANTE 3\*/.test(ind.despues),
   '[B26] Y con otro indicativo, la seccion sale con ÉL — que es para lo que se pidió el campo');
-log(/TC William Quintero/.test(ind.despues) && /TC Jin Eduardo Moreno/.test(ind.despues),
+log(/T\.C William Quintero/.test(ind.despues) && /T\.C Jin Eduardo Moreno/.test(ind.despues),
   '[B27] El comandante sigue siendo el contenido de su seccion');
 log(ind.enEditor === 'HALCON 2',
   '[B28] El editor de secciones enseña la etiqueta resuelta, no el nombre por defecto', ind.enEditor);

@@ -112,11 +112,17 @@ await page.waitForTimeout(500);
 log(!!(await page.$('#dos-sec-btn')), '[7] El editor de secciones tiene boton en pantalla');
 await page.click('#dos-sec-btn');
 await page.waitForTimeout(400);
+/* ⚠️ La cuenta se DERIVA del registro de secciones en vez de escribirse a mano:
+   la Mejora 8 anadio la de incautaciones, y un numero fijo dejaria esta prueba
+   obsoleta con la siguiente seccion que se sume. Lo que mide es lo mismo: que el
+   editor abre y lista TODAS. */
 const s7 = await page.evaluate(() => ({
   vis: document.getElementById('dos-sec-inner').style.display,
-  filas: document.querySelectorAll('#dos-sec-inner .sec-row').length
+  filas: document.querySelectorAll('#dos-sec-inner .sec-row').length,
+  esperadas: getDosierSecciones().length
 }));
-log(s7.vis === 'block' && s7.filas === 10, '[8] Abre y lista las 10 secciones', s7.filas + ' filas');
+log(s7.vis === 'block' && s7.filas === s7.esperadas && s7.filas >= 10,
+  '[8] Abre y lista todas las secciones', s7.filas + ' filas');
 
 // [9] desactivar una sección se refleja en el texto
 const s9 = await page.evaluate(async () => {

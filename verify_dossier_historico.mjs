@@ -116,8 +116,12 @@ console.log('\n── II · El caso congela la foto al guardarse ──\n');
 
 console.log('\n── III · LA PRUEBA DE CAMBIO DE PERFIL (§39 del encargo) ──\n');
 {
+  /* ⚠️ Los grados salen ahora abreviados CON PUNTO («S.I», «I.T») y la patrulla
+     como «CAI …, Patrulla 32»: es el formato que fijó la Mejora 8 para el
+     dossier. Lo que esta sección mide —que el caso viejo no se reescriba— no
+     cambia; lo que cambia es cómo se escribe el mismo dato. */
   const antes = await page.evaluate(() => genDossier(DB.getCases().filter(x => x.id === 'caso-viejo')[0]));
-  log(/SI NELSON DAVID GOMEZ/.test(antes), 'El dossier del caso dice el grado con el que se emitió', 'SI …');
+  log(/S\.I NELSON DAVID GOMEZ/.test(antes), 'El dossier del caso dice el grado con el que se emitió', 'S.I …');
 
   /* El funcionario asciende: Subintendente → Intendente. */
   await page.evaluate(async () => {
@@ -130,10 +134,10 @@ console.log('\n── III · LA PRUEBA DE CAMBIO DE PERFIL (§39 del encargo) �
   const despues = await page.evaluate(() => genDossier(DB.getCases().filter(x => x.id === 'caso-viejo')[0]));
   log(despues === antes,
     '⚠️ Tras el ascenso, el dossier del caso VIEJO no cambió ni un carácter', despues === antes ? 'idéntico' : 'CAMBIÓ');
-  log(/SI NELSON DAVID GOMEZ/.test(despues) && !/IT NELSON/.test(despues),
+  log(/S\.I NELSON DAVID GOMEZ/.test(despues) && !/I\.T NELSON/.test(despues),
     '  …sigue diciendo SI, que es el grado que tenía cuando se emitió', 'sin reescritura retroactiva');
-  log(/PATRULLA 32/.test(despues) && !/PATRULLA 47/.test(despues),
-    '  …y la patrulla que de verdad conoció el caso', 'PATRULLA 32');
+  log(/Patrulla 32/.test(despues) && !/Patrulla 47/.test(despues),
+    '  …y la patrulla que de verdad conoció el caso', 'Patrulla 32');
 
   /* Un caso NUEVO sí recoge el cambio: es la otra mitad. */
   const nuevo = await page.evaluate(async () => {
@@ -144,9 +148,9 @@ console.log('\n── III · LA PRUEBA DE CAMBIO DE PERFIL (§39 del encargo) �
     await DB.saveCase(c);
     return genDossier(DB.getCases().filter(x => x.id === 'caso-nuevo')[0]);
   });
-  log(/IT NELSON DAVID GOMEZ/.test(nuevo),
-    'Una captura NUEVA sí recoge el ascenso — la referencia estaba viva', 'IT …');
-  log(/PATRULLA 47/.test(nuevo), '  …y la patrulla nueva', 'PATRULLA 47');
+  log(/I\.T NELSON DAVID GOMEZ/.test(nuevo),
+    'Una captura NUEVA sí recoge el ascenso — la referencia estaba viva', 'I.T …');
+  log(/Patrulla 47/.test(nuevo), '  …y la patrulla nueva', 'Patrulla 47');
 }
 
 console.log('\n── IV · Editar una captura no reescribe su historia ──\n');
@@ -177,7 +181,7 @@ console.log('\n── V · Nada se migra a la fuerza ──\n');
     return { tieneSnap: !!g.dossierSnap, dossier: genDossier(g) };
   });
   log(!r.tieneSnap, 'Una captura sin foto se queda sin ella — no se migra al leerla', 'sin dossierSnap');
-  log(/IT NELSON DAVID GOMEZ/.test(r.dossier) && /PATRULLA 47/.test(r.dossier),
+  log(/I\.T NELSON DAVID GOMEZ/.test(r.dossier) && /Patrulla 47/.test(r.dossier),
     '  …y proyecta desde la configuración de hoy, como hacía antes', 'comportamiento anterior intacto');
 }
 

@@ -401,7 +401,11 @@ log(!/\?\?/.test(cuando) && /a las \d{2}:\d{2} horas/.test(cuando),
   'CUÁNDO ya no sale «??/??/?? a las ??:?? horas»', cuando);
 log(!/^—, Barrio —/.test(donde) && /CL 52 # 50-31, Barrio La Candelaria, Medellin - Antioquia/.test(donde),
   'DÓNDE imprime la dirección, el barrio, el municipio y el departamento', donde);
-log(/\*Conocieron el caso\*\nPATRULLA 32 CAI Parque Bolivar — SI NELSON DAVID DAVID \/ PT JUAN CORDOBA/.test(p8.dos),
+/* ⚠️ Formato de la Mejora 8: la unidad y la patrulla en el primer renglón y
+   DESPUÉS un funcionario por renglón, con el grado abreviado y con punto. Lo que
+   este check protege no cambia —que el dossier registre la patrulla ENTERA
+   aunque el oficio lo firme un solo funcionario—, solo cómo se escribe. */
+log(/\*Conocieron el caso\*\nCAI Parque Bolivar, Patrulla 32\nS\.I NELSON DAVID DAVID\nP\.T JUAN CORDOBA/.test(p8.dos),
   'El dossier sigue registrando la patrulla completa, aunque el oficio lo firme uno solo');
 log(/\*CÓMO\*\nRelato del procedimiento escrito por el funcionario\./.test(p8.dos),
   'Y CÓMO trae el relato del funcionario, que antes se quedaba fuera');
