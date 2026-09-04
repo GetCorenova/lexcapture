@@ -2545,7 +2545,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 98;
+var _BUILD = 99;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -7135,20 +7135,24 @@ var LC_DOS_APROP=/hurto|receptaci|abigeato|apropiaci[oó]n|estafa|extorsi/i;
 
 /* p = orden de impresión (armas → sustancias → instrumentos → vehículos →
    bienes → lo no reconocido). v='inc' es «siempre incautación». El PRIMERO que
-   casa gana, así que lo específico va antes que lo genérico. */
+   casa gana, así que lo específico va antes que lo genérico.
+   ⚠️ `masa:true` = NO se cuenta ni se pluraliza en el título. «CINCUENTA
+   MARIHUANAS» o «VEINTE MUNICIONES» no se dicen: la cantidad de una sustancia
+   son sus gramos y la de la munición sus cartuchos, y eso va en la descripción,
+   que es donde el funcionario lo escribió. */
 var LC_DOS_EMP=[
   {p:1,v:'inc', n:'ARMA DE FUEGO',      re:/arma\s+de\s+fuego|rev[oó]lver|pistola|escopeta|fusil|subametralladora|carabina|chang[oó]n|traum[áa]tic/i},
   {p:1,v:'inc', n:'ARMA CORTOPUNZANTE', re:/cortopunzant|arma\s+blanca|cuchill|navaj|pu[ñn]al|machete|punz[oó]n|bistur[íi]|cortant/i},
   {p:1,v:'inc', n:'ARMA CONTUNDENTE',   re:/contundent|garrote|\bbate\b|tonfa|manopla/i},
-  {p:1,v:'inc', n:'MUNICIÓN',           re:/munici[oó]n|cartuch|vainill|proyectil|proveedor/i},
-  {p:2,v:'inc', n:'MARIHUANA',              re:/marihuana|cannabis|cripy|creepy/i},
-  {p:2,v:'inc', n:'BASE DE COCA',           re:/base\s+de\s+coca|pasta\s+base/i},
-  {p:2,v:'inc', n:'BASUCO',                 re:/bas[uú]co|bazuco/i},
-  {p:2,v:'inc', n:'CLORHIDRATO DE COCAÍNA', re:/clorhidrato|coca[íi]na/i},
-  {p:2,v:'inc', n:'HEROÍNA',                re:/hero[íi]na/i},
-  {p:2,v:'inc', n:'ÉXTASIS',                re:/[ée]xtasis|\bmdma\b|\b2cb\b|\btusi\b/i},
-  {p:2,v:'inc', n:'SUSTANCIA ESTUPEFACIENTE', re:/estupefacient|alucin[oó]gen|sustancia\s+(?:il[íi]cita|controlada)|dosis\s+personal/i},
-  {p:3,v:'inc', n:'ELEMENTOS UTILIZADOS PARA LA COMISIÓN DEL DELITO',
+  {p:1,v:'inc', n:'MUNICIÓN', masa:true, re:/munici[oó]n|cartuch|vainill|proyectil|proveedor/i},
+  {p:2,v:'inc', masa:true, n:'MARIHUANA',              re:/marihuana|cannabis|cripy|creepy/i},
+  {p:2,v:'inc', masa:true, n:'BASE DE COCA',           re:/base\s+de\s+coca|pasta\s+base/i},
+  {p:2,v:'inc', masa:true, n:'BASUCO',                 re:/bas[uú]co|bazuco/i},
+  {p:2,v:'inc', masa:true, n:'CLORHIDRATO DE COCAÍNA', re:/clorhidrato|coca[íi]na/i},
+  {p:2,v:'inc', masa:true, n:'HEROÍNA',                re:/hero[íi]na/i},
+  {p:2,v:'inc', masa:true, n:'ÉXTASIS',                re:/[ée]xtasis|\bmdma\b|\b2cb\b|\btusi\b/i},
+  {p:2,v:'inc', masa:true, n:'SUSTANCIA ESTUPEFACIENTE', re:/estupefacient|alucin[oó]gen|sustancia\s+(?:il[íi]cita|controlada)|dosis\s+personal/i},
+  {p:3,v:'inc', masa:true, n:'ELEMENTOS UTILIZADOS PARA LA COMISIÓN DEL DELITO',
                 re:/ganz[uú]a|barreteador|llave\s+maestra|pasamonta|gramera|inhibidor|clonador/i},
   {p:4,v:'bien',n:'MOTOCICLETA', re:/motociclet|\bmotos?\b|motocarro/i},
   {p:4,v:'bien',n:'CAMIONETA',   re:/camionet/i},
@@ -7156,52 +7160,124 @@ var LC_DOS_EMP=[
   {p:4,v:'bien',n:'BICICLETA',   re:/bicicleta|patineta/i},
   {p:4,v:'bien',n:'VEHÍCULO',    re:/veh[íi]culo|cami[oó]n|buseta|\bbus\b|furg[oó]n/i},
   {p:5,v:'bien',n:'CELULAR',           re:/celular|tel[eé]fono|smartphone|equipo\s+m[oó]vil/i},
-  {p:5,v:'bien',n:'JOYAS',             re:/joya|cadena\s+de\s+oro|anillo|arete|pulsera|\breloj/i},
-  {p:5,v:'bien',n:'DINERO',            re:/dinero|efectivo|billete|\bpesos\b/i},
+  {p:5,v:'bien',masa:true, n:'JOYAS',  re:/joya|cadena\s+de\s+oro|anillo|arete|pulsera|\breloj/i},
+  {p:5,v:'bien',masa:true, n:'DINERO', re:/dinero|efectivo|billete|\bpesos\b/i},
   {p:5,v:'bien',n:'EQUIPO DE CÓMPUTO', re:/computador|port[áa]til|laptop|tablet/i},
-  {p:5,v:'bien',n:'MERCANCÍA',         re:/mercanc[íi]a/i}
+  {p:5,v:'bien',masa:true, n:'MERCANCÍA', re:/mercanc[íi]a/i}
 ];
+/* ⚠️ SE CLASIFICA POR EL NOMBRE DEL ELEMENTO, NO POR SU DESCRIPCIÓN ENTERA.
+   Mirar la descripción completa hacía que un DETALLE decidiera la categoría: el
+   caso que lo destapó fue «cheques de Bancolombia con firmas ilegibles por valor
+   de dos millones de PESOS», que salía como «INCAUTACIÓN DE DINERO». El elemento
+   es lo que se nombra al principio; lo que sigue son sus características. */
 function _dosEmpClase(txt){
-  var s=String(txt||'');
+  var s=_dosEmpCorto(txt);
   for(var i=0;i<LC_DOS_EMP.length;i++) if(LC_DOS_EMP[i].re.test(s)) return LC_DOS_EMP[i];
   return null;
 }
-/* Lo no reconocido conserva su descripción: primer segmento (hasta la primera
-   coma, punto y coma o paréntesis) y como mucho cinco palabras, para que una
-   descripción larga no convierta la línea del chat en un párrafo. */
-function _dosEmpNombre(desc){
+
+/* Lo que en una descripción abre los DETALLES del elemento y ya no es su
+   nombre: la marca, el color, el serial, el calibre… El nombre corto se corta
+   ahí. «cheques de Bancolombia con firmas ilegibles» → «CHEQUES DE BANCOLOMBIA»
+   (el «de» NO corta: forma parte del nombre); «celular marca Samsung Galaxy
+   A32, color negro» → «CELULAR». */
+/* ⚠️ `tipo` y `clase` NO cortan, y es deliberado: introducen la ESPECIE del
+   propio elemento, no un accesorio — «sustancia estupefaciente tipo marihuana»
+   tiene que poder clasificarse como MARIHUANA. `por` sí corta («por valor de…»). */
+var LC_DOS_EMP_DET=/^(?:marca|color|colores|serial|seriales|imei|ref|referencia|modelo|placas?|calibre|avalu\w*|valor|valorad\w*|contenido|numerad\w*|n[uú]mero|no\.?|n[°º]|con|sin|por|para|que|cuyo|cuya|el|la|los|las|al|en|dentro)$/i;
+
+/* Nombre corto del elemento cuando la app no lo reconoce en el catálogo: se
+   conserva SU PROPIA descripción, cortada donde empiezan los detalles y a lo
+   sumo seis palabras. ⚠️ Un elemento probatorio que se convierte en un genérico
+   («OTROS ELEMENTOS») es un elemento que desaparece del mensaje. */
+/* El nombre del elemento: la descripción hasta donde empiezan los detalles.
+   Lo usan el clasificador (con las palabras que haga falta) y el título (con
+   las seis primeras, para que una descripción larga no vuelva la línea del chat
+   un párrafo). */
+function _dosEmpCorto(desc){
   var s=String(desc||'').split(/[,;(]/)[0].trim().replace(/\s+/g,' ');
-  return mayus(s.split(' ').slice(0,5).join(' '));
+  var pal=s.split(' '), out=[];
+  for(var i=0;i<pal.length&&out.length<8;i++){
+    if(i>0&&LC_DOS_EMP_DET.test(pal[i])) break;
+    out.push(pal[i]);
+  }
+  return out.join(' ');
 }
-function dosEmpFrases(caso){
+function _dosEmpNombre(desc){
+  return mayus(_dosEmpCorto(desc).split(' ').slice(0,6).join(' '));
+}
+/* Plural del nombre del elemento: solo su PRIMERA palabra, como en lcEmpDesc —
+   «ARMA DE FUEGO» → «ARMAS DE FUEGO», no «ARMAS DES FUEGOS». */
+function _dosEmpPlural(n){
+  var p=String(n||'').split(' ');
+  p[0]=mayus(lcPlural(p[0]));
+  return p.join(' ');
+}
+/* La descripción que va DEBAJO del título: la misma que el funcionario registró
+   en el paso de EMP y EF, normalizada por lcEmpDesc (que retira la cantidad
+   repetida y pone el plural) y con la inicial en mayúscula para que se lea como
+   una frase. ⚠️ NO lleva el «01 (uno)» del numeral 7: la cantidad ya está en el
+   título, y repetirla en el renglón de abajo es el ruido que la Mejora 6 quitó. */
+function _dosEmpDescTxt(desc,cant){
+  var d=lcEmpDesc(desc,cant);
+  return d?d.charAt(0).toUpperCase()+d.slice(1):'';
+}
+
+/* ⚠️ MEJORA 8, 2.º pase — CADA ELEMENTO LLEVA SU DESCRIPCIÓN DEBAJO.
+   «La aplicación debe tener la capacidad de interpretar qué fue lo que se
+   incautó… acá debe quedar la descripción de ese celular o del elemento
+   incautado, es la misma descripción que se registra en el paso 6.»
+       ✅ *INCAUTACIÓN DE CELULAR*
+       Celular marca Samsung Galaxy A32, color negro
+       ✅ *INCAUTACIÓN DE DOS CHEQUES DE BANCOLOMBIA*
+       Cheques de Bancolombia con firmas ilegibles
+   ⚠️ POR ESO LOS ELEMENTOS YA NO SE FUNDEN. Antes dos del mismo tipo daban una
+   sola línea, que con el título solo era lo correcto; ahora cada uno tiene que
+   traer SU descripción, y fundirlos haría desaparecer la de uno de los dos.
+   ⚠️ El TÍTULO nombra el tipo con su cantidad en letras («DOS CHEQUES…»); la
+   DESCRIPCIÓN, debajo, es lo que el funcionario escribió. Título y descripción
+   salen del MISMO registro del paso de EMP y EF — la app no inventa ninguno de
+   los dos. */
+function dosEmpItems(caso){
   if(!caso) return [];
   var recup=LC_DOS_APROP.test((caso.conductas||[]).filter(Boolean).join(' '));
   var items=[];
   var emps=(typeof lcEmpDeCaso==='function')?lcEmpDeCaso(caso):(caso.elementos||[]);
   (emps||[]).forEach(function(it){
     if(!it||!String(it.desc||'').trim()) return;
+    var cant=parseInt(it.cant,10); if(isNaN(cant)||cant<1) cant=1;
     var c=_dosEmpClase(it.desc);
-    items.push({p:c?c.p:6, n:c?c.n:_dosEmpNombre(it.desc), inc:!!(c&&c.v==='inc')});
+    var base=c?c.n:_dosEmpNombre(_dosEmpDescTxt(it.desc,cant));
+    items.push({p:c?c.p:6, n:base, masa:!!(c&&c.masa), cant:cant,
+                inc:!!(c&&c.v==='inc'), d:_dosEmpDescTxt(it.desc,cant)});
   });
   /* Los vehículos implicados viven en su propia rama del caso (paso 8 del
      wizard) y son EMP tanto como el resto: el requerimiento los nombra
-     expresamente. Si el funcionario respondió que NO hay vehículos, no se
-     listan. */
+     expresamente. Su «descripción» se compone de los campos de esa ficha —marca,
+     color y placas—, que es lo que el funcionario registró de ellos. Si dijo que
+     NO hay vehículos, no se listan. */
   (caso.hayVehiculos===false?[]:(caso.vehiculos||[])).forEach(function(v){
     if(!v) return;
     var t=[v.clase,v.marca].filter(Boolean).join(' ').trim();
     if(!t) return;
     var c=_dosEmpClase(t);
-    items.push({p:4, n:(c&&c.p===4)?c.n:'VEHÍCULO', inc:false});
+    var d=[[v.clase,v.marca].filter(Boolean).join(' '),
+           v.color?'color '+v.color:'',
+           v.placas?'placas '+lcPlaca(v.placas):''].filter(Boolean).join(', ');
+    items.push({p:4, n:(c&&c.p===4)?c.n:'VEHÍCULO', masa:false, cant:1, inc:false,
+                d:d?d.charAt(0).toUpperCase()+d.slice(1):''});
   });
   items.sort(function(a,b){ return a.p-b.p; });
-  var vistas={}, out=[];
-  items.forEach(function(x){
-    var f=((x.inc||!recup)?'INCAUTACIÓN':'RECUPERACIÓN')+' DE '+x.n;
-    if(vistas[f]) return;
-    vistas[f]=1; out.push(f);
+  return items.map(function(x){
+    var nom=x.n;
+    if(!x.masa&&x.cant>1) nom=mayus(lcNumPalabra(x.cant))+' '+_dosEmpPlural(nom);
+    return { tit:((x.inc||!recup)?'INCAUTACIÓN':'RECUPERACIÓN')+' DE '+nom, desc:x.d };
   });
-  return out;
+}
+/* Solo los títulos — es lo que mira quien quiere saber QUÉ se incautó sin la
+   descripción (y lo que comprueba la regresión de la clasificación). */
+function dosEmpFrases(caso){
+  return dosEmpItems(caso).map(function(x){ return x.tit; });
 }
 
 /* El nombre del delito, SIN el artículo (Mejora 8: «no citar artículo, solo
@@ -7256,8 +7332,10 @@ function genSeccionContent(sec, caso, cfg) {
        vehículos registrados devuelve null y la sección no se imprime: el dossier
        de una captura sin EMP sale exactamente como salía. */
     case 'emp':
-      var frs=dosEmpFrases(caso);
-      return frs.length?frs.join('\n'):null;
+      /* Cada elemento son DOS renglones: el título y su descripción.
+         genDossier los vuelve a separar para poner el ✅ solo en el título. */
+      var its=dosEmpItems(caso);
+      return its.length?its.map(function(x){ return x.tit+(x.desc?'\n'+x.desc:''); }).join('\n\n'):null;
     case 'despacho':
       var parts=[caso.destino||'—'];
       if(caso.spoa) parts.push('SPOA: '+caso.spoa);
@@ -7350,10 +7428,13 @@ function genDossier(caso) {
        sin ninguna etiqueta contenedora encima. Su `label` existe solo para
        identificarla en el editor de secciones, donde se activa y se reordena. */
     if(sec.tipo==='emp'){
-      /* ⚠️ Van CONTIGUAS, sin renglón en blanco entre ellas: son una relación,
-         no una sección por elemento — el requerimiento las escribe seguidas. */
-      lines.push(String(content).split('\n').filter(function(t){return t.trim();})
-        .map(function(t){ return '✅ *'+t.trim()+'*'; }).join('\n'));
+      /* ⚠️ Cada elemento es un BLOQUE propio: el ✅ y la negrita van solo en el
+         título, y debajo —sin adorno— la descripción con la que se registró en
+         el paso de EMP y EF. Por eso van separados por un renglón en blanco y
+         no contiguos, como cuando eran solo títulos. */
+      dosEmpItems(caso).forEach(function(x){
+        lines.push('✅ *'+x.tit+'*'+(x.desc?'\n'+x.desc:''));
+      });
       return;
     }
     /* Etiqueta en negrilla y SIN dos puntos; el contenido siempre en la línea de abajo. */

@@ -245,6 +245,7 @@ await page.evaluate(async () => { const c = DB.getConfig(); delete c.dossierSecc
 sec('V · INCAUTACIONES Y RECUPERACIONES');
 
 const frases = async c => (await page.evaluate(x => dosEmpFrases(x), c));
+const items  = async c => (await page.evaluate(x => dosEmpItems(x), c));
 
 log((await dossier(CASO())).indexOf('INCAUTACIÓN DE') < 0,
   'Sin EMP ni EF registrados la sección NO se imprime', 'el dossier de siempre');
@@ -273,13 +274,16 @@ log(JSON.stringify(f) === JSON.stringify(['INCAUTACIÓN DE MOTOCICLETA']),
 f = await frases(CASO({ conductas: ['Hurto calificado'], elementos: [
   { cant: 2, desc: 'celulares marca Samsung' }, { cant: 1, desc: 'cadena de oro' },
   { cant: 1, desc: 'dinero en efectivo' }, { cant: 1, desc: 'revólver' }] }));
-log(JSON.stringify(f) === JSON.stringify(['INCAUTACIÓN DE ARMA DE FUEGO', 'RECUPERACIÓN DE CELULAR', 'RECUPERACIÓN DE JOYAS', 'RECUPERACIÓN DE DINERO']),
+log(JSON.stringify(f) === JSON.stringify(['INCAUTACIÓN DE ARMA DE FUEGO', 'RECUPERACIÓN DE DOS CELULARES', 'RECUPERACIÓN DE JOYAS', 'RECUPERACIÓN DE DINERO']),
   '⚠️ En un hurto: el arma se INCAUTA y lo hurtado se RECUPERA — en el mismo caso', f.join(' · '));
 
-f = await frases(CASO({ conductas: ['Hurto calificado'],
+/* ⚠️ 2.º pase: los elementos del mismo tipo YA NO SE FUNDEN. Cada uno trae su
+   descripción debajo, y fundirlos haría desaparecer la de uno de los dos. */
+const dosCel = await items(CASO({ conductas: ['Hurto calificado'],
   elementos: [{ cant: 1, desc: 'celular marca Samsung' }, { cant: 1, desc: 'celular marca Nokia' }] }));
-log(JSON.stringify(f) === JSON.stringify(['RECUPERACIÓN DE CELULAR']),
-  'Dos elementos del mismo tipo se funden en una sola línea', f.join(' · '));
+log(dosCel.length === 2 && dosCel[0].desc === 'Celular marca Samsung' && dosCel[1].desc === 'Celular marca Nokia',
+  '⚠️ Dos elementos del mismo tipo son DOS bloques: cada uno con SU descripción',
+  dosCel.map(x => x.desc).join(' | '));
 
 f = await frases(CASO({ conductas: ['Daño en bien ajeno'], elementos: [{ cant: 1, desc: 'extintor de incendios, marca XYZ' }] }));
 log(JSON.stringify(f) === JSON.stringify(['INCAUTACIÓN DE EXTINTOR DE INCENDIOS']),
@@ -293,6 +297,66 @@ log(/✅ \*RECUPERACIÓN DE CELULAR\*/.test(dEmp),
   'Cada frase es su propia línea, sin etiqueta contenedora encima');
 log((await dossier(CASO({ conductas: ['Hurto'], hayVehiculos: false, vehiculos: [{ clase: 'Motocicleta' }] }))).indexOf('MOTOCICLETA') < 0,
   'Si el funcionario dijo que NO hay vehículos, no se listan');
+
+/* ═══ 2.º pase · CADA ELEMENTO CON SU DESCRIPCIÓN DEBAJO ═════════════════ */
+sec('V-b · LA DESCRIPCIÓN DE CADA ELEMENTO');
+
+/* El caso exacto del reporte de campo: un celular y dos cheques. */
+const REPORTE = CASO({ conductas: ['Falsedad en documento privado'], elementos: [
+  { cant: 1, desc: 'celular marca Samsung Galaxy A32, color negro, IMEI 356938035643809' },
+  { cant: 2, desc: 'cheques de Bancolombia con firmas ilegibles por valor de dos millones de pesos' }] });
+let it = await items(REPORTE);
+log(it.length === 2 && it[0].tit === 'INCAUTACIÓN DE CELULAR',
+  'El título interpreta QUÉ se incautó', it[0] && it[0].tit);
+log(it[0].desc === 'Celular marca Samsung Galaxy A32, color negro, IMEI 356938035643809',
+  '⚠️ Y debajo va SU descripción, la del paso de EMP y EF', it[0] && it[0].desc);
+log(it[1].tit === 'INCAUTACIÓN DE DOS CHEQUES DE BANCOLOMBIA',
+  '⚠️ Con la cantidad en letras cuando es más de uno', it[1] && it[1].tit);
+log(it[1].desc === 'Cheques de Bancolombia con firmas ilegibles por valor de dos millones de pesos',
+  '  …y su descripción completa, sin recortar', it[1] && it[1].desc);
+
+/* ⚠️ EL DEFECTO QUE DESTAPÓ ESTE PASE: se clasificaba mirando la descripción
+   ENTERA, así que el «…por valor de dos millones de PESOS» de los cheques los
+   convertía en «INCAUTACIÓN DE DINERO». El elemento es lo que se nombra al
+   principio; lo que sigue son sus características. */
+log(!/DINERO/.test(it[1].tit), '⚠️ Un DETALLE ya no decide la categoría del elemento', it[1] && it[1].tit);
+
+const dRep = await dossier(REPORTE);
+log(/✅ \*INCAUTACIÓN DE CELULAR\*\nCelular marca Samsung/.test(dRep),
+  'En el mensaje: el ✅ y la negrita solo en el título, la descripción debajo');
+log(/✅ \*INCAUTACIÓN DE DOS CHEQUES DE BANCOLOMBIA\*\nCheques de Bancolombia/.test(dRep),
+  '  …y un bloque por elemento, separados por un renglón en blanco');
+
+/* La cantidad NO se cuenta ni se pluraliza en lo incontable. */
+it = await items(CASO({ conductas: ['Tráfico de estupefacientes'], elementos: [
+  { cant: 50, desc: 'bolsas de marihuana con un peso de 120 gramos' },
+  { cant: 20, desc: 'cartuchos calibre 9 mm' }] }));
+/* ⚠️ El orden es por CATEGORÍA (armas → sustancias → …), así que la munición
+   encabeza aunque se registrara después: es lo que el requerimiento enumera
+   primero y lo que operativamente se quiere ver arriba. */
+log(it[0].tit === 'INCAUTACIÓN DE MUNICIÓN' && it[1].tit === 'INCAUTACIÓN DE MARIHUANA',
+  '⚠️ Sustancias y munición no se cuentan: «CINCUENTA MARIHUANAS» no se dice',
+  it.map(x => x.tit).join(' · '));
+log(it[1].desc === 'Bolsas de marihuana con un peso de 120 gramos',
+  '  …pero la cantidad real sigue estando en la descripción', it[1].desc);
+
+/* La especie del elemento no se pierde por un «tipo». */
+it = await items(CASO({ conductas: ['Tráfico de estupefacientes'],
+  elementos: [{ cant: 1, desc: 'sustancia estupefaciente tipo marihuana, peso 50 gramos' }] }));
+log(it[0].tit === 'INCAUTACIÓN DE MARIHUANA',
+  '⚠️ «tipo» no corta el nombre: introduce la especie, no un accesorio', it[0].tit);
+
+/* El plural del título sale de la primera palabra, como en el numeral 7. */
+it = await items(CASO({ conductas: ['Fabricación, tráfico y porte de armas de fuego'],
+  elementos: [{ cant: 2, desc: 'armas de fuego tipo pistola' }] }));
+log(it[0].tit === 'INCAUTACIÓN DE DOS ARMAS DE FUEGO',
+  'El plural toca solo la primera palabra: «ARMAS DE FUEGO», no «ARMAS DES FUEGOS»', it[0].tit);
+
+/* El vehículo también trae su ficha debajo. */
+it = await items(CASO({ conductas: ['Hurto calificado'], elementos: [], hayVehiculos: true,
+  vehiculos: [{ clase: 'Motocicleta', marca: 'Bajaj', color: 'Rojo', placas: 'abc12d' }] }));
+log(it[0].tit === 'RECUPERACIÓN DE MOTOCICLETA' && it[0].desc === 'Motocicleta Bajaj, color Rojo, placas ABC12D',
+  'El vehículo lleva debajo su marca, color y placas', it[0] && it[0].desc);
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 sec('VI · CONOCIERON EL CASO · VERDE 3 · DIAMANTE 3');

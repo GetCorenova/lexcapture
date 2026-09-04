@@ -4985,3 +4985,55 @@ mecanismo retirado el 2026-08-08).
 ⚠️ **La suite nueva no es vacía**: contra el build anterior fallan **17 de sus primeros 32 checks** y
 después aborta, porque `dosEmpFrases` y `dosGradoPuntos` no existían.
 Anti-caché `?v=98` / `cache-v98`, `_BUILD=98`.
+
+### 2.º pase (2026-09-04) — cada elemento incautado lleva su descripción debajo
+Reportado en campo con el pantallazo del dossier enviado y recuadro rojo sobre las dos líneas de
+incautación: *«la aplicación debe de tener la capacidad de interpretar qué fue lo que se incautó…
+acá debe de quedar la descripción de ese celular o del elemento incautado, es la misma descripción
+que se registra en el paso 6 (de nueve pasos) del registro de las capturas»*. `verify_mejora8.mjs`
+sube a **72 checks** (antes 60).
+
+```
+✅ *INCAUTACIÓN DE CELULAR*
+Celular marca Samsung Galaxy A32, color negro, IMEI 356938035643809
+
+✅ *INCAUTACIÓN DE DOS CHEQUES DE BANCOLOMBIA*
+Cheques de Bancolombia con firmas ilegibles por valor de dos millones de pesos
+```
+
+- **El título nombra el tipo con su cantidad en letras; la descripción, debajo, es lo que el
+  funcionario escribió** — los dos salen del MISMO registro del paso de EMP y EF, y la app no
+  inventa ninguno de los dos. La descripción pasa por `lcEmpDesc`, la misma primitiva que la imprime
+  en el numeral 7 del FPJ-5, con la inicial en mayúscula. ⚠️ **No lleva el «01 (uno)»**: la cantidad
+  ya está en el título y repetirla debajo es el ruido que la Mejora 6 vino a quitar.
+- ⚠️ **LOS ELEMENTOS DEL MISMO TIPO YA NO SE FUNDEN.** En el primer pase, dos celulares daban una
+  sola línea —correcto cuando solo había títulos—; ahora cada uno tiene que traer SU descripción, y
+  fundirlos haría desaparecer la de uno de los dos. Un bloque por elemento registrado.
+- ⚠️ **Lo incontable no se cuenta ni se pluraliza** (`masa:true`): sustancias, munición, dinero,
+  joyas y mercancía. «CINCUENTA MARIHUANAS» o «VEINTE MUNICIONES» no se dicen — la cantidad de una
+  sustancia son sus gramos y la de la munición sus cartuchos, y eso va en la descripción, que es
+  donde el funcionario lo escribió.
+- **El plural del título toca solo la primera palabra**, como `lcEmpDesc` en el numeral 7:
+  «DOS ARMAS DE FUEGO», no «ARMAS DES FUEGOS».
+
+#### ⚠️ El defecto que destapó este pase: un DETALLE decidía la categoría
+Con el caso real del reporte, «cheques de Bancolombia con firmas ilegibles **por valor de dos
+millones de pesos**» salía como **«INCAUTACIÓN DE DINERO»**: el clasificador buscaba las palabras
+clave en la descripción ENTERA, y `/\bpesos\b/` es de la categoría DINERO.
+- **El elemento es lo que se nombra al principio; lo que sigue son sus características.** Ahora se
+  clasifica por el **nombre corto** (`_dosEmpCorto`), la descripción cortada donde empiezan los
+  detalles: marca, color, serial, IMEI, calibre, valor, «con», «por»…
+- ⚠️ **`tipo` y `clase` NO cortan, y es deliberado**: introducen la ESPECIE del propio elemento, no
+  un accesorio. Sin esa excepción, «sustancia estupefaciente **tipo** marihuana» habría dejado de
+  clasificarse como MARIHUANA — y esa es una redacción corriente en el numeral 7. El «de» tampoco
+  corta: «cheques **de** Bancolombia» es el nombre completo del elemento.
+- Medido sobre **15 descripciones reales** (arma de fuego con cartuchos, pistola con calibre,
+  sustancia con gramaje, dinero en efectivo, cadena de oro, bolso, extintor, bicicleta, cuchillo con
+  marca, tarjetas débito): las 15 clasifican y titulan bien, y ninguna pierde su descripción.
+
+- **El vehículo también trae su ficha debajo** —marca, color y placas—, compuesta de los campos de
+  su paso del wizard, que es lo que el funcionario registró de él.
+- Regresiones en verde: **mejora8 72** · mejora1 157 · mejora3 51 · mejora7 67 · expediente 13 ·
+  simulador 41 · custodia 111 · incautación 141 · entrega 111 · fpj6 140 · personas 25 · invitado 34.
+  Siguen los **cinco fallos preexistentes** ya listados arriba.
+  Anti-caché `?v=99` / `cache-v99`, `_BUILD=99`.
