@@ -201,7 +201,11 @@ log(docs.includes('Acta de entrega') && docs.includes('Resumen de la captura'),
 await page.evaluate(id => openCaseSheet(id), idCaso);
 await page.waitForTimeout(200);
 const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent.trim()));
-log(items.length === 4 && !items.some(t => /entrega|resumen|FPJ/i.test(t)),
+/* ⚠️ Lo que se exige es que NINGÚN documento asome aquí —que es lo que hacía
+   crecer el menú un ítem por formato—, no un número fijo de entradas: los VERBOS
+   sí pueden sumar («Trabajar con el compañero» es uno). Con la cuenta escrita a
+   mano este check fallaba por un verbo nuevo y dejaba de vigilar lo suyo. */
+log(items.length > 0 && !items.some(t => /entrega|resumen|FPJ/i.test(t)),
   'El menú de la captura sigue en 4 ítems y no nombra ningún documento', items.join(' · '));
 await page.evaluate(() => closeSheet());
 await page.waitForTimeout(150);

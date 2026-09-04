@@ -114,12 +114,16 @@ await page.screenshot({ path: OUT('07_capturas') });
 await page.click('.cc .prow-more');
 await page.waitForTimeout(450);
 const ccItems = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e => e.textContent));
-/* 4: lo que se HACE con una captura. Ningún documento asoma aquí — todos viven
-    en el expediente, que es donde caben, así el menú no crece un ítem por
-    formato nuevo (con los seis de hoy serían 12-14, y en un teléfono el menú ya
-    se desplaza a partir de 8). */
-log(ccItems.length === 4 && ccItems.includes('Dossier') && ccItems.includes('Expediente del caso'),
-  'Sheet de captura con 4 acciones etiquetadas', JSON.stringify(ccItems));
+/* Lo que se HACE con una captura. ⚠️ Ningún documento asoma aquí —todos viven en
+    el expediente, que es donde caben—, así el menú no crece un ítem por formato
+    nuevo (con los seis de hoy serían 12-14, y en un teléfono el menú ya se
+    desplaza a partir de 8). Lo que se exige es eso, no un número fijo de
+    entradas: los VERBOS sí pueden sumar —«Trabajar con el compañero» es uno—, y
+    con la cuenta escrita a mano este check se quedaba obsoleto al añadir uno. */
+const ccDocs = await page.evaluate(() => lcEstadoDocs(DB.getCases()[0]).map(d => d.lbl));
+log(ccItems.includes('Dossier') && ccItems.includes('Expediente del caso') &&
+    !ccItems.some(t => ccDocs.some(d => t.indexOf(d) >= 0)),
+  'Sheet de captura: solo verbos, ningún documento', JSON.stringify(ccItems));
 log(await page.$('#act-head .prow-name') !== null, 'Sheet de captura identifica el caso');
 await page.screenshot({ path: OUT('08_capturas_sheet') });
 

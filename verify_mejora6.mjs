@@ -83,15 +83,24 @@ const menu = async (id) => {
   }));
 };
 
-// ═══ 1 · El menu de la captura: cuatro opciones, y ningun documento ═══
+// ═══ 1 · El menu de la captura: solo VERBOS, y ningun documento ═══
+/* ⚠️ Lo que fijo la Mejora 6 no es un numero de entradas: es que el menu deje de
+   ser un INDICE DE SALIDAS —un item por documento, que es lo que lo hacia crecer
+   sin fin— y pase a listar lo que se HACE con una captura. Los verbos si pueden
+   sumar (el modo patrulla anadio «Trabajar con el companero»); lo que no puede
+   volver es un documento. Con la cuenta escrita a mano estos checks fallaban por
+   un verbo nuevo y dejaban de vigilar lo suyo. El limite real —que no se
+   desplace en un telefono— se sigue midiendo abajo. */
+const VERBOS = ['Expediente del caso','Dossier','Editar captura','Eliminar'];
 const mU = await menu(ids.uri);
-log(mU.n === 4, '[1] El menu de una captura de flagrancia tiene 4 opciones', mU.n + ': ' + mU.tit.join(' | '));
-log(JSON.stringify(mU.tit) === JSON.stringify(['Expediente del caso','Dossier','Editar captura','Eliminar']),
-  '[1] Y son Expediente / Dossier / Editar / Eliminar, en ese orden', mU.tit.join(' | '));
-log(!mU.scroll, '[1] Con cuatro items el menu ya no se desplaza en un telefono', 'alto ' + mU.alto + 'px');
+log(VERBOS.every(v => mU.tit.includes(v)),
+  '[1] El menu de una captura de flagrancia lista lo que se HACE con ella', mU.n + ': ' + mU.tit.join(' | '));
+log(mU.tit.indexOf('Expediente del caso') === 0 && mU.tit[mU.tit.length - 1] === 'Eliminar',
+  '[1] El expediente abre la lista y Eliminar la cierra', mU.tit.join(' | '));
+log(!mU.scroll, '[1] El menu no se desplaza en un telefono', mU.n + ' items · alto ' + mU.alto + 'px');
 const mO = await menu(ids.oj);
-log(mO.n === 4 && JSON.stringify(mO.tit) === JSON.stringify(mU.tit),
-  '[1] Una captura por orden judicial ofrece exactamente las mismas cuatro', mO.tit.join(' | '));
+log(JSON.stringify(mO.tit) === JSON.stringify(mU.tit),
+  '[1] Una captura por orden judicial ofrece exactamente las mismas', mO.tit.join(' | '));
 const txtMenu = await page.$eval('#act-items', e => e.textContent);
 log(!/FPJ-5|Oficio de disposici|Acta de derechos|incautaci|custodia|Rótulo/i.test(txtMenu),
   '[1] Ningun documento se ofrece desde el menu: todos viven en el expediente');

@@ -56,7 +56,13 @@ const m = await page.evaluate(() => {
     tit: [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim())
   };
 });
-log(m.n === 4 && !m.scroll, '[1] El menu esta en 4 items y no se desplaza', m.alto + 'px de ' + m.tope + 'px');
+/* ⚠️ Lo que se exige es que el menu NO SE DESPLACE, que es el limite real medido
+   por la auditoria (a partir de 8 items se va bajo el borde en un telefono), no
+   un numero fijo de entradas: los verbos pueden sumar —«Trabajar con el
+   companero» es uno— y con la cuenta escrita a mano este check se quedaba
+   obsoleto al anadir uno. Que no haya documentos aqui lo miden [5] y [7]. */
+log(!m.scroll, '[1] El menu no se desplaza en un telefono',
+  m.n + ' items · ' + m.alto + 'px de ' + m.tope + 'px');
 console.log('      ' + m.tit.join(' | '));
 
 // [2] hay una entrada al expediente

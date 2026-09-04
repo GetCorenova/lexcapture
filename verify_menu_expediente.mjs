@@ -61,7 +61,12 @@ const m = await page.evaluate(() => {
     tit: [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim())
   };
 });
-log(m.n === 4 && !m.scroll, '[1] El menu baja a 4 items y no se desplaza',
+/* ⚠️ Lo que se mide es el LIMITE REAL —que no se desplace y no se coma la
+   pantalla—, no un numero fijo de entradas: el menu dejo de crecer por
+   documentos, que era el problema, pero los verbos si pueden sumar («Trabajar
+   con el companero»). Con la cuenta escrita a mano este check fallaba por un
+   verbo nuevo y dejaba de vigilar lo suyo. */
+log(!m.scroll && m.pct <= 70, '[1] El menu no se desplaza ni se come la pantalla',
   m.n + ' items · ' + m.alto + 'px de ' + m.tope + 'px · tapa el ' + m.pct + '%');
 console.log('      ' + m.tit.join(' | '));
 
@@ -100,13 +105,25 @@ await page.click('.cc-wrap .prow-more');
 await page.waitForTimeout(400);
 
 // ── [5] Proyeccion: el menu ya no crece con documentos nuevos ──
+/* ⚠️ Se DERIVA del registro en vez de llevar el numero escrito a mano. Lo que
+   este check protege es que el menu no crezca un item por formato —era un indice
+   de salidas y por eso crecia sin fin—, NO que tenga exactamente N entradas: los
+   verbos (editar, borrar, trabajar con el companero) si pueden sumar, y con el
+   numero fijo este check se quedaba obsoleto en cuanto se anadia uno. */
 const proy = await page.evaluate(() => {
-  // Tres formatos mas, registrados como lo estaran de verdad: en el expediente.
-  const box = document.getElementById('exp-docs');
   const sh = document.getElementById('act-sheet');
-  return { itemsMenu: document.querySelectorAll('#act-items .sheet-item').length, altoMenu: sh.scrollHeight };
+  const titulos = [...document.querySelectorAll('#act-items .ti')].map(e => e.textContent.trim());
+  const c = DB.getCases()[0];
+  const docs = lcEstadoDocs(c).map(d => d.lbl);
+  return { titulos, docs,
+           nombraDoc: titulos.filter(t => docs.some(d => t.indexOf(d) >= 0)),
+           altoMenu: Math.round(sh.getBoundingClientRect().height),
+           presupuesto: Math.round(window.innerHeight * 0.8) };
 });
-log(proy.itemsMenu === 4, '[5] El menu no depende del numero de formatos: los nuevos van al expediente');
+log(proy.nombraDoc.length === 0 && proy.altoMenu <= proy.presupuesto,
+  '[5] El menu no depende del numero de formatos: los nuevos van al expediente',
+  proy.titulos.length + ' verbos, 0 de los ' + proy.docs.length + ' documentos · ' +
+  proy.altoMenu + ' px de ' + proy.presupuesto);
 
 // ── [6] El documento oficial abre el sheet de canales donde SI hay eleccion ──
 await page.evaluate(() => {

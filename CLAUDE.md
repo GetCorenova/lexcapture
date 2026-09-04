@@ -5166,3 +5166,327 @@ lógica no se toca.
   commit `21ae35b`), `verify_ds` 9/10 («favorito con estrella SVG») y `verify_mejora7` [B23], que es
   **intermitente** (falló 1 de 3 corridas aquí, y ya estaba documentado como tal).
   Anti-caché `?v=100` / `cache-v100`, `_BUILD=100`.
+
+### Fase 2 (2026-09-04) — el guardado deja de reemplazar el caso
+La fase 1 dejó las primitivas; esta las aplica al guardado, que es donde estaba el defecto.
+`verify_patrulla.mjs` sube a **46 checks** (antes 28).
+
+- **`DB.saveCase(c, base)`** gana un segundo argumento y una rama. ⚠️ **Un caso que no está
+  compartido ni entra en ella**: mismo camino de código y mismo resultado byte a byte. Uno que sí,
+  pasa por `ptGuardarLocal`, que calcula **qué cambió** respecto de su punto de partida y aplica eso
+  —y solo eso— sobre la versión viva, que puede llevar dentro el trabajo del compañero.
+- ⚠️ **`base` la pasa solo quien sabe que su copia es vieja**: los dos wizards, con `_wizBase`. Las
+  seis salidas documentales **no la pasan y no les hace falta**, porque leen el caso fresco y guardan
+  en milisegundos. Con eso, **13 de los 14 escritores no se tocaron**.
+- ⚠️ **`ptTomarFoto` existe por una peculiaridad real del código, no por comodidad.** `DB.getCase`
+  devuelve la **referencia viva** de la caché y las salidas documentales la **mutan directamente**
+  (`var c = DB.getCase(id); …; DB.saveCase(c)`), así que cuando el caso llega a guardarse la caché ya
+  lleva el cambio dentro y compararlos daría siempre «no cambió nada». La foto es el estado tal como
+  quedó **la última vez que se guardó**: comparar contra ella sí dice la verdad.
+- **La foto se actualiza SOLO si la escritura salió bien.** Si falla (memoria llena), `_lcGuardarCache`
+  revierte la caché y el próximo guardado tiene que volver a ver esos mismos cambios en vez de darlos
+  por escritos.
+- ⚠️ **`ptEspejar` — el objeto del llamador se queda al día.** `ojGenerarDesdeWizard` guarda y **acto
+  seguido produce el oficio con ese mismo `wc`**: si el guardado fusionara aparte y dejara el objeto
+  del llamador como estaba, el documento saldría sin lo que acaba de llegar del compañero — el mismo
+  fallo que esta fase viene a cerrar, por otra puerta.
+- **Cola de pendientes** (`lc_ptcola`, **cifrada** como las capturas: una operación lleva dentro el
+  dato de una persona, y en CESPA el de un menor). Se carga en `_lcLoadCaches`, así que **sobrevive a
+  cerrar la aplicación** — es lo que hace que la desconexión no sea un fallo sino el estado normal.
+  ⚠️ `ptAplicarRemoto` guarda con `saveCases` y **no** con `saveCase`: pasarlo por `ptGuardarLocal`
+  lo compararía contra su propia foto y generaría operaciones **propias** por lo que acaba de escribir
+  el compañero — el equipo se reenviaría a sí mismo lo que le acaban de mandar. Hay un check.
+- ⚠️ **`ptCompartido` responde «lleva marcas», no «hay una sesión abierta»**: un caso que se compartió
+  ayer y hoy está desvinculado **sigue** necesitando fusión, porque la otra réplica existe y puede
+  volver a conectarse. Desvincular cierra el canal, no la historia. Y `ptTerminarSesion` **no borra
+  el caso ni sus marcas**.
+
+#### ⚠️ El defecto que destapó la fase, y que no estaba en el diseño sobre el papel
+Al retirar a una persona, el diff emitía **un borrado por cada campo suyo**. Medido: el borrado de su
+`id` la dejaba **sin identificador**, así que la operación siguiente ya no la encontraba y **creaba
+otra con el mismo id**. La lista acababa con la persona original sin identificador y una segunda
+vacía — en el apartado 5 del FPJ-5, **una víctima fantasma sin nombre**.
+- **Retirar a una persona es UNA operación sobre el elemento** (`victimas/#v1`), no N sobre sus
+  campos: `ptIdsDe` compara qué elementos tiene cada lista antes y después, `ptDiff` emite el borrado
+  del elemento y **omite las rutas de sus campos**, y `ptPonerRuta` sabe retirarlo de la lista.
+- **Segunda guarda, por si acaso**: una operación de campo suelta **no puede borrar la clave
+  identificadora** de un elemento. Aunque llegara una así de una versión anterior, se rechaza.
+- Los dos checks nuevos ([17b] y [17c]) fijan el comportamiento para que no pueda volver.
+
+#### Lo que se comprueba
+- **[31] El escenario del encargo, de punta a punta**: A trabaja el capturado sobre su copia, mientras
+  tanto llega la víctima que registró B, A guarda — **y la víctima sigue ahí**.
+- ⚠️ **[32] es el complemento y sin él [31] no probaría nada**: guardando **sin** la foto de partida el
+  defecto **reaparece** y la víctima se pierde. Es la prueba de que el arreglo hace algo, no de que el
+  escenario sea fácil. Va sobre un caso propio: reproducir el defecto en el caso principal dejaba sus
+  operaciones de borrado en la cola y contaminaba la comprobación siguiente.
+- **[39]** repite lo mismo por el **formulario real** (`editCase` → escribir → llega algo de B →
+  `wizSave`). ⚠️ Hay que escribir **en el DOM**, no en el modelo: el paso «Lugar» recolecta del
+  formulario y **reemplaza `wc.lugar` entero**, así que un valor puesto a mano en el modelo no
+  sobrevive a `collectStep()`.
+- **[41]** el FPJ-5 de un caso trabajado a cuatro manos sale **byte a byte** igual que el del caso
+  equivalente sin compartir.
+- ⚠️ **[26] y [44] necesitaron un marcador único**: «MODO PATRULLA» aparece ahora también en el
+  comentario del enganche de `DB.saveCase`, antes del módulo, así que cortar el archivo por esa cadena
+  dejaba fuera justo lo que se quería contar. Se corta por `MODO PATRULLA · FASE 1`.
+
+- Regresiones: **idénticas a antes de esta fase**. En verde las 36 suites; siguen fallando **solo** los
+  cuatro preexistentes ya documentados (`jerarquia` 65/66, `mejora6b` [47] y [53],
+  `dossier_historico` [20] y [21], `ds` 9/10) más el intermitente `mejora7` [B23], que esta vez pasó.
+  Anti-caché `?v=101` / `cache-v101`, `_BUILD=101`.
+
+### Fase 3 (2026-09-04) — el canal: los dos teléfonos ya se hablan
+Las fases 1 y 2 dejaron el registro de cambios y la fusión al guardar; aquí las operaciones **salen**
+del teléfono. `verify_patrulla.mjs` sube a **65 checks** (antes 46), con **19 nuevos** que ejercitan
+el emparejamiento completo entre **dos contextos de navegador** —dos almacenamientos, dos identidades
+de equipo: dos teléfonos, no dos pestañas del mismo—.
+
+#### La decisión que lo condiciona todo: el envoltorio
+Ya estaba medida en la fase 1 y aquí se ejecuta. La app corre en un **WebView de Capacitor con carga
+remota**, así que **no tiene acceso a la radio del teléfono**: Bluetooth clásico y Wi-Fi Direct no
+tienen API web, Web Bluetooth no está en ese WebView, y un WebView no puede escuchar en un puerto.
+Cualquiera de esas vías exige un **complemento nativo**, o sea recompilar y volver a subir el paquete
+a la tienda cada vez que cambie el código — que hoy se despliega con un `git push`. WebRTC es lo único
+que el navegador da, no necesita ningún servidor y su descriptor cabe en un QR.
+- ⚠️ **La contrapartida, dicha entera**: los dos teléfonos tienen que estar en la misma red Wi-Fi. En
+  campo eso es que uno active su punto de acceso — **no hace falta cobertura ni datos móviles**, solo
+  la red que los une. Quitar ese paso es el complemento nativo de la fase 6, **decidible después de
+  publicar**.
+- ⚠️ **El permiso de cámara no es solo para leer el QR.** Sin él el navegador oculta la dirección
+  local tras un nombre `.local` que el otro tiene que resolver por multidifusión; con él, el
+  descriptor lleva la IP real y la conexión directa es mucho más fiable. Medido: 587 B sin permiso,
+  668 B con él y con la dirección de verdad dentro. **El permiso que hace falta para escanear es el
+  mismo que hace fiable la conexión** — por eso QR y WebRTC se refuerzan.
+
+#### ⚠️ El códec de QR se escribe entero, y NO se usa `BarcodeDetector`
+`BarcodeDetector` existe en el WebView del teléfono pero **NO existe en el navegador con el que se
+verifica esta aplicación** (comprobado: `typeof BarcodeDetector === 'undefined'`). Usarlo dejaría la
+**única ruta que va a campo como la única que nadie puede comprobar**, que es exactamente el defecto
+que este proyecto lleva años corrigiendo. Se escribe el códec —norma ISO/IEC 18004, ~500 líneas,
+`ptQr*`— y así la ruta que se envía es la que pasa por la regresión. Tampoco hay CDN: la app es un
+solo archivo autónomo y en campo no hay red.
+- **Modo binario puro, no texto**: el descriptor son bytes, y pasarlos por base64 costaría un 33 % más
+  de módulos — un código más denso y más difícil de leer con la cámara de un teléfono a un palmo de la
+  pantalla del otro. El QR es privado entre dos copias de la misma app: no hay lector de terceros al
+  que respetar.
+- ⚠️ **Verificado contra DOS oráculos independientes** (`jsqr` y `qrcode`, instalados con
+  `npm install --no-save` **solo para medir** y desinstalados después: la app sigue sin una sola
+  dependencia y la regresión permanente —`verify_patrulla`— no necesita ninguna). El codificador
+  produce una matriz **idéntica módulo a módulo** a la de un codificador de referencia (v1, v7 y v13,
+  0 de 441 / 0 de 2025 diferencias) y jsQR lee las 20 versiones y 60 cargas al azar. El lector se mide
+  **contra jsQR sobre las mismas imágenes**.
+
+#### Los cuatro defectos del códec, y por qué ninguno se veía «casi bien»
+Un QR mal construido no se lee **a medias**: no se lee. Los cuatro se encontraron por diferencia
+contra la referencia, no leyendo el código.
+
+| Defecto | Efecto |
+|---|---|
+| El **separador** del buscador se pintaba como borde | El cuadro se pegaba a la zona del formato: ningún lector reconocía el símbolo |
+| El **generador de Reed-Solomon** quedaba con los coeficientes al revés | Palabras de corrección plausibles que ningún lector valida |
+| Los 15 bits del **formato** se escribían con el bit menos significativo primero, y la copia 2 no saltaba el **módulo siempre oscuro** | Sin formato no hay máscara, y sin máscara no hay nada |
+| Se omitían los patrones de **alineación centrados sobre el temporizador** (v ≥ 7) | Todo el flujo de datos corrido: las versiones 1-6 leían y de la 7 en adelante, ninguna |
+
+Y dos del lector, los dos por medir mal, no por leer mal:
+- ⚠️ **El patrón de alineación es CLARO-OSCURO-CLARO** y lo que interesa es el centro del tramo
+  **oscuro**. Buscando oscuro-claro-oscuro el centro sale desplazado un módulo y **todo el muestreo se
+  corre**: el código se leía igual —la corrección de errores lo tapaba— gastando en un defecto propio
+  el margen que existe para la cámara. Con el centro bien: **0 módulos mal de 2 401**.
+- ⚠️ **El módulo se mide en LOS DOS EJES.** Una pantalla fotografiada en ángulo no se encoge por igual
+  a lo ancho que a lo alto; con la medida horizontal —la del barrido— el tamaño estimado sale corto,
+  cae en un valor imposible y **el código se descarta entero aunque los tres buscadores estén
+  perfectos**. Y el redondeo al tamaño válido más cercano tenía una fórmula que convertía un 44 en
+  **41** en vez de en 45: ⚠️ eso no falla a la vista — lee un símbolo de otra versión y devuelve basura
+  ya «corregida».
+- **Medido tras el arreglo**: de frente, inclinado, girado, con ruido, desenfocado y con iluminación
+  desigual, **10/10 en los seis casos**; y en el peor (todo junto) **10/10 frente a 7/10 de jsQR**.
+  Sobre ruido puro, **0 lecturas falsas de 40**.
+
+#### El descriptor, comprimido
+El SDP del navegador son ~590 bytes de los que casi todo es texto fijo. Solo viajan cinco cosas
+—usuario y clave de ICE, huella del certificado y direcciones— y el resto se vuelve a escribir en el
+otro lado. **Medido: 587 B → 109 B**, y la invitación entera (cabecera + clave de sesión +
+descriptor) son **154 B, un QR de versión 9 (53×53 módulos)**. ⚠️ En campo sale aún más pequeño: esa
+medida es con el nombre `.local` (40 bytes por dirección) porque el navegador de la prueba no tiene
+permiso de cámara; con la IP real son 7 bytes y la invitación baja a ~121 B — versión 7 (45×45).
+- ⚠️ **No es estética**: 590 bytes necesitan la versión 15 (77×77) y hay que acercar mucho la cámara;
+  con este tamaño se lee de un vistazo a la distancia a la que dos personas se enseñan una pantalla.
+- Hay un check que reconstruye el SDP y comprueba que **el navegador lo acepta** — que es lo único
+  que valida una plantilla escrita a mano.
+
+#### Seguridad: qué protege qué
+- **DTLS** cifra el canal, y **las huellas de los certificados viajan dentro de los QR**, así que cada
+  lado tiene fijado con quién habla: no hay intermediario posible.
+- **Encima se cifra en la aplicación** (AES-GCM) con dos subclaves derivadas de una **clave de sesión
+  de 32 bytes que solo existe en los dos códigos que se escanearon**. Es lo que convierte «haber visto
+  la pantalla del otro» en el único permiso para entrar, sin depender de que el navegador implemente
+  bien la capa de abajo. ⚠️ **Lo que no descifra se descarta en silencio** — hay un check que inyecta
+  un mensaje cifrado con otra clave y comprueba que el caso no se mueve.
+- **La respuesta viaja cifrada** con esa clave: quien invita solo acepta un código que **solo se puede
+  fabricar habiendo visto el suyo**. Y **acepta uno solo**.
+- ⚠️ **Contra un tercer equipo, lo que protege es la reciprocidad física**: A enseña, B escanea, B
+  enseña, A escanea. Un tercero tendría que conseguir además que A escanee **su** pantalla.
+- **Caducidad**: la invitación vale 3 minutos (un QR fotografiado la semana pasada no abre nada) y la
+  sesión inactiva, 12 horas. Los dos casos tienen check.
+- ⚠️ **LA FIRMA MANUSCRITA NO VIAJA**, y no hace falta filtrarla: vive en `lc_firmas`, cifrada y
+  aparte del caso, así que **no está en lo que se manda**. Hay un check que lo mide en los dos
+  extremos. Es la decisión que el usuario confirmó antes de escribir una línea: con ella se suscriben
+  documentos judiciales y enviarla permitiría firmar un oficio en nombre de quien no lo firmó.
+
+#### El caso completo y la cola
+- Quien invita manda el **caso entero** la primera vez: el compañero lo necesita para generar la
+  cadena de custodia, el rótulo y el acta también más tarde. Es la decisión que tomó el usuario, con
+  su consecuencia aceptada (el caso aparece en su lista y en sus estadísticas).
+- La **cola de pendientes** de la fase 2 se vacía sola: `ptEntregarPendientes()` se llama al abrirse
+  el canal y **desde el propio `ptGuardarLocal`**, así que basta con que exista canal para que salga.
+  ⚠️ **Sin compañero conectado es un no-op y la cola crece**: la desconexión es el estado normal en
+  campo, no un fallo. Hay un check de eso.
+- ⚠️ **Solo se retira de la cola lo que el compañero CONFIRMÓ, y por la cabeza**: mientras se esperaba
+  la confirmación el funcionario puede haber escrito más.
+
+#### Lo que se comprueba
+- **[C6]-[C7] El emparejamiento entero pasa por el QR de verdad**: el código se pinta, se dibuja en un
+  lienzo y se vuelve a leer con `ptQrLeer` — no se pasan los bytes por debajo.
+- **[C9]-[C11] El reparto real de la patrulla**, que es el encargo: A escribe las señas del capturado
+  y B registra la víctima, **a la vez**, y los dos acaban con las dos cosas y con la **misma huella**.
+- **[C19] Ni un servidor**: se comprueba sobre el código que no hay `stun:`, `turn:`, `fetch`,
+  `XMLHttpRequest` ni `WebSocket` en todo el módulo.
+- ⚠️ **[C4] necesitó un lienzo más grande, y el fallo era de la prueba**: al girar el código 7°, su
+  **diagonal** se salía del lienzo y las esquinas —donde viven los tres buscadores— quedaban
+  recortadas.
+- ⚠️ **Un defecto real que destapó la regresión**: `ptQrSvg` no declaraba el espacio de nombres, así
+  que el SVG se pinta dentro del documento pero **no carga como imagen** — la vista previa de la
+  pantalla de emparejamiento habría salido en blanco.
+
+#### Lo que NO cambia
+El modo individual sigue intacto: **ningún check anterior bajó su cuenta ni cambió una expectativa**,
+y el FPJ-5 de un caso trabajado a cuatro manos sale **byte a byte** igual que el del caso normal.
+Fuera del módulo se tocó **una línea**: la llamada a `ptEntregarPendientes()` dentro de
+`ptGuardarLocal`, que ya era código de esta ampliación.
+
+#### Lo que falta
+**4** interfaz (entrada en el menú, pantalla de emparejamiento con la cámara, franja de estado) ·
+**5** recuperación y reanudación tras cerrar la aplicación · **6** complemento nativo, **opcional y
+posterior a publicar**. ⚠️ Hasta la fase 4 **el funcionario no puede emparejar nada**: no hay pantalla
+que abra la cámara ni que muestre el código.
+
+### Fases 4 y 5 (2026-09-04) — la puerta, y lo que pasa cuando se cierra la aplicación
+Con la fase 3 el modo patrulla funcionaba entero y **no lo podía alcanzar nadie**: no había pantalla
+que abriera la cámara ni que enseñara el código. Estas dos fases lo abren y lo hacen sobrevivir a los
+días. `verify_patrulla.mjs` sube a **85 checks** (antes 67).
+
+#### Fase 4 · la interfaz
+- **Una sola pantalla** (`#screen-patrulla`) para las dos mitades del emparejamiento, con cuatro
+  estados (`_ptUiPaso`: inicio · invitando · respondiendo · conectado). ⚠️ **No son cuatro destinos**:
+  es un solo trámite, y partirlo haría perder de vista que lo es.
+- **DOS puertas, y las dos hacen falta.** Desde la captura (menú ⋮ → «Trabajar con el compañero») se
+  entra a **invitar**; desde el sheet «Más» se entra a **unirse**. ⚠️ Sin la segunda el compañero no
+  tendría por dónde empezar: **no puede abrir el menú de un caso que todavía no está en su teléfono**.
+- ⚠️ **El menú de la captura pasa de 4 a 5 ítems, y no reabre lo que cerró la Mejora 6.** Aquello era
+  un índice de SALIDAS —un ítem por documento— y por eso crecía sin fin; esto es un **verbo**, algo
+  que se hace con la captura, como editarla o borrarla. Los seis formatos siguen todos en el
+  expediente. **Medido: 495 px de un presupuesto de 640** — sigue sin desplazarse.
+- **La franja de estado** (`#pt-barra`) es permanente mientras dure la colaboración. ⚠️ Comparte
+  mecánica con la del modo invitado pero **no su color, a propósito**: aquella es una ADVERTENCIA
+  (nada se está guardando) y esta es un ESTADO — verde con el canal abierto, ámbar solo cuando hay
+  trabajo sin entregar. Un estado normal pintado de advertencia deja de leerse a los dos minutos. Con
+  las dos barras a la vez —un teléfono prestado que se une a una captura— **se apilan**, no se tapan.
+- **El lector** es un overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo y
+  aquí no se dispara nada, se lee solo en cuanto el código entra en el marco. ⚠️ **La puerta se cierra
+  ANTES de procesar** (`_ptScanOcupado`): el bucle de fotogramas sigue corriendo y sin eso el mismo
+  código se leería veinte veces mientras se resuelve la promesa, con veinte emparejamientos en marcha.
+- ⚠️ **NI UNA PALABRA TÉCNICA**, y hay un check que lo mide sobre la pantalla ya pintada: nada de IP,
+  puerto, canal, sesión ni servidor. El funcionario ve «el compañero», «el código» y «los cambios sin
+  entregar».
+- **Se dice siempre cuánto le queda al código.** Una invitación caduca a los 3 minutos y, sin
+  anunciarlo, el compañero se encontraría un «la invitación caducó» que parece un fallo de la app. La
+  cuenta atrás **repinta solo su renglón**: repintar la pantalla recrearía el SVG del código cada
+  segundo.
+- **Sistema visual**: tokens del Design System v2, sin gradientes y sin emojis. ⚠️ Los **únicos** dos
+  literales son blanco y negro puros, y los dos tienen motivo medido: un código se lee por contraste
+  —en tema oscuro, uno claro sobre fondo oscuro no lo lee ninguna cámara— y el visor de la cámara es
+  negro con texto blanco, igual que el que ya existe para las fotos de cédula. Es la misma excepción
+  del lienzo de la firma.
+- **Terminar la colaboración avisa de lo que queda sin entregar** y dice qué pasa con ello (que se
+  guarda y sale al volver a conectar). Cerrar en silencio con trabajo pendiente es exactamente el
+  silencio que este proyecto lleva años quitando.
+
+#### Fase 5 · reconciliación y reanudación
+La cola de la fase 2 hace que una desconexión corta no se note. Esta fase cubre **los días**: que uno
+cierre la aplicación, que trabajen toda una tarde por su lado, o que a uno se le haya vaciado la cola.
+- **Anti-entropía**: al conectar, cada lado manda su estado ENTERO con la versión de cada campo
+  (`ptEstadoSellado`) y el otro lo funde con la regla de siempre —gana el sello más reciente, campo
+  por campo—. Con un intercambio en cada sentido convergen, **sin que ninguna cola tenga que seguir
+  existiendo**. El `eco` acota el intercambio a **una vuelta por lado**: sin él, dos réplicas que no
+  llegaran a converger se estarían mandando su estado indefinidamente.
+- ⚠️ **El estado sellado lleva también los BORRADOS** — las rutas que están en el historial y no en el
+  caso. Sin ellos el compañero devolvería el dato que este acaba de retirar y **la víctima borrada
+  reaparecería en el informe**. Hay un check que lo mide en los dos extremos.
+- ⚠️ **EL DEFECTO DE PROTOCOLO QUE DESTAPÓ ESTA FASE, y que el diseño sobre el papel no vio**: el
+  saludo **no es simétrico y no puede serlo**. Quien invita sabe de qué caso se trata; **quien se une
+  no lo sabe hasta que se lo dicen**. El primer intento puso a reconciliar al que invita, y como el
+  saludo del otro llegaba sin caso y sin huella no se comparaba nada: **los dos se quedaban con lo
+  suyo y la reconciliación no ocurría nunca**. Ahora reconcilia siempre **el que recibe un saludo con
+  caso**: mira si lo tiene, y si lo tiene distinto ofrece su estado. Si no lo tiene, lo pide (`falta`)
+  y se lo mandan entero. ⚠️ Eso además **deja de mandar 5 KB de caso completo** a quien ya lo tenía,
+  que es lo que hacía la versión anterior.
+- ⚠️ **La entrega de pendientes se dispara al recibir el saludo, no al abrirse el canal**: quien se une
+  no sabe a qué cola mirar hasta ese momento, así que lo que hubiera quedado sin entregar se quedaba
+  esperando a la siguiente escritura.
+- **Reanudación**: la cola sobrevive cifrada a cerrar la aplicación, y al desbloquear se **anuncia**
+  (`ptBarraArranque`). ⚠️ Un cambio pendiente que nadie enseña es indistinguible de uno entregado.
+- ⚠️ **LO QUE NO SE PUEDE REANUDAR, Y HAY QUE DECIRLO**: la conexión en sí. Los certificados y las
+  direcciones que viajaron en los códigos mueren con la aplicación, así que volver a juntarse es
+  volver a escanear un código. Lo que SÍ sobrevive es todo lo demás: la captura, su historial de
+  versiones y lo que quedó sin entregar.
+- **La prueba que justifica la fase** ([E2]-[E6]): los dos equipos cierran el canal, **se les vacía la
+  cola**, cada uno escribe una cosa distinta y se vuelven a emparejar por el QR. Los dos acaban con
+  las dos cosas, con la **misma huella**, y lo que se había borrado **no reaparece**.
+
+#### ⚠️ La pantalla salía EN BLANCO y la regresión daba 85/85
+El primer intento insertó `#screen-patrulla` **fuera de `<main>`**, que es el contenedor de las
+pantallas: la sección quedaba de hermana de los banners y **no se dibujaba nada**. Los checks de la
+sección D seguían todos en verde porque medían el **contenido en el DOM** —cuántas opciones hay, qué
+texto tienen, si el código se vuelve a leer— y ninguno medía **que llegara a verse**. Se encontró
+mirando una captura de pantalla, no probando.
+- **[D1] mide ahora el rectángulo**: que la sección cuelgue de `#main` y que tenga alto real. Y se
+  comprobó que **la guarda no es vacía** reproduciendo el defecto en caliente —sacando la sección de
+  `#main` desde el propio navegador— y viendo que el check falla.
+- ⚠️ **La lección, que vale para cualquier pantalla nueva**: un check que consulta el DOM no dice que
+  la interfaz se vea. Es la misma familia que el `w:sz` ausente del acta o el `rPr` ausente del pie
+  del oficio — **lo que fallaba era la ausencia**, y ninguna comprobación que mire valores la
+  detecta. Con una pantalla nueva hay que **mirarla una vez**.
+- Del mismo vistazo salió que los botones secundarios no tenían fondo: les faltaba la variante `bs`
+  (`.btn` a secas no pinta nada en este sistema) y se leían como texto suelto.
+
+#### El idioma, y un descuido propio corregido
+⚠️ Los textos de la pantalla nueva salieron en **español peninsular** («podéis», «os conectéis»,
+«quedáis») en una aplicación de la policía **colombiana**, donde el resto de la app ya tutea en el
+registro local. Corregido a «pueden», «vuelvan a conectarse», «quedan conectados», y con ello los
+párrafos bajaron **por debajo de los 110 caracteres** que fijó la Mejora 6. El check **[D10]** lo
+vigila sobre la pantalla ya pintada, en los cuatro estados: si vuelve a colarse un «podéis» o un
+párrafo largo, la regresión lo dice. ⚠️ `verify_jerarquia` mide esa regla en 17 pantallas y **no
+incluye esta**, así que sin [D10] la pantalla nueva se habría quedado fuera de la vigilancia.
+
+#### Regresiones
+En verde: **patrulla 85** · mejora6 32 · menú+expediente 16 · personas 25 · expediente 13 ·
+almacén 12 · invitado 34 · ola1 38 · tema 39 · y las demás sin cambios.
+⚠️ **SIETE suites adaptadas, y las siete por el mismo motivo — ninguna baja su cuenta**:
+`verify_mejora6`, `verify_menu_expediente`, `verify_personas`, `verify_expediente`,
+`verify_custodia`, `verify_entrega` y `verify_incautacion` llevaban **el número de entradas del menú
+escrito a mano** (4). Lo que esos checks protegen es que el menú deje de
+ser un **índice de salidas** —un ítem por documento, que es lo que lo hacía crecer sin fin— y pase a
+listar lo que se HACE con la captura; los **verbos** sí pueden sumar. Ahora **derivan la expectativa
+de `lcEstadoDocs`** (ningún ítem nombra un documento) y miden **el límite real** (que el menú no se
+desplace ni tape más del 70 % de la pantalla), así que no vuelven a quedarse obsoletas con el
+siguiente verbo. ⚠️ Es el mismo defecto de método que ya se corrigió en `verify_menu_expediente` [7]
+y `verify_mejora6b` [20]: **un número fijo donde debía haber una derivación**.
+⚠️ **Fallos PREEXISTENTES, comprobados contra el build anterior**: `verify_jerarquia` 65/66,
+`verify_mejora6b` [47] y [53], `verify_dossier_historico` [20] y [21] y `verify_ds` 9/10.
+
+#### La fase 6 NO se ejecuta, y es una decisión, no un olvido
+El complemento nativo que quitaría el paso del punto de acceso manual **exige recompilar y volver a
+subir el `.aab`**, y el usuario ya decidió lo contrario al empezar: «punto de acceso manual en esta
+primera versión — a cambio de no recompilar». Se decide **después de publicar**. Hasta entonces, los
+dos teléfonos se juntan en la misma red wifi (uno activa su zona wifi) y **no hace falta cobertura ni
+datos**.

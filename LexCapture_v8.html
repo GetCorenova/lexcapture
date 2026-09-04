@@ -275,6 +275,102 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 .exp-opt.on .exp-opt-lbl{color:var(--acc)}
 #exp-go[disabled]{opacity:.45;cursor:not-allowed}
 
+
+/* ═══ MODO PATRULLA (Fase 4) ═══
+   Todo con tokens del Design System v2: ni un color literal, ni un gradiente, ni
+   un emoji. La única excepción es el fondo del código, y está justificada abajo. */
+
+/* Franja de estado. Mismo mecanismo que la del modo invitado, distinto color a
+   propósito: aquella es una ADVERTENCIA permanente (nada se está guardando) y
+   esta es un ESTADO — verde mientras el canal está abierto, ámbar solo cuando
+   hay trabajo sin entregar. Un estado normal pintado de advertencia deja de
+   leerse a los dos minutos. */
+#pt-barra{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
+  align-items:center;gap:12px;padding:7px 14px;
+  font-size:12.5px;line-height:1.35;
+  background:var(--ok-bg);color:var(--ok);
+  border-bottom:1px solid color-mix(in srgb,var(--ok) 28%,transparent);
+}
+#pt-barra.on{display:flex}
+#pt-barra.pend{background:var(--flag-bg);color:var(--flag-2);border-bottom-color:color-mix(in srgb,var(--flag-2) 28%,transparent)}
+#pt-barra .pb-pt{flex:0 0 auto;width:8px;height:8px;border-radius:999px;background:currentColor}
+#pt-barra .pb-txt{flex:1;min-width:0}
+#pt-barra .pb-btn{
+  flex:0 0 auto;padding:5px 12px;border-radius:8px;
+  border:1px solid color-mix(in srgb,currentColor 35%,transparent);
+  background:transparent;color:currentColor;font-size:12px;font-weight:600;cursor:pointer;
+}
+body.pt{padding-top:36px}
+/* Con las dos barras a la vez —un teléfono prestado que se une a una captura—
+   se apilan en vez de taparse. */
+body.guest #pt-barra{top:38px}
+body.guest.pt{padding-top:74px}
+
+/* El código en pantalla. ⚠️ Fondo blanco FIJO en los dos temas: un QR se lee por
+   contraste, y en modo oscuro un código claro sobre oscuro no lo lee ninguna
+   cámara. Es la misma excepción del lienzo de la firma. */
+.pt-qr{
+  display:flex;align-items:center;justify-content:center;
+  background:#fff;border-radius:var(--radius);padding:14px;margin:0 auto;
+  width:fit-content;max-width:100%;
+}
+.pt-qr svg{display:block;width:100%;height:auto;max-width:280px}
+
+.pt-paso{display:flex;flex-direction:column;gap:12px}
+.pt-op{
+  display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+  padding:16px;border-radius:var(--radius);cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+}
+.pt-op:hover{background:var(--hover)}
+.pt-op .lic{
+  flex:0 0 auto;width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accG);color:var(--acc);
+}
+.pt-op .lic svg{width:20px;height:20px;stroke-width:1.8}
+.pt-op .ti{font-weight:600;font-size:14px}
+.pt-op .de{font-size:12px;color:var(--text-3);margin-top:2px}
+
+.pt-est{
+  display:flex;align-items:center;gap:12px;padding:14px;
+  border-radius:var(--radius);background:var(--ok-bg);
+  border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);
+}
+.pt-est.off{background:var(--surface-2);border-color:var(--border)}
+.pt-est .pe-pt{flex:0 0 auto;width:10px;height:10px;border-radius:999px;background:var(--ok)}
+.pt-est.off .pe-pt{background:var(--text-3)}
+.pt-est .pe-ti{font-weight:600;font-size:13.5px;color:var(--ok)}
+.pt-est.off .pe-ti{color:var(--text-2)}
+.pt-est .pe-de{font-size:12px;color:var(--text-3);margin-top:2px}
+
+/* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
+#pt-scan{
+  display:none;position:fixed;inset:0;z-index:1500;background:#000;
+  flex-direction:column;
+}
+#pt-scan.on{display:flex}
+#pt-scan video{flex:1;width:100%;height:100%;object-fit:cover}
+#pt-scan .ps-marco{
+  position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);
+  width:min(72vw,300px);aspect-ratio:1;
+  border:2px solid var(--acc);border-radius:var(--radius);
+  box-shadow:0 0 0 100vmax rgba(0,0,0,.5);
+}
+#pt-scan .ps-txt{
+  position:absolute;left:16px;right:16px;top:calc(44% + min(36vw,150px) + 20px);
+  text-align:center;color:#fff;font-size:13px;line-height:1.4;
+}
+#pt-scan .ps-bar{
+  position:absolute;left:0;right:0;bottom:0;padding:16px;
+  display:flex;justify-content:center;
+}
+#pt-scan .ps-bar button{
+  padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
+  background:rgba(0,0,0,.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
+}
+
 /* ═══ BANNER MODO INVITADO ═══
    Barra fija arriba del todo. Usa el ámbar de flagrancia: es una advertencia
    permanente, no un estado neutro. */
@@ -2234,6 +2330,24 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </div>
   </section>
 
+  <!-- ====== MODO PATRULLA (Fase 4) ======
+       Una sola pantalla para las dos mitades del emparejamiento: quien invita
+       enseña su código y quien se une lo escanea. El paso en el que se está lo
+       decide `_ptUiPaso`, no una pantalla distinta por cada uno: son cuatro
+       estados del mismo trámite, y partirlos en cuatro destinos haría perder de
+       vista que es uno solo. -->
+  <section id="screen-patrulla" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn" onclick="ptUiVolver()" aria-label="Volver">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <div class="ttl">
+        <h1>Trabajar con el compañero</h1>
+        <span class="sub" id="pt-sub">Sin captura seleccionada</span>
+      </div>
+    </header>
+    <div class="pane stack" id="pt-pane"></div>
+  </section>
 </main>
 
 <!-- ====== RED / OFFLINE BADGE ====== -->
@@ -2244,12 +2358,23 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <span id="net-label">Sin señal</span>
 </div>
 
+
+
 <!-- ====== BANNER MODO INVITADO ======
      Visible en todo momento mientras dure la sesión: el invitado nunca debe
      creer que sus capturas quedaron guardadas en el equipo. -->
 <div id="guest-bar">
   <span class="gb-txt"><b>Modo invitado</b> · nada se guarda en este equipo — descarga tus documentos antes de salir</span>
   <button class="gb-btn" onclick="guestSalir()">Salir</button>
+</div>
+
+<!-- ====== FRANJA DEL MODO PATRULLA ======
+     Discreta y permanente mientras dure la colaboración: sin ella, que lo que
+     escribe uno le llegue al otro sería indistinguible de que no le llegue. -->
+<div id="pt-barra">
+  <span class="pb-pt"></span>
+  <span class="pb-txt"></span>
+  <button class="pb-btn" onclick="ptAbrirPatrulla(ptResumen().casoId)">Ver</button>
 </div>
 
 <!-- ====== BANNER INSTALACION PWA ====== -->
@@ -2293,6 +2418,10 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="sheet-item" onclick="closeSheet();go('perfil')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>
     <div class="body"><div class="ti">Perfil</div><div class="de">Funcionario activo</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();ptAbrirPatrulla(null)">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-5.6 6.5-5.6s6.5 2.3 6.5 5.6"/><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2"/><path d="M18 14.8c2.1.7 3.5 2.5 3.5 5.2"/></svg></div>
+    <div class="body"><div class="ti">Trabajar con el compañero</div><div class="de">Unirte a una captura del otro teléfono</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -2374,6 +2503,17 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </div>
 </div>
 
+<!-- ====== LECTOR DE CÓDIGOS (modo patrulla) ======
+     Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo
+     y aquí no se dispara nada — se lee solo en cuanto el código entra al marco. -->
+<div id="pt-scan">
+  <video id="pt-scan-video" autoplay playsinline muted></video>
+  <canvas id="pt-scan-canvas" style="display:none"></canvas>
+  <div class="ps-marco"></div>
+  <div class="ps-txt" id="pt-scan-txt"></div>
+  <div class="ps-bar"><button onclick="ptScanCerrar()">Cancelar</button></div>
+</div>
+
 <!-- ====== DATALISTS ====== -->
 <datalist id="dl-cond">
   <option value="Hurto calificado y agravado"><option value="Hurto agravado"><option value="Lesiones personales">
@@ -2403,7 +2543,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','patrulla'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2420,6 +2560,7 @@ function go(name) {
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
+  if (name === 'patrulla') renderPatrulla();
   if (name === 'ajustes') { loadAjustesFields(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -2545,7 +2686,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 100;
+var _BUILD = 103;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3149,6 +3290,10 @@ async function doUnlockPin() {
        lectura de la configuración; aquí se persiste y se anuncia. Un número que
        cambia solo tiene que verse cambiar. */
     lcNuncAvisoAno();
+    /* Y la franja del modo patrulla: la cola cifrada ya está cargada, así que si
+       quedó algo sin entregar al compañero se ve desde el primer momento. Un
+       cambio pendiente que nadie enseña es indistinguible de uno entregado. */
+    ptBarraArranque();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
 
@@ -3280,6 +3425,13 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_firmas');
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
+  /* Cola del Modo Patrulla: lo que este equipo escribió y el compañero todavía no
+     ha recibido. Va cifrada como las capturas —una operación lleva dentro el dato
+     de una persona— y se carga aquí para que sobreviva a cerrar la aplicación:
+     es lo que hace que una desconexión no pierda nada. */
+  enc = localStorage.getItem('lc_ptcola');
+  if (enc) { try { _ptCola = JSON.parse(await _lcDecrypt(enc)) || {}; } catch(e) { _ptCola = {}; } }
+  else { _ptCola = {}; }
   /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
      memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
      vuelva a abrir su formulario. No se fuerza ninguna escritura — el dato se
@@ -3344,7 +3496,21 @@ var DB = {
      así la reversión de `_lcGuardarCache` no tendría nada que revertir y la
      captura se quedaría en la lista sin estar en el disco. Sobre una copia, la
      caché solo cambia si la escritura sale bien. */
-  saveCase: function(c) { var a=this.getCases().slice(); var i=a.findIndex(function(x){return x.id===c.id;}); if(i>=0) a[i]=c; else a.push(c); return this.saveCases(a); },
+  saveCase: function(c, base) {
+    /* ⚠️ MODO PATRULLA — un caso que se está trabajando entre dos teléfonos NO se
+       reemplaza: se le aplica lo que este equipo cambió, sobre la versión que
+       puede llevar dentro el trabajo del compañero. `base` la pasa quien sabe que
+       su copia es vieja (el wizard, con su foto inicial). Un caso normal ni entra
+       aquí — mismo camino de código y mismo resultado de siempre. */
+    if (ptCompartido(c)) c = ptGuardarLocal(c, base);
+    var a=this.getCases().slice(); var i=a.findIndex(function(x){return x.id===c.id;}); if(i>=0) a[i]=c; else a.push(c);
+    var p=this.saveCases(a);
+    /* La foto se actualiza SOLO si la escritura salió bien: si falla (memoria
+       llena), la caché se revierte y el próximo guardado tiene que volver a ver
+       esos mismos cambios en vez de darlos por escritos. */
+    if (ptCompartido(c)) p.then(function(){ ptTomarFoto(c); }, function(){});
+    return p;
+  },
   delCase: function(id) { return this.saveCases(this.getCases().filter(function(c){return c.id!==id;})); },
   /* Firma manuscrita de un perfil. Una sola por perfil: guardar reemplaza. */
   getFirma: function(idPerfil) {
@@ -4266,7 +4432,12 @@ async function wizSave() {
      el caso ya la tiene: editar una captura vieja no reescribe su historia. */
   lcCongelarDossier(saved);
   try {
-    await DB.saveCase(saved);
+    /* ⚠️ El wizard pasa SU foto inicial: trabaja media hora sobre una copia, así
+       que su punto de partida no es la última versión guardada sino cómo estaba el
+       caso al abrirlo. Sin esto, guardar revertiría lo que el compañero escribió
+       entretanto — el fallo que motivó toda esta capa. En un caso no compartido el
+       segundo argumento se ignora. */
+    await DB.saveCase(saved, _wizBase ? JSON.parse(_wizBase) : null);
     var jobs=(saved.capturados||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Capturado'}));});
     if (saved.tipo!=='OJ'){
       jobs=jobs.concat((saved.victimas||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Víctima'}));}));
@@ -5659,7 +5830,13 @@ function openCaseSheet(id) {
     /* 3) Editar la captura — ahora la ÚNICA vía directa desde la lista. */
     actItem('editCase', id, ACT_IC.edit, 'Editar captura',
       'Abre el formulario para corregir o completar los datos') +
-    /* 4) Eliminar. */
+    /* 4) Trabajar con el compañero. ⚠️ Es un VERBO —algo que se hace con la
+       captura—, no un documento, así que no reabre el crecimiento «un ítem por
+       formato» que midió la auditoría: los formatos siguen todos en el
+       expediente y el menú no puede crecer por ellos. */
+    actItem('ptAbrirPatrulla', id, PT_IC.patrulla, 'Trabajar con el compañero',
+      'Diligenciar esta captura a la vez desde los dos teléfonos', '', ACT_ACC) +
+    /* 5) Eliminar. */
     actItem('delCase', id, ACT_IC.del, 'Eliminar', 'Borra el registro de '+termino+' de forma permanente', ' danger'));
 }
 
@@ -19313,7 +19490,7 @@ async function ojGuardarCaso(silencioso){
   var persona=ojEspejar(wc);
   wc.updated=Date.now();
   try{
-    await DB.saveCase(wc);
+    await DB.saveCase(wc, _wizBase ? JSON.parse(_wizBase) : null);   // misma razón que en wizSave
     await DB.savePerson(persona);
     await wizCerrarBorrador();      // ya es una captura: el borrador sobra
     if(!silencioso) guestToastGuardado('Caso guardado ✓');
@@ -20152,8 +20329,24 @@ function ptPonerRuta(obj, ruta, valor, borrar) {
     }
   }
   t = tr[tr.length - 1];
-  if (t.charAt(0) === '#') return false;          // una ruta nunca termina en un id
-  if (borrar) { if (Array.isArray(cur)) return false; delete cur[t]; return true; }
+  if (t.charAt(0) === '#') {
+    /* La ruta termina en un identificador: se está retirando el elemento entero
+       de la lista (una persona que el otro equipo eliminó). */
+    if (!borrar || !Array.isArray(cur)) return false;
+    var ik = PT_LISTAS[tr[tr.length - 2]] || 'id', qid = t.slice(1), antes = cur.length;
+    for (var j = cur.length - 1; j >= 0; j--) if (cur[j] && cur[j][ik] === qid) cur.splice(j, 1);
+    return cur.length !== antes;
+  }
+  if (borrar) {
+    if (Array.isArray(cur)) return false;
+    /* ⚠️ El identificador NO se borra nunca por una operación de campo: sin él, la
+       siguiente operación no encuentra al elemento y CREA otro con el mismo id —
+       la persona acaba duplicada, una con los datos y otra vacía. Retirar a una
+       persona es una operación sobre el elemento, no sobre sus campos. */
+    if (tr.length >= 2 && tr[tr.length - 2].charAt(0) === '#' && t === (PT_LISTAS[tr[tr.length - 3]] || 'id')) return false;
+    delete cur[t];
+    return true;
+  }
   cur[t] = valor;
   return true;
 }
@@ -20168,15 +20361,46 @@ function ptQuitarId(obj, rama, id) {
   return obj[rama].length !== n;
 }
 
+/* Qué elementos (por identificador) tiene cada lista fusionable. Lo necesita el
+   diff para distinguir «a esta persona le cambiaron un dato» de «esta persona ya
+   no está». */
+function ptIdsDe(obj) {
+  var out = {};
+  Object.keys(PT_LISTAS).forEach(function (rama) {
+    var v = obj && obj[rama], idk = PT_LISTAS[rama];
+    if (!Array.isArray(v)) return;
+    out[rama] = v.filter(function (el) { return el && el[idk]; }).map(function (el) { return el[idk]; });
+  });
+  return out;
+}
+
 /* ── 5 · QUÉ CAMBIÓ ───────────────────────────────────────────────────────
    Compara dos versiones del mismo caso y devuelve las operaciones que llevan de
    una a la otra. Es lo que permite que el wizard deje de reemplazar el caso: en
    vez de escribir «el caso es esto», dice «esto es lo que toqué», y lo que el
-   compañero haya escrito entretanto sobrevive. */
+   compañero haya escrito entretanto sobrevive.
+
+   ⚠️ QUE UNA PERSONA YA NO ESTÉ ES UNA SOLA OPERACIÓN, NO UNA POR CAMPO. Emitir
+   un borrado por cada campo tenía dos efectos, los dos medidos: el borrado de su
+   `id` dejaba al objeto sin identificador —así que la siguiente operación no lo
+   encontraba y CREABA otro con el mismo id—, y la lista acababa con la persona
+   original sin id y una segunda vacía. En el apartado 5 del FPJ-5 eso es una
+   víctima fantasma. Se borra el elemento entero y no se emiten sus campos. */
 function ptDiff(base, act) {
-  var A = ptAplanar(base || {}, '', {}, ''), B = ptAplanar(act || {}, '', {}, ''), ops = [], k;
+  var A = ptAplanar(base || {}, '', {}, ''), B = ptAplanar(act || {}, '', {}, '');
+  var idsA = ptIdsDe(base || {}), idsB = ptIdsDe(act || {}), ops = [], fuera = {}, k;
+  Object.keys(idsA).forEach(function (rama) {
+    var vivos = idsB[rama] || null;
+    if (!vivos) return;                       // la lista dejó de ser fusionable: se trata entera
+    idsA[rama].forEach(function (id) {
+      if (vivos.indexOf(id) >= 0) return;
+      ops.push({ r: rama + '/#' + id, x: 1 });
+      fuera[rama + '/#' + id + '/'] = true;
+    });
+  });
+  function eliminado(r) { for (var p in fuera) if (r.indexOf(p) === 0) return true; return false; }
   for (k in B) if (!ptIgual(A[k], B[k])) ops.push({ r: k, v: B[k] });
-  for (k in A) if (!(k in B)) ops.push({ r: k, x: 1 });
+  for (k in A) if (!(k in B) && !eliminado(k)) ops.push({ r: k, x: 1 });
   return ops;
 }
 
@@ -20264,6 +20488,1703 @@ function ptCanon(v) {
 function ptHuella(c) { try { return JSON.stringify(ptCanon(c)); } catch (e) { return null; } }
 /* ¿Estas dos réplicas tienen ya el mismo procedimiento? */
 function ptConvergen(a, b) { var x = ptHuella(a); return x !== null && x === ptHuella(b); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODO PATRULLA · FASE 2 — EL GUARDADO DEJA DE REEMPLAZAR EL CASO
+
+   Con la fase 1 ya se sabe QUÉ cambió y cómo fusionarlo. Aquí se aplica al
+   guardado de verdad, que es donde estaba el defecto: `DB.saveCase` escribía el
+   caso ENTERO tal como se lo daba el llamador. Para las seis salidas
+   documentales eso era inofensivo —leen el caso fresco, tocan su rama y guardan
+   en milisegundos—, pero el wizard trabaja media hora sobre una copia, así que
+   guardar reemplazando borraba de un plumazo todo lo que el compañero hubiera
+   escrito entretanto.
+
+   ⚠️ TODO ESTO SOLO SE ACTIVA EN UN CASO COMPARTIDO. Un caso normal sigue el
+   mismo camino de código de siempre, con el mismo resultado byte a byte.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Estado de la colaboración. Vive fuera del caso a propósito: son datos de la
+   sesión (con quién, qué falta por mandar), no del procedimiento, y no tienen
+   por qué acabar en un informe ni en una exportación. */
+var _ptFoto = {};        // caso.id → cómo quedó el caso tras el último guardado local
+var _ptCola = {};        // caso.id → operaciones propias todavía sin entregar
+var _ptSesion = null;    // sesión abierta: { casoId, rol, desde, par }
+
+/* ── LA FOTO ──────────────────────────────────────────────────────────────
+   ⚠️ Sin esto no hay forma de saber qué cambió, y el motivo es una peculiaridad
+   real del código: `DB.getCase` devuelve la REFERENCIA VIVA de la caché, y las
+   seis salidas documentales la mutan directamente («var c = DB.getCase(id); …;
+   DB.saveCase(c)»). Cuando el caso llega a guardarse, la caché ya lleva el
+   cambio dentro, así que compararlos daría siempre «no cambió nada».
+   La foto es el estado tal como quedó la última vez que se guardó: comparar
+   contra ella sí dice la verdad. */
+function ptTomarFoto(c) {
+  if (!c || !c.id) return;
+  try { _ptFoto[c.id] = JSON.parse(JSON.stringify(ptLimpio(c))); } catch (e) { delete _ptFoto[c.id]; }
+}
+function ptFotoDe(id) { return _ptFoto[id] || null; }
+
+/* ── LA COLA DE PENDIENTES ────────────────────────────────────────────────
+   Lo que este equipo ha escrito y el compañero todavía no ha recibido. Es lo
+   que permite que la desconexión no sea un fallo sino el estado normal: se
+   sigue trabajando, la cola crece, y al reconectar sale lo acumulado.
+   ⚠️ Va CIFRADA como las capturas: una operación lleva dentro el dato de una
+   persona, y en CESPA el de un menor. */
+function ptEncolar(id, ops) {
+  if (!id || !ops || !ops.length) return;
+  if (!_ptCola[id]) _ptCola[id] = [];
+  _ptCola[id] = _ptCola[id].concat(ops);
+  ptColaGuardar();
+}
+function ptPendientes(id) { return id ? ((_ptCola[id] || []).length) : Object.keys(_ptCola).reduce(function (n, k) { return n + _ptCola[k].length; }, 0); }
+function ptVaciarCola(id) { if (id) delete _ptCola[id]; else _ptCola = {}; ptColaGuardar(); }
+function ptColaGuardar() { try { return _lcEncSave('ptcola', _ptCola); } catch (e) { return Promise.resolve(); } }
+
+/* ── ¿ESTE CASO SE ESTÁ TRABAJANDO A CUATRO MANOS? ────────────────────────
+   La respuesta es «lleva marcas de versión», no «hay una sesión abierta»: un
+   caso que se compartió ayer y hoy está desvinculado SIGUE necesitando que sus
+   cambios se fusionen en vez de reemplazarse, porque la otra réplica existe y
+   puede volver a conectarse. Desvincular cierra el canal, no la historia. */
+function ptCompartido(c) { return ptTieneMarcas(c); }
+
+/* Mete un caso en una sesión compartida: sella todo lo que ya tiene y guarda la
+   foto de partida. A partir de aquí cada campo tiene una versión conocida. */
+function ptCompartir(c) {
+  if (!c) return null;
+  ptSellarCaso(c);
+  ptTomarFoto(c);
+  return c;
+}
+
+/* ── ESPEJO ───────────────────────────────────────────────────────────────
+   Deja `dst` con exactamente el contenido de `src`, SIN cambiar la referencia.
+   ⚠️ Hace falta porque el llamador se queda con el objeto que pasó y sigue
+   usándolo: `ojGenerarDesdeWizard` guarda y acto seguido produce el oficio con
+   ese mismo `wc`. Si el guardado fusionara aparte y dejara el objeto del
+   llamador como estaba, el documento saldría sin lo que acaba de llegar del
+   compañero — que es justo el fallo que esta fase viene a cerrar. */
+function ptEspejar(dst, src) {
+  if (!dst || !src || dst === src) return dst;
+  Object.keys(dst).forEach(function (k) { if (!(k in src)) delete dst[k]; });
+  Object.keys(src).forEach(function (k) { dst[k] = src[k]; });
+  return dst;
+}
+
+/* ── EL CORAZÓN DE LA FASE ────────────────────────────────────────────────
+   Guardar un caso compartido: en vez de escribir lo que el llamador trae, se
+   calcula QUÉ cambió respecto de su punto de partida y se aplica eso —y solo
+   eso— sobre la versión viva, que puede llevar dentro el trabajo del compañero.
+
+   `base` la pasa quien sabe que su copia es vieja: el wizard, con la foto que ya
+   tomaba al abrirse (`_wizBase`). Quien lee el caso fresco no pasa nada y se
+   compara contra la foto del último guardado.
+
+   Devuelve el objeto que hay que persistir. */
+function ptGuardarLocal(c, base) {
+  var vivo = DB.getCase(c.id);
+  if (!vivo) { ptTomarFoto(c); return c; }        // primera vez que se guarda
+  var ref = base || ptFotoDe(c.id) || vivo;
+  var ops = ptDiff(ref, c);
+  if (!ops.length) { ptEspejar(c, vivo); return vivo === c ? c : vivo; }
+  /* Se sella con el reloj propio y se aplica sobre el vivo. Si el llamador ya
+     mutó el vivo (las salidas documentales lo hacen), aplicar es un no-op: las
+     operaciones son idempotentes por construcción. */
+  ptSellarOps(vivo, ops);
+  ops.forEach(function (o) {
+    if (o.x) ptPonerRuta(vivo, o.r, undefined, true);
+    else ptPonerRuta(vivo, o.r, o.v, false);
+  });
+  ptEncolar(c.id, ops);
+  /* Y salen ya, si hay canal. ⚠️ No se espera a nada: sin compañero conectado
+     esto es un no-op y la cola sigue creciendo, que es el estado normal. */
+  ptEntregarPendientes();
+  ptEspejar(c, vivo);                              // el llamador se queda al día
+  return vivo;
+}
+
+/* ── LO QUE LLEGA DEL COMPAÑERO ───────────────────────────────────────────
+   Punto de entrada único de las operaciones remotas. La fase 3 (transporte) lo
+   llamará al recibir; aquí ya funciona y se puede verificar sin canal.
+   ⚠️ Se guarda con `saveCases` y NO con `saveCase`: el caso ya está fusionado y
+   volver a pasarlo por `ptGuardarLocal` lo compararía contra su propia foto y
+   generaría operaciones PROPIAS por lo que acaba de escribir el compañero —el
+   equipo se reenviaría a sí mismo lo que le acaban de mandar. */
+function ptAplicarRemoto(casoId, ops, opts) {
+  var c = DB.getCase(casoId);
+  if (!c) return { aplicadas: 0, descartadas: 0, rechazadas: (ops || []).length, sinCaso: true };
+  var r = ptFusionar(c, ops, opts);
+  ptTomarFoto(c);
+  if (r.aplicadas) {
+    var a = DB.getCases().slice();
+    var i = a.findIndex(function (x) { return x.id === casoId; });
+    if (i >= 0) a[i] = c;
+    r.guardado = DB.saveCases(a);
+  }
+  return r;
+}
+
+/* Cierra la sesión de un caso. ⚠️ NO borra el caso ni sus marcas: el
+   procedimiento queda completo en los dos teléfonos, como cualquier otra
+   captura, y solo se elimina con la acción explícita de siempre. */
+function ptTerminarSesion(casoId) {
+  if (_ptSesion && _ptSesion.casoId === casoId) _ptSesion = null;
+  var quedaban = ptPendientes(casoId);
+  return { pendientes: quedaban };
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CÓDEC DE QR — CODIFICADOR
+
+   ⚠️ SE ESCRIBE AQUÍ Y NO SE CARGA DE NINGUNA PARTE. La app es un solo archivo
+   HTML autónomo, sin dependencias externas: en campo no hay red, y una CDN que
+   no responde dejaría a la patrulla sin poder emparejarse. El código de abajo es
+   la norma ISO/IEC 18004 en lo que esta aplicación necesita y nada más.
+
+   ⚠️ MODO BINARIO PURO, no texto. El descriptor de conexión son bytes, y pasarlos
+   por base64 para meterlos en un QR costaría un 33 % más de módulos —o sea un
+   código más denso, más difícil de leer con la cámara de un teléfono a un palmo
+   de la pantalla del otro—. El QR es privado entre dos copias de esta misma
+   aplicación, así que no hay ningún lector de terceros al que respetar.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Estructura de bloques de corrección de errores por versión, nivel M (15 %).
+   ⚠️ NO es calculable: es una tabla de la norma. Cada entrada es [palabras de
+   corrección por bloque, bloques del grupo 1, palabras de datos del grupo 1,
+   bloques del grupo 2, palabras de datos del grupo 2]. */
+var PT_QR_EC = {
+  1:[10,1,16,0,0],   2:[16,1,28,0,0],   3:[26,1,44,0,0],   4:[18,2,32,0,0],
+  5:[24,2,43,0,0],   6:[16,4,27,0,0],   7:[18,4,31,0,0],   8:[22,2,38,2,39],
+  9:[22,3,36,2,37],  10:[26,4,43,1,44], 11:[30,1,50,4,51], 12:[22,6,36,2,37],
+  13:[22,8,37,1,38], 14:[24,4,40,5,41], 15:[24,5,41,5,42], 16:[28,7,45,3,46],
+  17:[28,10,46,1,47],18:[26,9,43,4,44], 19:[26,3,44,11,45],20:[26,3,41,13,42]
+};
+/* Palabras totales (datos + corrección) por versión. ⚠️ Tabla INDEPENDIENTE de
+   la anterior: existe para comprobarla. Si una de las dos estuviera mal
+   transcrita de la norma, no cuadrarían — y una tabla mal transcrita produce un
+   QR que ningún lector entiende. */
+var PT_QR_TOTAL = [0,26,44,70,100,134,172,196,242,292,346,404,466,532,581,655,733,815,901,991,1085];
+
+/* Centros de los patrones de alineación por versión (la 1 no tiene ninguno). */
+var PT_QR_ALIN = {
+  1:[], 2:[6,18], 3:[6,22], 4:[6,26], 5:[6,30], 6:[6,34], 7:[6,22,38],
+  8:[6,24,42], 9:[6,26,46], 10:[6,28,50], 11:[6,30,54], 12:[6,32,58],
+  13:[6,34,62], 14:[6,26,46,66], 15:[6,26,48,70], 16:[6,26,50,74],
+  17:[6,30,54,78], 18:[6,30,56,82], 19:[6,30,58,86], 20:[6,34,62,90]
+};
+
+/* ── Aritmética en GF(256) con el polinomio primitivo 0x11D de la norma ────── */
+var _ptGfExp = new Uint8Array(512), _ptGfLog = new Uint8Array(256);
+(function () {
+  var x = 1;
+  for (var i = 0; i < 255; i++) {
+    _ptGfExp[i] = x; _ptGfLog[x] = i;
+    x <<= 1; if (x & 0x100) x ^= 0x11D;
+  }
+  for (var j = 255; j < 512; j++) _ptGfExp[j] = _ptGfExp[j - 255];
+})();
+function ptGfMul(a, b) { return (a === 0 || b === 0) ? 0 : _ptGfExp[_ptGfLog[a] + _ptGfLog[b]]; }
+function ptGfDiv(a, b) { return _ptGfExp[(_ptGfLog[a] + 255 - _ptGfLog[b]) % 255]; }
+function ptGfPot(i) { return _ptGfExp[((i % 255) + 255) % 255]; }
+
+/* Polinomio generador de grado n para Reed-Solomon: (x−α⁰)(x−α¹)…(x−αⁿ⁻¹).
+   ⚠️ Los coeficientes van de MAYOR a menor grado, que es lo que da por hecho la
+   división de `ptRsEc` (necesita g[0] = 1 para que el término principal se
+   cancele). Guardarlos al revés produce palabras de corrección que parecen
+   plausibles y que ningún lector consigue validar. */
+function ptRsGen(n) {
+  var g = [1];
+  for (var i = 0; i < n; i++) {
+    var ng = new Array(g.length + 1);
+    for (var z = 0; z < ng.length; z++) ng[z] = 0;
+    for (var j = 0; j < g.length; j++) {
+      ng[j] ^= g[j];                                   // × x  → sube un grado
+      ng[j + 1] ^= ptGfMul(g[j], _ptGfExp[i]);         // × αⁱ → mismo grado
+    }
+    g = ng;
+  }
+  return g;
+}
+/* Palabras de corrección de un bloque de datos. */
+function ptRsEc(datos, n) {
+  var g = ptRsGen(n), res = [];
+  for (var z = 0; z < datos.length + n; z++) res[z] = z < datos.length ? datos[z] : 0;
+  for (var i = 0; i < datos.length; i++) {
+    var c = res[i];
+    if (!c) continue;
+    for (var j = 0; j < g.length; j++) res[i + j] ^= ptGfMul(g[j], c);
+  }
+  return res.slice(datos.length);
+}
+
+/* Versión más pequeña que admite `n` bytes en modo binario, nivel M. */
+function ptQrVersion(n) {
+  for (var v = 1; v <= 20; v++) {
+    var e = PT_QR_EC[v], datos = e[1] * e[2] + e[3] * e[4];
+    var cabecera = 4 + (v <= 9 ? 8 : 16);          // modo + indicador de cuenta
+    if (datos * 8 >= cabecera + n * 8) return v;
+  }
+  return 0;
+}
+
+/* Bytes → palabras de código, ya con corrección de errores e intercaladas. */
+function ptQrPalabras(bytes, v) {
+  var e = PT_QR_EC[v], nEc = e[0], b1 = e[1], w1 = e[2], b2 = e[3], w2 = e[4];
+  var nDatos = b1 * w1 + b2 * w2;
+  var bits = [];
+  function pon(val, n) { for (var i = n - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+  pon(4, 4);                                        // modo binario
+  pon(bytes.length, v <= 9 ? 8 : 16);
+  for (var i = 0; i < bytes.length; i++) pon(bytes[i], 8);
+  var libres = nDatos * 8 - bits.length;
+  pon(0, Math.min(4, libres));                      // terminador
+  while (bits.length % 8) bits.push(0);
+  var datos = [];
+  for (var k = 0; k < bits.length; k += 8) {
+    var byte = 0;
+    for (var q = 0; q < 8; q++) byte = (byte << 1) | bits[k + q];
+    datos.push(byte);
+  }
+  var relleno = [0xEC, 0x11], r = 0;
+  while (datos.length < nDatos) datos.push(relleno[r++ % 2]);
+
+  var bloques = [], ecs = [], p = 0, d;
+  for (var i3 = 0; i3 < b1; i3++) { d = datos.slice(p, p + w1); p += w1; bloques.push(d); ecs.push(ptRsEc(d, nEc)); }
+  for (var i4 = 0; i4 < b2; i4++) { d = datos.slice(p, p + w2); p += w2; bloques.push(d); ecs.push(ptRsEc(d, nEc)); }
+
+  /* Intercalado: primera palabra de cada bloque, segunda de cada bloque… */
+  var out = [], maxD = Math.max(w1, w2), c, bq;
+  for (c = 0; c < maxD; c++)
+    for (bq = 0; bq < bloques.length; bq++)
+      if (c < bloques[bq].length) out.push(bloques[bq][c]);
+  for (c = 0; c < nEc; c++)
+    for (bq = 0; bq < ecs.length; bq++) out.push(ecs[bq][c]);
+  return out;
+}
+
+/* Máscaras de la norma. */
+var PT_QR_MASCARAS = [
+  function (r, c) { return (r + c) % 2 === 0; },
+  function (r) { return r % 2 === 0; },
+  function (r, c) { return c % 3 === 0; },
+  function (r, c) { return (r + c) % 3 === 0; },
+  function (r, c) { return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0; },
+  function (r, c) { return ((r * c) % 2) + ((r * c) % 3) === 0; },
+  function (r, c) { return ((((r * c) % 2) + ((r * c) % 3)) % 2) === 0; },
+  function (r, c) { return ((((r + c) % 2) + ((r * c) % 3)) % 2) === 0; }
+];
+
+/* Corrección BCH de la información de formato: 5 bits de datos → 15. */
+function ptQrFormato(nivelBits, mascara) {
+  var d = (nivelBits << 3) | mascara, v = d << 10;
+  for (var i = 4; i >= 0; i--) if (v & (1 << (i + 10))) v ^= 0x537 << i;
+  return (((d << 10) | v) ^ 0x5412) & 0x7FFF;
+}
+/* Información de versión (v ≥ 7): 6 bits de datos → 18. */
+function ptQrVersionBits(v) {
+  var r = v << 12;
+  for (var i = 5; i >= 0; i--) if (r & (1 << (i + 12))) r ^= 0x1F25 << i;
+  return ((v << 12) | r) & 0x3FFFF;
+}
+
+function _ptQrLienzo(size) {
+  var m = [];
+  for (var i = 0; i < size; i++) { var f = new Int8Array(size); f.fill(-1); m.push(f); }
+  return m;
+}
+/* Dibuja los patrones fijos sobre el lienzo. */
+function _ptQrFunciones(m, v) {
+  var size = m.length, i, j, k;
+  function buscador(r, c) {
+    for (var a = -1; a <= 7; a++) for (var b = -1; b <= 7; b++) {
+      var rr = r + a, cc = c + b;
+      if (rr < 0 || cc < 0 || rr >= size || cc >= size) continue;
+      /* El anillo exterior (índices −1 y 7) es el SEPARADOR y va siempre claro:
+         no es parte del cuadro. Tratarlo como borde pega el buscador a la zona
+         del formato y ningún lector reconoce el código. */
+      if (a < 0 || a > 6 || b < 0 || b > 6) { m[rr][cc] = 0; continue; }
+      var borde = (a === 0 || a === 6 || b === 0 || b === 6);
+      var centro = (a >= 2 && a <= 4 && b >= 2 && b <= 4);
+      m[rr][cc] = (borde || centro) ? 1 : 0;
+    }
+  }
+  buscador(0, 0); buscador(0, size - 7); buscador(size - 7, 0);
+  for (i = 8; i < size - 8; i++) {                        // temporizadores
+    var b2 = (i % 2 === 0) ? 1 : 0;
+    m[6][i] = b2; m[i][6] = b2;
+  }
+  var al = PT_QR_ALIN[v], ult = al.length - 1;
+  for (var a2 = 0; a2 <= ult; a2++) for (var b3 = 0; b3 <= ult; b3++) {
+    /* Solo se omiten las TRES esquinas ocupadas por los buscadores.
+       ⚠️ No vale preguntar «¿esta celda ya es función?»: de la versión 7 en
+       adelante hay patrones de alineación centrados SOBRE el temporizador —(6,22)
+       y (22,6)— que sí van, y descartarlos corre todo el flujo de datos. */
+    if ((a2 === 0 && b3 === 0) || (a2 === 0 && b3 === ult) || (a2 === ult && b3 === 0)) continue;
+    var r2 = al[a2], c2 = al[b3];
+    for (i = -2; i <= 2; i++) for (j = -2; j <= 2; j++)
+      m[r2 + i][c2 + j] = (Math.max(Math.abs(i), Math.abs(j)) !== 1) ? 1 : 0;
+  }
+  m[size - 8][8] = 1;                                     // módulo siempre oscuro
+  for (k = 0; k < 9; k++) {                               // reserva del formato
+    if (m[8][k] === -1) m[8][k] = 0;
+    if (m[k][8] === -1) m[k][8] = 0;
+  }
+  for (k = 0; k < 8; k++) {
+    if (m[8][size - 1 - k] === -1) m[8][size - 1 - k] = 0;
+    if (m[size - 1 - k][8] === -1) m[size - 1 - k][8] = 0;
+  }
+  if (v >= 7) for (i = 0; i < 6; i++) for (j = 0; j < 3; j++) {
+    m[size - 11 + j][i] = 0; m[i][size - 11 + j] = 0;
+  }
+}
+
+/* Penalizaciones de la norma, para elegir la máscara que menos estorba. */
+function _ptQrPenal(m) {
+  var size = m.length, p = 0, i, j, k;
+  for (i = 0; i < size; i++) {
+    for (var eje = 0; eje < 2; eje++) {
+      var run = 1, prev = eje ? m[0][i] : m[i][0];
+      for (j = 1; j < size; j++) {
+        var v = eje ? m[j][i] : m[i][j];
+        if (v === prev) { run++; } else { if (run >= 5) p += 3 + (run - 5); run = 1; prev = v; }
+      }
+      if (run >= 5) p += 3 + (run - 5);
+    }
+  }
+  for (i = 0; i < size - 1; i++) for (j = 0; j < size - 1; j++) {
+    var a = m[i][j];
+    if (a === m[i][j + 1] && a === m[i + 1][j] && a === m[i + 1][j + 1]) p += 3;
+  }
+  var pat1 = [1,0,1,1,1,0,1,0,0,0,0], pat2 = [0,0,0,0,1,0,1,1,1,0,1];
+  for (i = 0; i < size; i++) for (j = 0; j <= size - 11; j++) {
+    var h1 = true, h2 = true, v1 = true, v2 = true;
+    for (k = 0; k < 11; k++) {
+      if (m[i][j + k] !== pat1[k]) h1 = false;
+      if (m[i][j + k] !== pat2[k]) h2 = false;
+      if (m[j + k][i] !== pat1[k]) v1 = false;
+      if (m[j + k][i] !== pat2[k]) v2 = false;
+    }
+    if (h1) p += 40; if (h2) p += 40; if (v1) p += 40; if (v2) p += 40;
+  }
+  var osc = 0;
+  for (i = 0; i < size; i++) for (j = 0; j < size; j++) if (m[i][j]) osc++;
+  p += Math.floor(Math.abs((osc * 100) / (size * size) - 50) / 5) * 10;
+  return p;
+}
+
+/* Escribe los 15 bits del formato en sus dos copias.
+   ⚠️ El bit MÁS significativo va primero en las dos, y la copia 2 SALTA el módulo
+   siempre oscuro de (size−8, 8), que no forma parte del formato: son 7 módulos en
+   la columna y 8 en la fila, no 8 y 7. */
+function _ptQrPonFormato(m, mascara) {
+  var size = m.length, fmt = ptQrFormato(0, mascara);     // 0 = nivel M
+  for (var i = 0; i < 15; i++) {
+    var b = (fmt >> (14 - i)) & 1;
+    /* Copia 1: (8,0)…(8,5), (8,7), (8,8), (7,8), (5,8)…(0,8) */
+    if (i < 6) m[8][i] = b;
+    else if (i === 6) m[8][7] = b;
+    else if (i === 7) m[8][8] = b;
+    else if (i === 8) m[7][8] = b;
+    else m[14 - i][8] = b;
+    /* Copia 2: (size−1,8)…(size−7,8) y luego (8,size−8)…(8,size−1) */
+    if (i < 7) m[size - 1 - i][8] = b;
+    else m[8][size - 15 + i] = b;
+  }
+  m[size - 8][8] = 1;
+}
+
+/* Bytes → matriz de módulos lista para dibujar. */
+function ptQrMatriz(bytes, mascaraForzada) {
+  var v = ptQrVersion(bytes.length);
+  if (!v) return null;                                    // no cabe
+  var size = v * 4 + 17, i, j;
+  var base = _ptQrLienzo(size);
+  _ptQrFunciones(base, v);
+  var esFuncion = [];
+  for (i = 0; i < size; i++) {
+    esFuncion.push([]);
+    for (j = 0; j < size; j++) esFuncion[i].push(base[i][j] !== -1);
+  }
+  var pal = ptQrPalabras(bytes, v), total = pal.length * 8;
+
+  var mejor = null, mejorP = Infinity, mejorMask = 0;
+  for (var mk = 0; mk < 8; mk++) {
+    var m = [];
+    for (i = 0; i < size; i++) m.push(Int8Array.from(base[i]));
+    var bit = 0, arriba = true, col = size - 1;
+    while (col > 0) {
+      if (col === 6) col--;                               // la columna 6 es temporizador
+      for (var k = 0; k < size; k++) {
+        var fila = arriba ? size - 1 - k : k;
+        for (var d = 0; d < 2; d++) {
+          var c = col - d;
+          if (esFuncion[fila][c]) continue;
+          var b = bit < total ? (pal[bit >> 3] >> (7 - (bit & 7))) & 1 : 0;
+          bit++;
+          if (PT_QR_MASCARAS[mk](fila, c)) b ^= 1;
+          m[fila][c] = b;
+        }
+      }
+      arriba = !arriba; col -= 2;
+    }
+    _ptQrPonFormato(m, mk);
+    if (v >= 7) {
+      var vb = ptQrVersionBits(v);
+      for (i = 0; i < 18; i++) {
+        var b4 = (vb >> i) & 1;
+        m[Math.floor(i / 3)][size - 11 + (i % 3)] = b4;
+        m[size - 11 + (i % 3)][Math.floor(i / 3)] = b4;
+      }
+    }
+    var p = (mascaraForzada === undefined) ? _ptQrPenal(m) : (mk === mascaraForzada ? -1 : 1e9);
+    if (p < mejorP) { mejorP = p; mejor = m; mejorMask = mk; }
+  }
+  return { v: v, size: size, mods: mejor, mascara: mejorMask };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CÓDEC DE QR — LECTOR
+
+   ⚠️ SE ESCRIBE AQUÍ Y NO SE USA `BarcodeDetector`. Esa API del navegador
+   existiría en el teléfono, pero NO existe en el navegador con el que se
+   verifica esta aplicación: usarla dejaría la única ruta que va a campo como la
+   única que nadie puede comprobar. Aquí la ruta que se envía es exactamente la
+   que pasa por la regresión.
+
+   Recorrido: imagen → binarización → localizar los tres buscadores → estimar el
+   tamaño del símbolo → transformación de perspectiva → muestrear los módulos →
+   leer el formato → desenmascarar → corregir con Reed-Solomon → bytes.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── BINARIZACIÓN POR BLOQUES ──────────────────────────────────────────────
+   Un umbral único para toda la imagen no sirve: la pantalla de un teléfono
+   fotografiada por otro llega con un lado más iluminado que el otro. Se calcula
+   la media de cada bloque de 8×8 y se suaviza con la de sus vecinos, así el
+   umbral acompaña al degradado. */
+var PT_QR_BLQ = 8;
+function ptQrBinarizar(datos, an, al) {
+  var gris = new Uint8Array(an * al), i, j;
+  for (i = 0; i < an * al; i++) {
+    var p = i * 4;
+    gris[i] = (datos[p] * 77 + datos[p + 1] * 151 + datos[p + 2] * 28) >> 8;
+  }
+  var bx = Math.max(1, Math.ceil(an / PT_QR_BLQ)), by = Math.max(1, Math.ceil(al / PT_QR_BLQ));
+  var med = new Float32Array(bx * by);
+  for (j = 0; j < by; j++) for (i = 0; i < bx; i++) {
+    var x0 = i * PT_QR_BLQ, y0 = j * PT_QR_BLQ;
+    var x1 = Math.min(x0 + PT_QR_BLQ, an), y1 = Math.min(y0 + PT_QR_BLQ, al);
+    var s = 0, n = 0, mn = 255, mx = 0;
+    for (var y = y0; y < y1; y++) for (var x = x0; x < x1; x++) {
+      var g = gris[y * an + x]; s += g; n++;
+      if (g < mn) mn = g; if (g > mx) mx = g;
+    }
+    var m = n ? s / n : 128;
+    /* Bloque sin contraste: es todo papel o todo tinta. Se decide con los
+       vecinos ya calculados, no con su propia media —que partiría el ruido por
+       la mitad e inventaría módulos. */
+    if (mx - mn <= 24) {
+      m = mn / 2;
+      if (j > 0 && i > 0) {
+        var vecino = (med[(j - 1) * bx + i] + med[j * bx + i - 1] + med[(j - 1) * bx + i - 1]) / 3;
+        if (mn < vecino) m = vecino;
+      }
+    }
+    med[j * bx + i] = m;
+  }
+  var bin = new Uint8Array(an * al);
+  for (j = 0; j < by; j++) for (i = 0; i < bx; i++) {
+    var li = Math.min(Math.max(i, 1), bx - 2), lj = Math.min(Math.max(j, 1), by - 2);
+    var suma = 0;
+    for (var dj = -1; dj <= 1; dj++) for (var di = -1; di <= 1; di++)
+      suma += med[(lj + dj) * bx + (li + di)];
+    var umb = suma / 9;
+    var ax0 = i * PT_QR_BLQ, ay0 = j * PT_QR_BLQ;
+    var ax1 = Math.min(ax0 + PT_QR_BLQ, an), ay1 = Math.min(ay0 + PT_QR_BLQ, al);
+    for (var yy = ay0; yy < ay1; yy++) for (var xx = ax0; xx < ax1; xx++)
+      bin[yy * an + xx] = gris[yy * an + xx] < umb ? 1 : 0;   // 1 = oscuro
+  }
+  return bin;
+}
+
+/* ── LOCALIZAR LOS TRES BUSCADORES ─────────────────────────────────────────
+   El buscador es el único sitio del símbolo con la proporción 1:1:3:1:1 de
+   oscuro-claro-oscuro-claro-oscuro. Se barre por filas, y cada candidato se
+   confirma en vertical y otra vez en horizontal sobre el centro afinado. */
+function _ptQrProporcion(c) {
+  var total = c[0] + c[1] + c[2] + c[3] + c[4];
+  if (total < 7) return 0;
+  var mod = total / 7, tol = mod / 2;
+  if (Math.abs(mod - c[0]) < tol && Math.abs(mod - c[1]) < tol &&
+      Math.abs(3 * mod - c[2]) < 3 * tol && Math.abs(mod - c[3]) < tol &&
+      Math.abs(mod - c[4]) < tol) return mod;
+  return 0;
+}
+function _ptQrCentroV(bin, an, al, cx, cy, maxAlto) {
+  var c = [0, 0, 0, 0, 0], y = cy;
+  while (y >= 0 && bin[y * an + cx]) { c[2]++; y--; }
+  while (y >= 0 && !bin[y * an + cx] && c[1] < maxAlto) { c[1]++; y--; }
+  while (y >= 0 && bin[y * an + cx] && c[0] < maxAlto) { c[0]++; y--; }
+  if (!c[0] || !c[1]) return null;
+  y = cy + 1;
+  while (y < al && bin[y * an + cx]) { c[2]++; y++; }
+  while (y < al && !bin[y * an + cx] && c[3] < maxAlto) { c[3]++; y++; }
+  while (y < al && bin[y * an + cx] && c[4] < maxAlto) { c[4]++; y++; }
+  if (!c[3] || !c[4]) return null;
+  var mv = _ptQrProporcion(c);
+  if (!mv) return null;
+  return { c: y - c[4] - c[3] - c[2] / 2, mod: mv };
+}
+function _ptQrCentroH(bin, an, cy, cx, maxAncho) {
+  var c = [0, 0, 0, 0, 0], x = cx, fila = cy * an;
+  while (x >= 0 && bin[fila + x]) { c[2]++; x--; }
+  while (x >= 0 && !bin[fila + x] && c[1] < maxAncho) { c[1]++; x--; }
+  while (x >= 0 && bin[fila + x] && c[0] < maxAncho) { c[0]++; x--; }
+  if (!c[0] || !c[1]) return null;
+  x = cx + 1;
+  while (x < an && bin[fila + x]) { c[2]++; x++; }
+  while (x < an && !bin[fila + x] && c[3] < maxAncho) { c[3]++; x++; }
+  while (x < an && bin[fila + x] && c[4] < maxAncho) { c[4]++; x++; }
+  if (!c[3] || !c[4]) return null;
+  var mh = _ptQrProporcion(c);
+  if (!mh) return null;
+  return { c: x - c[4] - c[3] - c[2] / 2, mod: mh };
+}
+function ptQrBuscadores(bin, an, al) {
+  var cands = [], y, x;
+  for (y = 0; y < al; y++) {
+    var c = [0, 0, 0, 0, 0], estado = 0;
+    for (x = 0; x < an; x++) {
+      var v = bin[y * an + x];
+      if (v) {                                    // oscuro
+        if (estado === 1 || estado === 3) estado++;
+        c[estado]++;
+      } else {                                    // claro
+        if (estado === 0) { if (c[0]) { estado = 1; c[estado]++; } }
+        else if (estado === 2) { estado = 3; c[estado]++; }
+        else if (estado === 4) {
+          var mod = _ptQrProporcion(c);
+          if (mod) _ptQrApunta(cands, bin, an, al, x, y, c, mod);
+          c = [c[2], c[3], c[4], 1, 0]; estado = 3;
+          continue;
+        } else c[estado]++;
+      }
+      if (estado === 4 && x === an - 1) {
+        var mod2 = _ptQrProporcion(c);
+        if (mod2) _ptQrApunta(cands, bin, an, al, x + 1, y, c, mod2);
+      }
+    }
+  }
+  /* Se agrupan los avistamientos de un mismo buscador (aparece en varias filas). */
+  var grupos = [];
+  cands.forEach(function (p) {
+    for (var i = 0; i < grupos.length; i++) {
+      var g = grupos[i];
+      if (Math.abs(g.x - p.x) < g.mod && Math.abs(g.y - p.y) < g.mod) {
+        g.x = (g.x * g.n + p.x) / (g.n + 1); g.y = (g.y * g.n + p.y) / (g.n + 1);
+        g.mod = (g.mod * g.n + p.mod) / (g.n + 1); g.n++; return;
+      }
+    }
+    grupos.push({ x: p.x, y: p.y, mod: p.mod, n: 1 });
+  });
+  grupos.sort(function (a, b) { return b.n - a.n; });
+  return grupos.filter(function (g) { return g.n >= 2; }).slice(0, 6);
+}
+/* ⚠️ El módulo se mide en LOS DOS EJES y se promedia. Una pantalla fotografiada
+   en ángulo no se encoge por igual a lo ancho que a lo alto, así que quedarse con
+   la medida horizontal —que es la del barrido— da un módulo demasiado grande para
+   la altura del símbolo: el tamaño estimado sale corto, cae en un valor imposible
+   y el código se descarta entero aunque los tres buscadores estén perfectos. */
+function _ptQrApunta(cands, bin, an, al, xFin, y, c, mod) {
+  var cx = xFin - c[4] - c[3] - c[2] / 2;
+  var v = _ptQrCentroV(bin, an, al, Math.round(cx), y, Math.ceil(mod * 3));
+  if (!v) return;
+  var h = _ptQrCentroH(bin, an, Math.round(v.c), Math.round(cx), Math.ceil(mod * 3));
+  if (!h) return;
+  cands.push({ x: h.c, y: v.c, mod: (h.mod + v.mod) / 2 });
+}
+
+/* Ordena tres buscadores en (esquina, arriba-derecha, abajo-izquierda). */
+function ptQrOrdenar(p) {
+  function d2(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy; }
+  var ab = d2(p[0], p[1]), ac = d2(p[0], p[2]), bc = d2(p[1], p[2]);
+  var esq, o1, o2;
+  if (bc >= ab && bc >= ac) { esq = p[0]; o1 = p[1]; o2 = p[2]; }
+  else if (ac >= ab && ac >= bc) { esq = p[1]; o1 = p[0]; o2 = p[2]; }
+  else { esq = p[2]; o1 = p[0]; o2 = p[1]; }
+  /* El producto vectorial decide cuál de los dos está arriba: sin esto el
+     símbolo se leería reflejado y no habría corrección que lo salvara. */
+  var cruz = (o1.x - esq.x) * (o2.y - esq.y) - (o1.y - esq.y) * (o2.x - esq.x);
+  return cruz < 0 ? { tl: esq, tr: o2, bl: o1 } : { tl: esq, tr: o1, bl: o2 };
+}
+
+/* ── TRANSFORMACIÓN DE PERSPECTIVA ─────────────────────────────────────────
+   La pantalla se fotografía en ángulo, así que el símbolo llega como un
+   cuadrilátero cualquiera. Se compone «cuadrado unidad → imagen» con la inversa
+   de «cuadrado unidad → módulos» para poder muestrear por coordenada de módulo. */
+function _ptCuad(x0, y0, x1, y1, x2, y2, x3, y3) {
+  var dx3 = x0 - x1 + x2 - x3, dy3 = y0 - y1 + y2 - y3;
+  if (dx3 === 0 && dy3 === 0)
+    return [x1 - x0, x2 - x1, x0, y1 - y0, y2 - y1, y0, 0, 0, 1];
+  var dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+  var den = dx1 * dy2 - dx2 * dy1;
+  var a13 = (dx3 * dy2 - dx2 * dy3) / den, a23 = (dx1 * dy3 - dx3 * dy1) / den;
+  return [x1 - x0 + a13 * x1, x3 - x0 + a23 * x3, x0,
+          y1 - y0 + a13 * y1, y3 - y0 + a23 * y3, y0,
+          a13, a23, 1];
+}
+function _ptCuadInv(m) {                       // adjunta: sirve como inversa proyectiva
+  return [m[4] * m[8] - m[5] * m[7], m[2] * m[7] - m[1] * m[8], m[1] * m[5] - m[2] * m[4],
+          m[5] * m[6] - m[3] * m[8], m[0] * m[8] - m[2] * m[6], m[2] * m[3] - m[0] * m[5],
+          m[3] * m[7] - m[4] * m[6], m[1] * m[6] - m[0] * m[7], m[0] * m[4] - m[1] * m[3]];
+}
+function _ptCuadMul(a, b) {
+  var r = new Array(9);
+  for (var i = 0; i < 3; i++) for (var j = 0; j < 3; j++) {
+    var s = 0;
+    for (var k = 0; k < 3; k++) s += a[i * 3 + k] * b[k * 3 + j];
+    r[i * 3 + j] = s;
+  }
+  return r;
+}
+function _ptCuadPunto(t, x, y) {
+  var d = t[6] * x + t[7] * y + t[8];
+  return { x: (t[0] * x + t[1] * y + t[2]) / d, y: (t[3] * x + t[4] * y + t[5]) / d };
+}
+
+/* Busca el patrón de alineación de abajo-derecha alrededor de la posición
+   estimada. Sin él, un símbolo grande fotografiado en ángulo se muestrea
+   torcido y falla justo en las esquinas. */
+function ptQrAlineacion(bin, an, al, cx, cy, mod) {
+  /* ⚠️ El patrón es CLARO-OSCURO-CLARO y lo que interesa es el centro del tramo
+     OSCURO, que es el módulo central del patrón. Buscar oscuro-claro-oscuro y
+     quedarse con el claro del medio devuelve un centro desplazado un módulo, y
+     con él todo el muestreo sale corrido — se lee, pero gastando la corrección
+     de errores en un defecto que no debería existir. */
+  var r = Math.max(4, Math.round(mod * 4)), mejor = null, mejorD = Infinity;
+  var y0 = Math.max(1, Math.round(cy - r)), y1 = Math.min(al - 2, Math.round(cy + r));
+  var x0 = Math.max(1, Math.round(cx - r)), x1 = Math.min(an - 2, Math.round(cx + r));
+  var tol = mod / 2 + 1;
+  function tres(c) {
+    var m = (c[0] + c[1] + c[2]) / 3;
+    return Math.abs(mod - c[0]) < tol && Math.abs(mod - c[1]) < tol && Math.abs(mod - c[2]) < tol && m > 0;
+  }
+  /* Centro vertical del tramo oscuro que pasa por (x, y). */
+  function centroV(x, y) {
+    var c = [0, 0, 0], q = y;
+    while (q >= y0 && bin[q * an + x]) { c[1]++; q--; }
+    while (q >= y0 && !bin[q * an + x] && c[0] <= mod * 2) { c[0]++; q--; }
+    q = y + 1;
+    while (q <= y1 && bin[q * an + x]) { c[1]++; q++; }
+    var fin = q;
+    while (q <= y1 && !bin[q * an + x] && c[2] <= mod * 2) { c[2]++; q++; }
+    if (!c[0] || !c[2] || !tres(c)) return -1;
+    return fin - c[1] / 2;
+  }
+  for (var y = y0; y <= y1; y++) {
+    var c = [0, 0, 0], estado = 0;                    // 0 claro, 1 oscuro, 2 claro
+    for (var x = x0; x <= x1; x++) {
+      var v = bin[y * an + x];
+      if (estado === 0) { if (!v) c[0]++; else if (c[0]) { estado = 1; c[1] = 1; } }
+      else if (estado === 1) { if (v) c[1]++; else { estado = 2; c[2] = 1; } }
+      else {
+        if (!v) c[2]++;
+        else {
+          if (tres(c)) {
+            var px = Math.round(x - c[2] - c[1] / 2);
+            var py = centroV(px, y);
+            if (py >= 0) {
+              var d = (px - cx) * (px - cx) + (py - cy) * (py - cy);
+              if (d < mejorD) { mejorD = d; mejor = { x: px, y: py }; }
+            }
+          }
+          c = [c[2], 1, 0]; estado = 1;
+        }
+      }
+    }
+  }
+  return mejor;
+}
+
+/* ── REED-SOLOMON: CORRECCIÓN ──────────────────────────────────────────────
+   Síndromes → Berlekamp-Massey → búsqueda de Chien → Forney. Devuelve las
+   palabras de datos ya corregidas, o null si el bloque tiene más errores de los
+   que el nivel de corrección admite. */
+function ptRsCorregir(r, nEc) {
+  var n = r.length, i, j, k;
+  var synd = new Array(nEc), hay = false;
+  for (j = 0; j < nEc; j++) {
+    var s = 0, a = ptGfPot(j);
+    for (i = 0; i < n; i++) s = ptGfMul(s, a) ^ r[i];
+    synd[j] = s; if (s) hay = true;
+  }
+  if (!hay) return r.slice(0, n - nEc);
+
+  var lam = [1], b = [1], L = 0, m = 1, bb = 1;
+  for (k = 0; k < nEc; k++) {
+    var d = synd[k];
+    for (i = 1; i <= L; i++) d ^= ptGfMul(lam[i] || 0, synd[k - i]);
+    if (d === 0) { m++; continue; }
+    var prev = lam.slice(), coef = ptGfDiv(d, bb);
+    while (lam.length < b.length + m) lam.push(0);
+    for (i = 0; i < b.length; i++) lam[i + m] ^= ptGfMul(coef, b[i]);
+    if (2 * L <= k) { L = k + 1 - L; b = prev; bb = d; m = 1; } else m++;
+  }
+  if (L > nEc / 2) return null;                          // más errores de los corregibles
+
+  var pos = [];
+  for (i = 0; i < n; i++) {                              // Chien: raíces α^−i
+    var x = ptGfPot(-i), val = 0;
+    for (j = 0; j < lam.length; j++) val ^= ptGfMul(lam[j], ptGfPot(-i * j));
+    if (val === 0) pos.push(i);
+  }
+  if (pos.length !== L) return null;
+
+  /* Ω(x) = S(x)·Λ(x) mod x^nEc */
+  var om = new Array(nEc).fill(0);
+  for (i = 0; i < nEc; i++) for (j = 0; j < lam.length && i + j < nEc; j++)
+    om[i + j] ^= ptGfMul(synd[i], lam[j]);
+
+  for (var q = 0; q < pos.length; q++) {
+    var e = pos[q], xi = ptGfPot(-e), num = 0, den = 0;
+    for (j = 0; j < nEc; j++) num ^= ptGfMul(om[j], ptGfPot(-e * j));
+    for (j = 1; j < lam.length; j += 2) den ^= ptGfMul(lam[j], ptGfPot(-e * (j - 1)));
+    if (!den) return null;
+    var mag = ptGfMul(ptGfDiv(num, den), ptGfPot(e));
+    var idx = n - 1 - e;
+    if (idx < 0 || idx >= n) return null;
+    r[idx] ^= mag;
+  }
+  /* Comprobación: si los síndromes no quedan a cero, la «corrección» inventó
+     datos. Un bloque mal corregido es peor que un bloque ilegible. */
+  for (j = 0; j < nEc; j++) {
+    var s2 = 0, a2 = ptGfPot(j);
+    for (i = 0; i < n; i++) s2 = ptGfMul(s2, a2) ^ r[i];
+    if (s2) return null;
+  }
+  return r.slice(0, n - nEc);
+}
+
+/* ── LEER EL SÍMBOLO YA MUESTREADO ─────────────────────────────────────────── */
+function ptQrDeMatriz(mods, size) {
+  var v = (size - 17) / 4, i, j;
+  if (v < 1 || v > 20 || v !== Math.floor(v)) return null;
+
+  /* Formato: se leen las dos copias y se acepta la que esté a menos de 3 bits
+     de un formato válido. Cada copia sola es frágil; juntas casi nunca fallan. */
+  var c1 = 0, c2 = 0;
+  for (i = 0; i < 15; i++) {
+    var r1, k1;
+    if (i < 6) { r1 = 8; k1 = i; }
+    else if (i === 6) { r1 = 8; k1 = 7; }
+    else if (i === 7) { r1 = 8; k1 = 8; }
+    else if (i === 8) { r1 = 7; k1 = 8; }
+    else { r1 = 14 - i; k1 = 8; }
+    c1 = (c1 << 1) | mods[r1][k1];
+    c2 = (c2 << 1) | (i < 7 ? mods[size - 1 - i][8] : mods[8][size - 15 + i]);
+  }
+  var fmt = _ptQrFmtValido(c1); if (fmt === null) fmt = _ptQrFmtValido(c2);
+  if (fmt === null) return null;
+  var nivel = fmt >> 3, mascara = fmt & 7;
+  if (nivel !== 0) return null;                 // esta aplicación solo emite nivel M
+
+  var base = _ptQrLienzo(size);
+  _ptQrFunciones(base, v);
+  var esF = [];
+  for (i = 0; i < size; i++) { esF.push([]); for (j = 0; j < size; j++) esF[i].push(base[i][j] !== -1); }
+
+  var bits = [], arriba = true, col = size - 1;
+  while (col > 0) {
+    if (col === 6) col--;
+    for (var k = 0; k < size; k++) {
+      var fila = arriba ? size - 1 - k : k;
+      for (var d = 0; d < 2; d++) {
+        var c = col - d;
+        if (esF[fila][c]) continue;
+        var b = mods[fila][c];
+        if (PT_QR_MASCARAS[mascara](fila, c)) b ^= 1;
+        bits.push(b);
+      }
+    }
+    arriba = !arriba; col -= 2;
+  }
+  var pal = [];
+  for (i = 0; i + 8 <= bits.length; i += 8) {
+    var by = 0;
+    for (var q = 0; q < 8; q++) by = (by << 1) | bits[i + q];
+    pal.push(by);
+  }
+
+  /* Deshacer el intercalado y corregir bloque a bloque. */
+  var e = PT_QR_EC[v], nEc = e[0], b1 = e[1], w1 = e[2], b2 = e[3], w2 = e[4];
+  var nBloques = b1 + b2, tam = [];
+  for (i = 0; i < b1; i++) tam.push(w1);
+  for (i = 0; i < b2; i++) tam.push(w2);
+  var bloques = [];
+  for (i = 0; i < nBloques; i++) bloques.push([]);
+  var p = 0, maxD = Math.max(w1, w2);
+  for (var cw = 0; cw < maxD; cw++)
+    for (i = 0; i < nBloques; i++)
+      if (cw < tam[i]) bloques[i].push(pal[p++]);
+  for (var ec = 0; ec < nEc; ec++)
+    for (i = 0; i < nBloques; i++) bloques[i].push(pal[p++]);
+
+  var datos = [];
+  for (i = 0; i < nBloques; i++) {
+    var ok = ptRsCorregir(bloques[i], nEc);
+    if (!ok) return null;
+    datos = datos.concat(ok);
+  }
+
+  /* Flujo de bits: modo binario, cuenta y bytes. */
+  var bp = 0;
+  function toma(n) { var x = 0; for (var z = 0; z < n; z++) { x = (x << 1) | ((datos[bp >> 3] >> (7 - (bp & 7))) & 1); bp++; } return x; }
+  if (bp + 4 > datos.length * 8) return null;
+  if (toma(4) !== 4) return null;                        // solo modo binario
+  var cnt = toma(v <= 9 ? 8 : 16);
+  if (cnt < 0 || (bp + cnt * 8) > datos.length * 8) return null;
+  var out = new Uint8Array(cnt);
+  for (i = 0; i < cnt; i++) out[i] = toma(8);
+  return out;
+}
+/* Devuelve los 5 bits de formato si la palabra leída está a ≤3 bits de uno de
+   los 32 formatos válidos; si no, null. */
+function _ptQrFmtValido(w) {
+  var mejor = null, mejorD = 4;
+  for (var d = 0; d < 32; d++) {
+    var v = ptQrFormato(d >> 3, d & 7), dif = v ^ w, n = 0;
+    while (dif) { n += dif & 1; dif >>= 1; }
+    if (n < mejorD) { mejorD = n; mejor = d; }
+  }
+  return mejor;
+}
+
+/* ── PUNTO DE ENTRADA: imagen → bytes ──────────────────────────────────────── */
+function ptQrLeer(datos, an, al) {
+  var bin = ptQrBinarizar(datos, an, al);
+  var b = ptQrBuscadores(bin, an, al);
+  if (b.length < 3) return null;
+  /* Con más de tres candidatos se prueban las combinaciones más votadas: un
+     reflejo en la pantalla puede fabricar un cuarto buscador. */
+  var combos = [];
+  for (var i = 0; i < b.length && combos.length < 10; i++)
+    for (var j = i + 1; j < b.length; j++)
+      for (var k = j + 1; k < b.length; k++) combos.push([b[i], b[j], b[k]]);
+  for (var c = 0; c < combos.length; c++) {
+    var out = _ptQrIntento(bin, an, al, combos[c]);
+    if (out) return out;
+  }
+  return null;
+}
+function _ptQrIntento(bin, an, al, tres) {
+  var o = ptQrOrdenar(tres), tl = o.tl, tr = o.tr, bl = o.bl;
+  var mod = (tl.mod + tr.mod + bl.mod) / 3;
+  if (!(mod > 0)) return null;
+  /* El tamaño se estima con las DOS distancias desde la esquina, no con una:
+     fotografiado en ángulo, un lado se acorta y una sola medida se queda corta. */
+  var d1 = Math.sqrt((tr.x - tl.x) * (tr.x - tl.x) + (tr.y - tl.y) * (tr.y - tl.y));
+  var d2 = Math.sqrt((bl.x - tl.x) * (bl.x - tl.x) + (bl.y - tl.y) * (bl.y - tl.y));
+  var dim = Math.round((d1 / mod + d2 / mod) / 2) + 7;
+  /* Los tamaños válidos son 4v+17, o sea siempre ≡1 (mod 4). Se ajusta al más
+     cercano y se rechaza si queda a dos módulos: ⚠️ una fórmula que «redondee»
+     un 44 a 41 en vez de a 45 lee un símbolo de otra versión y no falla a la
+     vista — devuelve basura corregida. */
+  var resto = dim % 4;
+  if (resto === 0) dim++;
+  else if (resto === 2) dim--;
+  else if (resto === 3) return null;
+  if (dim < 21 || dim > 97) return null;
+
+  var pMod, pImg;
+  if (dim > 21) {
+    /* Se extrapola dónde debería caer el patrón de alineación y se busca ahí. */
+    var ex = tr.x + bl.x - tl.x, ey = tr.y + bl.y - tl.y;
+    var f = 1 - 3 / (dim - 7);
+    var ax = tl.x + f * (ex - tl.x), ay = tl.y + f * (ey - tl.y);
+    var ali = ptQrAlineacion(bin, an, al, ax, ay, mod);
+    if (ali) {
+      pMod = [3.5, 3.5, dim - 3.5, 3.5, dim - 6.5, dim - 6.5, 3.5, dim - 3.5];
+      pImg = [tl.x, tl.y, tr.x, tr.y, ali.x, ali.y, bl.x, bl.y];
+    }
+  }
+  if (!pMod) {
+    pMod = [3.5, 3.5, dim - 3.5, 3.5, dim - 3.5, dim - 3.5, 3.5, dim - 3.5];
+    pImg = [tl.x, tl.y, tr.x, tr.y, tr.x + bl.x - tl.x, tr.y + bl.y - tl.y, bl.x, bl.y];
+  }
+  var t = _ptCuadMul(_ptCuad.apply(null, pImg), _ptCuadInv(_ptCuad.apply(null, pMod)));
+
+  var mods = [];
+  for (var y = 0; y < dim; y++) {
+    mods.push(new Uint8Array(dim));
+    for (var x = 0; x < dim; x++) {
+      var p = _ptCuadPunto(t, x + 0.5, y + 0.5);
+      var px = Math.round(p.x), py = Math.round(p.y);
+      if (px < 0 || py < 0 || px >= an || py >= al) return null;
+      mods[y][x] = bin[py * an + px];
+    }
+  }
+  return ptQrDeMatriz(mods, dim);
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODO PATRULLA · FASE 3 — EL CANAL
+
+   Las fases 1 y 2 dejaron el registro de cambios y la fusión. Aquí las
+   operaciones por fin SALEN del teléfono y llegan al del compañero.
+
+   ⚠️ POR QUÉ WebRTC Y NO BLUETOOTH NI WI-FI DIRECT. La aplicación corre dentro
+   de un WebView de Capacitor con carga remota, así que NO tiene acceso a la
+   radio del teléfono: Bluetooth clásico y Wi-Fi Direct no tienen API web, Web
+   Bluetooth no está en ese WebView, y un WebView no puede escuchar en un puerto.
+   Cualquiera de esas vías exigiría un complemento nativo, o sea recompilar y
+   volver a subir el paquete a la tienda cada vez que cambie el código — que hoy
+   se despliega con un `git push`. WebRTC es lo único que el navegador da, no
+   necesita ningún servidor, y su descriptor de conexión cabe en un QR.
+
+   ⚠️ LA CONTRAPARTIDA, DICHA ENTERA: los dos teléfonos tienen que estar en la
+   misma red Wi-Fi. En campo eso es que uno active su punto de acceso —NO hace
+   falta cobertura ni datos móviles, solo la red que los une—. Quitarle ese paso
+   al usuario es el complemento nativo de la fase 6, y se decide DESPUÉS de
+   publicar.
+
+   ⚠️ EL PERMISO DE CÁMARA NO ES SOLO PARA LEER EL QR. Sin él, el navegador
+   oculta la dirección local del equipo tras un nombre `.local` que el otro tiene
+   que resolver por multidifusión; con él, el descriptor lleva la IP real y la
+   conexión directa es mucho más fiable. Medido: 587 bytes sin permiso, 668 con
+   él y con la dirección de verdad dentro.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var PT_PROTO = 1;                 // versión del formato de emparejamiento
+var PT_INVIT_MS = 3 * 60 * 1000;  // una invitación caduca a los 3 minutos
+var PT_SESION_MS = 12 * 60 * 60 * 1000;   // y una sesión inactiva, a las 12 horas
+var PT_LATIDO_MS = 15000;
+var PT_QR_MAX_LADO = 480;         // se lee sobre una copia reducida del fotograma
+
+/* ── DESCRIPTOR DE CONEXIÓN, COMPRIMIDO ────────────────────────────────────
+   El SDP que produce el navegador son ~590 bytes, de los que casi todo es
+   texto fijo. Lo que de verdad cambia son cinco cosas: el usuario y la clave de
+   ICE, la huella del certificado y las direcciones. Se transportan esas y el
+   resto se vuelve a escribir en el otro lado.
+
+   ⚠️ Se comprime para que el QR sea PEQUEÑO, y eso no es estética: un código de
+   590 bytes necesita la versión 15 (77×77 módulos) y hay que acercar mucho la
+   cámara; con ~110 bytes basta la versión 6 (41×41), que se lee de un vistazo a
+   la distancia a la que dos personas se enseñan una pantalla. */
+function ptSdpPartes(sdp) {
+  var uf = sdp.match(/a=ice-ufrag:(\S+)/), pw = sdp.match(/a=ice-pwd:(\S+)/);
+  var fp = sdp.match(/a=fingerprint:sha-256 (\S+)/);
+  if (!uf || !pw || !fp) return null;
+  var cands = [], re = /a=candidate:\S+ 1 udp \S+ (\S+) (\d+) typ host/g, m;
+  while ((m = re.exec(sdp))) cands.push({ dir: m[1], puerto: parseInt(m[2], 10) });
+  return { ufrag: uf[1], pwd: pw[1], fp: fp[1], cands: cands };
+}
+function ptSdpArmar(p, esOferta) {
+  var l = ['v=0', 'o=- ' + (Date.now() % 1e10) + ' 2 IN IP4 127.0.0.1', 's=-', 't=0 0',
+           'a=group:BUNDLE 0', 'a=extmap-allow-mixed', 'a=msid-semantic: WMS',
+           'm=application 9 UDP/DTLS/SCTP webrtc-datachannel', 'c=IN IP4 0.0.0.0'];
+  p.cands.forEach(function (c, i) {
+    l.push('a=candidate:' + (100000 + i) + ' 1 udp 2113937151 ' + c.dir + ' ' + c.puerto +
+           ' typ host generation 0 network-cost 999');
+  });
+  l.push('a=ice-ufrag:' + p.ufrag, 'a=ice-pwd:' + p.pwd, 'a=ice-options:trickle',
+         'a=fingerprint:sha-256 ' + p.fp, 'a=setup:' + (esOferta ? 'actpass' : 'active'),
+         'a=mid:0', 'a=sctp-port:5000', 'a=max-message-size:262144');
+  return l.join('\r\n') + '\r\n';
+}
+
+/* ── SERIALIZACIÓN BINARIA DEL DESCRIPTOR ─────────────────────────────────── */
+function _ptEsc(bytes, s) { for (var i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255); }
+function _ptEscN(bytes, s) { bytes.push(s.length & 255); _ptEsc(bytes, s); }
+function ptDescBytes(p) {
+  var b = [];
+  _ptEscN(b, p.ufrag); _ptEscN(b, p.pwd);
+  var hex = p.fp.replace(/:/g, '');
+  for (var i = 0; i < 32; i++) b.push(parseInt(hex.substr(i * 2, 2), 16) || 0);
+  b.push(p.cands.length & 255);
+  p.cands.forEach(function (c) {
+    var ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(c.dir);
+    if (ip) { b.push(0); for (var k = 1; k <= 4; k++) b.push(parseInt(ip[k], 10) & 255); }
+    else { b.push(1); _ptEscN(b, c.dir); }
+    b.push((c.puerto >> 8) & 255, c.puerto & 255);
+  });
+  return Uint8Array.from(b);
+}
+function ptDescDeBytes(u) {
+  try {
+    var i = 0;
+    function txt() { var n = u[i++], s = ''; for (var k = 0; k < n; k++) s += String.fromCharCode(u[i++]); return s; }
+    var ufrag = txt(), pwd = txt(), fp = [];
+    for (var k2 = 0; k2 < 32; k2++) fp.push(('0' + u[i++].toString(16)).slice(-2).toUpperCase());
+    var n = u[i++], cands = [];
+    for (var c = 0; c < n; c++) {
+      var tipo = u[i++], dir;
+      if (tipo === 0) dir = u[i++] + '.' + u[i++] + '.' + u[i++] + '.' + u[i++];
+      else dir = txt();
+      var puerto = (u[i++] << 8) | u[i++];
+      cands.push({ dir: dir, puerto: puerto });
+    }
+    if (i > u.length || !ufrag || !pwd) return null;
+    return { ufrag: ufrag, pwd: pwd, fp: fp.join(':'), cands: cands };
+  } catch (e) { return null; }
+}
+
+/* ── CIFRADO DE APLICACIÓN ─────────────────────────────────────────────────
+   El canal de WebRTC ya va cifrado por DTLS, y las huellas de los certificados
+   viajan dentro de los QR, así que cada lado sabe con quién habla. Aun así se
+   cifra ENCIMA, con una clave que solo existe en los dos códigos que se
+   escanearon: es lo que convierte «haber visto la pantalla del otro» en el
+   único permiso para entrar, sin depender de que el navegador implemente bien
+   la capa de abajo. */
+function _ptAzar(n) { var u = new Uint8Array(n); crypto.getRandomValues(u); return u; }
+async function ptSubclave(raw, etiqueta) {
+  var m = new Uint8Array(raw.length + 1);
+  m.set(raw, 0); m[raw.length] = etiqueta;
+  var h = await crypto.subtle.digest('SHA-256', m);
+  return crypto.subtle.importKey('raw', h, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+async function ptCifrar(clave, bytes) {
+  var iv = _ptAzar(12);
+  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, clave, bytes));
+  var out = new Uint8Array(12 + ct.length);
+  out.set(iv, 0); out.set(ct, 12);
+  return out;
+}
+async function ptDescifrar(clave, bytes) {
+  try {
+    var iv = bytes.slice(0, 12), ct = bytes.slice(12);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: iv }, clave, ct));
+  } catch (e) { return null; }   // no es de quien escaneó el QR, o viene alterado
+}
+
+/* ── EL PAQUETE QUE VIAJA EN EL QR ─────────────────────────────────────────
+   Cabecera en claro (para saber qué es antes de poder descifrarlo) y, en la
+   respuesta, el descriptor cifrado con la clave que solo tiene quien escaneó la
+   invitación. */
+var PT_MAGIA = 0x4C;             // 'L'
+function ptQrCabecera(rol, sid, ts) {
+  var b = [PT_MAGIA, PT_PROTO, rol];
+  for (var i = 0; i < 4; i++) b.push(sid[i]);
+  for (var j = 5; j >= 0; j--) b.push(Math.floor(ts / Math.pow(256, j)) & 255);
+  return b;                       // 3 + 4 + 6 = 13 bytes
+}
+function ptQrLeeCabecera(u) {
+  if (!u || u.length < 13 || u[0] !== PT_MAGIA) return null;
+  var ts = 0;
+  for (var j = 0; j < 6; j++) ts = ts * 256 + u[7 + j];
+  return { proto: u[1], rol: u[2], sid: u.slice(3, 7), ts: ts, cuerpo: u.slice(13) };
+}
+
+/* Invitación: cabecera + clave de sesión + descriptor EN CLARO.
+   ⚠️ El descriptor de quien invita no se cifra a propósito: quien lo lee es
+   justamente el que todavía no tiene la clave — la clave viaja aquí. Lo que
+   protege el emparejamiento no es ocultar este código, es que la respuesta solo
+   se puede fabricar habiéndolo visto, y que quien invita solo acepta UNA. */
+function ptInvitacionBytes(sid, ts, clave, desc) {
+  var b = ptQrCabecera(0, sid, ts);
+  for (var i = 0; i < 32; i++) b.push(clave[i]);
+  var d = ptDescBytes(desc);
+  for (var j = 0; j < d.length; j++) b.push(d[j]);
+  return Uint8Array.from(b);
+}
+async function ptRespuestaBytes(sid, ts, claveQr, desc) {
+  var cab = ptQrCabecera(1, sid, ts);
+  var cif = await ptCifrar(claveQr, ptDescBytes(desc));
+  var out = new Uint8Array(cab.length + cif.length);
+  out.set(Uint8Array.from(cab), 0); out.set(cif, cab.length);
+  return out;
+}
+
+/* ── ESTADO DE LA SESIÓN ───────────────────────────────────────────────────── */
+var _ptPc = null;         // RTCPeerConnection
+var _ptCanal = null;      // RTCDataChannel
+var _ptClave = null;      // clave del canal (derivada)
+var _ptClaveQr = null;    // clave del emparejamiento (derivada)
+var _ptRaw = null;        // clave de sesión en bruto
+var _ptSid = null;
+var _ptRol = 0;           // 0 invita, 1 responde
+var _ptLatido = null;
+var _ptEnVuelo = 0;       // operaciones entregadas y pendientes de confirmación
+var _ptEmparejado = false;// ya hay canal: la invitación se agotó
+var _ptAlEstado = null;   // la interfaz de la fase 4 se engancha aquí
+
+function ptEstado() {
+  return {
+    activa: !!(_ptCanal && _ptCanal.readyState === 'open'),
+    caso: _ptSesion ? _ptSesion.casoId : null,
+    rol: _ptRol,
+    pendientes: _ptSesion ? ptPendientes(_ptSesion.casoId) : 0,
+    desde: _ptSesion ? _ptSesion.desde : null
+  };
+}
+function _ptAviso() { if (typeof _ptAlEstado === 'function') { try { _ptAlEstado(ptEstado()); } catch (e) {} } }
+
+function _ptNuevaPc() {
+  /* Sin servidores STUN ni TURN: la conexión es entre dos teléfonos de la misma
+     red y no tiene por qué salir a internet — que además puede no haberlo. */
+  var pc = new RTCPeerConnection({ iceServers: [] });
+  pc.onconnectionstatechange = function () {
+    if (pc.connectionState === 'failed' || pc.connectionState === 'closed') _ptAviso();
+  };
+  return pc;
+}
+/* Espera a que ICE termine de reunir direcciones: hacen falta DENTRO del QR,
+   porque no hay ningún canal por el que mandarlas después. */
+function _ptEsperarIce(pc, ms) {
+  return new Promise(function (res) {
+    if (pc.iceGatheringState === 'complete') return res();
+    var t = setTimeout(res, ms || 3000);
+    pc.addEventListener('icegatheringstatechange', function () {
+      if (pc.iceGatheringState === 'complete') { clearTimeout(t); res(); }
+    });
+  });
+}
+
+/* ── QUIEN INVITA ──────────────────────────────────────────────────────────── */
+async function ptCrearInvitacion(casoId) {
+  ptCerrarCanal();
+  _ptRol = 0; _ptSid = _ptAzar(4); _ptRaw = _ptAzar(32);
+  _ptClaveQr = await ptSubclave(_ptRaw, 1);
+  _ptClave = await ptSubclave(_ptRaw, 2);
+  _ptPc = _ptNuevaPc();
+  var ch = _ptPc.createDataChannel('lexcapture', { ordered: true });
+  _ptPrepararCanal(ch);
+  await _ptPc.setLocalDescription(await _ptPc.createOffer());
+  await _ptEsperarIce(_ptPc);
+  var p = ptSdpPartes(_ptPc.localDescription.sdp);
+  if (!p) return null;
+  var ts = Date.now();
+  _ptSesion = { casoId: casoId, rol: 0, desde: ts, par: null };
+  return { bytes: ptInvitacionBytes(_ptSid, ts, _ptRaw, p), ts: ts };
+}
+/* Cierra el emparejamiento con la respuesta leída del QR del compañero. */
+async function ptAceptarRespuesta(bytes) {
+  /* ⚠️ UNA invitación, UNA respuesta. Con el canal ya abierto no se admite una
+     segunda: es lo que impide que un tercer equipo que alcanzara a fotografiar
+     el código entre después. */
+  if (_ptEmparejado) return { ok: false, motivo: 'la invitación ya se usó' };
+  var c = ptQrLeeCabecera(bytes);
+  if (!c || c.proto !== PT_PROTO || c.rol !== 1) return { ok: false, motivo: 'otro código' };
+  for (var i = 0; i < 4; i++) if (c.sid[i] !== _ptSid[i]) return { ok: false, motivo: 'de otra sesión' };
+  var claro = await ptDescifrar(_ptClaveQr, c.cuerpo);
+  if (!claro) return { ok: false, motivo: 'no coincide con esta invitación' };
+  var p = ptDescDeBytes(claro);
+  if (!p) return { ok: false, motivo: 'código incompleto' };
+  await _ptPc.setRemoteDescription({ type: 'answer', sdp: ptSdpArmar(p, false) });
+  return { ok: true };
+}
+
+/* ── QUIEN RESPONDE ────────────────────────────────────────────────────────── */
+async function ptResponderInvitacion(bytes, casoId) {
+  var c = ptQrLeeCabecera(bytes);
+  if (!c || c.proto !== PT_PROTO || c.rol !== 0) return { ok: false, motivo: 'otro código' };
+  /* ⚠️ Una invitación caduca. Un QR fotografiado hace una semana no puede seguir
+     abriendo el teléfono de nadie. */
+  if (Date.now() - c.ts > PT_INVIT_MS) return { ok: false, motivo: 'la invitación caducó' };
+  if (c.cuerpo.length < 33) return { ok: false, motivo: 'código incompleto' };
+  ptCerrarCanal();
+  _ptRol = 1; _ptSid = c.sid; _ptRaw = c.cuerpo.slice(0, 32);
+  _ptClaveQr = await ptSubclave(_ptRaw, 1);
+  _ptClave = await ptSubclave(_ptRaw, 2);
+  var p = ptDescDeBytes(c.cuerpo.slice(32));
+  if (!p) return { ok: false, motivo: 'código incompleto' };
+  _ptPc = _ptNuevaPc();
+  _ptPc.ondatachannel = function (e) { _ptPrepararCanal(e.channel); };
+  await _ptPc.setRemoteDescription({ type: 'offer', sdp: ptSdpArmar(p, true) });
+  await _ptPc.setLocalDescription(await _ptPc.createAnswer());
+  await _ptEsperarIce(_ptPc);
+  var mio = ptSdpPartes(_ptPc.localDescription.sdp);
+  if (!mio) return { ok: false, motivo: 'no se pudo preparar la respuesta' };
+  _ptSesion = { casoId: casoId || null, rol: 1, desde: Date.now(), par: null };
+  return { ok: true, bytes: await ptRespuestaBytes(_ptSid, Date.now(), _ptClaveQr, mio) };
+}
+
+/* ── EL CANAL ──────────────────────────────────────────────────────────────── */
+function _ptPrepararCanal(ch) {
+  _ptCanal = ch;
+  ch.binaryType = 'arraybuffer';
+  ch.onopen = function () {
+    /* ⚠️ En cuanto hay canal, la invitación deja de valer: a partir de aquí un
+       tercer equipo que hubiera fotografiado el código ya no puede entrar. */
+    _ptEmparejado = true;
+    _ptLatido = setInterval(function () { ptEnviar({ t: 'ping' }); }, PT_LATIDO_MS);
+    var _c0 = _ptSesion && _ptSesion.casoId ? DB.getCase(_ptSesion.casoId) : null;
+    ptEnviar({ t: 'hola', dev: ptDeviceId(), caso: _ptSesion ? _ptSesion.casoId : null,
+               huella: _c0 ? ptHuella(_c0) : null });
+    _ptAviso();
+    ptEntregarPendientes();
+  };
+  ch.onclose = function () { _ptPararLatido(); _ptEnVuelo = 0; _ptAviso(); };
+  ch.onmessage = function (e) { _ptRecibir(e.data); };
+}
+function _ptPararLatido() { if (_ptLatido) { clearInterval(_ptLatido); _ptLatido = null; } }
+
+function ptEnviar(obj) {
+  if (!_ptCanal || _ptCanal.readyState !== 'open' || !_ptClave) return Promise.resolve(false);
+  var txt = JSON.stringify(obj), b = new TextEncoder().encode(txt);
+  return ptCifrar(_ptClave, b).then(function (c) {
+    try { _ptCanal.send(c.buffer); return true; } catch (e) { return false; }
+  });
+}
+async function _ptRecibir(datos) {
+  var u = new Uint8Array(datos), claro = await ptDescifrar(_ptClave, u);
+  /* ⚠️ Lo que no descifra se DESCARTA sin más. Un mensaje que no venga de quien
+     escaneó el QR no tiene por qué llegar hasta aquí, y si llega no se toca. */
+  if (!claro) return;
+  var m;
+  try { m = JSON.parse(new TextDecoder().decode(claro)); } catch (e) { return; }
+  if (!m || !m.t) return;
+  if (ptSesionCaducada()) { ptCerrarCanal(); return; }
+  if (_ptSesion) _ptSesion.visto = Date.now();
+  if (m.t === 'ping') { ptEnviar({ t: 'pong' }); return; }
+  if (m.t === 'pong') return;
+  if (m.t === 'hola') {
+    if (_ptSesion) { _ptSesion.par = m.dev; if (!_ptSesion.casoId && m.caso) _ptSesion.casoId = m.caso; }
+    /* ⚠️ EL SALUDO NO ES SIMÉTRICO, Y NO PUEDE SERLO: quien invita sabe de qué
+       caso se trata y quien se une NO lo sabe hasta que se lo dicen. Por eso el
+       que reconcilia es siempre el que RECIBE un saludo con caso: mira si lo
+       tiene, y si lo tiene distinto ofrece su estado sellado. Un primer intento
+       puso a reconciliar al que invita, y como el saludo del otro llegaba sin
+       caso y sin huella, no se comparaba nada: los dos se quedaban con lo suyo. */
+    var cid = m.caso || (_ptSesion ? _ptSesion.casoId : null);
+    var c = cid ? DB.getCase(cid) : null;
+    if (m.caso) {
+      if (!c) ptEnviar({ t: 'falta', caso: m.caso });          // no lo tengo: mándamelo entero
+      else if (m.huella && m.huella !== ptHuella(c))            // lo tengo distinto: reconciliamos
+        ptEnviar({ t: 'estado', caso: c.id, ops: ptEstadoSellado(c) });
+    }
+    /* ⚠️ Y aquí, no antes: quien se une no sabe DE QUÉ CASO va hasta este
+       saludo, así que la entrega de pendientes del `onopen` no tenía a qué cola
+       mirar. Sin esta línea, lo que hubiera quedado sin entregar se quedaba
+       esperando a la siguiente escritura. */
+    ptEntregarPendientes();
+    _ptAviso(); return;
+  }
+  /* El compañero no tiene la captura: se le manda entera. La necesita para
+     generar sus documentos, también más tarde. */
+  if (m.t === 'falta' && m.caso) {
+    var cf = DB.getCase(m.caso);
+    if (cf) ptEnviar({ t: 'lleno', caso: cf });
+    return;
+  }
+  if (m.t === 'lleno' && m.caso && m.caso.id) {
+    var ya = DB.getCase(m.caso.id);
+    if (!ya) {
+      var a = DB.getCases().slice(); a.push(m.caso); await DB.saveCases(a);
+      ptTomarFoto(m.caso);
+    }
+    if (_ptSesion) _ptSesion.casoId = m.caso.id;
+    _ptAviso(); return;
+  }
+  if (m.t === 'estado' && m.caso && m.ops) {
+    await ptRecibirEstado(m);
+    _ptAviso(); return;
+  }
+  if (m.t === 'ops' && m.caso && m.ops) {
+    var r = ptAplicarRemoto(m.caso, m.ops);
+    if (r.guardado && r.guardado.then) { try { await r.guardado; } catch (e) {} }
+    ptEnviar({ t: 'ack', id: m.id, n: (m.ops || []).length });
+    _ptAviso(); return;
+  }
+  if (m.t === 'ack') {
+    /* Solo se retira de la cola lo que el compañero confirmó, y por la cabeza:
+       ⚠️ mientras se esperaba, el funcionario puede haber escrito más. */
+    if (_ptSesion && m.n > 0) {
+      var q = _ptCola[_ptSesion.casoId];
+      if (q) { q.splice(0, Math.min(m.n, q.length)); if (!q.length) delete _ptCola[_ptSesion.casoId]; ptColaGuardar(); }
+    }
+    _ptEnVuelo = 0; _ptAviso();
+    ptEntregarPendientes();
+    return;
+  }
+}
+
+/* Vacía la cola de pendientes por el canal. Lo llaman la apertura del canal y
+   cada guardado, así que basta con que exista canal para que salga solo. */
+function ptEntregarPendientes() {
+  if (!_ptSesion || !_ptCanal || _ptCanal.readyState !== 'open') return false;
+  /* ⚠️ Una sesión que lleva medio día sin actividad se cierra en vez de seguir
+     mandando: el procedimiento terminó hace horas y el canal no tiene por qué
+     seguir abierto. Lo pendiente NO se pierde — queda en la cola. */
+  if (ptSesionCaducada()) { ptCerrarCanal(); return false; }
+  if (_ptEnVuelo) return false;                        // ya hay un envío esperando confirmación
+  var id = _ptSesion.casoId, ops = _ptCola[id];
+  if (!id || !ops || !ops.length) return false;
+  _ptEnVuelo = ops.length;
+  ptEnviar({ t: 'ops', caso: id, ops: ops.slice(), id: uid() });
+  return true;
+}
+
+/* ⚠️ Desvincular cierra el CANAL, no la historia: el caso, sus marcas de versión
+   y lo que quede sin entregar siguen en los dos teléfonos, y el procedimiento se
+   puede terminar en cualquiera de los dos. Es la misma regla de la fase 2. */
+function ptCerrarCanal() {
+  _ptPararLatido();
+  try { if (_ptCanal) _ptCanal.close(); } catch (e) {}
+  try { if (_ptPc) _ptPc.close(); } catch (e) {}
+  _ptCanal = null; _ptPc = null; _ptEnVuelo = 0; _ptEmparejado = false;
+  _ptClave = null; _ptClaveQr = null; _ptRaw = null; _ptSid = null;
+  _ptAviso();
+}
+function ptSesionCaducada() {
+  if (!_ptSesion) return false;
+  var ult = _ptSesion.visto || _ptSesion.desde;
+  return (Date.now() - ult) > PT_SESION_MS;
+}
+
+/* ── LECTURA DEL QR DESDE LA CÁMARA ────────────────────────────────────────
+   Se reduce el fotograma antes de analizarlo: a 480 px de lado el código sigue
+   teniendo módulos de sobra y el análisis cuesta la cuarta parte, que en un
+   teléfono es la diferencia entre leer al vuelo y ir a tirones. */
+function ptQrDeVideo(video, canvas) {
+  if (!video || !video.videoWidth) return null;
+  var esc = Math.min(1, PT_QR_MAX_LADO / Math.max(video.videoWidth, video.videoHeight));
+  var w = Math.round(video.videoWidth * esc), h = Math.round(video.videoHeight * esc);
+  canvas.width = w; canvas.height = h;
+  var ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(video, 0, 0, w, h);
+  var img = ctx.getImageData(0, 0, w, h);
+  return ptQrLeer(img.data, w, h);
+}
+
+/* Matriz de módulos → SVG. ⚠️ Se dibuja con SVG y no con canvas para que el
+   código salga nítido en cualquier pantalla: un canvas escalado emborrona los
+   bordes de los módulos y es justo lo que hace que la cámara del otro no lea. */
+function ptQrSvg(bytes, lado) {
+  var m = ptQrMatriz(bytes);
+  if (!m) return '';
+  var q = 4, n = m.size + q * 2, p = [];
+  for (var y = 0; y < m.size; y++) {
+    var x = 0;
+    while (x < m.size) {
+      if (!m.mods[y][x]) { x++; continue; }
+      var w = 0;
+      while (x + w < m.size && m.mods[y][x + w]) w++;
+      p.push('M' + (x + q) + ' ' + (y + q) + 'h' + w + 'v1h-' + w + 'z');
+      x += w;
+    }
+  }
+    /* ⚠️ El espacio de nombres es obligatorio: sin él el SVG se pinta dentro del
+     documento pero NO carga como imagen, y la vista previa de la pantalla de
+     emparejamiento —y la propia regresión— se quedan en blanco. */
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" width="' + lado + '" height="' + lado +
+         '" shape-rendering="crispEdges" style="background:#fff;border-radius:8px">' +
+         '<path fill="#000" d="' + p.join('') + '"/></svg>';
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODO PATRULLA · FASE 5 — RECUPERACIÓN Y REANUDACIÓN
+
+   La cola de pendientes (fase 2) hace que una desconexión corta no se note. Esta
+   fase cubre lo otro: los días. Que uno cierre la aplicación, que el teléfono se
+   reinicie, que trabajen cada uno por su lado toda una tarde, o que a uno se le
+   haya vaciado la cola. Al volver a conectar, los dos tienen que acabar con lo
+   mismo — y sin que nadie pierda nada.
+
+   ⚠️ LO QUE NO SE PUEDE REANUDAR, Y HAY QUE DECIRLO: la conexión en sí. Los
+   certificados y las direcciones que se intercambiaron en los códigos mueren con
+   la aplicación, así que volver a juntarse es volver a escanear un código. Lo
+   que SÍ sobrevive es todo lo demás: la captura, su historial de versiones y lo
+   que quedó sin entregar.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── ANTI-ENTROPÍA ─────────────────────────────────────────────────────────
+   La cola es el camino rápido y este es la red de seguridad. Cada lado manda su
+   estado ENTERO con la versión de cada campo; el otro lo funde con la misma
+   regla de siempre (gana el sello más reciente, campo por campo). Con un
+   intercambio en cada sentido convergen, hayan pasado las horas que hayan
+   pasado — no hace falta que ninguna cola siga existiendo. */
+function ptEstadoSellado(c) {
+  var plano = ptAplanar(ptLimpio(c), '', {}, ''), m = ptMarcas(c), ops = [], k;
+  for (k in plano) if (m[k]) ops.push({ r: k, v: plano[k], s: m[k] });
+  /* ⚠️ Las rutas que están en el historial y NO en el caso son BORRADOS, y hay
+     que mandarlos: sin ellos, el otro lado devolvería el dato que este acaba de
+     retirar y la persona borrada reaparecería. */
+  for (k in m) if (!(k in plano)) ops.push({ r: k, x: 1, s: m[k] });
+  return ops;
+}
+
+/* Une el estado que manda el compañero y devuelve el propio UNA vez, para que
+   los dos acaben iguales. El `eco` acota el intercambio a una vuelta por lado:
+   sin él, dos réplicas que no lleguen a converger se estarían mandando su estado
+   indefinidamente. */
+async function ptRecibirEstado(m) {
+  var c = DB.getCase(m.caso);
+  if (!c) return { aplicadas: 0, sinCaso: true };
+  var r = ptFusionar(c, m.ops || []);
+  ptTomarFoto(c);
+  if (r.aplicadas) {
+    var a = DB.getCases().slice(), i = a.findIndex(function (x) { return x.id === c.id; });
+    if (i >= 0) a[i] = c;
+    try { await DB.saveCases(a); } catch (e) {}
+  }
+  if (!m.eco) ptEnviar({ t: 'estado', caso: c.id, ops: ptEstadoSellado(DB.getCase(c.id) || c), eco: 1 });
+  return r;
+}
+
+/* ── REANUDACIÓN ───────────────────────────────────────────────────────────
+   Tras cerrar la aplicación no queda sesión, pero sí queda la cola —cifrada, en
+   su clave propia— y las marcas de versión del caso. Lo que hace falta es que el
+   funcionario LO VEA: un cambio sin entregar que nadie enseña es indistinguible
+   de un cambio entregado. */
+function ptCasoPendiente() {
+  for (var k in _ptCola) if (_ptCola[k] && _ptCola[k].length) return k;
+  return null;
+}
+function ptResumen() {
+  var e = ptEstado(), id = _ptSesion ? _ptSesion.casoId : ptCasoPendiente();
+  return { activa: e.activa, casoId: id, pendientes: id ? ptPendientes(id) : 0 };
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MODO PATRULLA · FASE 4 — LA INTERFAZ
+
+   Hasta aquí el modo patrulla funcionaba entero pero **no lo podía alcanzar
+   nadie**: no había pantalla que abriera la cámara ni que enseñara el código.
+   Esta fase es la puerta.
+
+   ⚠️ NI UNA PALABRA TÉCNICA EN LA PANTALLA. El funcionario no tiene por qué
+   saber qué es una IP, un puerto, un canal ni una sesión: ve «el compañero»,
+   «el código» y «los cambios sin entregar». El vocabulario de dentro se queda
+   dentro.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var _ptUiPaso = 'inicio';    // inicio · invitando · respondiendo · conectado
+var _ptUiCaso = null;        // el caso desde el que se entró (quien invita)
+var _ptUiBytes = null;       // el código que se está enseñando ahora mismo
+var _ptUiTs = 0;             // cuándo se generó, para la cuenta atrás
+var _ptScanRaf = null, _ptScanStream = null, _ptScanCb = null;
+
+var PT_IC = {
+  mostrar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>',
+  escanear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>',
+  patrulla:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-5.6 6.5-5.6s6.5 2.3 6.5 5.6"/><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2"/><path d="M18 14.8c2.1.7 3.5 2.5 3.5 5.2"/></svg>'
+};
+
+/* ── ENTRADA ───────────────────────────────────────────────────────────────
+   Dos puertas, porque son dos situaciones distintas: quien tiene la captura
+   entra desde ella (a invitar) y quien todavía no la tiene entra desde el menú
+   general (a unirse). ⚠️ Sin la segunda, el compañero no tendría por dónde
+   empezar: no puede abrir el menú de un caso que no está en su teléfono. */
+function ptAbrirPatrulla(casoId) {
+  _ptUiCaso = casoId || null;
+  _ptUiPaso = ptEstado().activa ? 'conectado' : 'inicio';
+  go('patrulla');
+}
+function ptUiVolver() {
+  ptScanCerrar();
+  if (_ptUiCaso && DB.getCase(_ptUiCaso)) abrirDossierCaso(_ptUiCaso); else go('capturas');
+}
+
+/* ── LA PANTALLA ───────────────────────────────────────────────────────────── */
+function renderPatrulla() {
+  var e = ptEstado(), pane = document.getElementById('pt-pane');
+  var caso = _ptUiCaso ? DB.getCase(_ptUiCaso) : (e.caso ? DB.getCase(e.caso) : null);
+  var sub = document.getElementById('pt-sub');
+  if (sub) sub.textContent = caso
+    ? ((caso.capturados && caso.capturados[0]) ? fullName(caso.capturados[0]) : 'Captura sin capturado')
+    : 'Para unirte a la captura del compañero';
+  if (e.activa) _ptUiPaso = 'conectado';
+  else if (_ptUiPaso === 'conectado') _ptUiPaso = 'inicio';
+  pane.innerHTML = _ptUiPaso === 'conectado' ? _ptUiConectado(e, caso)
+    : _ptUiPaso === 'invitando' ? _ptUiCodigo(true)
+    : _ptUiPaso === 'respondiendo' ? _ptUiCodigo(false)
+    : _ptUiInicio(caso);
+}
+
+function _ptUiInicio(caso) {
+  var h = '<div class="card"><div class="st">Cómo funciona</div>' +
+    '<p class="txd txs">Los dos teléfonos deben estar en la misma red wifi.</p>' +
+    '<p class="txd txs">Si no hay, uno activa su zona wifi. No hace falta internet ni datos.</p></div>' +
+    '<div class="pt-paso">';
+  if (caso) {
+    h += '<button class="pt-op" onclick="ptUiInvitar()">' +
+      '<div class="lic">' + PT_IC.mostrar + '</div>' +
+      '<div><div class="ti">Mostrar el código</div>' +
+      '<div class="de">El compañero lo escanea y se suma a esta captura</div></div></button>';
+  }
+  h += '<button class="pt-op" onclick="ptUiUnirse()">' +
+    '<div class="lic">' + PT_IC.escanear + '</div>' +
+    '<div><div class="ti">Escanear el código del compañero</div>' +
+    '<div class="de">Para sumarte a una captura que él ya empezó</div></div></button>' +
+    '</div>';
+  if (!caso) h += '<p class="txd txs" style="margin-top:12px">Para mostrar un código, abre una captura ' +
+    'y toca «Trabajar con el compañero».</p>';
+  return h;
+}
+
+/* El código en pantalla. ⚠️ Se dice SIEMPRE cuánto le queda: una invitación
+   caduca a los 3 minutos y, sin decirlo, el compañero se encontraría con un
+   «la invitación caducó» que parece un fallo de la aplicación. */
+function _ptUiCodigo(esInvitacion) {
+  var quedan = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
+  var min = Math.floor(quedan / 60000), seg = Math.floor((quedan % 60000) / 1000);
+  var svg = _ptUiBytes ? ptQrSvg(_ptUiBytes, 280) : '';
+  return '<div class="card">' +
+    '<div class="st">' + (esInvitacion ? 'Enséñale este código' : 'Enséñale tu respuesta') + '</div>' +
+    '<p class="txd txs">' + (esInvitacion
+      ? 'El compañero abre «Trabajar con el compañero» en su teléfono y escanea este código.'
+      : 'El compañero escanea este código con su teléfono y quedan conectados.') + '</p>' +
+    '<div class="pt-qr">' + svg + '</div>' +
+    '<p class="txd txs" style="text-align:center;margin-top:10px" id="pt-cuenta">' +
+      (quedan > 0 ? ('Caduca en ' + min + ':' + (seg < 10 ? '0' : '') + seg)
+                  : 'Caducó — genera uno nuevo') + '</p>' +
+    '</div>' +
+    (esInvitacion
+      ? '<button class="btn bp bbl" onclick="ptUiEscanearRespuesta()">Ahora escanea su respuesta</button>' +
+        '<button class="btn bs bbl" onclick="ptUiInvitar()">Generar otro código</button>'
+      : '<p class="txd txs" style="text-align:center">Esperando a que el compañero lo escanee…</p>') +
+    '<button class="btn bs bbl" onclick="ptUiCancelar()">Cancelar</button>';
+}
+
+function _ptUiConectado(e, caso) {
+  var pend = e.pendientes;
+  return '<div class="pt-est"><div class="pe-pt"></div><div>' +
+      '<div class="pe-ti">Conectado con el compañero</div>' +
+      '<div class="pe-de">' + (pend ? (pend + ' cambio' + (pend === 1 ? '' : 's') + ' en camino')
+                                    : 'Todo lo escrito está entregado') + '</div>' +
+    '</div></div>' +
+    '<div class="card"><div class="st">Qué pasa a partir de ahora</div>' +
+    '<p class="txd txs">Los dos pueden diligenciar la misma captura a la vez.</p>' +
+    '<p class="txd txs">Lo que escriba cada uno le llega al otro solo, sin mandar nada.</p>' +
+    '<p class="txd txs">Si se corta el wifi se sigue trabajando: lo pendiente se entrega al reconectar.</p></div>' +
+    (caso ? '<button class="btn bp bbl" onclick="abrirDossierCaso(\'' + escAttr(caso.id) + '\')">Ir al expediente</button>' : '') +
+    '<button class="btn bs bbl" onclick="ptUiTerminar()">Terminar la colaboración</button>';
+}
+
+/* ── LAS DOS MITADES DEL EMPAREJAMIENTO ─────────────────────────────────────── */
+async function ptUiInvitar() {
+  var c = _ptUiCaso ? DB.getCase(_ptUiCaso) : null;
+  if (!c) { toast('Abre una captura para poder invitar'); return; }
+  toast('Preparando el código…');
+  /* El caso entra en una sesión compartida ANTES de enseñar nada: a partir de
+     aquí cada campo tiene versión, que es lo que permite fusionar en vez de
+     reemplazar. Si el emparejamiento no llega a cuajar no pasa nada — el caso
+     con marcas se guarda y se abre igual. */
+  if (!ptCompartido(c)) { ptCompartir(c); await DB.saveCases(DB.getCases()); }
+  var inv = await ptCrearInvitacion(_ptUiCaso);
+  if (!inv) { toast('No se pudo preparar la conexión'); return; }
+  _ptUiBytes = inv.bytes; _ptUiTs = inv.ts; _ptUiPaso = 'invitando';
+  renderPatrulla(); _ptUiCuenta();
+}
+function ptUiEscanearRespuesta() {
+  ptScanAbrir('Apunta al código del compañero', async function (bytes) {
+    var r = await ptAceptarRespuesta(bytes);
+    if (!r.ok) { toast('Ese código ' + r.motivo); return false; }
+    toast('Conectando con el compañero…');
+    return true;
+  });
+}
+function ptUiUnirse() {
+  ptScanAbrir('Apunta al código que muestra el compañero', async function (bytes) {
+    var r = await ptResponderInvitacion(bytes, _ptUiCaso);
+    if (!r.ok) { toast('Ese código ' + r.motivo); return false; }
+    _ptUiBytes = r.bytes; _ptUiTs = Date.now(); _ptUiPaso = 'respondiendo';
+    renderPatrulla(); _ptUiCuenta();
+    return true;
+  });
+}
+function ptUiCancelar() { ptCerrarCanal(); _ptUiPaso = 'inicio'; _ptUiBytes = null; renderPatrulla(); }
+function ptUiTerminar() {
+  var pend = ptEstado().pendientes;
+  /* ⚠️ Si queda algo sin entregar se dice, y se dice qué pasa con ello: que se
+     guarda y sale al volver a conectar. Cerrar en silencio con trabajo pendiente
+     es exactamente el silencio que este proyecto lleva años quitando. */
+  var msg = pend
+    ? 'Quedan ' + pend + ' cambio' + (pend === 1 ? '' : 's') + ' sin entregar. ' +
+      'Se guardan y salen solos cuando vuelvan a conectarse.'
+    : 'Cada uno sigue con su copia de la captura. Pueden volver a conectarse cuando quieran.';
+  openModal(
+    '<div class="mh"><h2>Terminar la colaboración</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="txd txs">' + escHtml(msg) + '</p>' +
+    '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
+      '<button class="btn bs" onclick="closeModal()">Seguir trabajando</button>' +
+      '<button class="btn bp" onclick="ptUiTerminarSi()">Terminar</button>' +
+    '</div>');
+}
+function ptUiTerminarSi() {
+  closeModal();
+  ptCerrarCanal();
+  if (_ptSesion) ptTerminarSesion(_ptSesion.casoId);
+  _ptUiPaso = 'inicio'; _ptUiBytes = null;
+  renderPatrulla(); toast('Colaboración terminada');
+}
+/* Cuenta atrás del código: se repinta solo el renglón, no la pantalla — repintar
+   entero recrearía el SVG del código en cada segundo. */
+function _ptUiCuenta() {
+  var el = document.getElementById('pt-cuenta');
+  if (!el || (_ptUiPaso !== 'invitando' && _ptUiPaso !== 'respondiendo')) return;
+  var q = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
+  var m = Math.floor(q / 60000), s = Math.floor((q % 60000) / 1000);
+  el.textContent = q > 0 ? ('Caduca en ' + m + ':' + (s < 10 ? '0' : '') + s) : 'Caducó — genera uno nuevo';
+  if (q > 0) setTimeout(_ptUiCuenta, 1000);
+}
+
+/* ── EL LECTOR ─────────────────────────────────────────────────────────────
+   Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo y
+   aquí no se dispara nada — se lee solo en cuanto el código entra en el marco. */
+function ptScanAbrir(pista, cb) {
+  _ptScanCb = cb;
+  var ov = document.getElementById('pt-scan'), vid = document.getElementById('pt-scan-video');
+  document.getElementById('pt-scan-txt').textContent = pista;
+  ov.classList.add('on');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } })
+    .then(function (s) { _ptScanStream = s; vid.srcObject = s; _ptScanBucle(); })
+    .catch(function () { toast('No se pudo abrir la cámara'); ptScanCerrar(); });
+}
+function ptScanCerrar() {
+  if (_ptScanRaf) { cancelAnimationFrame(_ptScanRaf); _ptScanRaf = null; }
+  if (_ptScanStream) { _ptScanStream.getTracks().forEach(function (t) { t.stop(); }); _ptScanStream = null; }
+  var ov = document.getElementById('pt-scan'); if (ov) ov.classList.remove('on');
+  _ptScanCb = null;
+}
+var _ptScanOcupado = false;
+function _ptScanBucle() {
+  _ptScanRaf = requestAnimationFrame(_ptScanBucle);
+  if (_ptScanOcupado || !_ptScanCb) return;
+  var vid = document.getElementById('pt-scan-video'), cv = document.getElementById('pt-scan-canvas');
+  var bytes = null;
+  try { bytes = ptQrDeVideo(vid, cv); } catch (e) { bytes = null; }
+  if (!bytes) return;
+  /* ⚠️ Se cierra la puerta ANTES de procesar: el bucle sigue corriendo y sin
+     esto el mismo código se leería veinte veces mientras se resuelve la promesa,
+     con veinte emparejamientos en marcha. */
+  _ptScanOcupado = true;
+  var cb = _ptScanCb;
+  Promise.resolve(cb(bytes)).then(function (ok) {
+    _ptScanOcupado = false;
+    if (ok) ptScanCerrar();
+  }, function () { _ptScanOcupado = false; });
+}
+
+/* ── LA FRANJA DE ESTADO ───────────────────────────────────────────────────
+   Discreta y permanente mientras dure la colaboración: sin ella, que lo que
+   escribe uno le llegue al otro sería indistinguible de que no le llegue. */
+/* Se llama al desbloquear, cuando la cola cifrada ya está cargada. */
+function ptBarraArranque() { try { ptBarra(); } catch (e) {} }
+function ptBarra() {
+  var b = document.getElementById('pt-barra');
+  if (!b) return;
+  var r = ptResumen(), e = { activa: r.activa }, pend = r.pendientes;
+  var hay = !!(r.activa || pend);
+  b.classList.toggle('on', hay);
+  document.body.classList.toggle('pt', hay);
+  if (!hay) return;
+  b.classList.toggle('pend', !e.activa);
+  b.querySelector('.pb-txt').innerHTML = e.activa
+    ? ('<b>Trabajando con el compañero</b> · ' + (pend ? (pend + ' cambio' + (pend === 1 ? '' : 's') + ' en camino') : 'todo entregado'))
+    : ('<b>Sin conexión con el compañero</b> · ' + pend + ' cambio' + (pend === 1 ? '' : 's') + ' sin entregar');
+}
+/* La capa de abajo avisa; aquí se traduce a pantalla. Es el único punto que las
+   une: el transporte no sabe que hay una interfaz. */
+_ptAlEstado = function () {
+  ptBarra();
+  var s = document.getElementById('screen-patrulla');
+  if (s && s.classList.contains('on')) renderPatrulla();
+};
+
 
 // ====== SERVICE WORKER (Fase G) ======
 // NOTA: el SW solo funciona en HTTPS o localhost.
