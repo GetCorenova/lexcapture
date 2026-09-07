@@ -5039,6 +5039,15 @@ clave en la descripción ENTERA, y `/\bpesos\b/` es de la categoría DINERO.
   Anti-caché `?v=99` / `cache-v99`, `_BUILD=99`.
 
 ## Modo Patrulla — Fase 1 (2026-09-04) — identidad, reloj y registro de cambios
+⚠️ **RETIRADO DEL CÓDIGO EL 2026-09-07.** Las cuatro secciones «Modo Patrulla» que siguen describen
+una **colaboración en vivo dentro de un procedimiento** que el usuario rechazó por completo: no es
+así como se trabaja. Lo que hay hoy es **«Modo compartir»** —ver la sección de ese nombre al final
+del archivo—, que pasa **registros ya diligenciados** entre los dos teléfonos. Del código de estas
+cuatro secciones solo sobrevive el transporte (el códec de códigos y el vínculo por WebRTC); el
+reloj lógico, las marcas de versión, la fusión al guardar, la cola y la anti-entropía **no existen**.
+Se conservan estas páginas por lo que enseñan —sobre todo por qué se eligió WebRTC y qué costó el
+códec—, no como descripción de la app.
+
 Encargo de ampliación: que **dos funcionarios de la misma patrulla diligencien un mismo
 procedimiento desde sus dos teléfonos**, sin internet, sin servidores y sin alterar nada de lo que
 existe. Se entregó primero la auditoría y la arquitectura completa (A–J), como pedía el encargo, y
@@ -5490,3 +5499,115 @@ subir el `.aab`**, y el usuario ya decidió lo contrario al empezar: «punto de 
 primera versión — a cambio de no recompilar». Se decide **después de publicar**. Hasta entonces, los
 dos teléfonos se juntan en la misma red wifi (uno activa su zona wifi) y **no hace falta cobertura ni
 datos**.
+
+## Modo compartir (2026-09-07) — se comparten REGISTROS, no se diligencia un procedimiento entre dos
+⚠️ **ESTA SECCIÓN SUSTITUYE ENTERAS LAS DEL «MODO PATRULLA» (fases 1 a 5, 2026-09-04).** Aquello se
+retiró del código: no está desactivado, no está detrás de una bandera — no existe. Lo que sigue en
+pie es el transporte (el códec de códigos y el vínculo por WebRTC), que se conservó porque estaba
+verificado y era caro de rehacer.
+
+El usuario devolvió la entrega anterior: *«yo no quiero tipo de colaboración dentro de la captura […]
+no pongas trabajar con el compañero, porque es que eso no es profesional»*. Y explicó el flujo real,
+que era otro: *«si empezamos un procedimiento y yo estoy tomando los datos, supongamos, de la
+víctima, mi compañero puede estar tomando los del capturado […] eso es lo que yo necesito que se
+comparta»*. Verificado con `verify_compartir.mjs` (**43 checks**, sustituye a `verify_patrulla.mjs`).
+
+### ⚠️ El error de fondo, y por qué conviene tenerlo escrito
+El requerimiento original decía «que dos funcionarios diligencien el mismo procedimiento a la vez
+desde sus dos teléfonos», y eso se implementó al pie de la letra: reloj lógico, versiones por campo,
+fusión al guardar, anti-entropía. **Todo funcionaba y nada de eso servía.** El funcionario no
+diligencia una captura a cuatro manos; diligencia PERSONAS en el registro de Personas —cada uno las
+suyas— y después quien arma el procedimiento las agrega con «Buscar existente». Lo que hay que mover
+entre los dos teléfonos son **registros terminados**, no pulsaciones de tecla.
+
+La lección no es «se implementó mal»: es que **una frase del requerimiento describía un mecanismo, y
+había que preguntar por el flujo de trabajo antes de construirlo**. La diferencia entre las dos
+lecturas son ~1 000 líneas y una capa entera en el guardado.
+
+### Qué se retiró, y qué se quedó
+| Se retiró | Motivo |
+|---|---|
+| Reloj lógico híbrido (`lc_hlc`), `ptSello`/`ptObservar`/`ptCmp` | Con envíos explícitos no hay que decidir «quién escribió último» |
+| `ptDiff`, marcas `caso._m`, `ptSellarCaso`, `ptFusionar` con sellos | No hay edición simultánea que reconciliar |
+| La rama de `DB.saveCase` y su segundo argumento `base` | **El guardado volvió a ser tres líneas, las de siempre** |
+| La cola cifrada `lc_ptcola` y su carga en `_lcLoadCaches` | No hay pendientes: se envía cuando hay vínculo |
+| La anti-entropía (`ptEstadoSellado`, `ptRecibirEstado`) | Lo mismo |
+| `ptLimpio`/`ptLimpioJSON` y sus dos usos en el wizard | **`wizMarcarBase` vuelve a `JSON.stringify(wc)` a secas** |
+| La entrada del menú ⋮ de la captura | Instrucción explícita: es una función aparte |
+
+Se conservan **el códec de QR completo** (ISO/IEC 18004, escrito en la app), **el vínculo por WebRTC
+sin servidores**, el cifrado de aplicación con la clave de los dos códigos, y las primitivas de
+aplanado a rutas (`ptAplanar`/`ptPonerRuta`), que ahora sirven para **fundir un registro recibido**.
+
+⚠️ **`lc_ptcola` se purga del equipo al arrancar** (`_lcPurgarPlantillas`): iba cifrada y ocupaba
+cuota en el mismo origen que las capturas. El build 103 estuvo publicado, así que puede existir.
+
+### Dónde vive: el panel lateral, no la captura
+*«Eso debe de quedar en el panel lateral izquierdo, precisamente como una función aparte, no dentro
+de capturas.»* Nueva pantalla `#screen-compartir` con su ítem en **Operación**, junto a Capturas y
+Personas, y su entrada en el sheet «Más» para el teléfono.
+- ⚠️ **El menú ⋮ de la captura vuelve a sus CUATRO entradas.** Y no es solo obedecer: compartir no es
+  una acción de una captura — lo que se le pasa al compañero son sobre todo **personas**, que la
+  mayoría de las veces **todavía no están en ninguna captura**. Ponerlo ahí obligaba a inventarse una
+  captura para poder compartir a una persona.
+- El rótulo es **«Modo compartir»**, elegido por el usuario. «Trabajar con el compañero» se retiró
+  por su instrucción: *«eso no es profesional»*.
+
+### Qué se manda y qué pasa al recibirlo
+Se marcan **personas** y **capturas** con casillas y se pulsa «Enviar al compañero (N)». Cada
+registro viaja como un mensaje (`reg`), se acumulan en el otro lado **sin guardar**, y solo al llegar
+el `fin` se aplican y se guardan **de una vez**: un envío entra entero o no entra, así el compañero
+no se queda con la mitad y sin saber cuál mitad.
+- ⚠️ **LA REGLA DE LA FUSIÓN: NADA SE BORRA NUNCA.** Lo que el compañero mandó con dato gana; lo que
+  mandó **vacío deja intacto** lo que ya hubiera aquí; y lo que aquí existe y allá no, se queda. Un
+  envío es «toma lo que tengo», no «tu copia pasa a ser la mía». En el registro de personas de un
+  procedimiento judicial, perder un dato en silencio es peor que quedarse con uno desactualizado, y
+  quien lo note lo corrige en dos toques. Hay un check que le añade el teléfono a la víctima en un
+  teléfono y el correo en el otro, y exige que acaben los dos datos.
+- ⚠️ **QUIEN SUSCRIBE NO SE PISA.** Sobre una captura que YA está en el teléfono, `servidor`,
+  `dossierSnap`, `oj/firma` y `oj/encabezado` no se funden: cada equipo firma con su funcionario y
+  recibir una corrección no puede poner el nombre de otro en un documento que firma él. En una
+  captura que llega **por primera vez** no hay nada que proteger y entra entera.
+- ⚠️ **LA FIRMA MANUSCRITA NO VIAJA**, y no hace falta filtrarla: vive en `lc_firmas`, cifrada y
+  aparte del caso y de la persona, así que **no está en lo que se manda**. Hay un check en los dos
+  extremos.
+- **El que envía se entera de lo que el otro hizo con su envío** (`ok` con las cuentas): «enviado»
+  tiene que significar «llegó y quedó guardado», no «salió de aquí». Y si el compañero no responde en
+  30 segundos se dice, en vez de quedarse «Enviando…» para siempre.
+- **El que recibe lo ve**: la pantalla nombra lo que entró y un aviso lo anuncia; si Personas o
+  Capturas están a la vista, se repintan. ⚠️ Recibir en silencio es indistinguible de no recibir.
+
+### El vínculo (sin cambios de fondo respecto de lo verificado el 2026-09-04)
+WebRTC con señalización por código en pantalla y **cero servidores** (sin STUN, TURN, `fetch`, XHR ni
+WebSocket en todo el módulo — hay check que lo mide). El descriptor se comprime **587 B → 109 B** y
+el código entero son **154 B = versión 9 (53×53)**. Cifrado de aplicación (AES-GCM) sobre DTLS con
+dos subclaves derivadas de una clave que **solo existe en los dos códigos escaneados**; lo que no
+descifra se descarta en silencio. Un código caduca a los **3 minutos**, el vínculo inactivo a las
+**12 horas**, y **solo se acepta UNA respuesta** por código.
+- ⚠️ **El vínculo NO se ata a ninguna captura**: es entre los dos TELÉFONOS. Una vez vinculados se
+  pasan lo que quieran, las veces que quieran, sin volver a escanear.
+- ⚠️ Los dos teléfonos en la **misma red wifi** (uno activa su zona wifi). No hace falta cobertura ni
+  datos. Quitar ese paso exige el complemento nativo, y se decide **después de publicar**.
+
+### Regresiones
+`verify_compartir.mjs` **43 checks**, en cinco secciones: A el códec (5) · B el vínculo y su
+seguridad (8) · C compartir de verdad, entre dos contextos de navegador (12) · D la pantalla (10) ·
+E el modo individual intacto (8).
+- ⚠️ **La sección E es la que protege el trabajo**: mide sobre el código fuente que `DB.saveCase` no
+  tiene **ni una rama** del módulo, que el formulario vuelve a medir «sucio» con `JSON.stringify(wc)`,
+  que fuera del módulo solo se le llama desde la navegación, que **ningún motor documental** lo
+  conoce, y que **no queda un solo resto** de la colaboración en vivo (lista literal de 15 nombres).
+- ⚠️ **Un check que falló por el criterio de la prueba, no por el código**: `[C3b]` buscaba «Te llegó
+  del compañero» distinguiendo mayúsculas, y el sistema visual pinta los títulos de sección en
+  versalitas — `innerText` los devuelve en mayúsculas.
+- ⚠️ **Mirar la pantalla, otra vez**: la primera captura de la pantalla vinculada no enseñaba la
+  tarjeta de «te llegó». No era un fallo — `renderCompartir()` se repintó con el estado real, donde
+  no había nada recibido —, pero se persiguió hasta el final antes de darlo por bueno, y de ahí salió
+  `[C3b]`, que lo mide **end to end** en vez de con un estado inventado.
+  Regresiones (45 suites): **compartir 43** (nueva) y todo lo demás en verde salvo los cuatro fallos
+  PREEXISTENTES ya documentados — `dossier_historico` [20] y [21], `mejora6b` [47] y [53],
+  `jerarquia` (el mismo aviso de más de 110 caracteres de Ajustes) y `ds` («favorito con estrella
+  SVG»). ⚠️ **Ninguna suite bajó su cuenta y ninguna expectativa se tocó**, ni siquiera las siete que
+  el 2026-09-04 se adaptaron al menú de 5 ítems: como derivan la expectativa de `lcEstadoDocs` y
+  miden el límite real en vez de un número escrito a mano, el menú volviendo a 4 no las movió.
+  Anti-caché `?v=104` / `cache-v104`, `_BUILD=104`.

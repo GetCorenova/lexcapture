@@ -276,15 +276,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #exp-go[disabled]{opacity:.45;cursor:not-allowed}
 
 
-/* ═══ MODO PATRULLA (Fase 4) ═══
+/* ═══ MODO COMPARTIR ═══
    Todo con tokens del Design System v2: ni un color literal, ni un gradiente, ni
    un emoji. La única excepción es el fondo del código, y está justificada abajo. */
 
 /* Franja de estado. Mismo mecanismo que la del modo invitado, distinto color a
    propósito: aquella es una ADVERTENCIA permanente (nada se está guardando) y
-   esta es un ESTADO — verde mientras el canal está abierto, ámbar solo cuando
-   hay trabajo sin entregar. Un estado normal pintado de advertencia deja de
-   leerse a los dos minutos. */
+   esta es un ESTADO — verde mientras dure el vínculo. Un estado normal pintado
+   de advertencia deja de leerse a los dos minutos. */
 #pt-barra{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
   align-items:center;gap:12px;padding:7px 14px;
@@ -293,7 +292,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   border-bottom:1px solid color-mix(in srgb,var(--ok) 28%,transparent);
 }
 #pt-barra.on{display:flex}
-#pt-barra.pend{background:var(--flag-bg);color:var(--flag-2);border-bottom-color:color-mix(in srgb,var(--flag-2) 28%,transparent)}
 #pt-barra .pb-pt{flex:0 0 auto;width:8px;height:8px;border-radius:999px;background:currentColor}
 #pt-barra .pb-txt{flex:1;min-width:0}
 #pt-barra .pb-btn{
@@ -302,13 +300,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   background:transparent;color:currentColor;font-size:12px;font-weight:600;cursor:pointer;
 }
 body.pt{padding-top:36px}
-/* Con las dos barras a la vez —un teléfono prestado que se une a una captura—
-   se apilan en vez de taparse. */
+/* Con las dos barras a la vez —un teléfono prestado que se vincula— se apilan en
+   vez de taparse. */
 body.guest #pt-barra{top:38px}
 body.guest.pt{padding-top:74px}
 
-/* El código en pantalla. ⚠️ Fondo blanco FIJO en los dos temas: un QR se lee por
-   contraste, y en modo oscuro un código claro sobre oscuro no lo lee ninguna
+/* El código en pantalla. ⚠️ Fondo blanco FIJO en los dos temas: un código se lee
+   por contraste, y en modo oscuro uno claro sobre oscuro no lo lee ninguna
    cámara. Es la misma excepción del lienzo de la firma. */
 .pt-qr{
   display:flex;align-items:center;justify-content:center;
@@ -338,12 +336,25 @@ body.guest.pt{padding-top:74px}
   border-radius:var(--radius);background:var(--ok-bg);
   border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);
 }
-.pt-est.off{background:var(--surface-2);border-color:var(--border)}
 .pt-est .pe-pt{flex:0 0 auto;width:10px;height:10px;border-radius:999px;background:var(--ok)}
-.pt-est.off .pe-pt{background:var(--text-3)}
 .pt-est .pe-ti{font-weight:600;font-size:13.5px;color:var(--ok)}
-.pt-est.off .pe-ti{color:var(--text-2)}
 .pt-est .pe-de{font-size:12px;color:var(--text-3);margin-top:2px}
+
+/* Lo que se puede enviar. La lista se desplaza dentro de su tarjeta: con treinta
+   personas registradas, la pantalla entera dejaría de tener pie. */
+.cp-tools{display:flex;justify-content:flex-end;margin:10px 0 6px}
+.cp-mini{padding:6px 12px;font-size:12px}
+.cp-list{max-height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+.cp-it{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;cursor:pointer;
+  border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
+}
+.cp-it:hover{background:var(--hover)}
+.cp-it.on{background:var(--surface-selected);border-color:var(--acc)}
+.cp-it input{flex:0 0 auto;width:18px;height:18px;accent-color:var(--acc)}
+.cp-it .cp-b{display:flex;flex-direction:column;min-width:0}
+.cp-it .cp-ti{font-size:13.5px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.cp-it .cp-de{font-size:11.5px;color:var(--text-3);margin-top:1px;overflow-wrap:anywhere}
 
 /* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
 #pt-scan{
@@ -370,7 +381,6 @@ body.guest.pt{padding-top:74px}
   padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
 }
-
 /* ═══ BANNER MODO INVITADO ═══
    Barra fija arriba del todo. Usa el ámbar de flagrancia: es una advertencia
    permanente, no un estado neutro. */
@@ -1808,6 +1818,12 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>
     Personas
   </div>
+  <!-- ⚠️ Función APARTE, no una acción de una captura: lo que se pasa al
+       compañero son sobre todo personas que todavía no están en ninguna. -->
+  <div class="sb-item" data-screen="compartir" onclick="go('compartir')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>
+    Modo compartir
+  </div>
   <div class="sb-sec">Análisis</div>
 
   <div class="sb-item" data-screen="estadisticas" onclick="go('estadisticas')">
@@ -2330,23 +2346,20 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </div>
   </section>
 
-  <!-- ====== MODO PATRULLA (Fase 4) ======
-       Una sola pantalla para las dos mitades del emparejamiento: quien invita
-       enseña su código y quien se une lo escanea. El paso en el que se está lo
-       decide `_ptUiPaso`, no una pantalla distinta por cada uno: son cuatro
-       estados del mismo trámite, y partirlos en cuatro destinos haría perder de
-       vista que es uno solo. -->
-  <section id="screen-patrulla" class="screen">
+  <!-- ====== MODO COMPARTIR ======
+       Una función aparte, con su propia entrada en el panel lateral: lo que se
+       comparte —sobre todo PERSONAS— no pertenece a ninguna captura concreta, y
+       la mayoría de las veces todavía no está en ninguna. Los cuatro estados del
+       trámite viven en la misma pantalla porque son un solo trámite; partirlos en
+       cuatro destinos haría perder de vista que lo es. -->
+  <section id="screen-compartir" class="screen">
     <header class="topbar">
-      <button class="topbar-btn" onclick="ptUiVolver()" aria-label="Volver">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-      </button>
       <div class="ttl">
-        <h1>Trabajar con el compañero</h1>
-        <span class="sub" id="pt-sub">Sin captura seleccionada</span>
+        <h1>Modo compartir</h1>
+        <span class="sub" id="cp-sub">Pásale al compañero las personas y capturas que ya tienes</span>
       </div>
     </header>
-    <div class="pane stack" id="pt-pane"></div>
+    <div class="pane stack" id="cp-pane"></div>
   </section>
 </main>
 
@@ -2368,13 +2381,13 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="gb-btn" onclick="guestSalir()">Salir</button>
 </div>
 
-<!-- ====== FRANJA DEL MODO PATRULLA ======
-     Discreta y permanente mientras dure la colaboración: sin ella, que lo que
-     escribe uno le llegue al otro sería indistinguible de que no le llegue. -->
+<!-- ====== FRANJA DEL MODO COMPARTIR ======
+     Discreta y permanente mientras dure el vínculo: sin ella, estar vinculado
+     sería indistinguible de no estarlo en cuanto se sale de la pantalla. -->
 <div id="pt-barra">
   <span class="pb-pt"></span>
   <span class="pb-txt"></span>
-  <button class="pb-btn" onclick="ptAbrirPatrulla(ptResumen().casoId)">Ver</button>
+  <button class="pb-btn" onclick="ptAbrirCompartir()">Ver</button>
 </div>
 
 <!-- ====== BANNER INSTALACION PWA ====== -->
@@ -2419,9 +2432,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>
     <div class="body"><div class="ti">Perfil</div><div class="de">Funcionario activo</div></div>
   </button>
-  <button class="sheet-item" onclick="closeSheet();ptAbrirPatrulla(null)">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-5.6 6.5-5.6s6.5 2.3 6.5 5.6"/><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2"/><path d="M18 14.8c2.1.7 3.5 2.5 3.5 5.2"/></svg></div>
-    <div class="body"><div class="ti">Trabajar con el compañero</div><div class="de">Unirte a una captura del otro teléfono</div></div>
+  <button class="sheet-item" onclick="closeSheet();ptAbrirCompartir()">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
+    <div class="body"><div class="ti">Modo compartir</div><div class="de">Pasarle personas y capturas al compañero</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -2503,7 +2516,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </div>
 </div>
 
-<!-- ====== LECTOR DE CÓDIGOS (modo patrulla) ======
+<!-- ====== LECTOR DE CÓDIGOS (modo compartir) ======
      Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo
      y aquí no se dispara nada — se lee solo en cuanto el código entra al marco. -->
 <div id="pt-scan">
@@ -2543,7 +2556,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','patrulla'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2560,7 +2573,7 @@ function go(name) {
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
-  if (name === 'patrulla') renderPatrulla();
+  if (name === 'compartir') renderCompartir();
   if (name === 'ajustes') { loadAjustesFields(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -2686,7 +2699,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 103;
+var _BUILD = 104;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3290,10 +3303,6 @@ async function doUnlockPin() {
        lectura de la configuración; aquí se persiste y se anuncia. Un número que
        cambia solo tiene que verse cambiar. */
     lcNuncAvisoAno();
-    /* Y la franja del modo patrulla: la cola cifrada ya está cargada, así que si
-       quedó algo sin entregar al compañero se ve desde el primer momento. Un
-       cambio pendiente que nadie enseña es indistinguible de uno entregado. */
-    ptBarraArranque();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
 
@@ -3425,13 +3434,6 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_firmas');
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
-  /* Cola del Modo Patrulla: lo que este equipo escribió y el compañero todavía no
-     ha recibido. Va cifrada como las capturas —una operación lleva dentro el dato
-     de una persona— y se carga aquí para que sobreviva a cerrar la aplicación:
-     es lo que hace que una desconexión no pierda nada. */
-  enc = localStorage.getItem('lc_ptcola');
-  if (enc) { try { _ptCola = JSON.parse(await _lcDecrypt(enc)) || {}; } catch(e) { _ptCola = {}; } }
-  else { _ptCola = {}; }
   /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
      memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
      vuelva a abrir su formulario. No se fuerza ninguna escritura — el dato se
@@ -3496,20 +3498,9 @@ var DB = {
      así la reversión de `_lcGuardarCache` no tendría nada que revertir y la
      captura se quedaría en la lista sin estar en el disco. Sobre una copia, la
      caché solo cambia si la escritura sale bien. */
-  saveCase: function(c, base) {
-    /* ⚠️ MODO PATRULLA — un caso que se está trabajando entre dos teléfonos NO se
-       reemplaza: se le aplica lo que este equipo cambió, sobre la versión que
-       puede llevar dentro el trabajo del compañero. `base` la pasa quien sabe que
-       su copia es vieja (el wizard, con su foto inicial). Un caso normal ni entra
-       aquí — mismo camino de código y mismo resultado de siempre. */
-    if (ptCompartido(c)) c = ptGuardarLocal(c, base);
+  saveCase: function(c) {
     var a=this.getCases().slice(); var i=a.findIndex(function(x){return x.id===c.id;}); if(i>=0) a[i]=c; else a.push(c);
-    var p=this.saveCases(a);
-    /* La foto se actualiza SOLO si la escritura salió bien: si falla (memoria
-       llena), la caché se revierte y el próximo guardado tiene que volver a ver
-       esos mismos cambios en vez de darlos por escritos. */
-    if (ptCompartido(c)) p.then(function(){ ptTomarFoto(c); }, function(){});
-    return p;
+    return this.saveCases(a);
   },
   delCase: function(id) { return this.saveCases(this.getCases().filter(function(c){return c.id!==id;})); },
   /* Firma manuscrita de un perfil. Una sola por perfil: guardar reemplaza. */
@@ -3559,6 +3550,11 @@ function _lcPurgarPlantillas() {
   if (_guest) return;                       // el invitado no toca localStorage
   try { if (localStorage.getItem('lc_templates') !== null) localStorage.removeItem('lc_templates'); }
   catch (e) { /* almacenamiento no disponible: nada que purgar */ }
+  /* Cola de la colaboración en vivo, que se retiró: el Modo compartir manda
+     registros completos por decisión del usuario y no lleva pendientes. La clave
+     iba cifrada y ocupaba cuota en el mismo origen que las capturas. */
+  try { if (localStorage.getItem('lc_ptcola') !== null) localStorage.removeItem('lc_ptcola'); }
+  catch (e) {}
 }
 /* Claves de formatos que la app ya no produce. Se retiran de la configuración
    para que dejen de viajar en cada guardado y en cada «Exportar config»: no las
@@ -4158,11 +4154,7 @@ var _wizDraftTimer = null;           // temporizador del guardado diferido
 var _wizDraftListo = false;          // el detector de escritura ya está montado
 
 function wizMarcarBase(){
-  /* ⚠️ Se descuentan las marcas de versión del Modo Patrulla (`_m`): cambian en
-     cada tecla, así que incluirlas haría que el formulario se creyera sucio
-     siempre y preguntara al salir sin que nadie hubiera tocado nada. En un caso
-     sin marcas `ptLimpio` devuelve el mismo objeto: modo individual idéntico. */
-  try { _wizBase = ptLimpioJSON(wc); } catch(e) { _wizBase = null; }
+  try { _wizBase = JSON.stringify(wc); } catch(e) { _wizBase = null; }
   wizMontarAutoguardado();
 }
 /* «Sucio» = distinto de como nació. Se recolecta antes para contar lo que está
@@ -4175,7 +4167,7 @@ function wizMarcarBase(){
 function wizSucio(yaRecolectado){
   if (!wc) return false;
   if (!yaRecolectado) { try { collectStep(); } catch(e) {} }
-  try { return ptLimpioJSON(wc) !== _wizBase; } catch(e) { return true; }
+  try { return JSON.stringify(wc) !== _wizBase; } catch(e) { return true; }
 }
 // Nombre de quien va en la captura; si todavía no se ha diligenciado se dice
 // así, en vez de repetir el tipo de captura (que ya va en el subtítulo).
@@ -5830,13 +5822,11 @@ function openCaseSheet(id) {
     /* 3) Editar la captura — ahora la ÚNICA vía directa desde la lista. */
     actItem('editCase', id, ACT_IC.edit, 'Editar captura',
       'Abre el formulario para corregir o completar los datos') +
-    /* 4) Trabajar con el compañero. ⚠️ Es un VERBO —algo que se hace con la
-       captura—, no un documento, así que no reabre el crecimiento «un ítem por
-       formato» que midió la auditoría: los formatos siguen todos en el
-       expediente y el menú no puede crecer por ellos. */
-    actItem('ptAbrirPatrulla', id, PT_IC.patrulla, 'Trabajar con el compañero',
-      'Diligenciar esta captura a la vez desde los dos teléfonos', '', ACT_ACC) +
-    /* 5) Eliminar. */
+    /* ⚠️ Compartir NO está aquí, y es una decisión: lo que se le pasa al
+       compañero son sobre todo PERSONAS, que no pertenecen a ninguna captura
+       —muchas veces todavía no están en ninguna—. Vive en el panel lateral,
+       como función aparte, y así este menú tampoco vuelve a crecer. */
+    /* 4) Eliminar. */
     actItem('delCase', id, ACT_IC.del, 'Eliminar', 'Borra el registro de '+termino+' de forma permanente', ' danger'));
 }
 
@@ -20132,41 +20122,38 @@ function pwaDismiss() {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MODO PATRULLA · FASE 1 — IDENTIDAD DEL EQUIPO, RELOJ Y REGISTRO DE CAMBIOS
+   MODO COMPARTIR · LOS DATOS — QUÉ SE MANDA Y QUÉ PASA AL RECIBIRLO
 
-   Dos funcionarios de la misma patrulla diligencian UN procedimiento desde sus
-   dos teléfonos. Esta fase construye la capa de datos de esa colaboración —y
-   NADA MÁS—: identidad del equipo, un reloj que resiste teléfonos desajustados,
-   y las primitivas que convierten «lo que cambió» en operaciones y las vuelven a
-   aplicar del otro lado. Sin interfaz, sin transporte y sin una sola diferencia
-   visible: en modo individual este bloque está inerte.
+   Dos funcionarios de la misma patrulla se reparten el trabajo: uno toma los
+   datos del capturado mientras el otro toma los de la víctima o los del
+   testigo. Cada uno los diligencia en SU teléfono, en el registro de Personas,
+   y cuando los tiene listos se los pasa al compañero. Después, quien arma el
+   procedimiento agrega esas personas desde el registro —«Buscar existente»— sin
+   volver a teclear un solo dato.
 
-   ⚠️ POR QUÉ NO SE SINCRONIZA EL CASO ENTERO — el hallazgo que gobierna todo.
-   Las seis salidas documentales ya escriben bien (leen el caso fresco, tocan
-   SOLO su rama y guardan), pero el wizard no: al abrirlo hace una copia completa
-   (`wc = JSON.parse(JSON.stringify(raw))`), el funcionario trabaja media hora
-   sobre ella y al guardar REEMPLAZA el caso entero. Con una regla de «gana el
-   último» sobre el caso completo, el reparto real de la patrulla —A en el
-   capturado, B en la víctima— perdería el trabajo de B de forma GARANTIZADA, no
-   ocasional. De ahí que lo que viaje sea una operación por RUTA
-   («victimas/#a3f9c1/tel pasó a valer X») y no un caso.
+   ⚠️ NO SE DILIGENCIA UN PROCEDIMIENTO ENTRE DOS A LA VEZ, Y ES UNA DECISIÓN
+   DEL USUARIO. Lo que se comparte son REGISTROS YA DILIGENCIADOS —una persona,
+   una captura—, con un envío explícito que alguien decide y ve salir. No hay
+   edición simultánea del mismo formulario, ni versiones por campo, ni nada que
+   ocurra por debajo mientras el funcionario escribe. El modo individual es
+   exactamente el de siempre: `DB.saveCase` no tiene una sola rama nueva y el
+   wizard guarda como guardaba.
 
-   ⚠️ EL MODO INDIVIDUAL NO PAGA NI UN BYTE. Las marcas de versión (`caso._m`)
-   solo existen en un caso que se haya compartido; un caso que nunca entró en una
-   sesión se guarda exactamente igual que antes de esta fase. Es la capa de
-   compatibilidad que exige la regla de no alterar lo existente.
+   ⚠️ LA FIRMA MANUSCRITA NO VIAJA. Vive en `lc_firmas`, cifrada y aparte de la
+   persona y del caso, así que no está en lo que se manda. Es un rasgo
+   biométrico y con ella se suscriben documentos judiciales: mandarla permitiría
+   firmar un oficio en nombre de quien no lo firmó.
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── 1 · IDENTIDAD DEL EQUIPO ─────────────────────────────────────────────
-   Identificador opaco del teléfono. No lleva ningún dato de la persona ni del
-   equipo: es `uid()`, o sea instante + azar. Sirve para dos cosas y ninguna más:
-   saber de qué lado vino un cambio, y desempatar de forma determinista cuando
-   dos cambios caen en el mismo instante lógico.
+/* ── IDENTIDAD DEL EQUIPO ──────────────────────────────────────────────────
+   Identificador opaco del teléfono: no lleva ningún dato de la persona ni de la
+   unidad, es instante + azar. Sirve para una sola cosa —saber que al otro lado
+   hay otro equipo— y para nada más.
    ⚠️ Vive en clave propia y NO en `lc_cfg`: la configuración se exporta e
    importa entre equipos («Exportar config»), y dos teléfonos con la misma
-   identidad harían que la fusión se comiera cambios en silencio.
+   identidad no se distinguirían.
    ⚠️ En modo invitado se genera en memoria y no se escribe un byte —misma regla
-   que el resto del almacenamiento— así que un teléfono prestado no queda
+   que el resto del almacenamiento—, así que un teléfono prestado no queda
    marcado. */
 var PT_DEV_KEY = 'lc_device';
 var _ptDev = null;
@@ -20181,94 +20168,29 @@ function ptDeviceId() {
   return _ptDev;
 }
 
-/* ── 2 · RELOJ LÓGICO HÍBRIDO ─────────────────────────────────────────────
-   ⚠️ LA HORA DEL TELÉFONO NO SIRVE PARA DECIDIR QUIÉN ESCRIBIÓ ÚLTIMO. Dos
-   equipos pueden llevar horas distintas, y con unos minutos de diferencia «gana
-   el más reciente» elegiría el cambio equivocado — en un procedimiento judicial
-   eso es perder el trabajo de un funcionario sin que nadie se entere.
-   El sello combina la hora física con un contador que SE ADELANTA cada vez que
-   se ve un sello del otro equipo. Así, aunque un teléfono vaya diez minutos
-   atrasado, en cuanto recibe algo del compañero su reloj lógico pasa por delante
-   y el orden causal de los cambios se respeta.
-   Se persiste para que sobreviva a cerrar la aplicación o a reiniciar el
-   teléfono: si el reloj lógico volviera a cero, los cambios de después de un
-   reinicio parecerían anteriores a los de antes. */
-var PT_HLC_KEY = 'lc_hlc';
-var _ptHlc = null;
-function _ptHlcCargar() {
-  if (_ptHlc) return _ptHlc;
-  _ptHlc = { t: 0, c: 0 };
-  if (!_guest) {
-    try {
-      var raw = localStorage.getItem(PT_HLC_KEY);
-      if (raw) { var o = JSON.parse(raw); if (o && typeof o.t === 'number') _ptHlc = { t: o.t, c: o.c || 0 }; }
-    } catch (e) { /* ilegible: se arranca de cero, el reloj se recupera al primer intercambio */ }
-  }
-  return _ptHlc;
-}
-function _ptHlcGuardar() {
-  if (_guest) return;
-  try { localStorage.setItem(PT_HLC_KEY, JSON.stringify(_ptHlc)); } catch (e) {}
-}
-/* Sello para un cambio propio. */
-function ptSello() {
-  var h = _ptHlcCargar(), ahora = Date.now();
-  if (ahora > h.t) { h.t = ahora; h.c = 0; } else { h.c++; }
-  _ptHlcGuardar();
-  return { t: h.t, c: h.c, d: ptDeviceId() };
-}
-/* Se acaba de ver un sello del otro equipo: el reloj local se adelanta para no
-   quedar «detrás» de un cambio que ya conoce. Es lo que hace que el orden sea
-   causal y no cronológico. */
-function ptObservar(s) {
-  if (!s || typeof s.t !== 'number') return;
-  var h = _ptHlcCargar(), ahora = Date.now(), sc = s.c || 0;
-  var t = Math.max(h.t, s.t, ahora);
-  if (t === h.t && t === s.t)      h.c = Math.max(h.c, sc) + 1;
-  else if (t === h.t)              h.c = h.c + 1;
-  else if (t === s.t)              h.c = sc + 1;
-  else                             h.c = 0;
-  h.t = t;
-  _ptHlcGuardar();
-}
-/* Orden TOTAL entre dos sellos. El desempate por identificador de equipo es
-   arbitrario a propósito: lo que importa no es cuál gana, sino que los DOS
-   teléfonos apliquen la misma regla y lleguen al mismo resultado sea cual sea el
-   orden en que reciban los mensajes. Sin esto, dos réplicas pueden quedar
-   distintas para siempre sin que nadie lo note. */
-function ptCmp(a, b) {
-  if (!a && !b) return 0;
-  if (!a) return -1;
-  if (!b) return 1;
-  if (a.t !== b.t) return a.t < b.t ? -1 : 1;
-  var ac = a.c || 0, bc = b.c || 0;
-  if (ac !== bc) return ac < bc ? -1 : 1;
-  var ad = a.d || '', bd = b.d || '';
-  return ad === bd ? 0 : (ad < bd ? -1 : 1);
-}
-
-/* ── 3 · QUÉ RAMAS SE FUSIONAN ELEMENTO A ELEMENTO ────────────────────────
+/* ── QUÉ RAMAS SE FUNDEN ELEMENTO A ELEMENTO ──────────────────────────────
    Estas listas ya nacen con identificador propio, y no por esta función: la
    persona lo recibe en `savePersonModal`, el elemento material en `lcEmpIds`, el
    acta se indexa por `personaId` y el rótulo por `empId` — decisiones tomadas en
    su momento para que un rótulo no le robara la procedencia a otro elemento.
-   Eso es lo que permite fusionar POR ELEMENTO: que A añada un capturado y B una
-   víctima no es un conflicto, y editar a dos personas distintas tampoco.
-   ⚠️ Lo que NO está aquí se trata como valor atómico y gana la última escritura:
-   `conductas` y `articulosCP` son dos listas paralelas por posición y `vehiculos`
-   no lleva identificador. Darles uno tocaría `lcCondFilas` y el motor que numera
-   el apartado 2 del FPJ-5, calibrado aparte; y en el reparto real solo un
-   funcionario escribe ahí. Es una limitación declarada, no un descuido. */
+   Eso es lo que permite fundir POR ELEMENTO: que el compañero mande una captura
+   con una víctima que aquí no está no puede llevarse por delante al capturado
+   que aquí sí está.
+   ⚠️ Lo que NO está aquí se trata como valor entero: `conductas` y `articulosCP`
+   son dos listas paralelas por posición y `vehiculos` no lleva identificador.
+   Darles uno tocaría `lcCondFilas` y el motor que numera el apartado 2 del
+   FPJ-5, calibrado aparte. Es una limitación declarada, no un descuido. */
 var PT_LISTAS = {
   capturados: 'id', victimas: 'id', testigos: 'id',
   elementos: 'id', actas: 'personaId', rotulos: 'empId'
 };
 
-/* Rutas que SOLO escribe el propietario del caso (categoría C de la
-   clasificación). No son datos del procedimiento sino de quién lo suscribe: el
-   servidor que firma el FPJ-5, la foto de la unidad congelada en el dossier y el
-   firmante del oficio. Que el compañero los cambiara pondría su unidad y su
-   nombre en un documento que firma otro. */
+/* Rutas de QUIÉN SUSCRIBE, no del procedimiento: el servidor que firma el
+   FPJ-5, la foto de la unidad congelada en el dossier y el firmante del oficio.
+   ⚠️ Sobre una captura que ya está en este teléfono NO se funden: cada equipo
+   firma con su funcionario, y recibir una corrección del compañero no puede
+   poner su nombre y su unidad en un documento que firma otro. En una captura
+   que llega por primera vez no hay nada que proteger y entra entera. */
 var PT_SOLO_DUENO = ['servidor', 'dossierSnap', 'oj/firma', 'oj/encabezado'];
 function ptEsDelDueno(ruta) {
   for (var i = 0; i < PT_SOLO_DUENO.length; i++) {
@@ -20278,21 +20200,20 @@ function ptEsDelDueno(ruta) {
   return false;
 }
 
-/* ── 4 · APLANADO DEL CASO A RUTAS ────────────────────────────────────────
+/* ── APLANADO A RUTAS ─────────────────────────────────────────────────────
    `{lugar:{muni:'Medellín'}}` → `{'lugar/muni':'Medellín'}`, y un capturado con
-   id `a3f9c1` → `capturados/#a3f9c1/priNom`. Cada hoja es lo que puede llevar su
-   propia marca de versión, y por tanto la unidad mínima de conflicto.
-   ⚠️ Las claves que empiezan por `_` se saltan: son metadatos de esta capa
-   (`_m`), no contenido del procedimiento, y no pueden viajar ni versionarse a sí
-   mismas. */
+   id `a3f9c1` → `capturados/#a3f9c1/priNom`. Cada hoja es la unidad mínima que
+   se puede fundir sin pisar a su vecina.
+   ⚠️ Las claves que empiezan por `_` se saltan: son metadatos internos, no
+   contenido del procedimiento, y no tienen por qué viajar. */
 function ptAplanar(v, pre, out, clave) {
   out = out || {};
   if (v === null || typeof v !== 'object') { out[pre] = v; return out; }
   if (Array.isArray(v)) {
     var idk = PT_LISTAS[clave];
     /* Degradación segura: si la lista debería tener identificadores pero a algún
-       elemento le falta, se trata ENTERA como valor atómico. Fusionar a medias
-       una lista de personas es peor que fusionarla toda de una vez. */
+       elemento le falta, se trata ENTERA como un valor. Fundir a medias una
+       lista de personas es peor que fundirla toda de una vez. */
     if (idk && v.every(function (el) { return el && typeof el === 'object' && el[idk]; })) {
       v.forEach(function (el) { ptAplanar(el, pre + '/#' + el[idk], out, ''); });
       return out;
@@ -20309,11 +20230,29 @@ function ptIgual(a, b) {
   try { return JSON.stringify(a) === JSON.stringify(b); } catch (e) { return false; }
 }
 
+/* Lee el valor que hay AQUÍ en esa ruta, para no reescribir lo que ya coincide. */
+function ptLeerRuta(obj, ruta) {
+  var tr = ruta.split('/'), cur = obj, i, t, k, enc;
+  for (i = 0; i < tr.length; i++) {
+    if (cur === null || typeof cur !== 'object') return undefined;
+    t = tr[i];
+    if (t.charAt(0) === '#') {
+      if (!Array.isArray(cur)) return undefined;
+      var idk = PT_LISTAS[tr[i - 1]] || 'id', id = t.slice(1);
+      enc = null;
+      for (k = 0; k < cur.length; k++) if (cur[k] && cur[k][idk] === id) { enc = cur[k]; break; }
+      if (!enc) return undefined;
+      cur = enc;
+    } else cur = cur[t];
+  }
+  return cur;
+}
+
 /* Escribe un valor en su ruta, creando por el camino lo que falte. Un tramo
    `#id` busca el elemento de esa lista por su clave identificadora; si no está,
    lo crea con su identificador puesto — que es exactamente lo que pasa cuando
-   llega una persona que el otro equipo acaba de registrar. */
-function ptPonerRuta(obj, ruta, valor, borrar) {
+   llega una víctima que el compañero acaba de registrar. */
+function ptPonerRuta(obj, ruta, valor) {
   var tr = ruta.split('/'), cur = obj, i, t;
   for (i = 0; i < tr.length - 1; i++) {
     t = tr[i];
@@ -20329,154 +20268,14 @@ function ptPonerRuta(obj, ruta, valor, borrar) {
     }
   }
   t = tr[tr.length - 1];
-  if (t.charAt(0) === '#') {
-    /* La ruta termina en un identificador: se está retirando el elemento entero
-       de la lista (una persona que el otro equipo eliminó). */
-    if (!borrar || !Array.isArray(cur)) return false;
-    var ik = PT_LISTAS[tr[tr.length - 2]] || 'id', qid = t.slice(1), antes = cur.length;
-    for (var j = cur.length - 1; j >= 0; j--) if (cur[j] && cur[j][ik] === qid) cur.splice(j, 1);
-    return cur.length !== antes;
-  }
-  if (borrar) {
-    if (Array.isArray(cur)) return false;
-    /* ⚠️ El identificador NO se borra nunca por una operación de campo: sin él, la
-       siguiente operación no encuentra al elemento y CREA otro con el mismo id —
-       la persona acaba duplicada, una con los datos y otra vacía. Retirar a una
-       persona es una operación sobre el elemento, no sobre sus campos. */
-    if (tr.length >= 2 && tr[tr.length - 2].charAt(0) === '#' && t === (PT_LISTAS[tr[tr.length - 3]] || 'id')) return false;
-    delete cur[t];
-    return true;
-  }
+  if (t.charAt(0) === '#' || Array.isArray(cur)) return false;
   cur[t] = valor;
   return true;
 }
 
-/* Borra de una lista el elemento con ese identificador. Se usa cuando el otro
-   equipo eliminó una persona, un elemento o un rótulo. */
-function ptQuitarId(obj, rama, id) {
-  var lista = obj[rama];
-  if (!Array.isArray(lista)) return false;
-  var idk = PT_LISTAS[rama] || 'id', n = lista.length;
-  obj[rama] = lista.filter(function (el) { return !el || el[idk] !== id; });
-  return obj[rama].length !== n;
-}
-
-/* Qué elementos (por identificador) tiene cada lista fusionable. Lo necesita el
-   diff para distinguir «a esta persona le cambiaron un dato» de «esta persona ya
-   no está». */
-function ptIdsDe(obj) {
-  var out = {};
-  Object.keys(PT_LISTAS).forEach(function (rama) {
-    var v = obj && obj[rama], idk = PT_LISTAS[rama];
-    if (!Array.isArray(v)) return;
-    out[rama] = v.filter(function (el) { return el && el[idk]; }).map(function (el) { return el[idk]; });
-  });
-  return out;
-}
-
-/* ── 5 · QUÉ CAMBIÓ ───────────────────────────────────────────────────────
-   Compara dos versiones del mismo caso y devuelve las operaciones que llevan de
-   una a la otra. Es lo que permite que el wizard deje de reemplazar el caso: en
-   vez de escribir «el caso es esto», dice «esto es lo que toqué», y lo que el
-   compañero haya escrito entretanto sobrevive.
-
-   ⚠️ QUE UNA PERSONA YA NO ESTÉ ES UNA SOLA OPERACIÓN, NO UNA POR CAMPO. Emitir
-   un borrado por cada campo tenía dos efectos, los dos medidos: el borrado de su
-   `id` dejaba al objeto sin identificador —así que la siguiente operación no lo
-   encontraba y CREABA otro con el mismo id—, y la lista acababa con la persona
-   original sin id y una segunda vacía. En el apartado 5 del FPJ-5 eso es una
-   víctima fantasma. Se borra el elemento entero y no se emiten sus campos. */
-function ptDiff(base, act) {
-  var A = ptAplanar(base || {}, '', {}, ''), B = ptAplanar(act || {}, '', {}, '');
-  var idsA = ptIdsDe(base || {}), idsB = ptIdsDe(act || {}), ops = [], fuera = {}, k;
-  Object.keys(idsA).forEach(function (rama) {
-    var vivos = idsB[rama] || null;
-    if (!vivos) return;                       // la lista dejó de ser fusionable: se trata entera
-    idsA[rama].forEach(function (id) {
-      if (vivos.indexOf(id) >= 0) return;
-      ops.push({ r: rama + '/#' + id, x: 1 });
-      fuera[rama + '/#' + id + '/'] = true;
-    });
-  });
-  function eliminado(r) { for (var p in fuera) if (r.indexOf(p) === 0) return true; return false; }
-  for (k in B) if (!ptIgual(A[k], B[k])) ops.push({ r: k, v: B[k] });
-  for (k in A) if (!(k in B) && !eliminado(k)) ops.push({ r: k, x: 1 });
-  return ops;
-}
-
-/* ── 6 · MARCAS DE VERSIÓN ────────────────────────────────────────────────
-   `caso._m` es un mapa de ruta → sello: quién escribió ese campo y cuándo.
-   ⚠️ Solo aparece en un caso que se haya compartido. Un caso que nunca entró en
-   una sesión colaborativa no lo lleva, se guarda idéntico a como se guardaba
-   antes de esta fase, y `ptLimpio` garantiza que ninguna huella ni exportación
-   lo vea aunque exista. */
-function ptMarcas(c) { if (!c._m || typeof c._m !== 'object') c._m = {}; return c._m; }
-function ptTieneMarcas(c) { return !!(c && c._m && Object.keys(c._m).length); }
-
-/* Sella el caso entero con un mismo instante. Es lo que se hace al empezar a
-   compartir: a partir de ahí todo campo tiene una versión conocida y la fusión
-   puede razonar sobre él. */
-function ptSellarCaso(c, sello) {
-  if (!c) return null;
-  var s = sello || ptSello(), m = ptMarcas(c), plano = ptAplanar(c, '', {}, '');
-  for (var k in plano) if (!m[k]) m[k] = s;
-  return c;
-}
-/* Anota las rutas de unas operaciones propias. */
-function ptSellarOps(c, ops, sello) {
-  var s = sello || ptSello(), m = ptMarcas(c);
-  ops.forEach(function (o) { m[o.r] = s; o.s = s; });
-  return ops;
-}
-
-/* ── 7 · FUSIÓN ───────────────────────────────────────────────────────────
-   Aplica operaciones que vienen del otro equipo. Por CAMPO, no por rama: que A
-   corrija el barrio no revierte el municipio que puso B.
-   Devuelve qué se aplicó y qué se descartó, porque el estado de sincronización
-   tiene que poder decir la verdad y no un «listo» genérico. */
-function ptFusionar(c, ops, opts) {
-  opts = opts || {};
-  var m = ptMarcas(c), res = { aplicadas: 0, descartadas: 0, rechazadas: 0, rutas: [] };
-  (ops || []).forEach(function (o) {
-    if (!o || !o.r) return;
-    ptObservar(o.s);
-    /* La identidad de quien suscribe no se fusiona: la escribe el propietario del
-       caso. Un secundario que la mandara pondría su nombre en el informe del otro. */
-    if (!opts.dueno && ptEsDelDueno(o.r)) { res.rechazadas++; return; }
-    var actual = m[o.r];
-    if (actual && ptCmp(o.s, actual) <= 0) { res.descartadas++; return; }
-    var ok = o.x ? ptPonerRuta(c, o.r, undefined, true) : ptPonerRuta(c, o.r, o.v, false);
-    if (ok) { m[o.r] = o.s; res.aplicadas++; res.rutas.push(o.r); }
-    else res.rechazadas++;
-  });
-  return res;
-}
-
-/* ── 8 · EL CASO SIN METADATOS ────────────────────────────────────────────
-   ⚠️ Esta función es la capa de compatibilidad, y no es cosmética. El wizard
-   decide si hay trabajo sin guardar comparando `JSON.stringify(wc)` con la foto
-   de cómo nació el caso; las marcas de versión cambian en cada tecla, así que sin
-   descontarlas el formulario se creería sucio siempre y preguntaría al salir
-   aunque no se hubiera tocado nada. Lo mismo vale para exportar capturas.
-   En un caso sin marcas devuelve el MISMO objeto, así que en modo individual no
-   cuesta ni una copia. */
-function ptLimpio(c) {
-  if (!c || !c._m) return c;
-  var o = {};
-  for (var k in c) if (k !== '_m') o[k] = c[k];
-  return o;
-}
-function ptLimpioJSON(c) { try { return JSON.stringify(ptLimpio(c)); } catch (e) { return null; } }
-
-/* Huella CANÓNICA de un caso: el mismo contenido da la misma cadena aunque las
-   claves estén en otro orden.
-   ⚠️ No es un detalle de comodidad. Dos réplicas que han recibido los mismos
-   cambios en distinto orden acaban con el mismo contenido pero con las claves
-   escritas en distinta secuencia —quien recibió antes el teléfono lo tiene antes
-   dentro de la persona—. Con una comparación textual corriente los dos equipos se
-   verían eternamente distintos y volverían a mandarse todo una y otra vez.
-   Las listas SIN identificador conservan su orden, que ahí es contenido: las
-   conductas punibles se imprimen numeradas en el apartado 2 del FPJ-5. */
+/* Copia canónica de un registro: sin metadatos internos y con las claves en el
+   mismo orden pase lo que pase. Es lo que sale por el canal y lo que se compara
+   para saber si un envío cambiaría algo. */
 function ptCanon(v) {
   if (v === null || typeof v !== 'object') return v;
   if (Array.isArray(v)) return v.map(ptCanon);
@@ -20486,153 +20285,83 @@ function ptCanon(v) {
   return o;
 }
 function ptHuella(c) { try { return JSON.stringify(ptCanon(c)); } catch (e) { return null; } }
-/* ¿Estas dos réplicas tienen ya el mismo procedimiento? */
-function ptConvergen(a, b) { var x = ptHuella(a); return x !== null && x === ptHuella(b); }
+function ptParaEnviar(o) { try { return ptCanon(o); } catch (e) { return null; } }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MODO PATRULLA · FASE 2 — EL GUARDADO DEJA DE REEMPLAZAR EL CASO
-
-   Con la fase 1 ya se sabe QUÉ cambió y cómo fusionarlo. Aquí se aplica al
-   guardado de verdad, que es donde estaba el defecto: `DB.saveCase` escribía el
-   caso ENTERO tal como se lo daba el llamador. Para las seis salidas
-   documentales eso era inofensivo —leen el caso fresco, tocan su rama y guardan
-   en milisegundos—, pero el wizard trabaja media hora sobre una copia, así que
-   guardar reemplazando borraba de un plumazo todo lo que el compañero hubiera
-   escrito entretanto.
-
-   ⚠️ TODO ESTO SOLO SE ACTIVA EN UN CASO COMPARTIDO. Un caso normal sigue el
-   mismo camino de código de siempre, con el mismo resultado byte a byte.
-═══════════════════════════════════════════════════════════════════════════ */
-
-/* Estado de la colaboración. Vive fuera del caso a propósito: son datos de la
-   sesión (con quién, qué falta por mandar), no del procedimiento, y no tienen
-   por qué acabar en un informe ni en una exportación. */
-var _ptFoto = {};        // caso.id → cómo quedó el caso tras el último guardado local
-var _ptCola = {};        // caso.id → operaciones propias todavía sin entregar
-var _ptSesion = null;    // sesión abierta: { casoId, rol, desde, par }
-
-/* ── LA FOTO ──────────────────────────────────────────────────────────────
-   ⚠️ Sin esto no hay forma de saber qué cambió, y el motivo es una peculiaridad
-   real del código: `DB.getCase` devuelve la REFERENCIA VIVA de la caché, y las
-   seis salidas documentales la mutan directamente («var c = DB.getCase(id); …;
-   DB.saveCase(c)»). Cuando el caso llega a guardarse, la caché ya lleva el
-   cambio dentro, así que compararlos daría siempre «no cambió nada».
-   La foto es el estado tal como quedó la última vez que se guardó: comparar
-   contra ella sí dice la verdad. */
-function ptTomarFoto(c) {
-  if (!c || !c.id) return;
-  try { _ptFoto[c.id] = JSON.parse(JSON.stringify(ptLimpio(c))); } catch (e) { delete _ptFoto[c.id]; }
+/* ── LA REGLA DE LA FUSIÓN ────────────────────────────────────────────────
+   Un valor VACÍO no pisa nada. Si el compañero no diligenció el correo, el
+   correo que ya estuviera aquí se queda.
+   ⚠️ NADA SE BORRA NUNCA. Lo que él mandó con dato gana; lo que mandó vacío deja
+   intacto lo de aquí; y lo que aquí existe y allá no, sigue aquí. Un envío es
+   «toma lo que tengo», no «tu copia pasa a ser la mía»: en el registro de
+   personas de un procedimiento judicial, perder un dato en silencio es peor que
+   quedarse con uno desactualizado, y quien lo note lo corrige en dos toques. */
+function ptVacio(v) {
+  if (v === undefined || v === null || v === '') return true;
+  if (Array.isArray(v)) return !v.length;
+  if (typeof v === 'object') return !Object.keys(v).length;
+  return false;
 }
-function ptFotoDe(id) { return _ptFoto[id] || null; }
-
-/* ── LA COLA DE PENDIENTES ────────────────────────────────────────────────
-   Lo que este equipo ha escrito y el compañero todavía no ha recibido. Es lo
-   que permite que la desconexión no sea un fallo sino el estado normal: se
-   sigue trabajando, la cola crece, y al reconectar sale lo acumulado.
-   ⚠️ Va CIFRADA como las capturas: una operación lleva dentro el dato de una
-   persona, y en CESPA el de un menor. */
-function ptEncolar(id, ops) {
-  if (!id || !ops || !ops.length) return;
-  if (!_ptCola[id]) _ptCola[id] = [];
-  _ptCola[id] = _ptCola[id].concat(ops);
-  ptColaGuardar();
-}
-function ptPendientes(id) { return id ? ((_ptCola[id] || []).length) : Object.keys(_ptCola).reduce(function (n, k) { return n + _ptCola[k].length; }, 0); }
-function ptVaciarCola(id) { if (id) delete _ptCola[id]; else _ptCola = {}; ptColaGuardar(); }
-function ptColaGuardar() { try { return _lcEncSave('ptcola', _ptCola); } catch (e) { return Promise.resolve(); } }
-
-/* ── ¿ESTE CASO SE ESTÁ TRABAJANDO A CUATRO MANOS? ────────────────────────
-   La respuesta es «lleva marcas de versión», no «hay una sesión abierta»: un
-   caso que se compartió ayer y hoy está desvinculado SIGUE necesitando que sus
-   cambios se fusionen en vez de reemplazarse, porque la otra réplica existe y
-   puede volver a conectarse. Desvincular cierra el canal, no la historia. */
-function ptCompartido(c) { return ptTieneMarcas(c); }
-
-/* Mete un caso en una sesión compartida: sella todo lo que ya tiene y guarda la
-   foto de partida. A partir de aquí cada campo tiene una versión conocida. */
-function ptCompartir(c) {
-  if (!c) return null;
-  ptSellarCaso(c);
-  ptTomarFoto(c);
-  return c;
-}
-
-/* ── ESPEJO ───────────────────────────────────────────────────────────────
-   Deja `dst` con exactamente el contenido de `src`, SIN cambiar la referencia.
-   ⚠️ Hace falta porque el llamador se queda con el objeto que pasó y sigue
-   usándolo: `ojGenerarDesdeWizard` guarda y acto seguido produce el oficio con
-   ese mismo `wc`. Si el guardado fusionara aparte y dejara el objeto del
-   llamador como estaba, el documento saldría sin lo que acaba de llegar del
-   compañero — que es justo el fallo que esta fase viene a cerrar. */
-function ptEspejar(dst, src) {
-  if (!dst || !src || dst === src) return dst;
-  Object.keys(dst).forEach(function (k) { if (!(k in src)) delete dst[k]; });
-  Object.keys(src).forEach(function (k) { dst[k] = src[k]; });
-  return dst;
-}
-
-/* ── EL CORAZÓN DE LA FASE ────────────────────────────────────────────────
-   Guardar un caso compartido: en vez de escribir lo que el llamador trae, se
-   calcula QUÉ cambió respecto de su punto de partida y se aplica eso —y solo
-   eso— sobre la versión viva, que puede llevar dentro el trabajo del compañero.
-
-   `base` la pasa quien sabe que su copia es vieja: el wizard, con la foto que ya
-   tomaba al abrirse (`_wizBase`). Quien lee el caso fresco no pasa nada y se
-   compara contra la foto del último guardado.
-
-   Devuelve el objeto que hay que persistir. */
-function ptGuardarLocal(c, base) {
-  var vivo = DB.getCase(c.id);
-  if (!vivo) { ptTomarFoto(c); return c; }        // primera vez que se guarda
-  var ref = base || ptFotoDe(c.id) || vivo;
-  var ops = ptDiff(ref, c);
-  if (!ops.length) { ptEspejar(c, vivo); return vivo === c ? c : vivo; }
-  /* Se sella con el reloj propio y se aplica sobre el vivo. Si el llamador ya
-     mutó el vivo (las salidas documentales lo hacen), aplicar es un no-op: las
-     operaciones son idempotentes por construcción. */
-  ptSellarOps(vivo, ops);
-  ops.forEach(function (o) {
-    if (o.x) ptPonerRuta(vivo, o.r, undefined, true);
-    else ptPonerRuta(vivo, o.r, o.v, false);
-  });
-  ptEncolar(c.id, ops);
-  /* Y salen ya, si hay canal. ⚠️ No se espera a nada: sin compañero conectado
-     esto es un no-op y la cola sigue creciendo, que es el estado normal. */
-  ptEntregarPendientes();
-  ptEspejar(c, vivo);                              // el llamador se queda al día
-  return vivo;
+function ptFundir(local, remoto, opts) {
+  opts = opts || {};
+  var plano = ptAplanar(remoto || {}, '', {}, ''), n = 0, r;
+  for (r in plano) {
+    var v = plano[r];
+    if (!r || ptVacio(v)) continue;
+    if (opts.protegerDueno && ptEsDelDueno(r)) continue;
+    if (ptIgual(ptLeerRuta(local, r), v)) continue;
+    if (ptPonerRuta(local, r, v)) n++;
+  }
+  return n;
 }
 
 /* ── LO QUE LLEGA DEL COMPAÑERO ───────────────────────────────────────────
-   Punto de entrada único de las operaciones remotas. La fase 3 (transporte) lo
-   llamará al recibir; aquí ya funciona y se puede verificar sin canal.
-   ⚠️ Se guarda con `saveCases` y NO con `saveCase`: el caso ya está fusionado y
-   volver a pasarlo por `ptGuardarLocal` lo compararía contra su propia foto y
-   generaría operaciones PROPIAS por lo que acaba de escribir el compañero —el
-   equipo se reenviaría a sí mismo lo que le acaban de mandar. */
-function ptAplicarRemoto(casoId, ops, opts) {
-  var c = DB.getCase(casoId);
-  if (!c) return { aplicadas: 0, descartadas: 0, rechazadas: (ops || []).length, sinCaso: true };
-  var r = ptFusionar(c, ops, opts);
-  ptTomarFoto(c);
-  if (r.aplicadas) {
-    var a = DB.getCases().slice();
-    var i = a.findIndex(function (x) { return x.id === casoId; });
-    if (i >= 0) a[i] = c;
-    r.guardado = DB.saveCases(a);
-  }
-  return r;
+   Punto de entrada único. Devuelve el detalle de lo que entró y lo que se
+   actualizó, con sus nombres: la pantalla tiene que poder decir QUÉ llegó y no
+   un «listo» genérico. */
+function ptNombreDe(p) {
+  var n = '';
+  try { n = (fullName(p) || '').trim(); } catch (e) { n = ''; }
+  return n || 'Sin nombre';
+}
+function ptEtiquetaCaso(c) {
+  var q = c && c.capturados && c.capturados[0] ? ptNombreDe(c.capturados[0]) : '';
+  return (q && q !== 'Sin nombre') ? q : 'Captura sin capturado';
 }
 
-/* Cierra la sesión de un caso. ⚠️ NO borra el caso ni sus marcas: el
-   procedimiento queda completo en los dos teléfonos, como cualquier otra
-   captura, y solo se elimina con la acción explícita de siempre. */
-function ptTerminarSesion(casoId) {
-  if (_ptSesion && _ptSesion.casoId === casoId) _ptSesion = null;
-  var quedaban = ptPendientes(casoId);
-  return { pendientes: quedaban };
+async function ptRecibirPersonas(lista) {
+  var a = DB.getPersons().slice(), res = { nuevos: 0, actualizados: 0, nombres: [] }, i;
+  (lista || []).forEach(function (p) {
+    if (!p || !p.id) return;
+    i = a.findIndex(function (x) { return x.id === p.id; });
+    if (i < 0) {
+      var nuevo = ptParaEnviar(p);
+      if (!nuevo) return;
+      a.push(nuevo); res.nuevos++; res.nombres.push(ptNombreDe(nuevo));
+    } else if (ptFundir(a[i], p)) { res.actualizados++; res.nombres.push(ptNombreDe(a[i])); }
+  });
+  if (res.nuevos || res.actualizados) await DB.savePersons(a);
+  return res;
 }
 
+/* ⚠️ Se guarda con `saveCases` y NO con `saveCase`: el caso ya viene fundido y
+   pasarlo por el guardado de uno en uno no aportaría nada y sí volvería a
+   recorrer la lista entera por cada captura recibida. */
+async function ptRecibirCasos(lista) {
+  var a = DB.getCases().slice(), res = { nuevos: 0, actualizados: 0, nombres: [] }, i;
+  (lista || []).forEach(function (c) {
+    if (!c || !c.id) return;
+    i = a.findIndex(function (x) { return x.id === c.id; });
+    if (i < 0) {
+      var nuevo = ptParaEnviar(c);
+      if (!nuevo) return;
+      a.push(nuevo); res.nuevos++; res.nombres.push(ptEtiquetaCaso(nuevo));
+    } else if (ptFundir(a[i], c, { protegerDueno: true })) {
+      res.actualizados++; res.nombres.push(ptEtiquetaCaso(a[i]));
+    }
+  });
+  if (res.nuevos || res.actualizados) await DB.saveCases(a);
+  return res;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CÓDEC DE QR — CODIFICADOR
@@ -21428,10 +21157,11 @@ function _ptQrIntento(bin, an, al, tres) {
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MODO PATRULLA · FASE 3 — EL CANAL
+   MODO COMPARTIR · EL VÍNCULO — CÓMO SE JUNTAN LOS DOS TELÉFONOS
 
-   Las fases 1 y 2 dejaron el registro de cambios y la fusión. Aquí las
-   operaciones por fin SALEN del teléfono y llegan al del compañero.
+   Se enseñan un código en la pantalla, se lo escanean, y a partir de ahí uno
+   puede mandarle registros al otro. Sin internet, sin servidores, sin cuentas y
+   sin ningún intermediario.
 
    ⚠️ POR QUÉ WebRTC Y NO BLUETOOTH NI WI-FI DIRECT. La aplicación corre dentro
    de un WebView de Capacitor con carga remota, así que NO tiene acceso a la
@@ -21445,14 +21175,13 @@ function _ptQrIntento(bin, an, al, tres) {
    ⚠️ LA CONTRAPARTIDA, DICHA ENTERA: los dos teléfonos tienen que estar en la
    misma red Wi-Fi. En campo eso es que uno active su punto de acceso —NO hace
    falta cobertura ni datos móviles, solo la red que los une—. Quitarle ese paso
-   al usuario es el complemento nativo de la fase 6, y se decide DESPUÉS de
-   publicar.
+   al usuario exige el complemento nativo, y se decide DESPUÉS de publicar.
 
-   ⚠️ EL PERMISO DE CÁMARA NO ES SOLO PARA LEER EL QR. Sin él, el navegador
+   ⚠️ EL PERMISO DE CÁMARA NO ES SOLO PARA LEER EL CÓDIGO. Sin él, el navegador
    oculta la dirección local del equipo tras un nombre `.local` que el otro tiene
-   que resolver por multidifusión; con él, el descriptor lleva la IP real y la
-   conexión directa es mucho más fiable. Medido: 587 bytes sin permiso, 668 con
-   él y con la dirección de verdad dentro.
+   que resolver por multidifusión; con él, el descriptor lleva la dirección real
+   y la conexión directa es mucho más fiable. Medido: 587 bytes sin permiso, 668
+   con él y con la dirección de verdad dentro.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 var PT_PROTO = 1;                 // versión del formato de emparejamiento
@@ -21595,26 +21324,37 @@ async function ptRespuestaBytes(sid, ts, claveQr, desc) {
   return out;
 }
 
-/* ── ESTADO DE LA SESIÓN ───────────────────────────────────────────────────── */
+/* ── ESTADO DEL VÍNCULO ─────────────────────────────────────────────────────
+   ⚠️ El vínculo NO se ata a ninguna captura. Es entre los dos TELÉFONOS: una vez
+   vinculados se pueden pasar personas, capturas o las dos cosas, tantas veces
+   como quieran, sin volver a escanear nada. */
 var _ptPc = null;         // RTCPeerConnection
 var _ptCanal = null;      // RTCDataChannel
 var _ptClave = null;      // clave del canal (derivada)
 var _ptClaveQr = null;    // clave del emparejamiento (derivada)
 var _ptRaw = null;        // clave de sesión en bruto
 var _ptSid = null;
-var _ptRol = 0;           // 0 invita, 1 responde
+var _ptRol = 0;           // 0 muestra el código, 1 lo escanea
 var _ptLatido = null;
-var _ptEnVuelo = 0;       // operaciones entregadas y pendientes de confirmación
-var _ptEmparejado = false;// ya hay canal: la invitación se agotó
-var _ptAlEstado = null;   // la interfaz de la fase 4 se engancha aquí
+var _ptEmparejado = false;// ya hay canal: el código se agotó
+var _ptPar = null;        // identificador del equipo del compañero
+var _ptDesde = 0, _ptVisto = 0;
+var _ptEnvio = null;      // envío en curso, esperando la confirmación del otro
+var _ptEnvioReloj = null;
+var _ptBuf = [];          // registros llegados, todavía sin guardar
+var _ptRecibido = [];     // lo que ha entrado en este vínculo, para poder decirlo
+var _ptAlEstado = null;   // la pantalla se engancha aquí
+
+var PT_BUF_MAX = 400;     // tope de registros por envío: la memoria no es infinita
 
 function ptEstado() {
   return {
     activa: !!(_ptCanal && _ptCanal.readyState === 'open'),
-    caso: _ptSesion ? _ptSesion.casoId : null,
     rol: _ptRol,
-    pendientes: _ptSesion ? ptPendientes(_ptSesion.casoId) : 0,
-    desde: _ptSesion ? _ptSesion.desde : null
+    par: _ptPar,
+    desde: _ptDesde,
+    enviando: _ptEnvio ? (_ptEnvio.p + _ptEnvio.c) : 0,
+    recibido: _ptRecibido.slice()
   };
 }
 function _ptAviso() { if (typeof _ptAlEstado === 'function') { try { _ptAlEstado(ptEstado()); } catch (e) {} } }
@@ -21628,7 +21368,7 @@ function _ptNuevaPc() {
   };
   return pc;
 }
-/* Espera a que ICE termine de reunir direcciones: hacen falta DENTRO del QR,
+/* Espera a que ICE termine de reunir direcciones: hacen falta DENTRO del código,
    porque no hay ningún canal por el que mandarlas después. */
 function _ptEsperarIce(pc, ms) {
   return new Promise(function (res) {
@@ -21640,9 +21380,9 @@ function _ptEsperarIce(pc, ms) {
   });
 }
 
-/* ── QUIEN INVITA ──────────────────────────────────────────────────────────── */
-async function ptCrearInvitacion(casoId) {
-  ptCerrarCanal();
+/* ── QUIEN MUESTRA EL CÓDIGO ───────────────────────────────────────────────── */
+async function ptCrearInvitacion() {
+  ptDesvincular();
   _ptRol = 0; _ptSid = _ptAzar(4); _ptRaw = _ptAzar(32);
   _ptClaveQr = await ptSubclave(_ptRaw, 1);
   _ptClave = await ptSubclave(_ptRaw, 2);
@@ -21654,40 +21394,40 @@ async function ptCrearInvitacion(casoId) {
   var p = ptSdpPartes(_ptPc.localDescription.sdp);
   if (!p) return null;
   var ts = Date.now();
-  _ptSesion = { casoId: casoId, rol: 0, desde: ts, par: null };
+  _ptDesde = ts;
   return { bytes: ptInvitacionBytes(_ptSid, ts, _ptRaw, p), ts: ts };
 }
-/* Cierra el emparejamiento con la respuesta leída del QR del compañero. */
+/* Cierra el vínculo con la respuesta leída del código del compañero. */
 async function ptAceptarRespuesta(bytes) {
-  /* ⚠️ UNA invitación, UNA respuesta. Con el canal ya abierto no se admite una
+  /* ⚠️ UN código, UNA respuesta. Con el canal ya abierto no se admite una
      segunda: es lo que impide que un tercer equipo que alcanzara a fotografiar
-     el código entre después. */
-  if (_ptEmparejado) return { ok: false, motivo: 'la invitación ya se usó' };
+     la pantalla entre después. */
+  if (_ptEmparejado) return { ok: false, motivo: 'ya se usó' };
   var c = ptQrLeeCabecera(bytes);
-  if (!c || c.proto !== PT_PROTO || c.rol !== 1) return { ok: false, motivo: 'otro código' };
-  for (var i = 0; i < 4; i++) if (c.sid[i] !== _ptSid[i]) return { ok: false, motivo: 'de otra sesión' };
+  if (!c || c.proto !== PT_PROTO || c.rol !== 1) return { ok: false, motivo: 'no es de aquí' };
+  for (var i = 0; i < 4; i++) if (c.sid[i] !== _ptSid[i]) return { ok: false, motivo: 'es de otro vínculo' };
   var claro = await ptDescifrar(_ptClaveQr, c.cuerpo);
-  if (!claro) return { ok: false, motivo: 'no coincide con esta invitación' };
+  if (!claro) return { ok: false, motivo: 'no coincide con el que mostraste' };
   var p = ptDescDeBytes(claro);
-  if (!p) return { ok: false, motivo: 'código incompleto' };
+  if (!p) return { ok: false, motivo: 'quedó incompleto' };
   await _ptPc.setRemoteDescription({ type: 'answer', sdp: ptSdpArmar(p, false) });
   return { ok: true };
 }
 
-/* ── QUIEN RESPONDE ────────────────────────────────────────────────────────── */
-async function ptResponderInvitacion(bytes, casoId) {
+/* ── QUIEN LO ESCANEA ──────────────────────────────────────────────────────── */
+async function ptResponderInvitacion(bytes) {
   var c = ptQrLeeCabecera(bytes);
-  if (!c || c.proto !== PT_PROTO || c.rol !== 0) return { ok: false, motivo: 'otro código' };
-  /* ⚠️ Una invitación caduca. Un QR fotografiado hace una semana no puede seguir
+  if (!c || c.proto !== PT_PROTO || c.rol !== 0) return { ok: false, motivo: 'no es de aquí' };
+  /* ⚠️ Un código caduca. Uno fotografiado hace una semana no puede seguir
      abriendo el teléfono de nadie. */
-  if (Date.now() - c.ts > PT_INVIT_MS) return { ok: false, motivo: 'la invitación caducó' };
-  if (c.cuerpo.length < 33) return { ok: false, motivo: 'código incompleto' };
-  ptCerrarCanal();
+  if (Date.now() - c.ts > PT_INVIT_MS) return { ok: false, motivo: 'ya caducó' };
+  if (c.cuerpo.length < 33) return { ok: false, motivo: 'quedó incompleto' };
+  ptDesvincular();
   _ptRol = 1; _ptSid = c.sid; _ptRaw = c.cuerpo.slice(0, 32);
   _ptClaveQr = await ptSubclave(_ptRaw, 1);
   _ptClave = await ptSubclave(_ptRaw, 2);
   var p = ptDescDeBytes(c.cuerpo.slice(32));
-  if (!p) return { ok: false, motivo: 'código incompleto' };
+  if (!p) return { ok: false, motivo: 'quedó incompleto' };
   _ptPc = _ptNuevaPc();
   _ptPc.ondatachannel = function (e) { _ptPrepararCanal(e.channel); };
   await _ptPc.setRemoteDescription({ type: 'offer', sdp: ptSdpArmar(p, true) });
@@ -21695,7 +21435,7 @@ async function ptResponderInvitacion(bytes, casoId) {
   await _ptEsperarIce(_ptPc);
   var mio = ptSdpPartes(_ptPc.localDescription.sdp);
   if (!mio) return { ok: false, motivo: 'no se pudo preparar la respuesta' };
-  _ptSesion = { casoId: casoId || null, rol: 1, desde: Date.now(), par: null };
+  _ptDesde = Date.now();
   return { ok: true, bytes: await ptRespuestaBytes(_ptSid, Date.now(), _ptClaveQr, mio) };
 }
 
@@ -21704,20 +21444,22 @@ function _ptPrepararCanal(ch) {
   _ptCanal = ch;
   ch.binaryType = 'arraybuffer';
   ch.onopen = function () {
-    /* ⚠️ En cuanto hay canal, la invitación deja de valer: a partir de aquí un
-       tercer equipo que hubiera fotografiado el código ya no puede entrar. */
+    /* ⚠️ En cuanto hay canal, el código deja de valer: a partir de aquí un tercer
+       equipo que lo hubiera fotografiado ya no puede entrar. */
     _ptEmparejado = true;
+    _ptVisto = Date.now();
     _ptLatido = setInterval(function () { ptEnviar({ t: 'ping' }); }, PT_LATIDO_MS);
-    var _c0 = _ptSesion && _ptSesion.casoId ? DB.getCase(_ptSesion.casoId) : null;
-    ptEnviar({ t: 'hola', dev: ptDeviceId(), caso: _ptSesion ? _ptSesion.casoId : null,
-               huella: _c0 ? ptHuella(_c0) : null });
+    ptEnviar({ t: 'hola', dev: ptDeviceId() });
     _ptAviso();
-    ptEntregarPendientes();
   };
-  ch.onclose = function () { _ptPararLatido(); _ptEnVuelo = 0; _ptAviso(); };
+  ch.onclose = function () { _ptPararLatido(); _ptCerrarEnvio(); _ptAviso(); };
   ch.onmessage = function (e) { _ptRecibir(e.data); };
 }
 function _ptPararLatido() { if (_ptLatido) { clearInterval(_ptLatido); _ptLatido = null; } }
+function _ptCerrarEnvio() {
+  if (_ptEnvioReloj) { clearTimeout(_ptEnvioReloj); _ptEnvioReloj = null; }
+  _ptEnvio = null;
+}
 
 function ptEnviar(obj) {
   if (!_ptCanal || _ptCanal.readyState !== 'open' || !_ptClave) return Promise.resolve(false);
@@ -21726,110 +21468,94 @@ function ptEnviar(obj) {
     try { _ptCanal.send(c.buffer); return true; } catch (e) { return false; }
   });
 }
+
 async function _ptRecibir(datos) {
   var u = new Uint8Array(datos), claro = await ptDescifrar(_ptClave, u);
   /* ⚠️ Lo que no descifra se DESCARTA sin más. Un mensaje que no venga de quien
-     escaneó el QR no tiene por qué llegar hasta aquí, y si llega no se toca. */
+     escaneó el código no tiene por qué llegar hasta aquí, y si llega no se toca. */
   if (!claro) return;
   var m;
   try { m = JSON.parse(new TextDecoder().decode(claro)); } catch (e) { return; }
   if (!m || !m.t) return;
-  if (ptSesionCaducada()) { ptCerrarCanal(); return; }
-  if (_ptSesion) _ptSesion.visto = Date.now();
+  if (ptVinculoCaducado()) { ptDesvincular(); return; }
+  _ptVisto = Date.now();
+
   if (m.t === 'ping') { ptEnviar({ t: 'pong' }); return; }
   if (m.t === 'pong') return;
-  if (m.t === 'hola') {
-    if (_ptSesion) { _ptSesion.par = m.dev; if (!_ptSesion.casoId && m.caso) _ptSesion.casoId = m.caso; }
-    /* ⚠️ EL SALUDO NO ES SIMÉTRICO, Y NO PUEDE SERLO: quien invita sabe de qué
-       caso se trata y quien se une NO lo sabe hasta que se lo dicen. Por eso el
-       que reconcilia es siempre el que RECIBE un saludo con caso: mira si lo
-       tiene, y si lo tiene distinto ofrece su estado sellado. Un primer intento
-       puso a reconciliar al que invita, y como el saludo del otro llegaba sin
-       caso y sin huella, no se comparaba nada: los dos se quedaban con lo suyo. */
-    var cid = m.caso || (_ptSesion ? _ptSesion.casoId : null);
-    var c = cid ? DB.getCase(cid) : null;
-    if (m.caso) {
-      if (!c) ptEnviar({ t: 'falta', caso: m.caso });          // no lo tengo: mándamelo entero
-      else if (m.huella && m.huella !== ptHuella(c))            // lo tengo distinto: reconciliamos
-        ptEnviar({ t: 'estado', caso: c.id, ops: ptEstadoSellado(c) });
-    }
-    /* ⚠️ Y aquí, no antes: quien se une no sabe DE QUÉ CASO va hasta este
-       saludo, así que la entrega de pendientes del `onopen` no tenía a qué cola
-       mirar. Sin esta línea, lo que hubiera quedado sin entregar se quedaba
-       esperando a la siguiente escritura. */
-    ptEntregarPendientes();
-    _ptAviso(); return;
-  }
-  /* El compañero no tiene la captura: se le manda entera. La necesita para
-     generar sus documentos, también más tarde. */
-  if (m.t === 'falta' && m.caso) {
-    var cf = DB.getCase(m.caso);
-    if (cf) ptEnviar({ t: 'lleno', caso: cf });
+  if (m.t === 'hola') { _ptPar = m.dev || null; _ptAviso(); return; }
+
+  /* Un registro del envío en curso. ⚠️ Se acumula y NO se guarda todavía: un
+     envío se aplica entero o no se aplica, así el compañero no se queda con la
+     mitad de lo que mandó y sin saber cuál mitad. */
+  if (m.t === 'reg') {
+    if (_ptBuf.length < PT_BUF_MAX && m.d) _ptBuf.push(m);
     return;
   }
-  if (m.t === 'lleno' && m.caso && m.caso.id) {
-    var ya = DB.getCase(m.caso.id);
-    if (!ya) {
-      var a = DB.getCases().slice(); a.push(m.caso); await DB.saveCases(a);
-      ptTomarFoto(m.caso);
+  if (m.t === 'fin') {
+    var pers = [], cass = [];
+    _ptBuf.forEach(function (x) { (x.k === 'c' ? cass : pers).push(x.d); });
+    _ptBuf = [];
+    var rp = await ptRecibirPersonas(pers), rc = await ptRecibirCasos(cass);
+    _ptRecibido.push({ ts: Date.now(), p: rp, c: rc });
+    ptEnviar({ t: 'ok', id: m.id, p: rp, c: rc });
+    _ptAviso();
+    if (typeof ptAlRecibir === 'function') { try { ptAlRecibir(rp, rc); } catch (e) {} }
+    return;
+  }
+  /* El compañero confirma qué hizo con lo que se le mandó. Lo dice él, no lo
+     supone este teléfono: es la única forma de que «enviado» signifique
+     «llegó y quedó guardado». */
+  if (m.t === 'ok') {
+    if (_ptEnvio && _ptEnvio.id === m.id) {
+      var cb = _ptEnvio.cb;
+      _ptCerrarEnvio();
+      _ptAviso();
+      if (typeof cb === 'function') { try { cb({ ok: true, p: m.p, c: m.c }); } catch (e) {} }
     }
-    if (_ptSesion) _ptSesion.casoId = m.caso.id;
-    _ptAviso(); return;
-  }
-  if (m.t === 'estado' && m.caso && m.ops) {
-    await ptRecibirEstado(m);
-    _ptAviso(); return;
-  }
-  if (m.t === 'ops' && m.caso && m.ops) {
-    var r = ptAplicarRemoto(m.caso, m.ops);
-    if (r.guardado && r.guardado.then) { try { await r.guardado; } catch (e) {} }
-    ptEnviar({ t: 'ack', id: m.id, n: (m.ops || []).length });
-    _ptAviso(); return;
-  }
-  if (m.t === 'ack') {
-    /* Solo se retira de la cola lo que el compañero confirmó, y por la cabeza:
-       ⚠️ mientras se esperaba, el funcionario puede haber escrito más. */
-    if (_ptSesion && m.n > 0) {
-      var q = _ptCola[_ptSesion.casoId];
-      if (q) { q.splice(0, Math.min(m.n, q.length)); if (!q.length) delete _ptCola[_ptSesion.casoId]; ptColaGuardar(); }
-    }
-    _ptEnVuelo = 0; _ptAviso();
-    ptEntregarPendientes();
     return;
   }
 }
 
-/* Vacía la cola de pendientes por el canal. Lo llaman la apertura del canal y
-   cada guardado, así que basta con que exista canal para que salga solo. */
-function ptEntregarPendientes() {
-  if (!_ptSesion || !_ptCanal || _ptCanal.readyState !== 'open') return false;
-  /* ⚠️ Una sesión que lleva medio día sin actividad se cierra en vez de seguir
-     mandando: el procedimiento terminó hace horas y el canal no tiene por qué
-     seguir abierto. Lo pendiente NO se pierde — queda en la cola. */
-  if (ptSesionCaducada()) { ptCerrarCanal(); return false; }
-  if (_ptEnVuelo) return false;                        // ya hay un envío esperando confirmación
-  var id = _ptSesion.casoId, ops = _ptCola[id];
-  if (!id || !ops || !ops.length) return false;
-  _ptEnVuelo = ops.length;
-  ptEnviar({ t: 'ops', caso: id, ops: ops.slice(), id: uid() });
-  return true;
+/* ── EL ENVÍO ──────────────────────────────────────────────────────────────
+   Explícito, de uno en uno y con confirmación. `cb` recibe qué hizo el
+   compañero con cada registro. */
+function ptEnviarRegistros(personas, casos, cb) {
+  if (!ptEstado().activa) return { ok: false, motivo: 'sin vínculo' };
+  if (_ptEnvio) return { ok: false, motivo: 'hay un envío en curso' };
+  personas = personas || []; casos = casos || [];
+  if (!personas.length && !casos.length) return { ok: false, motivo: 'nada que enviar' };
+  var id = uid();
+  _ptEnvio = { id: id, p: personas.length, c: casos.length, cb: cb, ts: Date.now() };
+  /* ⚠️ Si el compañero no contesta no se queda «enviando» para siempre: se
+     avisa y se puede volver a intentar. Un estado que no termina nunca es
+     indistinguible de uno que falló. */
+  _ptEnvioReloj = setTimeout(function () {
+    var f = _ptEnvio && _ptEnvio.cb;
+    _ptCerrarEnvio(); _ptAviso();
+    if (typeof f === 'function') { try { f({ ok: false, motivo: 'el compañero no respondió' }); } catch (e) {} }
+  }, 30000);
+  var cadena = Promise.resolve();
+  personas.forEach(function (p) { cadena = cadena.then(function () { return ptEnviar({ t: 'reg', k: 'p', d: ptParaEnviar(p) }); }); });
+  casos.forEach(function (c) { cadena = cadena.then(function () { return ptEnviar({ t: 'reg', k: 'c', d: ptParaEnviar(c) }); }); });
+  cadena.then(function () { return ptEnviar({ t: 'fin', id: id }); });
+  _ptAviso();
+  return { ok: true, id: id };
 }
 
-/* ⚠️ Desvincular cierra el CANAL, no la historia: el caso, sus marcas de versión
-   y lo que quede sin entregar siguen en los dos teléfonos, y el procedimiento se
-   puede terminar en cualquiera de los dos. Es la misma regla de la fase 2. */
-function ptCerrarCanal() {
+/* ⚠️ Desvincular cierra el CANAL y nada más: lo que ya se recibió está guardado
+   en este teléfono como cualquier otro registro suyo, y no se toca. */
+function ptDesvincular() {
   _ptPararLatido();
+  _ptCerrarEnvio();
   try { if (_ptCanal) _ptCanal.close(); } catch (e) {}
   try { if (_ptPc) _ptPc.close(); } catch (e) {}
-  _ptCanal = null; _ptPc = null; _ptEnVuelo = 0; _ptEmparejado = false;
-  _ptClave = null; _ptClaveQr = null; _ptRaw = null; _ptSid = null;
+  _ptCanal = null; _ptPc = null; _ptEmparejado = false; _ptBuf = [];
+  _ptClave = null; _ptClaveQr = null; _ptRaw = null; _ptSid = null; _ptPar = null;
   _ptAviso();
 }
-function ptSesionCaducada() {
-  if (!_ptSesion) return false;
-  var ult = _ptSesion.visto || _ptSesion.desde;
-  return (Date.now() - ult) > PT_SESION_MS;
+function ptVinculoCaducado() {
+  if (!_ptDesde) return false;
+  return (Date.now() - (_ptVisto || _ptDesde)) > PT_SESION_MS;
 }
 
 /* ── LECTURA DEL QR DESDE LA CÁMARA ────────────────────────────────────────
@@ -21872,152 +21598,77 @@ function ptQrSvg(bytes, lado) {
          '<path fill="#000" d="' + p.join('') + '"/></svg>';
 }
 
-
-
 /* ═══════════════════════════════════════════════════════════════════════════
-   MODO PATRULLA · FASE 5 — RECUPERACIÓN Y REANUDACIÓN
+   MODO COMPARTIR · LA PANTALLA
 
-   La cola de pendientes (fase 2) hace que una desconexión corta no se note. Esta
-   fase cubre lo otro: los días. Que uno cierre la aplicación, que el teléfono se
-   reinicie, que trabajen cada uno por su lado toda una tarde, o que a uno se le
-   haya vaciado la cola. Al volver a conectar, los dos tienen que acabar con lo
-   mismo — y sin que nadie pierda nada.
+   ⚠️ ES UNA FUNCIÓN APARTE, NO UNA ACCIÓN DE UNA CAPTURA. Vive en el panel
+   lateral, junto a Capturas y Personas, porque lo que se comparte no pertenece a
+   un procedimiento concreto: la mayoría de las veces son PERSONAS que el
+   compañero acaba de registrar y que todavía no están en ninguna captura. El
+   menú de una captura se queda en sus cuatro entradas y no vuelve a crecer.
 
-   ⚠️ LO QUE NO SE PUEDE REANUDAR, Y HAY QUE DECIRLO: la conexión en sí. Los
-   certificados y las direcciones que se intercambiaron en los códigos mueren con
-   la aplicación, así que volver a juntarse es volver a escanear un código. Lo
-   que SÍ sobrevive es todo lo demás: la captura, su historial de versiones y lo
-   que quedó sin entregar.
+   ⚠️ NI UNA PALABRA TÉCNICA EN PANTALLA. El funcionario no tiene por qué saber
+   qué hay debajo: ve «el compañero», «el código», «enviar» y «vincular».
 ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── ANTI-ENTROPÍA ─────────────────────────────────────────────────────────
-   La cola es el camino rápido y este es la red de seguridad. Cada lado manda su
-   estado ENTERO con la versión de cada campo; el otro lo funde con la misma
-   regla de siempre (gana el sello más reciente, campo por campo). Con un
-   intercambio en cada sentido convergen, hayan pasado las horas que hayan
-   pasado — no hace falta que ninguna cola siga existiendo. */
-function ptEstadoSellado(c) {
-  var plano = ptAplanar(ptLimpio(c), '', {}, ''), m = ptMarcas(c), ops = [], k;
-  for (k in plano) if (m[k]) ops.push({ r: k, v: plano[k], s: m[k] });
-  /* ⚠️ Las rutas que están en el historial y NO en el caso son BORRADOS, y hay
-     que mandarlos: sin ellos, el otro lado devolvería el dato que este acaba de
-     retirar y la persona borrada reaparecería. */
-  for (k in m) if (!(k in plano)) ops.push({ r: k, x: 1, s: m[k] });
-  return ops;
-}
-
-/* Une el estado que manda el compañero y devuelve el propio UNA vez, para que
-   los dos acaben iguales. El `eco` acota el intercambio a una vuelta por lado:
-   sin él, dos réplicas que no lleguen a converger se estarían mandando su estado
-   indefinidamente. */
-async function ptRecibirEstado(m) {
-  var c = DB.getCase(m.caso);
-  if (!c) return { aplicadas: 0, sinCaso: true };
-  var r = ptFusionar(c, m.ops || []);
-  ptTomarFoto(c);
-  if (r.aplicadas) {
-    var a = DB.getCases().slice(), i = a.findIndex(function (x) { return x.id === c.id; });
-    if (i >= 0) a[i] = c;
-    try { await DB.saveCases(a); } catch (e) {}
-  }
-  if (!m.eco) ptEnviar({ t: 'estado', caso: c.id, ops: ptEstadoSellado(DB.getCase(c.id) || c), eco: 1 });
-  return r;
-}
-
-/* ── REANUDACIÓN ───────────────────────────────────────────────────────────
-   Tras cerrar la aplicación no queda sesión, pero sí queda la cola —cifrada, en
-   su clave propia— y las marcas de versión del caso. Lo que hace falta es que el
-   funcionario LO VEA: un cambio sin entregar que nadie enseña es indistinguible
-   de un cambio entregado. */
-function ptCasoPendiente() {
-  for (var k in _ptCola) if (_ptCola[k] && _ptCola[k].length) return k;
-  return null;
-}
-function ptResumen() {
-  var e = ptEstado(), id = _ptSesion ? _ptSesion.casoId : ptCasoPendiente();
-  return { activa: e.activa, casoId: id, pendientes: id ? ptPendientes(id) : 0 };
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   MODO PATRULLA · FASE 4 — LA INTERFAZ
-
-   Hasta aquí el modo patrulla funcionaba entero pero **no lo podía alcanzar
-   nadie**: no había pantalla que abriera la cámara ni que enseñara el código.
-   Esta fase es la puerta.
-
-   ⚠️ NI UNA PALABRA TÉCNICA EN LA PANTALLA. El funcionario no tiene por qué
-   saber qué es una IP, un puerto, un canal ni una sesión: ve «el compañero»,
-   «el código» y «los cambios sin entregar». El vocabulario de dentro se queda
-   dentro.
-═══════════════════════════════════════════════════════════════════════════ */
-
-var _ptUiPaso = 'inicio';    // inicio · invitando · respondiendo · conectado
-var _ptUiCaso = null;        // el caso desde el que se entró (quien invita)
+var _ptUiPaso = 'inicio';    // inicio · mostrando · respondiendo · vinculado
 var _ptUiBytes = null;       // el código que se está enseñando ahora mismo
 var _ptUiTs = 0;             // cuándo se generó, para la cuenta atrás
+var _ptSel = { p: {}, c: {} };  // qué está marcado para enviar
 var _ptScanRaf = null, _ptScanStream = null, _ptScanCb = null;
 
 var PT_IC = {
   mostrar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>',
   escanear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>',
-  patrulla:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-5.6 6.5-5.6s6.5 2.3 6.5 5.6"/><path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2"/><path d="M18 14.8c2.1.7 3.5 2.5 3.5 5.2"/></svg>'
+  compartir:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>'
 };
 
-/* ── ENTRADA ───────────────────────────────────────────────────────────────
-   Dos puertas, porque son dos situaciones distintas: quien tiene la captura
-   entra desde ella (a invitar) y quien todavía no la tiene entra desde el menú
-   general (a unirse). ⚠️ Sin la segunda, el compañero no tendría por dónde
-   empezar: no puede abrir el menú de un caso que no está en su teléfono. */
-function ptAbrirPatrulla(casoId) {
-  _ptUiCaso = casoId || null;
-  _ptUiPaso = ptEstado().activa ? 'conectado' : 'inicio';
-  go('patrulla');
-}
-function ptUiVolver() {
-  ptScanCerrar();
-  if (_ptUiCaso && DB.getCase(_ptUiCaso)) abrirDossierCaso(_ptUiCaso); else go('capturas');
+/* ── ENTRADA ─────────────────────────────────────────────────────────────── */
+function ptAbrirCompartir() {
+  _ptUiPaso = ptEstado().activa ? 'vinculado' : 'inicio';
+  go('compartir');
 }
 
-/* ── LA PANTALLA ───────────────────────────────────────────────────────────── */
-function renderPatrulla() {
-  var e = ptEstado(), pane = document.getElementById('pt-pane');
-  var caso = _ptUiCaso ? DB.getCase(_ptUiCaso) : (e.caso ? DB.getCase(e.caso) : null);
-  var sub = document.getElementById('pt-sub');
-  if (sub) sub.textContent = caso
-    ? ((caso.capturados && caso.capturados[0]) ? fullName(caso.capturados[0]) : 'Captura sin capturado')
-    : 'Para unirte a la captura del compañero';
-  if (e.activa) _ptUiPaso = 'conectado';
-  else if (_ptUiPaso === 'conectado') _ptUiPaso = 'inicio';
-  pane.innerHTML = _ptUiPaso === 'conectado' ? _ptUiConectado(e, caso)
-    : _ptUiPaso === 'invitando' ? _ptUiCodigo(true)
+/* ── LA PANTALLA ─────────────────────────────────────────────────────────── */
+function renderCompartir() {
+  var e = ptEstado(), pane = document.getElementById('cp-pane');
+  if (!pane) return;
+  var sub = document.getElementById('cp-sub');
+  if (sub) sub.textContent = e.activa
+    ? 'Vinculado con el compañero'
+    : 'Pásale al compañero las personas y capturas que ya tienes';
+  if (e.activa) _ptUiPaso = 'vinculado';
+  else if (_ptUiPaso === 'vinculado') _ptUiPaso = 'inicio';
+  pane.innerHTML = _ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
+    : _ptUiPaso === 'mostrando' ? _ptUiCodigo(true)
     : _ptUiPaso === 'respondiendo' ? _ptUiCodigo(false)
-    : _ptUiInicio(caso);
+    : _ptUiInicio();
 }
 
-function _ptUiInicio(caso) {
-  var h = '<div class="card"><div class="st">Cómo funciona</div>' +
+function _ptUiInicio() {
+  return '<div class="card"><div class="st">Para qué sirve</div>' +
+    '<p class="txd txs">Cada uno registra en su teléfono las personas que le tocaron.</p>' +
+    '<p class="txd txs">Al vincularse se las pasan, y quedan guardadas en los dos equipos.</p>' +
+    '<p class="txd txs">Quien arme la captura las agrega con «Buscar existente», sin volver a escribirlas.</p>' +
+    '</div>' +
+    '<div class="card"><div class="st">Antes de vincular</div>' +
     '<p class="txd txs">Los dos teléfonos deben estar en la misma red wifi.</p>' +
-    '<p class="txd txs">Si no hay, uno activa su zona wifi. No hace falta internet ni datos.</p></div>' +
-    '<div class="pt-paso">';
-  if (caso) {
-    h += '<button class="pt-op" onclick="ptUiInvitar()">' +
-      '<div class="lic">' + PT_IC.mostrar + '</div>' +
-      '<div><div class="ti">Mostrar el código</div>' +
-      '<div class="de">El compañero lo escanea y se suma a esta captura</div></div></button>';
-  }
-  h += '<button class="pt-op" onclick="ptUiUnirse()">' +
-    '<div class="lic">' + PT_IC.escanear + '</div>' +
-    '<div><div class="ti">Escanear el código del compañero</div>' +
-    '<div class="de">Para sumarte a una captura que él ya empezó</div></div></button>' +
+    '<p class="txd txs">Si no hay ninguna, uno activa su zona wifi. No hace falta internet ni datos.</p></div>' +
+    '<div class="pt-paso">' +
+      '<button class="pt-op" onclick="ptUiMostrar()">' +
+        '<div class="lic">' + PT_IC.mostrar + '</div>' +
+        '<div><div class="ti">Mostrar el código</div>' +
+        '<div class="de">El compañero lo escanea y quedan vinculados</div></div></button>' +
+      '<button class="pt-op" onclick="ptUiEscanear()">' +
+        '<div class="lic">' + PT_IC.escanear + '</div>' +
+        '<div><div class="ti">Escanear el código del compañero</div>' +
+        '<div class="de">Si el código lo está mostrando él</div></div></button>' +
     '</div>';
-  if (!caso) h += '<p class="txd txs" style="margin-top:12px">Para mostrar un código, abre una captura ' +
-    'y toca «Trabajar con el compañero».</p>';
-  return h;
 }
 
-/* El código en pantalla. ⚠️ Se dice SIEMPRE cuánto le queda: una invitación
-   caduca a los 3 minutos y, sin decirlo, el compañero se encontraría con un
-   «la invitación caducó» que parece un fallo de la aplicación. */
+/* El código en pantalla. ⚠️ Se dice SIEMPRE cuánto le queda: un código caduca a
+   los 3 minutos y, sin decirlo, el compañero se encontraría con un «ya caducó»
+   que parece un fallo de la aplicación. */
 function _ptUiCodigo(esInvitacion) {
   var quedan = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
   var min = Math.floor(quedan / 60000), seg = Math.floor((quedan % 60000) / 1000);
@@ -22025,8 +21676,8 @@ function _ptUiCodigo(esInvitacion) {
   return '<div class="card">' +
     '<div class="st">' + (esInvitacion ? 'Enséñale este código' : 'Enséñale tu respuesta') + '</div>' +
     '<p class="txd txs">' + (esInvitacion
-      ? 'El compañero abre «Trabajar con el compañero» en su teléfono y escanea este código.'
-      : 'El compañero escanea este código con su teléfono y quedan conectados.') + '</p>' +
+      ? 'El compañero abre «Modo compartir» en su teléfono y escanea este código.'
+      : 'El compañero escanea este código y quedan vinculados.') + '</p>' +
     '<div class="pt-qr">' + svg + '</div>' +
     '<p class="txd txs" style="text-align:center;margin-top:10px" id="pt-cuenta">' +
       (quedan > 0 ? ('Caduca en ' + min + ':' + (seg < 10 ? '0' : '') + seg)
@@ -22034,88 +21685,167 @@ function _ptUiCodigo(esInvitacion) {
     '</div>' +
     (esInvitacion
       ? '<button class="btn bp bbl" onclick="ptUiEscanearRespuesta()">Ahora escanea su respuesta</button>' +
-        '<button class="btn bs bbl" onclick="ptUiInvitar()">Generar otro código</button>'
+        '<button class="btn bs bbl" onclick="ptUiMostrar()">Generar otro código</button>'
       : '<p class="txd txs" style="text-align:center">Esperando a que el compañero lo escanee…</p>') +
     '<button class="btn bs bbl" onclick="ptUiCancelar()">Cancelar</button>';
 }
 
-function _ptUiConectado(e, caso) {
-  var pend = e.pendientes;
-  return '<div class="pt-est"><div class="pe-pt"></div><div>' +
-      '<div class="pe-ti">Conectado con el compañero</div>' +
-      '<div class="pe-de">' + (pend ? (pend + ' cambio' + (pend === 1 ? '' : 's') + ' en camino')
-                                    : 'Todo lo escrito está entregado') + '</div>' +
-    '</div></div>' +
-    '<div class="card"><div class="st">Qué pasa a partir de ahora</div>' +
-    '<p class="txd txs">Los dos pueden diligenciar la misma captura a la vez.</p>' +
-    '<p class="txd txs">Lo que escriba cada uno le llega al otro solo, sin mandar nada.</p>' +
-    '<p class="txd txs">Si se corta el wifi se sigue trabajando: lo pendiente se entrega al reconectar.</p></div>' +
-    (caso ? '<button class="btn bp bbl" onclick="abrirDossierCaso(\'' + escAttr(caso.id) + '\')">Ir al expediente</button>' : '') +
-    '<button class="btn bs bbl" onclick="ptUiTerminar()">Terminar la colaboración</button>';
+/* ── VINCULADOS: QUÉ SE MANDA ────────────────────────────────────────────── */
+function _ptUiVinculado(e) {
+  var np = _ptContar('p'), nc = _ptContar('c'), n = np + nc;
+  var h = '<div class="pt-est"><div class="pe-pt"></div><div>' +
+      '<div class="pe-ti">Vinculado con el compañero</div>' +
+      '<div class="pe-de">' + (e.enviando ? 'Enviando…' : 'Marca lo que quieras enviarle') + '</div>' +
+    '</div></div>';
+  h += _ptUiRecibido(e);
+  h += _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste');
+  h += _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro');
+  h += '<button class="btn bp bbl" id="cp-enviar" onclick="ptUiEnviar()"' + (n && !e.enviando ? '' : ' disabled') + '>' +
+       (e.enviando ? 'Enviando…' : (n ? ('Enviar al compañero (' + n + ')') : 'Enviar al compañero')) + '</button>';
+  h += '<button class="btn bs bbl" onclick="ptUiDesvincular()">Desvincular</button>';
+  return h;
 }
 
-/* ── LAS DOS MITADES DEL EMPAREJAMIENTO ─────────────────────────────────────── */
-async function ptUiInvitar() {
-  var c = _ptUiCaso ? DB.getCase(_ptUiCaso) : null;
-  if (!c) { toast('Abre una captura para poder invitar'); return; }
+function _ptUiGrupo(k, titulo, pista) {
+  var lista = _ptRegistros(k);
+  var h = '<div class="card"><div class="st">' + titulo + '</div>';
+  if (!lista.length) return h + '<p class="txd txs">Todavía no tienes ninguna.</p></div>';
+  h += '<p class="txd txs">' + pista + '</p>' +
+       '<div class="cp-tools"><button class="btn bs cp-mini" onclick="ptUiMarcarTodo(\'' + k + '\')">' +
+       (_ptContar(k) === lista.length ? 'Quitar las marcas' : 'Marcar todas') + '</button></div>' +
+       '<div class="cp-list">';
+  lista.forEach(function (it) {
+    var m = !!_ptSel[k][it.id];
+    h += '<label class="cp-it' + (m ? ' on' : '') + '">' +
+         '<input type="checkbox" data-k="' + k + '" data-id="' + escAttr(it.id) + '"' + (m ? ' checked' : '') +
+         ' onchange="ptUiMarcar(\'' + k + '\',this.dataset.id,this.checked)">' +
+         '<span class="cp-b"><span class="cp-ti">' + escHtml(it.ti) + '</span>' +
+         '<span class="cp-de">' + escHtml(it.de) + '</span></span></label>';
+  });
+  return h + '</div></div>';
+}
+
+/* Lo que ya entró en este vínculo. ⚠️ Que algo haya llegado tiene que VERSE: si
+   no, recibir es indistinguible de no recibir. */
+function _ptUiRecibido(e) {
+  var r = (e && e.recibido) || [];
+  if (!r.length) return '';
+  var nombres = [], nuevos = 0, act = 0;
+  r.forEach(function (x) {
+    ['p', 'c'].forEach(function (k) {
+      nuevos += x[k].nuevos; act += x[k].actualizados;
+      x[k].nombres.forEach(function (n) { if (nombres.indexOf(n) < 0) nombres.push(n); });
+    });
+  });
+  if (!nombres.length) return '';
+  return '<div class="card"><div class="st">Te llegó del compañero</div>' +
+    '<p class="txd txs">' + escHtml(nombres.slice(0, 12).join(' · ')) +
+    (nombres.length > 12 ? ' y ' + (nombres.length - 12) + ' más' : '') + '</p>' +
+    '<p class="txd txs">' + nuevos + ' nuevo' + (nuevos === 1 ? '' : 's') +
+    ' y ' + act + ' actualizado' + (act === 1 ? '' : 's') + ', ya guardados aquí.</p></div>';
+}
+
+/* ── LOS REGISTROS QUE SE PUEDEN ENVIAR ──────────────────────────────────── */
+function _ptRegistros(k) {
+  var out = [];
+  if (k === 'p') {
+    /* Al revés que en el registro: el último que se diligenció es justamente el
+       que se quiere pasar, así que va primero y no al final de la lista. */
+    DB.getPersons().slice().reverse().forEach(function (p) {
+      if (!p || !p.id) return;
+      var doc = ((p.tipoDoc || 'CC') + ' ' + (p.numDoc || '')).trim();
+      out.push({ id: p.id, ti: ptNombreDe(p), de: p.numDoc ? doc : 'Sin identificación registrada' });
+    });
+  } else {
+    DB.getCases().slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); })
+      .forEach(function (c) {
+        if (!c || !c.id) return;
+        var t = (c.tipo === 'OJ' || c.ojv === 2) ? 'Orden judicial' : (c.tipo === 'CESPA' ? 'CESPA' : 'URI');
+        out.push({ id: c.id, ti: ptEtiquetaCaso(c), de: t + ' · ' + (c.fechaProc || '').slice(0, 10) });
+      });
+  }
+  return out;
+}
+function _ptContar(k) { return Object.keys(_ptSel[k]).filter(function (i) { return _ptSel[k][i]; }).length; }
+
+function ptUiMarcar(k, id, on) {
+  if (on) _ptSel[k][id] = true; else delete _ptSel[k][id];
+  renderCompartir();
+}
+function ptUiMarcarTodo(k) {
+  var lista = _ptRegistros(k), todas = _ptContar(k) === lista.length;
+  _ptSel[k] = {};
+  if (!todas) lista.forEach(function (it) { _ptSel[k][it.id] = true; });
+  renderCompartir();
+}
+
+/* ── LAS DOS MITADES DEL VÍNCULO ─────────────────────────────────────────── */
+async function ptUiMostrar() {
   toast('Preparando el código…');
-  /* El caso entra en una sesión compartida ANTES de enseñar nada: a partir de
-     aquí cada campo tiene versión, que es lo que permite fusionar en vez de
-     reemplazar. Si el emparejamiento no llega a cuajar no pasa nada — el caso
-     con marcas se guarda y se abre igual. */
-  if (!ptCompartido(c)) { ptCompartir(c); await DB.saveCases(DB.getCases()); }
-  var inv = await ptCrearInvitacion(_ptUiCaso);
-  if (!inv) { toast('No se pudo preparar la conexión'); return; }
-  _ptUiBytes = inv.bytes; _ptUiTs = inv.ts; _ptUiPaso = 'invitando';
-  renderPatrulla(); _ptUiCuenta();
+  var inv = await ptCrearInvitacion();
+  if (!inv) { toast('No se pudo preparar el código'); return; }
+  _ptUiBytes = inv.bytes; _ptUiTs = inv.ts; _ptUiPaso = 'mostrando';
+  renderCompartir(); _ptUiCuenta();
 }
 function ptUiEscanearRespuesta() {
   ptScanAbrir('Apunta al código del compañero', async function (bytes) {
     var r = await ptAceptarRespuesta(bytes);
     if (!r.ok) { toast('Ese código ' + r.motivo); return false; }
-    toast('Conectando con el compañero…');
+    toast('Vinculando con el compañero…');
     return true;
   });
 }
-function ptUiUnirse() {
+function ptUiEscanear() {
   ptScanAbrir('Apunta al código que muestra el compañero', async function (bytes) {
-    var r = await ptResponderInvitacion(bytes, _ptUiCaso);
+    var r = await ptResponderInvitacion(bytes);
     if (!r.ok) { toast('Ese código ' + r.motivo); return false; }
     _ptUiBytes = r.bytes; _ptUiTs = Date.now(); _ptUiPaso = 'respondiendo';
-    renderPatrulla(); _ptUiCuenta();
+    renderCompartir(); _ptUiCuenta();
     return true;
   });
 }
-function ptUiCancelar() { ptCerrarCanal(); _ptUiPaso = 'inicio'; _ptUiBytes = null; renderPatrulla(); }
-function ptUiTerminar() {
-  var pend = ptEstado().pendientes;
-  /* ⚠️ Si queda algo sin entregar se dice, y se dice qué pasa con ello: que se
-     guarda y sale al volver a conectar. Cerrar en silencio con trabajo pendiente
-     es exactamente el silencio que este proyecto lleva años quitando. */
-  var msg = pend
-    ? 'Quedan ' + pend + ' cambio' + (pend === 1 ? '' : 's') + ' sin entregar. ' +
-      'Se guardan y salen solos cuando vuelvan a conectarse.'
-    : 'Cada uno sigue con su copia de la captura. Pueden volver a conectarse cuando quieran.';
+function ptUiCancelar() { ptDesvincular(); _ptUiPaso = 'inicio'; _ptUiBytes = null; renderCompartir(); }
+
+/* ── ENVIAR ──────────────────────────────────────────────────────────────── */
+function ptUiEnviar() {
+  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
+  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
+  var r = ptEnviarRegistros(personas, casos, function (res) {
+    if (!res.ok) { toast('No se pudo enviar: ' + res.motivo); renderCompartir(); return; }
+    var n = res.p.nuevos + res.p.actualizados + res.c.nuevos + res.c.actualizados;
+    /* ⚠️ Lo que se dice es lo que el COMPAÑERO hizo con el envío, no lo que este
+       teléfono mandó: «enviado» tiene que significar «llegó y quedó guardado». */
+    toast(n ? ('El compañero recibió ' + n + ' registro' + (n === 1 ? '' : 's'))
+            : 'El compañero ya tenía todo lo que le enviaste');
+    _ptSel = { p: {}, c: {} };
+    renderCompartir();
+  });
+  if (!r.ok) { toast('No se pudo enviar: ' + r.motivo); return; }
+  toast('Enviando al compañero…');
+  renderCompartir();
+}
+
+function ptUiDesvincular() {
   openModal(
-    '<div class="mh"><h2>Terminar la colaboración</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
-    '<p class="txd txs">' + escHtml(msg) + '</p>' +
+    '<div class="mh"><h2>Desvincular</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="txd txs">Lo que ya te llegó se queda guardado aquí. Pueden volver a vincularse cuando quieran.</p>' +
     '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
-      '<button class="btn bs" onclick="closeModal()">Seguir trabajando</button>' +
-      '<button class="btn bp" onclick="ptUiTerminarSi()">Terminar</button>' +
+      '<button class="btn bs" onclick="closeModal()">Seguir vinculados</button>' +
+      '<button class="btn bp" onclick="ptUiDesvincularSi()">Desvincular</button>' +
     '</div>');
 }
-function ptUiTerminarSi() {
+function ptUiDesvincularSi() {
   closeModal();
-  ptCerrarCanal();
-  if (_ptSesion) ptTerminarSesion(_ptSesion.casoId);
-  _ptUiPaso = 'inicio'; _ptUiBytes = null;
-  renderPatrulla(); toast('Colaboración terminada');
+  ptDesvincular();
+  _ptUiPaso = 'inicio'; _ptUiBytes = null; _ptRecibido = [];
+  renderCompartir(); toast('Desvinculado');
 }
+
 /* Cuenta atrás del código: se repinta solo el renglón, no la pantalla — repintar
-   entero recrearía el SVG del código en cada segundo. */
+   entero recrearía el código en cada segundo. */
 function _ptUiCuenta() {
   var el = document.getElementById('pt-cuenta');
-  if (!el || (_ptUiPaso !== 'invitando' && _ptUiPaso !== 'respondiendo')) return;
+  if (!el || (_ptUiPaso !== 'mostrando' && _ptUiPaso !== 'respondiendo')) return;
   var q = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
   var m = Math.floor(q / 60000), s = Math.floor((q % 60000) / 1000);
   el.textContent = q > 0 ? ('Caduca en ' + m + ':' + (s < 10 ? '0' : '') + s) : 'Caducó — genera uno nuevo';
@@ -22150,7 +21880,7 @@ function _ptScanBucle() {
   if (!bytes) return;
   /* ⚠️ Se cierra la puerta ANTES de procesar: el bucle sigue corriendo y sin
      esto el mismo código se leería veinte veces mientras se resuelve la promesa,
-     con veinte emparejamientos en marcha. */
+     con veinte vínculos en marcha. */
   _ptScanOcupado = true;
   var cb = _ptScanCb;
   Promise.resolve(cb(bytes)).then(function (ok) {
@@ -22159,32 +21889,44 @@ function _ptScanBucle() {
   }, function () { _ptScanOcupado = false; });
 }
 
+/* ── LO QUE PASA AL RECIBIR ────────────────────────────────────────────────
+   ⚠️ Las listas que estén a la vista se repintan: una persona que llega y no
+   aparece en Personas hasta que se cambie de pantalla parece que no llegó. */
+function ptAlRecibir(rp, rc) {
+  var n = rp.nuevos + rp.actualizados + rc.nuevos + rc.actualizados;
+  if (!n) return;
+  var partes = [];
+  if (rp.nuevos + rp.actualizados) partes.push((rp.nuevos + rp.actualizados) + ' persona' + ((rp.nuevos + rp.actualizados) === 1 ? '' : 's'));
+  if (rc.nuevos + rc.actualizados) partes.push((rc.nuevos + rc.actualizados) + ' captura' + ((rc.nuevos + rc.actualizados) === 1 ? '' : 's'));
+  toast('Te llegó del compañero: ' + partes.join(' y '));
+  try { if (_on('personas')) renderPersonas(); } catch (e) {}
+  try { if (_on('capturas')) renderCases(); } catch (e) {}
+}
+function _on(id) {
+  var s = document.getElementById('screen-' + id);
+  return !!(s && s.classList.contains('on'));
+}
+
 /* ── LA FRANJA DE ESTADO ───────────────────────────────────────────────────
-   Discreta y permanente mientras dure la colaboración: sin ella, que lo que
-   escribe uno le llegue al otro sería indistinguible de que no le llegue. */
-/* Se llama al desbloquear, cuando la cola cifrada ya está cargada. */
-function ptBarraArranque() { try { ptBarra(); } catch (e) {} }
+   Discreta y permanente mientras dure el vínculo: sin ella, estar vinculado
+   sería indistinguible de no estarlo en cuanto se sale de esta pantalla. */
 function ptBarra() {
   var b = document.getElementById('pt-barra');
   if (!b) return;
-  var r = ptResumen(), e = { activa: r.activa }, pend = r.pendientes;
-  var hay = !!(r.activa || pend);
-  b.classList.toggle('on', hay);
-  document.body.classList.toggle('pt', hay);
-  if (!hay) return;
-  b.classList.toggle('pend', !e.activa);
-  b.querySelector('.pb-txt').innerHTML = e.activa
-    ? ('<b>Trabajando con el compañero</b> · ' + (pend ? (pend + ' cambio' + (pend === 1 ? '' : 's') + ' en camino') : 'todo entregado'))
-    : ('<b>Sin conexión con el compañero</b> · ' + pend + ' cambio' + (pend === 1 ? '' : 's') + ' sin entregar');
+  var e = ptEstado();
+  b.classList.toggle('on', e.activa);
+  document.body.classList.toggle('pt', e.activa);
+  if (!e.activa) return;
+  b.querySelector('.pb-txt').innerHTML = e.enviando
+    ? '<b>Enviando al compañero</b> · ' + e.enviando + ' registro' + (e.enviando === 1 ? '' : 's')
+    : '<b>Vinculado con el compañero</b> · listo para enviar';
 }
 /* La capa de abajo avisa; aquí se traduce a pantalla. Es el único punto que las
    une: el transporte no sabe que hay una interfaz. */
 _ptAlEstado = function () {
   ptBarra();
-  var s = document.getElementById('screen-patrulla');
-  if (s && s.classList.contains('on')) renderPatrulla();
+  if (_on('compartir')) renderCompartir();
 };
-
 
 // ====== SERVICE WORKER (Fase G) ======
 // NOTA: el SW solo funciona en HTTPS o localhost.
