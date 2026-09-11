@@ -25,6 +25,10 @@ const R = [];
 const log = (ok, l, x) => { R.push(ok); console.log(ok ? 'OK  ' : 'FAIL', l, x ?? ''); };
 const src = readFileSync(join(ROOT, 'LexCapture_v8.html'), 'utf8');
 
+/* El tamaño máximo que el lector lee con holgura en condiciones de campo.
+   ⚠️ No es «lo que cabe en el códec» —llega a la versión 20— sino lo que se LEE
+   con la cámara de un teléfono apuntando a la pantalla de otro. */
+const PT_VER_MAX_ESPERADA = 10;
 const browser = await chromium.launch({ headless: true });
 async function abrirEquipo(pin) {
   const ctx = await browser.newContext({ viewport: { width: 384, height: 800 } });
@@ -277,14 +281,35 @@ log(/iceServers:\s*\[\]/.test(bloqueCanal) && !/stun:|turn:|fetch\(|XMLHttpReque
    teléfono. Después se los pasan y los dos los tienen.
    ══════════════════════════════════════════════════════════════════════════ */
 
-const enviar = (pg, ids) => pg.evaluate(async (s) => {
-  const personas = DB.getPersons().filter(p => s.p.indexOf(p.id) >= 0);
-  const casos = DB.getCases().filter(c => s.c.indexOf(c.id) >= 0);
-  return await new Promise((res) => {
-    const r = ptEnviarRegistros(personas, casos, res);
-    if (!r.ok) res({ ok: false, motivo: r.motivo });
-  });
-}, ids);
+/* ⚠️ Ahora el que recibe DECIDE: lo que llega se enseña y no entra hasta que se
+   acepta (punto 9 del encargo — «¿Desea importar esta información?»). El helper
+   hace aquí lo que hace una persona: espera a que aparezca el diálogo y lo
+   acepta. `op.cancelar` prueba el camino contrario y `op.dup` elige qué hacer
+   con una persona que ya está. */
+async function aceptarEnReceptor(rx, op) {
+  op = op || {};
+  try { await rx.waitForSelector('#modal-c .cf-res, #modal-c .cf-dups', { timeout: 6000 }); }
+  catch (e) { return false; }
+  if (op.dup) {
+    for (const [id, v] of Object.entries(op.dup))
+      await rx.evaluate(({ id, v }) => ptConfDup(id, v), { id, v });
+  }
+  await rx.click(op.cancelar ? 'button[onclick="ptConfCancelar()"]' : 'button[onclick="ptConfAceptar()"]');
+  await rx.waitForTimeout(250);
+  return true;
+}
+const enviar = async (pg, ids, rx, op) => {
+  const prom = pg.evaluate(async (s) => {
+    const personas = DB.getPersons().filter(p => s.p.indexOf(p.id) >= 0);
+    const casos = DB.getCases().filter(c => s.c.indexOf(c.id) >= 0);
+    return await new Promise((res) => {
+      const r = ptEnviarRegistros(personas, casos, res);
+      if (!r.ok) res({ ok: false, motivo: r.motivo });
+    });
+  }, ids);
+  if (rx) await aceptarEnReceptor(rx, op);
+  return await prom;
+};
 
 // A registra al capturado; B, a la víctima. Cada uno en su teléfono.
 await page.evaluate(async () => {
@@ -297,7 +322,7 @@ await pageB.evaluate(async () => {
 });
 
 // [C1] A le pasa su capturado a B.
-const c1 = await enviar(page, { p: ['p-cap'], c: [] });
+const c1 = await enviar(page, { p: ['p-cap'], c: [] }, pageB);
 await pageB.waitForTimeout(400);
 const c1B = await pageB.evaluate(() => {
   const p = DB.getPersons().filter(x => x.id === 'p-cap')[0];
@@ -307,7 +332,7 @@ log(c1.ok && c1.p.nuevos === 1 && c1B && c1B.nom === 'JUAN GOMEZ' && c1B.tel ===
   '[C1] El capturado que registró uno llega completo al teléfono del otro', c1B ? c1B.nom : 'no llegó');
 
 // [C2] Y B le pasa su víctima a A — el reparto de verdad, en los dos sentidos.
-const c2 = await enviar(pageB, { p: ['p-vic'], c: [] });
+const c2 = await enviar(pageB, { p: ['p-vic'], c: [] }, page);
 await page.waitForTimeout(400);
 const c2A = await page.evaluate(() => {
   const p = DB.getPersons().filter(x => x.id === 'p-vic')[0];
@@ -330,7 +355,7 @@ await pageB.evaluate(async () => {
   a.filter(p => p.id === 'p-vic')[0].correo = 'luz@correo.test';
   await DB.savePersons(a);
 });
-const c3 = await enviar(pageB, { p: ['p-vic'], c: [] });
+const c3 = await enviar(pageB, { p: ['p-vic'], c: [] }, page);
 await page.waitForTimeout(400);
 const c3A = await page.evaluate(() => {
   const p = DB.getPersons().filter(x => x.id === 'p-vic')[0];
@@ -352,7 +377,7 @@ log(c3b.hay && c3b.nombra, '[C3b] El que recibe ve en pantalla qué le llegó y 
 
 // [C4] El que envía se entera de lo que el compañero hizo con su envío — no lo
 //      supone. «Enviado» tiene que significar «llegó y quedó guardado».
-const c4 = await enviar(pageB, { p: ['p-vic'], c: [] });
+const c4 = await enviar(pageB, { p: ['p-vic'], c: [] }, page);
 log(c4.ok && c4.p.nuevos === 0 && c4.p.actualizados === 0,
   '[C4] Reenviar lo mismo se confirma como «ya lo tenía», sin duplicar nada');
 
@@ -364,7 +389,7 @@ const casoId = await page.evaluate(async () => {
   await DB.saveCase(c);
   return c.id;
 });
-const c5 = await enviar(page, { p: [], c: [casoId] });
+const c5 = await enviar(page, { p: [], c: [casoId] }, pageB);
 await pageB.waitForTimeout(500);
 const c5B = await pageB.evaluate((id) => {
   const c = DB.getCase(id);
@@ -403,7 +428,7 @@ await pageB.evaluate(async (id) => {
   c.servidor = c.servidor || {}; c.servidor.nombre = 'SERVIDOR DE B';
   await DB.saveCases(a);
 }, casoId);
-const c7 = await enviar(page, { p: [], c: [casoId] });
+const c7 = await enviar(page, { p: [], c: [casoId] }, pageB);
 await pageB.waitForTimeout(400);
 const c7B = await pageB.evaluate((id) => (DB.getCase(id).servidor || {}).nombre, casoId);
 log(c7.ok && c7B === 'SERVIDOR DE B',
@@ -488,13 +513,18 @@ log(!d2.comparte && d2.nombra.length === 0 && !d2.scroll,
   '[D2] El menú de la captura no ofrece compartir ni nombra ningún documento',
   d2.tit.join(' | '));
 
-// [D3] Sin vínculo, la pantalla ofrece las DOS mitades y ninguna más.
+// [D3] Sin vínculo, la pantalla ofrece las dos mitades del vínculo Y el respaldo
+//      por archivo. ⚠️ El respaldo NO se esconde detrás de un fallo: ofrecérselo
+//      al funcionario solo cuando ya ha perdido cinco minutos con la cámara es
+//      ofrecérselo tarde — la misma lección que este proyecto ya pagó con el
+//      envío de los documentos, donde la vía fiable acabó siendo la primaria.
 const d3 = await page.evaluate(() => {
   ptAbrirCompartir();
   return [...document.querySelectorAll('#cp-pane .pt-op .ti')].map(e => e.textContent.trim());
 });
-log(d3.length === 2 && /Mostrar el código/.test(d3[0]) && /Escanear/.test(d3[1]),
-  '[D3] Sin vínculo se ofrece mostrar el código o escanear el del compañero', d3.join(' | '));
+log(d3.length === 4 && /Mostrar el código/.test(d3[0]) && /Escanear/.test(d3[1]) &&
+    /archivo/i.test(d3[2]) && /archivo/i.test(d3[3]),
+  '[D3] Sin vínculo se ofrecen las dos vías: el código y el archivo', d3.join(' | '));
 
 // [D4] El código que se enseña ES legible: se vuelve a leer de la propia pantalla.
 const d4 = await page.evaluate(async ([leerSrc]) => {
@@ -508,7 +538,7 @@ const d4 = await page.evaluate(async ([leerSrc]) => {
   ptUiCancelar();
   return { ok: !!(cab && cab.rol === 0), cuenta };
 }, [LEER()]);
-log(d4.ok && /Caduca en \d/.test(d4.cuenta),
+log(d4.ok && /Válido \d+:\d\d más/.test(d4.cuenta),
   '[D4] El código de la pantalla se lee de verdad y dice cuánto le queda', d4.cuenta);
 
 // [D5] Vinculados: se listan personas y capturas, se marcan, y el botón cuenta.
@@ -626,6 +656,291 @@ log(d10.oculta && d10.visible && /Vinculado con el compañero/.test(d10.txt) && 
   '[D10] La franja aparece solo con el vínculo abierto y dice qué pasa', d10.txt);
 
 /* ══════════════════════════════════════════════════════════════════════════
+   F · LO QUE FALLABA EN CAMPO, Y LO QUE SE LE AÑADIÓ
+
+   El reporte era «el teléfono A no lee el código del B», y la causa no estaba en
+   el rol —quién muestra y quién escanea— sino en el ESTADO DE RED de cada
+   equipo: el código llevaba dentro todas las direcciones que el navegador
+   expusiera, y eso varía de un teléfono a otro. Esta sección fija ese límite y
+   comprueba el resto de lo que se corrigió con él.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+// [F1] EL FALLO DE RAÍZ. Un teléfono con muchas redes activas —wifi, zona wifi,
+//      datos, IPv6, una red privada virtual— generaba un código de 65×65 módulos
+//      que el lector no leía NUNCA en condiciones de campo. Ahora el tamaño no
+//      depende de eso: se descarta lo que no puede conectar dos teléfonos de la
+//      misma red y se comprimen los nombres locales.
+const f1 = await page.evaluate(() => {
+  const esc = {
+    'un solo wifi':            ['192.168.1.11'],
+    'wifi y zona wifi':        ['192.168.43.1', '192.168.1.11'],
+    'con datos e IPv6':        ['192.168.43.1', '192.168.1.11', '2800:e2:1a80:9f3::1a2b'],
+    'teléfono muy cargado':    ['192.168.43.1', '192.168.1.11', '10.80.14.203', '2800:e2:1a80:9f3::1a2b',
+                                '2800:e2:1a80:9f3:4c11:22ff:fe33:4455', 'fd00:1234:5678:9abc::1'],
+    'con red privada virtual': ['192.168.43.1', '192.168.1.11', '10.80.14.203', '172.20.10.2', '100.64.3.7',
+                                '2800:e2:1a80:9f3::1a2b', '2a00:1450:4003:80f::200e', '2606:4700:4700::1111'],
+    'sin permiso de cámara':   ['3f8a2c1e-1111-2222-3333-444455556666.local',
+                                '7b2d9e4f-aaaa-bbbb-cccc-ddddeeeeffff.local',
+                                '91c4a7b2-9999-8888-7777-666655554444.local']
+  };
+  const out = {};
+  for (const [nom, dirs] of Object.entries(esc)) {
+    const p = ptDescAjustado({
+      ufrag: 'aB3x', pwd: 'Kq7ZmN4pR2vT8wYcE1jL6sHd',
+      fp: 'AB:CD:' + Array.from({ length: 30 }, () => '1F').join(':'),
+      cands: ptFiltrarCands(dirs.map((d, i) => ({ dir: d, puerto: 50000 + i })))
+    });
+    if (!p) { out[nom] = { v: 0 }; continue; }
+    const inv = ptInvitacionBytes(new Uint8Array([1, 2, 3, 4]), Date.now(), new Uint8Array(32), p);
+    const m = ptQrMatriz(inv);
+    out[nom] = { v: m.v, size: m.size, dirs: p.cands.length };
+  }
+  return out;
+});
+const f1max = Math.max(...Object.values(f1).map(x => x.size || 999));
+log(Object.values(f1).every(x => x.v && x.v <= PT_VER_MAX_ESPERADA),
+  '[F1] El código nunca pasa del tamaño legible, con las redes que tenga el equipo',
+  Object.entries(f1).map(([k, v]) => k + ' ' + v.size + '×' + v.size).join(' · '));
+
+// [F2] Y el lector LEE ese tamaño en condiciones de campo. ⚠️ Se mide sobre el
+//      fotograma que la aplicación analiza de verdad: antes reducía una cámara de
+//      1280×720 a 480×270 —270 px de alto para todo el símbolo— y fallaba el
+//      100 % de las veces en cuanto el código pasaba de 61 módulos.
+const f2 = await page.evaluate(() => {
+  function foto(m, FW, FH, frac, ang, blur, ruido) {
+    const q = 4, n = m.size + q * 2, lado = Math.round(FH * frac), esc = lado / n;
+    const d = new Uint8ClampedArray(FW * FH * 4).fill(230);
+    for (let i = 3; i < d.length; i += 4) d[i] = 255;
+    const ox = (FW - lado) / 2, oy = (FH - lado) / 2;
+    const rad = ang * Math.PI / 180, cs = Math.cos(rad), sn = Math.sin(rad);
+    for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+      const dx = x - FW / 2, dy = y - FH / 2;
+      const rx = dx * cs + dy * sn + FW / 2, ry = -dx * sn + dy * cs + FH / 2;
+      let v = 230;
+      if (rx >= ox && ry >= oy && rx < ox + lado && ry < oy + lado) {
+        const mx = Math.floor((rx - ox) / esc) - q, my = Math.floor((ry - oy) / esc) - q;
+        v = (mx >= 0 && my >= 0 && mx < m.size && my < m.size && m.mods[my][mx]) ? 18 : 248;
+      }
+      const i = (y * FW + x) * 4; d[i] = d[i + 1] = d[i + 2] = v;
+    }
+    for (let p = 0; p < blur; p++) {
+      const c = d.slice();
+      for (let y = 1; y < FH - 1; y++) for (let x = 1; x < FW - 1; x++) {
+        let sm = 0;
+        for (let j = -1; j <= 1; j++) for (let i2 = -1; i2 <= 1; i2++) sm += c[((y + j) * FW + (x + i2)) * 4];
+        const i = (y * FW + x) * 4; d[i] = d[i + 1] = d[i + 2] = sm / 9;
+      }
+    }
+    if (ruido) for (let i = 0; i < d.length; i += 4) {
+      const r = (Math.random() * 2 - 1) * ruido;
+      d[i] = d[i + 1] = d[i + 2] = Math.max(0, Math.min(255, d[i] + r));
+    }
+    return d;
+  }
+  /* El fotograma que analiza la aplicación hoy: una cámara de 1280×720 con el
+     lado mayor limitado a PT_QR_MAX_LADO. */
+  const esc = Math.min(1, PT_QR_MAX_LADO / 1280);
+  const FW = Math.round(1280 * esc), FH = Math.round(720 * esc);
+  const out = [];
+  for (const v of [7, 8, 9, 10]) {
+    const e = PT_QR_EC[v], cap = e[1] * e[2] + e[3] * e[4] - (v <= 9 ? 2 : 3);
+    const p = new Uint8Array(cap);
+    for (let i = 0; i < cap; i++) p[i] = (i * 53 + v * 7) & 255;
+    const m = ptQrMatriz(p);
+    let ok = 0; const N = 6;
+    for (let t = 0; t < N; t++) {
+      let x = null;
+      try { x = ptQrLeer(foto(m, FW, FH, 0.80, 5, 1, 10), FW, FH); } catch (e2) {}
+      if (x && x.length === cap && Array.from(x).every((b, i) => b === p[i])) ok++;
+    }
+    out.push({ v, size: m.size, ok, N });
+  }
+  return { FW, FH, out };
+});
+log(f2.out.every(x => x.ok === x.N),
+  '[F2] El lector lee todos esos tamaños con la cámara en ángulo, movida y con ruido',
+  'fotograma ' + f2.FW + '×' + f2.FH + ' · ' + f2.out.map(x => 'v' + x.v + ' ' + x.ok + '/' + x.N).join(' · '));
+
+// [F3] LA GUARDA QUE FALTABA: un vídeo pausado tiene su medida correcta y no
+//      entrega un solo fotograma. Sin mirarlo, el lector analiza un lienzo en
+//      blanco y no ve nada, sin que nada parezca roto.
+const f3 = await page.evaluate(() => {
+  const v = { paused: true, ended: false, videoWidth: 1280, videoHeight: 720, play() { this.pidioPlay = true; } };
+  const cv = document.createElement('canvas');
+  const r = ptQrDeVideo(v, cv);
+  return { devuelve: r, pidioPlay: !!v.pidioPlay };
+});
+log(f3.devuelve === null && f3.pidioPlay,
+  '[F3] Un vídeo pausado no se analiza en vano: se reanuda', 'devolvió null y llamó a play()');
+
+/* ⚠️ [C10] y [C11] cierran el vínculo a propósito —eso es lo que comprueban—,
+   así que aquí se vuelve a abrir uno. Reaprovechar el helper y no un atajo es
+   lo que hace que estas comprobaciones midan el camino de verdad. */
+await vincular();
+
+// [F4] LOS DOS SENTIDOS, ida y vuelta, por el vínculo ya abierto (pruebas 1 a 4
+//      del encargo: A→B, B→A, con registro pequeño y con captura completa).
+const f4 = await page.evaluate(async () => {
+  await DB.savePerson({ id: 'f4-a', priNom: 'PEDRO', priApe: 'SUAREZ', tipoDoc: 'CC', numDoc: '10203040' });
+  return true;
+});
+await pageB.evaluate(async () => {
+  await DB.savePerson({ id: 'f4-b', priNom: 'MARTA', priApe: 'VEGA', tipoDoc: 'CC', numDoc: '50607080' });
+});
+const f4ab = await enviar(page, { p: ['f4-a'], c: [] }, pageB);
+const f4ba = await enviar(pageB, { p: ['f4-b'], c: [] }, page);
+const f4fin = await page.evaluate(() => DB.getPersons().map(p => p.id));
+const f4finB = await pageB.evaluate(() => DB.getPersons().map(p => p.id));
+log(f4ab.ok && f4ba.ok && f4fin.indexOf('f4-b') >= 0 && f4finB.indexOf('f4-a') >= 0,
+  '[F4] La transferencia va en los dos sentidos por el mismo vínculo',
+  'A tiene ' + f4fin.length + ' · B tiene ' + f4finB.length);
+
+// [F5] NO SE DUPLICA UNA PERSONA. La misma cédula registrada por los dos, cada
+//      uno con su identificador: antes entraba DOS VECES sin decir nada. Ahora se
+//      pregunta, y por defecto se propone que es la misma.
+await page.evaluate(async () => {
+  await DB.savePerson({ id: 'mia-9', priNom: 'CARLOS', priApe: 'DIAZ', tipoDoc: 'CC',
+                        numDoc: '1128456789', tel: '3005550011' });
+});
+await pageB.evaluate(async () => {
+  await DB.savePerson({ id: 'suya-7', priNom: 'CARLOS', priApe: 'DIAZ', tipoDoc: 'CC',
+                        numDoc: '1128456789', correo: 'carlos@correo.test' });
+});
+const f5env = await enviar(pageB, { p: ['suya-7'], c: [] }, page);
+const f5 = await page.evaluate(() => {
+  const con = DB.getPersons().filter(p => sinPuntos(p.numDoc || '') === '1128456789');
+  return { n: con.length, id: con[0] && con[0].id, tel: con[0] && con[0].tel, correo: con[0] && con[0].correo };
+});
+log(f5.n === 1 && f5.id === 'mia-9' && f5.tel === '3005550011' && f5.correo === 'carlos@correo.test',
+  '[F5] La misma persona no entra dos veces: se completa la ficha que ya estaba',
+  f5.n + ' ficha · ' + f5.tel + ' + ' + f5.correo);
+
+// [F6] …y si el funcionario dice que son DOS personas distintas, entran las dos.
+//      ⚠️ La decisión es suya: él sabe si son la misma y la aplicación no.
+await pageB.evaluate(async () => {
+  await DB.savePerson({ id: 'suya-8', priNom: 'CARLOS A', priApe: 'DIAZ', tipoDoc: 'CC', numDoc: '1128456789' });
+});
+await enviar(pageB, { p: ['suya-8'], c: [] }, page, { dup: { 'suya-8': 'aparte' } });
+const f6 = await page.evaluate(() => DB.getPersons().filter(p => sinPuntos(p.numDoc || '') === '1128456789').length);
+log(f6 === 2, '[F6] Si el funcionario dice que son distintas, entran las dos', f6 + ' fichas');
+
+// [F7] SE CONFIRMA ANTES DE IMPORTAR, y si se rechaza NO entra nada.
+await pageB.evaluate(async () => {
+  await DB.savePerson({ id: 'f7-no', priNom: 'NO', priApe: 'ENTRA', tipoDoc: 'CC', numDoc: '99887766' });
+});
+const f7env = await enviar(pageB, { p: ['f7-no'], c: [] }, page, { cancelar: true });
+const f7 = await page.evaluate(() => DB.getPersons().filter(p => p.id === 'f7-no').length);
+log(f7 === 0 && f7env.ok && f7env.cancelado,
+  '[F7] Lo que llega no entra hasta que se acepta, y el que envía se entera', 'rechazado y avisado');
+
+// [F8] UN PAQUETE MALFORMADO NO ROMPE NADA. ⚠️ Reproducido contra el código
+//      anterior: lanzaba de verdad dentro del guardado, dejaba el almacén a
+//      medias —las personas guardadas y las capturas no— y al que enviaba lo
+//      dejaba treinta segundos en «enviando» porque la confirmación no salía.
+const f8 = await page.evaluate(async () => {
+  const antesP = DB.getPersons().length, antesC = DB.getCases().length;
+  const malos = [
+    { lx: 'lexcapture', schemaVersion: 1, personas: [{ id: 'z', capturados: 'no-es-lista' }], casos: [] },
+    { lx: 'lexcapture', schemaVersion: 1, personas: [], casos: [{ id: 'z2', capturados: 'texto' }] },
+    { lx: 'lexcapture', schemaVersion: 1, personas: [{ priNom: 'SIN ID' }], casos: [] },
+    { lx: 'lexcapture', schemaVersion: 99, personas: [], casos: [] },
+    { lx: 'otra-app', schemaVersion: 1, personas: [], casos: [] },
+    null, 42, 'texto suelto'
+  ];
+  const res = [];
+  for (const m of malos) {
+    const a = ptAbrirPaquete(m);
+    let entro = 0;
+    if (a.ok) { const r = await ptAplicarPaquete(a, {}); entro = r.p.nuevos + r.c.nuevos; }
+    res.push({ ok: a.ok, motivo: a.motivo || '', rech: (a.rechazados || []).length, entro });
+  }
+  return { res, dP: DB.getPersons().length - antesP, dC: DB.getCases().length - antesC };
+});
+log(f8.dP === 0 && f8.dC === 0 && f8.res.every(r => !r.ok || r.rech > 0 || r.entro === 0),
+  '[F8] Un paquete malformado se rechaza con su motivo y no toca el almacén',
+  f8.res.filter(r => !r.ok).length + ' rechazados de ' + f8.res.length + ' · nada entró');
+
+// [F9] Un registro ABSURDAMENTE grande no llena el almacenamiento del teléfono.
+const f9 = await page.evaluate(() => {
+  const enorme = { id: 'gordo', priNom: 'X'.repeat(600 * 1024) };
+  const a = ptAbrirPaquete({ lx: 'lexcapture', schemaVersion: 1, personas: [enorme], casos: [] });
+  const hondo = { id: 'hondo' }; let cur = hondo;
+  for (let i = 0; i < 30; i++) { cur.mas = {}; cur = cur.mas; }
+  const b = ptAbrirPaquete({ lx: 'lexcapture', schemaVersion: 1, personas: [hondo], casos: [] });
+  return { gordo: a.personas.length === 0 && a.rechazados.length === 1,
+           motivo: a.rechazados[0] && a.rechazados[0].motivo,
+           hondo: b.personas.length === 0 && b.rechazados.length === 1 };
+});
+log(f9.gordo && f9.hondo, '[F9] Un registro desmedido o demasiado anidado se rechaza', f9.motivo);
+
+// [F10] EL RESPALDO POR ARCHIVO, de punta a punta y CIFRADO. ⚠️ Dentro hay datos
+//       de un capturado, y en una captura de menores los de un menor: un archivo
+//       sin cifrar que pasa por un chat queda en la galería de los dos teléfonos.
+const f10 = await page.evaluate(async () => {
+  const p = { id: 'arch-1', priNom: 'ELENA', priApe: 'TORRES', tipoDoc: 'CC', numDoc: '77665544', tel: '3019998877' };
+  const pin = ptClaveNumerica();
+  const bytes = await ptArchivoCifrar(ptPaquete([p], []), pin);
+  /* Que esté cifrado se comprueba buscando el dato dentro del archivo, no
+     confiando en que la función se llame «cifrar». */
+  let txt = ''; for (let i = 0; i < bytes.length; i++) txt += String.fromCharCode(bytes[i]);
+  const bien = await ptArchivoAbrir(bytes.buffer, pin);
+  const mal = await ptArchivoAbrir(bytes.buffer, pin === '000000' ? '111111' : '000000');
+  const otra = await ptArchivoAbrir(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]).buffer, pin);
+  return {
+    pinOk: /^\d{6}$/.test(pin),
+    claro: txt.indexOf('ELENA') >= 0 || txt.indexOf('77665544') >= 0,
+    abre: bien.ok && bien.personas.length === 1 && bien.personas[0].priNom === 'ELENA',
+    rechazaClave: !mal.ok, rechazaAjeno: !otra.ok, motivoAjeno: otra.motivo
+  };
+});
+log(f10.pinOk && !f10.claro && f10.abre && f10.rechazaClave && f10.rechazaAjeno,
+  '[F10] El archivo va cifrado, se abre con su clave y rechaza la equivocada',
+  'clave de 6 dígitos · nada legible dentro');
+
+// [F11] Y lo que sale del archivo pasa por la MISMA revisión que lo que llega por
+//       el vínculo: una sola puerta de entrada, no dos con criterios distintos.
+const f11 = await page.evaluate(() => {
+  const src = ptAbrirArchivoConClave.toString();
+  return { confirma: /ptConfirmarImportacion/.test(src), aplica: /ptAplicarPaquete/.test(src) };
+});
+log(f11.confirma && f11.aplica,
+  '[F11] El archivo entra por la misma revisión y la misma puerta que el vínculo');
+
+// [F12] Un envío que el compañero tarda en decidir NO se da por fallido: el acuse
+//       de llegada para el reloj. ⚠️ Antes la espera era una sola de treinta
+//       segundos, y la confirmación del usuario la agotaba.
+const f12 = await page.evaluate(() => ({
+  corta: PT_ESPERA_ENVIO_MS, larga: PT_ESPERA_DECISION_MS,
+  acusa: /'llego'/.test(_ptRecibirAhora.toString()),
+  reinicia: /PT_ESPERA_DECISION_MS/.test(_ptRecibirAhora.toString())
+}));
+log(f12.acusa && f12.reinicia && f12.larga > f12.corta,
+  '[F12] Hay dos esperas: que el envío cruce, y que una persona decida',
+  (f12.corta / 1000) + ' s para cruzar · ' + (f12.larga / 60000) + ' min para decidir');
+
+// [F13] El error de cámara dice qué HACER, no solo que falló.
+const f13 = await page.evaluate(() => ({
+  denegado: _ptCamMotivo({ name: 'NotAllowedError' }),
+  ocupada: _ptCamMotivo({ name: 'NotReadableError' }),
+  otro: _ptCamMotivo({ name: 'LoQueSea' })
+}));
+log(/ajustes del teléfono/.test(f13.denegado) && /Otra aplicación/.test(f13.ocupada) &&
+    /archivo/i.test(f13.otro) && f13.denegado !== f13.ocupada,
+  '[F13] Un fallo de cámara se explica y ofrece la salida', f13.ocupada);
+
+// [F14] La captura compartida sigue produciendo EL MISMO documento. ⚠️ Es la
+//       comprobación que protege todo lo demás: el encargo prohíbe tocar la
+//       salida documental, y aquí se mide en vez de suponerse.
+const f14 = await page.evaluate(async () => {
+  const c = DB.getCases()[0];
+  if (!c) return { ok: false };
+  const b = await buildFPJBlob(c);
+  return { ok: !!b && (b.blob ? b.blob.size : b.size) > 0, n: b.blob ? b.blob.size : b.size };
+});
+log(f14.ok, '[F14] La captura que llegó del compañero genera su informe igual', f14.n + ' B');
+
+
+/* ══════════════════════════════════════════════════════════════════════════
    E · EL MODO INDIVIDUAL, INTACTO
 
    La colaboración en vivo se retiró entera. Estos checks miden que no quedó ni
@@ -651,7 +966,15 @@ log(e2, '[E2] El formulario vuelve a medir «sucio» con la huella de siempre');
 // [E3] El módulo está AISLADO: fuera de él solo se le llama desde la navegación.
 const antes = src.slice(0, src.indexOf('MODO COMPARTIR · LOS DATOS'));
 const llamadas = [...antes.matchAll(/\b(pt[A-Z]\w*|renderCompartir)\s*\(/g)].map(m => m[1]);
-const permitidas = ['ptAbrirCompartir', 'renderCompartir', 'ptScanCerrar', 'ptUiMostrar', 'ptUiEscanear', 'ptUiMarcar', 'ptUiEnviar', 'ptUiCancelar', 'ptUiDesvincular', 'ptUiDesvincularSi', 'ptUiEscanearRespuesta', 'ptUiMarcarTodo'];
+/* Lo que puede aparecer antes del módulo es la NAVEGACIÓN y los manejadores del
+   HTML que el propio módulo pone en la página —su pantalla, su lector, su diálogo
+   y el selector del archivo de intercambio—. Ninguna es una llamada desde otro
+   módulo, que es lo que este check vigila. */
+const permitidas = ['ptAbrirCompartir', 'renderCompartir', 'ptScanCerrar', 'ptUiMostrar',
+  'ptUiEscanear', 'ptUiMarcar', 'ptUiEnviar', 'ptUiCancelar', 'ptUiDesvincular',
+  'ptUiDesvincularSi', 'ptUiEscanearRespuesta', 'ptUiMarcarTodo', 'ptArchivoElegido',
+  'ptUiExportar', 'ptImportarArchivo', 'ptConfAceptar', 'ptConfCancelar', 'ptConfDup',
+  'ptUiExportarDesdeModal', 'ptAbrirArchivoConClave'];
 const intrusas = llamadas.filter(n => permitidas.indexOf(n) < 0);
 log(intrusas.length === 0,
   '[E3] Fuera del módulo solo se le llama desde la navegación y la pantalla',

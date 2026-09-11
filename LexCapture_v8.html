@@ -305,15 +305,101 @@ body.pt{padding-top:36px}
 body.guest #pt-barra{top:38px}
 body.guest.pt{padding-top:74px}
 
-/* El código en pantalla. ⚠️ Fondo blanco FIJO en los dos temas: un código se lee
-   por contraste, y en modo oscuro uno claro sobre oscuro no lo lee ninguna
-   cámara. Es la misma excepción del lienzo de la firma. */
+/* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
+   ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
+   adorno: ni logotipo en el centro, ni módulos redondeados, ni degradados —todo
+   eso le roba capacidad de corrección de errores a un símbolo que ya se lee al
+   límite—. Lo que se diseña es su MARCO: la tarjeta que lo enmarca, lo que dice
+   arriba, lo que dice abajo y cuánta zona de silencio lo rodea.
+
+   ⚠️ Fondo blanco FIJO en los dos temas, y negro puro para los módulos. En modo
+   oscuro un código claro sobre fondo oscuro no lo lee ninguna cámara. Es la misma
+   excepción del lienzo de la firma, y por el mismo motivo. */
+.cp-code{
+  border-radius:var(--r-lg);
+  border:1px solid var(--border);
+  background:var(--surface-2);
+  overflow:hidden;margin-bottom:12px;
+}
+.cp-code .cc-hd{padding:16px 18px 12px}
+.cp-code .cc-ti{font-size:15px;font-weight:700;color:var(--text)}
+.cp-code .cc-de{font-size:12.5px;color:var(--text-3);margin-top:3px;line-height:1.45}
+/* La zona de silencio: el código trae 4 módulos propios y la tarjeta le añade
+   aire blanco por fuera. Un código pegado al borde de su recuadro se lee mucho
+   peor, y es el fallo más común de un código mal presentado. */
 .pt-qr{
   display:flex;align-items:center;justify-content:center;
-  background:#fff;border-radius:var(--radius);padding:14px;margin:0 auto;
-  width:fit-content;max-width:100%;
+  background:#fff;padding:18px;margin:0 18px;border-radius:12px;
 }
-.pt-qr svg{display:block;width:100%;height:auto;max-width:280px}
+.pt-qr svg{display:block;width:100%;height:auto;max-width:320px}
+.cp-code .cc-mal{
+  padding:26px 18px;text-align:center;font-size:13px;color:var(--err);line-height:1.5;
+}
+.cp-code .cc-pie{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:12px 18px 16px;font-size:12.5px;color:var(--text-3);
+}
+.cp-code .cc-pt{width:7px;height:7px;border-radius:999px;background:var(--text-3)}
+.cp-code .cc-pt.viva{background:var(--ok);animation:cpLat 2s ease-in-out infinite}
+@keyframes cpLat{0%,100%{opacity:1}50%{opacity:.35}}
+
+.cp-tip{text-align:center;margin:0 0 12px}
+
+/* Espera: preparar el código pide direcciones de red y tarda un segundo largo. */
+.cp-esp{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:30px 18px}
+.cp-giro{
+  width:26px;height:26px;border-radius:999px;
+  border:2.5px solid var(--border);border-top-color:var(--acc);
+  animation:cpGiro .8s linear infinite;
+}
+.cp-giro.chico{width:15px;height:15px;border-width:2px}
+@keyframes cpGiro{to{transform:rotate(360deg)}}
+.cp-esperando{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  font-size:12.5px;color:var(--text-3);margin:0 0 12px;
+}
+
+/* El respaldo por archivo, a la vista desde el principio y no escondido tras un
+   fallo: ofrecerlo solo cuando la cámara ya falló es ofrecerlo tarde. */
+.cp-alt{border-style:dashed}
+
+/* ── REVISAR LO QUE LLEGÓ ─────────────────────────────────────────────────── */
+.cf-res{
+  margin:12px 0;padding:12px 14px;border-radius:12px;
+  background:var(--surface-2);border:1px solid var(--border);
+}
+.cf-res .cf-l{font-size:13px;color:var(--text-2);line-height:1.7}
+.cf-mal{
+  margin:10px 0;padding:11px 13px;border-radius:10px;
+  background:var(--errB);color:var(--err);font-size:12.5px;line-height:1.5;
+}
+.cf-dups{display:flex;flex-direction:column;gap:10px;max-height:270px;overflow-y:auto}
+.cf-d{padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border)}
+.cf-dn{font-size:13.5px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.cf-dd{font-size:11.5px;color:var(--text-3);margin-top:2px;overflow-wrap:anywhere}
+.cf-do{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.cf-op{
+  padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface-3);color:var(--text-2);
+}
+.cf-op.on{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
+.cf-sel{max-height:52vh;overflow-y:auto}
+
+/* La clave del archivo: se lee en voz alta, así que se enseña grande y separada
+   en dos grupos de tres — es como se dictan los números por radio. */
+.cf-pin{
+  margin:14px 0;padding:16px;border-radius:14px;text-align:center;
+  background:var(--accG);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
+}
+.cf-pin-t{font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+.cf-pin-n{
+  font-size:32px;font-weight:700;color:var(--acc);margin-top:6px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em;
+}
+.cf-pin-in{
+  text-align:center;font-size:26px;letter-spacing:.32em;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
 
 .pt-paso{display:flex;flex-direction:column;gap:12px}
 .pt-op{
@@ -363,11 +449,22 @@ body.guest.pt{padding-top:74px}
 }
 #pt-scan.on{display:flex}
 #pt-scan video{flex:1;width:100%;height:100%;object-fit:cover}
+/* El marco es una ESCUADRA en cada esquina, no un recuadro cerrado: enseña
+   dónde encuadrar sin dibujar una línea continua que la cámara pueda confundir
+   con el borde del propio código. */
 #pt-scan .ps-marco{
   position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);
-  width:min(72vw,300px);aspect-ratio:1;
-  border:2px solid var(--acc);border-radius:var(--radius);
-  box-shadow:0 0 0 100vmax rgba(0,0,0,.5);
+  width:min(76vw,320px);aspect-ratio:1;border-radius:var(--radius);
+  box-shadow:0 0 0 100vmax rgba(0,0,0,.55);
+}
+#pt-scan .ps-marco .pe{position:absolute;width:30px;height:30px;border:3px solid var(--acc)}
+#pt-scan .ps-marco .e1{top:-2px;left:-2px;border-right:0;border-bottom:0;border-radius:10px 0 0 0}
+#pt-scan .ps-marco .e2{top:-2px;right:-2px;border-left:0;border-bottom:0;border-radius:0 10px 0 0}
+#pt-scan .ps-marco .e3{bottom:-2px;left:-2px;border-right:0;border-top:0;border-radius:0 0 0 10px}
+#pt-scan .ps-marco .e4{bottom:-2px;right:-2px;border-left:0;border-top:0;border-radius:0 0 10px 0}
+#pt-scan .ps-est{
+  position:absolute;left:16px;right:16px;top:calc(44% + min(38vw,160px) + 52px);
+  text-align:center;color:var(--acc);font-size:12.5px;font-weight:600;
 }
 #pt-scan .ps-txt{
   position:absolute;left:16px;right:16px;top:calc(44% + min(36vw,150px) + 20px);
@@ -2519,11 +2616,16 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <!-- ====== LECTOR DE CÓDIGOS (modo compartir) ======
      Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo
      y aquí no se dispara nada — se lee solo en cuanto el código entra al marco. -->
+<!-- Selector del archivo de intercambio. Oculto: lo dispara el botón de la pantalla. -->
+<input type="file" id="pt-arch" accept=".lexc,application/octet-stream" style="display:none" onchange="ptArchivoElegido(this)">
 <div id="pt-scan">
   <video id="pt-scan-video" autoplay playsinline muted></video>
   <canvas id="pt-scan-canvas" style="display:none"></canvas>
-  <div class="ps-marco"></div>
+  <div class="ps-marco">
+    <span class="pe e1"></span><span class="pe e2"></span><span class="pe e3"></span><span class="pe e4"></span>
+  </div>
   <div class="ps-txt" id="pt-scan-txt"></div>
+  <div class="ps-est" id="pt-scan-est"></div>
   <div class="ps-bar"><button onclick="ptScanCerrar()">Cancelar</button></div>
 </div>
 
@@ -2699,7 +2801,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 104;
+var _BUILD = 105;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -20314,10 +20416,143 @@ function ptFundir(local, remoto, opts) {
   return n;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   EL PAQUETE DE INTERCAMBIO — FORMATO, VERSIÓN Y VALIDACIÓN
+
+   ⚠️ Lo que sale de un teléfono y entra en otro tiene FORMA DECLARADA y versión
+   propia. Antes viajaban los registros tal cual y el receptor los guardaba sin
+   mirarlos: cualquier objeto con un identificador entraba en el almacén, y uno
+   con una rama de forma equivocada —una lista que llegara como texto— hacía
+   reventar el guardado a media escritura. Reproducido: el fallo dejaba el almacén
+   con las personas guardadas y las capturas no, y al que enviaba lo dejaba
+   treinta segundos en «enviando» porque la confirmación nunca salía.
+
+   ⚠️ LA VERSIÓN NO ESTÁ ATADA A LOS FORMULARIOS. Describe el SOBRE, no el
+   contenido: mientras el sobre sea el 1, un teléfono con una versión más nueva de
+   la aplicación se entiende con uno más viejo aunque sus capturas lleven campos
+   que el otro todavía no conoce —los guarda igual, y los imprime quien pueda—.
+   Solo habría que subirla si cambiara la forma del propio sobre. */
+var PT_ESQUEMA = 1;
+var PT_MARCA = 'lexcapture';
+
+/* Topes. Una captura completa con dos capturados, dos víctimas, un testigo y sus
+   elementos mide unos 5 KB; medio megabyte por registro es holgadísimo y a la vez
+   impide que un paquete absurdo llene el almacenamiento del teléfono. */
+var PT_MAX_REG_BYTES = 512 * 1024;
+var PT_MAX_TOTAL_BYTES = 8 * 1024 * 1024;
+var PT_MAX_PROF = 12;
+
+/* Las ramas que TIENEN que ser listas. Si llegan con otra forma, el registro se
+   rechaza entero en vez de romper el guardado más adelante. */
+var PT_RAMAS_LISTA = ['capturados', 'victimas', 'testigos', 'elementos', 'actas',
+                      'rotulos', 'conductas', 'articulosCP', 'vehiculos'];
+
+function _ptProfundidad(v, n) {
+  if (n > PT_MAX_PROF) return n;
+  if (!v || typeof v !== 'object') return n;
+  var max = n, k;
+  if (Array.isArray(v)) { for (k = 0; k < v.length; k++) max = Math.max(max, _ptProfundidad(v[k], n + 1)); return max; }
+  var ks = Object.keys(v);
+  for (k = 0; k < ks.length; k++) max = Math.max(max, _ptProfundidad(v[ks[k]], n + 1));
+  return max;
+}
+function _ptBytes(o) { try { return new TextEncoder().encode(JSON.stringify(o)).length; } catch (e) { return Infinity; } }
+
+/* Validación de un registro. Devuelve el motivo del rechazo, o cadena vacía.
+   ⚠️ Se comprueba ANTES de tocar el almacén, nunca después: un registro que se
+   rechaza a mitad de la escritura deja el teléfono peor que si no hubiera llegado
+   nada. */
+function ptValidarRegistro(r, clase) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) return 'no tiene forma de registro';
+  if (typeof r.id !== 'string' || !r.id || r.id.length > 80) return 'sin identificador válido';
+  var b = _ptBytes(r);
+  if (b > PT_MAX_REG_BYTES) return 'demasiado grande (' + Math.round(b / 1024) + ' KB)';
+  if (_ptProfundidad(r, 0) > PT_MAX_PROF) return 'estructura demasiado anidada';
+  for (var i = 0; i < PT_RAMAS_LISTA.length; i++) {
+    var k = PT_RAMAS_LISTA[i];
+    if (r[k] !== undefined && r[k] !== null && !Array.isArray(r[k])) return 'el campo «' + k + '» no es una lista';
+  }
+  if (clase === 'c' && r.oj !== undefined && r.oj !== null && (typeof r.oj !== 'object' || Array.isArray(r.oj)))
+    return 'los datos de la orden judicial no tienen forma válida';
+  return '';
+}
+
+/* Arma el sobre que viaja, por el canal o dentro de un archivo. */
+function ptPaquete(personas, casos) {
+  return {
+    lx: PT_MARCA, schemaVersion: PT_ESQUEMA, app: _BUILD,
+    origen: ptDeviceId(), ts: Date.now(),
+    personas: (personas || []).map(ptParaEnviar).filter(Boolean),
+    casos: (casos || []).map(ptParaEnviar).filter(Boolean)
+  };
+}
+
+/* Abre el sobre. ⚠️ NUNCA LANZA: devuelve lo que se puede usar y la lista de lo
+   que se descartó, con su motivo. Un paquete corrupto tiene que poder explicarse
+   al funcionario, no tumbar la pantalla. */
+function ptAbrirPaquete(o) {
+  if (!o || typeof o !== 'object') return { ok: false, motivo: 'El archivo no tiene el formato de la aplicación.' };
+  if (o.lx !== PT_MARCA) return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
+  if (typeof o.schemaVersion !== 'number')
+    return { ok: false, motivo: 'El archivo no dice con qué versión se creó.' };
+  if (o.schemaVersion > PT_ESQUEMA)
+    return { ok: false, motivo: 'El archivo viene de una versión más nueva de la aplicación. Actualiza este equipo para poder abrirlo.' };
+  if (_ptBytes(o) > PT_MAX_TOTAL_BYTES) return { ok: false, motivo: 'El archivo es demasiado grande para importarlo.' };
+  var personas = [], casos = [], rechazados = [];
+  ['personas', 'casos'].forEach(function (k) {
+    var lista = o[k], clase = (k === 'casos') ? 'c' : 'p';
+    if (lista === undefined || lista === null) return;
+    if (!Array.isArray(lista)) { rechazados.push({ que: k, motivo: 'no es una lista' }); return; }
+    lista.forEach(function (r) {
+      var m = ptValidarRegistro(r, clase);
+      if (m) { rechazados.push({ que: (r && r.id) || 'un registro', motivo: m }); return; }
+      (clase === 'c' ? casos : personas).push(r);
+    });
+  });
+  return { ok: true, personas: personas, casos: casos, rechazados: rechazados, origen: o.origen || '', ts: o.ts || 0 };
+}
+
+/* ── LA MISMA PERSONA, DOS VECES ──────────────────────────────────────────
+   ⚠️ Hasta ahora solo se comparaba el identificador interno, así que la misma
+   persona registrada por los dos funcionarios —cada uno en su teléfono, cada uno
+   con su identificador— entraba DOS VECES en el registro, con la misma cédula y
+   sin que nadie dijera nada. En un registro de personas de un procedimiento
+   judicial eso no es un detalle: la siguiente captura de esa persona se haría
+   sobre una de las dos fichas, que está incompleta.
+
+   El documento es lo que identifica a una persona ante la ley, así que es lo que
+   se compara. ⚠️ Sin documento NO se supone nada: se trata como persona distinta
+   —dos homónimos sin cédula son, hasta donde la aplicación sabe, dos personas, y
+   fundirlos sería peor que duplicarlos—. */
+function ptClaveDoc(p) {
+  if (!p) return '';
+  var n = sinPuntos(p.numDoc || '').replace(/\s+/g, '').toUpperCase();
+  if (!n) return '';
+  return ((p.tipoDoc || 'CC').toUpperCase().replace(/[^A-Z]/g, '') || 'CC') + ':' + n;
+}
+/* Qué haría cada registro que llega: nuevo, actualizar el que ya está con su
+   mismo identificador, o coincidir en documento con OTRO registro —que es lo
+   único que hay que preguntar—. */
+function ptClasificar(entrantes, locales, clase) {
+  var porId = {}, porDoc = {}, i;
+  for (i = 0; i < locales.length; i++) {
+    porId[locales[i].id] = locales[i];
+    if (clase === 'p') { var d = ptClaveDoc(locales[i]); if (d && !porDoc[d]) porDoc[d] = locales[i]; }
+  }
+  var out = { nuevos: [], mismos: [], conflictos: [] };
+  (entrantes || []).forEach(function (r) {
+    if (porId[r.id]) { out.mismos.push({ r: r, local: porId[r.id] }); return; }
+    var d = (clase === 'p') ? ptClaveDoc(r) : '';
+    if (d && porDoc[d]) { out.conflictos.push({ r: r, local: porDoc[d], doc: d }); return; }
+    out.nuevos.push(r);
+  });
+  return out;
+}
+
 /* ── LO QUE LLEGA DEL COMPAÑERO ───────────────────────────────────────────
    Punto de entrada único. Devuelve el detalle de lo que entró y lo que se
-   actualizó, con sus nombres: la pantalla tiene que poder decir QUÉ llegó y no
-   un «listo» genérico. */
+   actualizó, con sus nombres: la pantalla tiene que poder decir QUÉ llegó y no un
+   «listo» genérico. */
 function ptNombreDe(p) {
   var n = '';
   try { n = (fullName(p) || '').trim(); } catch (e) { n = ''; }
@@ -20328,18 +20563,45 @@ function ptEtiquetaCaso(c) {
   return (q && q !== 'Sin nombre') ? q : 'Captura sin capturado';
 }
 
-async function ptRecibirPersonas(lista) {
-  var a = DB.getPersons().slice(), res = { nuevos: 0, actualizados: 0, nombres: [] }, i;
-  (lista || []).forEach(function (p) {
-    if (!p || !p.id) return;
-    i = a.findIndex(function (x) { return x.id === p.id; });
-    if (i < 0) {
-      var nuevo = ptParaEnviar(p);
-      if (!nuevo) return;
-      a.push(nuevo); res.nuevos++; res.nombres.push(ptNombreDe(nuevo));
-    } else if (ptFundir(a[i], p)) { res.actualizados++; res.nombres.push(ptNombreDe(a[i])); }
+/* Qué hacer con una persona que ya está aquí con OTRO identificador:
+   'fundir'  → se completa la ficha que ya existe y no se crea otra (por defecto)
+   'aparte'  → entra como registro nuevo, porque el funcionario sabe que son dos
+   'ignorar' → se queda lo de aquí y no se toca nada. */
+var PT_CONFLICTO_DEF = 'fundir';
+
+async function ptRecibirPersonas(lista, decision) {
+  var a = DB.getPersons().slice(), res = { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] };
+  var cl = ptClasificar(lista || [], a, 'p');
+  cl.nuevos.forEach(function (p) {
+    var nuevo = ptParaEnviar(p);
+    if (!nuevo) return;
+    a.push(nuevo); res.nuevos++; res.nombres.push(ptNombreDe(nuevo));
   });
-  if (res.nuevos || res.actualizados) await DB.savePersons(a);
+  cl.mismos.forEach(function (x) {
+    var i = a.findIndex(function (y) { return y.id === x.r.id; });
+    if (i >= 0 && ptFundir(a[i], x.r)) { res.actualizados++; res.nombres.push(ptNombreDe(a[i])); }
+  });
+  cl.conflictos.forEach(function (x) {
+    var d = (decision && decision[x.r.id]) || PT_CONFLICTO_DEF;
+    if (d === 'ignorar') { res.ignorados++; return; }
+    if (d === 'aparte') {
+      var nuevo = ptParaEnviar(x.r);
+      if (!nuevo) return;
+      a.push(nuevo); res.nuevos++; res.nombres.push(ptNombreDe(nuevo)); return;
+    }
+    var i = a.findIndex(function (y) { return y.id === x.local.id; });
+    if (i < 0) return;
+    /* ⚠️ Se funde SOBRE la ficha de aquí y NO se le cambia el identificador: de
+       ese identificador cuelgan las capturas de este teléfono —los apartados 4, 5
+       y 6 del informe, las actas y los rótulos—, y cambiarlo dejaría a esas
+       capturas apuntando a una persona que ya no existe. Lo que se toma del
+       compañero son los DATOS, no su numeración interna. */
+    var copia = ptParaEnviar(x.r) || {};
+    delete copia.id;
+    if (ptFundir(a[i], copia)) { res.fundidos++; res.nombres.push(ptNombreDe(a[i])); }
+    else res.ignorados++;
+  });
+  if (res.nuevos || res.actualizados || res.fundidos) await DB.savePersons(a);
   return res;
 }
 
@@ -20361,6 +20623,26 @@ async function ptRecibirCasos(lista) {
   });
   if (res.nuevos || res.actualizados) await DB.saveCases(a);
   return res;
+}
+
+/* ── APLICAR UN PAQUETE ENTERO ────────────────────────────────────────────
+   ⚠️ Un paquete entra ENTERO o no entra. Si el guardado de las capturas falla
+   después de haber guardado las personas, el teléfono se queda a medias y nadie
+   sabe con qué mitad — que es exactamente lo que pasaba. Ahora las dos mitades se
+   preparan en memoria, se guardan, y si algo se cae se devuelve el registro
+   completo a como estaba antes de empezar. */
+async function ptAplicarPaquete(abierto, decision) {
+  var personasAntes = DB.getPersons().slice(), casosAntes = DB.getCases().slice();
+  try {
+    var rp = await ptRecibirPersonas(abierto.personas, decision);
+    var rc = await ptRecibirCasos(abierto.casos);
+    return { ok: true, p: rp, c: rc, rechazados: abierto.rechazados || [] };
+  } catch (e) {
+    try { await DB.savePersons(personasAntes); await DB.saveCases(casosAntes); } catch (e2) {}
+    return { ok: false, motivo: 'No se pudo guardar lo que llegó. Nada cambió en este equipo.',
+             p: { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] },
+             c: { nuevos: 0, actualizados: 0, nombres: [] }, rechazados: abierto.rechazados || [] };
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -21188,7 +21470,19 @@ var PT_PROTO = 1;                 // versión del formato de emparejamiento
 var PT_INVIT_MS = 3 * 60 * 1000;  // una invitación caduca a los 3 minutos
 var PT_SESION_MS = 12 * 60 * 60 * 1000;   // y una sesión inactiva, a las 12 horas
 var PT_LATIDO_MS = 15000;
-var PT_QR_MAX_LADO = 480;         // se lee sobre una copia reducida del fotograma
+/* ⚠️ RESOLUCIÓN DE ANÁLISIS — el valor que decide si un código se lee o no.
+   Estaba en 480, y eso no reducía «un poco» el fotograma: de una cámara de
+   1280×720 dejaba 480×270, o sea 270 px de ALTO para todo el símbolo. Medido
+   sobre fotogramas con inclinación, desenfoque y ruido: a 480 el lector falla el
+   100 % de las veces en cuanto el código pasa de 61 módulos; a 720 los lee todos
+   hasta 81 sin un solo fallo, y cuesta 19 ms por fotograma en vez de 8 — a 24
+   fotogramas por segundo sobra tiempo. */
+var PT_QR_MAX_LADO = 720;
+/* Se analiza el CUADRO CENTRAL, que es donde el marco de la pantalla le pide al
+   usuario que ponga el código: más píxeles por módulo y menos trabajo que mirar
+   los bordes, donde no va a estar nunca. Se alterna con el fotograma entero para
+   que un encuadre descuidado tampoco deje al funcionario sin vincularse. */
+var PT_QR_CENTRO = 0.82;
 
 /* ── DESCRIPTOR DE CONEXIÓN, COMPRIMIDO ────────────────────────────────────
    El SDP que produce el navegador son ~590 bytes, de los que casi todo es
@@ -21200,13 +21494,55 @@ var PT_QR_MAX_LADO = 480;         // se lee sobre una copia reducida del fotogra
    590 bytes necesita la versión 15 (77×77 módulos) y hay que acercar mucho la
    cámara; con ~110 bytes basta la versión 6 (41×41), que se lee de un vistazo a
    la distancia a la que dos personas se enseñan una pantalla. */
+var PT_RE_UFRAG = /a=ice-ufrag:(\S+)/;
+var PT_RE_PWD = /a=ice-pwd:(\S+)/;
+var PT_RE_FP = /a=fingerprint:sha-256 (\S+)/;
+var PT_RE_CAND = /a=candidate:\S+ 1 udp \S+ (\S+) (\d+) typ host/;
+var PT_RE_IP4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+var PT_RE_MDNS = /\.local$/i;
+/* ── QUÉ DIRECCIONES ENTRAN EN EL CÓDIGO ──────────────────────────────────
+   ⚠️ AQUÍ ESTABA LA CAUSA DEL FALLO REPORTADO («el teléfono A no lee el código
+   del B»). El código llevaba TODAS las direcciones que el navegador expusiera, y
+   eso no depende del rol —quién muestra y quién escanea— sino del ESTADO DE RED
+   de cada equipo. Medido: con una sola dirección de wifi el código son 45×45
+   módulos; con wifi + datos + IPv6 sube a 61×61, y con una red privada virtual a
+   65×65. Uno de los dos teléfonos generaba un código legible y el otro no, y
+   parecía cosa del aparato.
+
+   La regla es que solo sirve lo que puede conectar DOS TELÉFONOS DE LA MISMA
+   RED: direcciones IPv4 privadas, y los nombres locales que el navegador pone en
+   su lugar mientras no tiene permiso de cámara. Todo lo demás —IPv6, la IP de
+   los datos móviles, las de operador— no va a conectar nada aquí y solo engorda
+   el código hasta volverlo ilegible. */
+function _ptDirPrivada(d) {
+  var m = PT_RE_IP4.exec(d);
+  if (!m) return false;
+  var a = +m[1], b = +m[2];
+  return a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 169 && b === 254);
+}
+function _ptEsMdns(d) { return PT_RE_MDNS.test(d); }
+/* Orden: primero lo que más conecta —una dirección privada de verdad— y después
+   los nombres locales, que dependen de que la multidifusión funcione en esa red.
+   El tope está en tres: con más, el código crece sin que la conexión mejore. */
+var PT_MAX_CANDS = 3;
+function ptFiltrarCands(cands) {
+  var ip = [], md = [], vistos = {};
+  (cands || []).forEach(function (c) {
+    var k = c.dir + ':' + c.puerto;
+    if (vistos[k]) return;
+    vistos[k] = 1;
+    if (_ptDirPrivada(c.dir)) ip.push(c);
+    else if (_ptEsMdns(c.dir)) md.push(c);
+  });
+  return ip.concat(md).slice(0, PT_MAX_CANDS);
+}
 function ptSdpPartes(sdp) {
-  var uf = sdp.match(/a=ice-ufrag:(\S+)/), pw = sdp.match(/a=ice-pwd:(\S+)/);
-  var fp = sdp.match(/a=fingerprint:sha-256 (\S+)/);
+  var uf = sdp.match(PT_RE_UFRAG), pw = sdp.match(PT_RE_PWD);
+  var fp = sdp.match(PT_RE_FP);
   if (!uf || !pw || !fp) return null;
-  var cands = [], re = /a=candidate:\S+ 1 udp \S+ (\S+) (\d+) typ host/g, m;
+  var cands = [], re = new RegExp(PT_RE_CAND.source, 'g'), m;
   while ((m = re.exec(sdp))) cands.push({ dir: m[1], puerto: parseInt(m[2], 10) });
-  return { ufrag: uf[1], pwd: pw[1], fp: fp[1], cands: cands };
+  return { ufrag: uf[1], pwd: pw[1], fp: fp[1], cands: ptFiltrarCands(cands) };
 }
 function ptSdpArmar(p, esOferta) {
   var l = ['v=0', 'o=- ' + (Date.now() % 1e10) + ' 2 IN IP4 127.0.0.1', 's=-', 't=0 0',
@@ -21225,20 +21561,78 @@ function ptSdpArmar(p, esOferta) {
 /* ── SERIALIZACIÓN BINARIA DEL DESCRIPTOR ─────────────────────────────────── */
 function _ptEsc(bytes, s) { for (var i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i) & 255); }
 function _ptEscN(bytes, s) { bytes.push(s.length & 255); _ptEsc(bytes, s); }
+var PT_RE_UUID = /^([0-9a-f]{8})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{4})-([0-9a-f]{12})\.local$/i;
+var PT_RE_DOSP = /:/g;
+/* ⚠️ Un nombre local es un identificador de 32 dígitos hexadecimales escrito con
+   guiones y seguido de «.local»: 41 caracteres que son SOLO 16 BYTES de
+   información. Guardarlo como texto costaba 42 bytes por dirección, y con tres
+   direcciones se llevaba el código dos versiones más arriba —justo al tamaño que
+   deja de leerse—. Se guardan los 16 bytes y el nombre se vuelve a escribir igual
+   al otro lado. */
+function _ptUuidBytes(d) {
+  var m = PT_RE_UUID.exec(d);
+  if (!m) return null;
+  var hex = (m[1] + m[2] + m[3] + m[4] + m[5]).toLowerCase(), out = [];
+  for (var i = 0; i < 16; i++) out.push(parseInt(hex.substr(i * 2, 2), 16));
+  return out;
+}
+function _ptUuidTexto(u, i) {
+  var h = '';
+  for (var k = 0; k < 16; k++) h += ('0' + u[i + k].toString(16)).slice(-2);
+  return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' +
+         h.slice(16, 20) + '-' + h.slice(20) + '.local';
+}
+/* Tipos de dirección: 0 = IPv4 (4 bytes) · 1 = texto tal cual · 2 = nombre local
+   comprimido (16 bytes). El 1 se conserva para lo que no encaje en los otros dos,
+   así una dirección con una forma que no se previó viaja entera en vez de
+   perderse. */
 function ptDescBytes(p) {
   var b = [];
   _ptEscN(b, p.ufrag); _ptEscN(b, p.pwd);
-  var hex = p.fp.replace(/:/g, '');
+  var hex = p.fp.replace(PT_RE_DOSP, '');
   for (var i = 0; i < 32; i++) b.push(parseInt(hex.substr(i * 2, 2), 16) || 0);
   b.push(p.cands.length & 255);
   p.cands.forEach(function (c) {
-    var ip = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(c.dir);
+    var ip = PT_RE_IP4.exec(c.dir), uu;
     if (ip) { b.push(0); for (var k = 1; k <= 4; k++) b.push(parseInt(ip[k], 10) & 255); }
+    else if ((uu = _ptUuidBytes(c.dir))) { b.push(2); for (var j = 0; j < 16; j++) b.push(uu[j]); }
     else { b.push(1); _ptEscN(b, c.dir); }
     b.push((c.puerto >> 8) & 255, c.puerto & 255);
   });
   return Uint8Array.from(b);
 }
+/* ── TOPE DURO DEL TAMAÑO DEL CÓDIGO ──────────────────────────────────────
+   ⚠️ El códec llega hasta la versión 20, pero eso NO quiere decir que un código
+   de esa versión se pueda leer con la cámara de un teléfono apuntando a la
+   pantalla de otro. Medido sobre fotogramas con inclinación, desenfoque y ruido:
+   hasta la versión 10 (57×57 módulos) se lee siempre; por encima, la lectura
+   empieza a depender del pulso. Así que el límite lo pone lo que se lee, no lo
+   que cabe.
+
+   Si el descriptor no entra, se recortan direcciones de una en una —la última es
+   siempre la que menos aporta, porque ya vienen ordenadas por utilidad— antes de
+   rendirse. Con una sola dirección el código nunca pasa de la versión 8.
+   ⚠️ Y si aun así no cupiera, se DICE. Antes se devolvía una cadena vacía y la
+   pantalla se quedaba en blanco, que es indistinguible de una aplicación rota. */
+var PT_QR_VER_MAX = 10;
+function ptDescAjustado(p) {
+  var q = { ufrag: p.ufrag, pwd: p.pwd, fp: p.fp, cands: p.cands.slice() }, v;
+  while (true) {
+    v = ptQrVersion(_ptTamPaquete(q));
+    if (v && v <= PT_QR_VER_MAX) return q;
+    if (!q.cands.length) return null;
+    q.cands.pop();
+  }
+}
+/* El paquete más grande de los dos que viajan: la invitación lleva la clave de
+   sesión (32 B) y la respuesta va cifrada (12 de vector + 16 de sello). Se mide
+   contra el mayor para que las dos mitades quepan con el mismo recorte y el
+   código del compañero no salga ilegible justo después del propio. */
+function _ptTamPaquete(p) {
+  var d = ptDescBytes(p).length;
+  return 13 + Math.max(32 + d, 12 + d + 16);
+}
+
 function ptDescDeBytes(u) {
   try {
     var i = 0;
@@ -21249,6 +21643,7 @@ function ptDescDeBytes(u) {
     for (var c = 0; c < n; c++) {
       var tipo = u[i++], dir;
       if (tipo === 0) dir = u[i++] + '.' + u[i++] + '.' + u[i++] + '.' + u[i++];
+      else if (tipo === 2) { dir = _ptUuidTexto(u, i); i += 16; }
       else dir = txt();
       var puerto = (u[i++] << 8) | u[i++];
       cands.push({ dir: dir, puerto: puerto });
@@ -21354,6 +21749,7 @@ function ptEstado() {
     par: _ptPar,
     desde: _ptDesde,
     enviando: _ptEnvio ? (_ptEnvio.p + _ptEnvio.c) : 0,
+    entregado: !!(_ptEnvio && _ptEnvio.llego),
     recibido: _ptRecibido.slice()
   };
 }
@@ -21392,6 +21788,10 @@ async function ptCrearInvitacion() {
   await _ptPc.setLocalDescription(await _ptPc.createOffer());
   await _ptEsperarIce(_ptPc);
   var p = ptSdpPartes(_ptPc.localDescription.sdp);
+  if (!p) return null;
+  /* ⚠️ Se recorta ANTES de dibujar nada: un código que no se puede leer no es un
+     código, es una pantalla que hace perder el tiempo. */
+  p = ptDescAjustado(p);
   if (!p) return null;
   var ts = Date.now();
   _ptDesde = ts;
@@ -21434,6 +21834,7 @@ async function ptResponderInvitacion(bytes) {
   await _ptPc.setLocalDescription(await _ptPc.createAnswer());
   await _ptEsperarIce(_ptPc);
   var mio = ptSdpPartes(_ptPc.localDescription.sdp);
+  if (mio) mio = ptDescAjustado(mio);
   if (!mio) return { ok: false, motivo: 'no se pudo preparar la respuesta' };
   _ptDesde = Date.now();
   return { ok: true, bytes: await ptRespuestaBytes(_ptSid, Date.now(), _ptClaveQr, mio) };
@@ -21470,6 +21871,18 @@ function ptEnviar(obj) {
 }
 
 async function _ptRecibir(datos) {
+  /* ⚠️ TODO EL MANEJO VA ENVUELTO. Antes, un mensaje con una forma inesperada
+     lanzaba dentro de esta función —que no la llama nadie que pueda recogerlo— y
+     dejaba al que envía treinta segundos en «enviando» sin que su confirmación
+     llegara nunca. Un fallo aquí no puede volverse un cuelgue en el otro
+     teléfono. */
+  try { await _ptRecibirAhora(datos); }
+  catch (e) {
+    _ptBuf = [];
+    try { toast('Llegó algo que este equipo no pudo leer. No se cambió nada.'); } catch (e2) {}
+  }
+}
+async function _ptRecibirAhora(datos) {
   var u = new Uint8Array(datos), claro = await ptDescifrar(_ptClave, u);
   /* ⚠️ Lo que no descifra se DESCARTA sin más. Un mensaje que no venga de quien
      escaneó el código no tiene por qué llegar hasta aquí, y si llega no se toca. */
@@ -21491,53 +21904,111 @@ async function _ptRecibir(datos) {
     if (_ptBuf.length < PT_BUF_MAX && m.d) _ptBuf.push(m);
     return;
   }
+
   if (m.t === 'fin') {
     var pers = [], cass = [];
     _ptBuf.forEach(function (x) { (x.k === 'c' ? cass : pers).push(x.d); });
     _ptBuf = [];
-    var rp = await ptRecibirPersonas(pers), rc = await ptRecibirCasos(cass);
-    _ptRecibido.push({ ts: Date.now(), p: rp, c: rc });
-    ptEnviar({ t: 'ok', id: m.id, p: rp, c: rc });
-    _ptAviso();
-    if (typeof ptAlRecibir === 'function') { try { ptAlRecibir(rp, rc); } catch (e) {} }
+    var abierto = ptAbrirPaquete({
+      lx: PT_MARCA, schemaVersion: (typeof m.esq === 'number' ? m.esq : PT_ESQUEMA),
+      origen: _ptPar || '', ts: Date.now(), personas: pers, casos: cass
+    });
+    if (!abierto.ok) {
+      ptEnviar({ t: 'ok', id: m.id, rechazado: abierto.motivo,
+                 p: { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] },
+                 c: { nuevos: 0, actualizados: 0, nombres: [] } });
+      toast(abierto.motivo);
+      return;
+    }
+    /* ⚠️ ACUSE INMEDIATO. El que envía no puede seguir contando los segundos
+       mientras aquí se decide: se le dice que LLEGÓ, y después qué se hizo con
+       ello. Sin esto, la confirmación del usuario agotaba su espera y el envío se
+       daba por fallido cuando en realidad estaba sobre la mesa. */
+    ptEnviar({ t: 'llego', id: m.id, p: abierto.personas.length, c: abierto.casos.length });
+    ptConfirmarImportacion(abierto, 'el compañero', async function (aceptado, decision) {
+      var r = aceptado
+        ? await ptAplicarPaquete(abierto, decision)
+        : { ok: true, cancelado: true, p: { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] },
+            c: { nuevos: 0, actualizados: 0, nombres: [] }, rechazados: abierto.rechazados };
+      if (aceptado && r.ok) { _ptRecibido.push({ ts: Date.now(), p: r.p, c: r.c }); }
+      ptEnviar({ t: 'ok', id: m.id, p: r.p, c: r.c, cancelado: !aceptado, rechazado: r.ok ? '' : r.motivo });
+      _ptAviso();
+      if (aceptado && r.ok && typeof ptAlRecibir === 'function') { try { ptAlRecibir(r.p, r.c); } catch (e) {} }
+      if (!aceptado) toast('No se importó nada. El compañero queda avisado.');
+    });
     return;
   }
+
+  /* Acuse de llegada: el envío está en el otro teléfono y espera su decisión. */
+  if (m.t === 'llego') {
+    if (_ptEnvio && _ptEnvio.id === m.id) {
+      _ptEnvio.llego = true;
+      if (_ptEnvioReloj) clearTimeout(_ptEnvioReloj);
+      /* Con el envío ya entregado la espera se alarga: lo que queda es que una
+         persona mire la pantalla y decida, y eso no son treinta segundos. */
+      _ptEnvioReloj = setTimeout(_ptEnvioSeRindio, PT_ESPERA_DECISION_MS);
+      _ptAviso();
+    }
+    return;
+  }
+
   /* El compañero confirma qué hizo con lo que se le mandó. Lo dice él, no lo
-     supone este teléfono: es la única forma de que «enviado» signifique
-     «llegó y quedó guardado». */
+     supone este teléfono: es la única forma de que «enviado» signifique «llegó y
+     quedó guardado». */
   if (m.t === 'ok') {
     if (_ptEnvio && _ptEnvio.id === m.id) {
       var cb = _ptEnvio.cb;
       _ptCerrarEnvio();
       _ptAviso();
-      if (typeof cb === 'function') { try { cb({ ok: true, p: m.p, c: m.c }); } catch (e) {} }
+      if (typeof cb === 'function') {
+        try { cb({ ok: !m.rechazado, motivo: m.rechazado || '', cancelado: !!m.cancelado, p: m.p, c: m.c }); } catch (e) {}
+      }
     }
     return;
   }
 }
 
 /* ── EL ENVÍO ──────────────────────────────────────────────────────────────
-   Explícito, de uno en uno y con confirmación. `cb` recibe qué hizo el
-   compañero con cada registro. */
+   Explícito, de uno en uno y con confirmación. `cb` recibe qué hizo el compañero
+   con cada registro.
+
+   ⚠️ DOS ESPERAS, NO UNA, y la distinción importa. Hasta que llega el acuse, lo
+   que se espera es que el paquete CRUCE —treinta segundos de sobra—. Después, lo
+   que se espera es que una persona mire su pantalla y decida, y para eso treinta
+   segundos son pocos: el envío se daba por fallido cuando en realidad estaba
+   sobre la mesa del compañero. */
+var PT_ESPERA_ENVIO_MS = 30 * 1000;
+var PT_ESPERA_DECISION_MS = 5 * 60 * 1000;
+
+function _ptEnvioSeRindio() {
+  var f = _ptEnvio && _ptEnvio.cb, llego = !!(_ptEnvio && _ptEnvio.llego);
+  _ptCerrarEnvio(); _ptAviso();
+  if (typeof f === 'function') {
+    try {
+      f({ ok: false, motivo: llego
+        ? 'le llegó, pero no llegó a decidir a tiempo. Vuelve a enviárselo.'
+        : 'no respondió. Comprueba que siguen vinculados y vuelve a intentarlo.' });
+    } catch (e) {}
+  }
+}
 function ptEnviarRegistros(personas, casos, cb) {
   if (!ptEstado().activa) return { ok: false, motivo: 'sin vínculo' };
   if (_ptEnvio) return { ok: false, motivo: 'hay un envío en curso' };
   personas = personas || []; casos = casos || [];
   if (!personas.length && !casos.length) return { ok: false, motivo: 'nada que enviar' };
   var id = uid();
-  _ptEnvio = { id: id, p: personas.length, c: casos.length, cb: cb, ts: Date.now() };
-  /* ⚠️ Si el compañero no contesta no se queda «enviando» para siempre: se
-     avisa y se puede volver a intentar. Un estado que no termina nunca es
+  _ptEnvio = { id: id, p: personas.length, c: casos.length, cb: cb, ts: Date.now(), llego: false };
+  /* ⚠️ Si el compañero no contesta no se queda «enviando» para siempre: se avisa
+     y se puede volver a intentar. Un estado que no termina nunca es
      indistinguible de uno que falló. */
-  _ptEnvioReloj = setTimeout(function () {
-    var f = _ptEnvio && _ptEnvio.cb;
-    _ptCerrarEnvio(); _ptAviso();
-    if (typeof f === 'function') { try { f({ ok: false, motivo: 'el compañero no respondió' }); } catch (e) {} }
-  }, 30000);
+  _ptEnvioReloj = setTimeout(_ptEnvioSeRindio, PT_ESPERA_ENVIO_MS);
   var cadena = Promise.resolve();
   personas.forEach(function (p) { cadena = cadena.then(function () { return ptEnviar({ t: 'reg', k: 'p', d: ptParaEnviar(p) }); }); });
   casos.forEach(function (c) { cadena = cadena.then(function () { return ptEnviar({ t: 'reg', k: 'c', d: ptParaEnviar(c) }); }); });
-  cadena.then(function () { return ptEnviar({ t: 'fin', id: id }); });
+  /* La versión del sobre viaja con el cierre del envío: así el que recibe puede
+     rechazar limpiamente un paquete de una versión que no entiende, en vez de
+     intentar guardarlo. */
+  cadena.then(function () { return ptEnviar({ t: 'fin', id: id, esq: PT_ESQUEMA }); });
   _ptAviso();
   return { ok: true, id: id };
 }
@@ -21562,13 +22033,29 @@ function ptVinculoCaducado() {
    Se reduce el fotograma antes de analizarlo: a 480 px de lado el código sigue
    teniendo módulos de sobra y el análisis cuesta la cuarta parte, que en un
    teléfono es la diferencia entre leer al vuelo y ir a tirones. */
+var _ptScanAlterno = false;
 function ptQrDeVideo(video, canvas) {
   if (!video || !video.videoWidth) return null;
-  var esc = Math.min(1, PT_QR_MAX_LADO / Math.max(video.videoWidth, video.videoHeight));
-  var w = Math.round(video.videoWidth * esc), h = Math.round(video.videoHeight * esc);
+  /* ⚠️ Un vídeo PAUSADO tiene su `videoWidth` correcto y no entrega ni un
+     fotograma: `drawImage` pinta un lienzo vacío y el lector no ve nada, sin que
+     nada parezca roto. Comprobado. Por eso la guarda mira si está corriendo, no
+     solo si tiene medidas — y lo reanuda, que es lo que hace falta cuando el
+     sistema lo pausa al volver de otra aplicación. */
+  if (video.paused || video.ended) { try { video.play(); } catch (e) {} return null; }
+
+  _ptScanAlterno = !_ptScanAlterno;
+  var vw = video.videoWidth, vh = video.videoHeight;
+  var sx = 0, sy = 0, sw = vw, sh = vh;
+  if (_ptScanAlterno) {
+    var lado = Math.round(Math.min(vw, vh) * PT_QR_CENTRO);
+    sx = Math.round((vw - lado) / 2); sy = Math.round((vh - lado) / 2);
+    sw = lado; sh = lado;
+  }
+  var esc = Math.min(1, PT_QR_MAX_LADO / Math.max(sw, sh));
+  var w = Math.round(sw * esc), h = Math.round(sh * esc);
   canvas.width = w; canvas.height = h;
   var ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(video, 0, 0, w, h);
+  ctx.drawImage(video, sx, sy, sw, sh, 0, 0, w, h);
   var img = ctx.getImageData(0, 0, w, h);
   return ptQrLeer(img.data, w, h);
 }
@@ -21620,6 +22107,8 @@ var _ptScanRaf = null, _ptScanStream = null, _ptScanCb = null;
 var PT_IC = {
   mostrar:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20h1"/></svg>',
   escanear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>',
+  archivo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 12v5M9.5 14.5 12 12l2.5 2.5"/></svg>',
+  recibir:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-5M9.5 14.5 12 17l2.5-2.5"/></svg>',
   compartir:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>'
 };
 
@@ -21629,7 +22118,9 @@ function ptAbrirCompartir() {
   go('compartir');
 }
 
-/* ── LA PANTALLA ─────────────────────────────────────────────────────────── */
+/* ── LA PANTALLA ─────────────────────────────────────────────────────────
+   Un solo trámite con sus estados, no varios destinos: inicio · preparando ·
+   mostrando · respondiendo · vinculado. */
 function renderCompartir() {
   var e = ptEstado(), pane = document.getElementById('cp-pane');
   if (!pane) return;
@@ -21640,6 +22131,7 @@ function renderCompartir() {
   if (e.activa) _ptUiPaso = 'vinculado';
   else if (_ptUiPaso === 'vinculado') _ptUiPaso = 'inicio';
   pane.innerHTML = _ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
+    : _ptUiPaso === 'preparando' ? _ptUiPreparando()
     : _ptUiPaso === 'mostrando' ? _ptUiCodigo(true)
     : _ptUiPaso === 'respondiendo' ? _ptUiCodigo(false)
     : _ptUiInicio();
@@ -21663,45 +22155,83 @@ function _ptUiInicio() {
         '<div class="lic">' + PT_IC.escanear + '</div>' +
         '<div><div class="ti">Escanear el código del compañero</div>' +
         '<div class="de">Si el código lo está mostrando él</div></div></button>' +
-    '</div>';
+    '</div>' +
+    /* ⚠️ El respaldo por archivo NO se esconde detrás de un fallo: está a la
+       vista desde el principio. Ofrecérselo al funcionario solo cuando ya ha
+       perdido cinco minutos con la cámara es ofrecérselo tarde. */
+    '<div class="card cp-alt"><div class="st">Si no pueden vincularse</div>' +
+    '<p class="txd txs">Se guarda un archivo y se lo pasas por donde quieras.</p>' +
+    '<p class="txd txs">No hace falta cámara, ni wifi, ni internet.</p>' +
+    '<div class="pt-paso">' +
+      '<button class="pt-op" onclick="ptUiExportar()">' +
+        '<div class="lic">' + PT_IC.archivo + '</div>' +
+        '<div><div class="ti">Guardar un archivo para el compañero</div>' +
+        '<div class="de">Marca antes lo que quieras pasarle</div></div></button>' +
+      '<button class="pt-op" onclick="ptImportarArchivo()">' +
+        '<div class="lic">' + PT_IC.recibir + '</div>' +
+        '<div><div class="ti">Recibir un archivo</div>' +
+        '<div class="de">El que te pasó el compañero</div></div></button>' +
+    '</div></div>' +
+    _ptUiRecibido(ptEstado());
 }
 
-/* El código en pantalla. ⚠️ Se dice SIEMPRE cuánto le queda: un código caduca a
-   los 3 minutos y, sin decirlo, el compañero se encontraría con un «ya caducó»
-   que parece un fallo de la aplicación. */
+/* Estado de espera: preparar el código pide direcciones de red y eso tarda un
+   segundo largo. ⚠️ Sin este estado la pantalla se quedaba quieta y el
+   funcionario volvía a tocar el botón, con dos códigos en marcha. */
+function _ptUiPreparando() {
+  return '<div class="card cp-esp"><div class="cp-giro"></div>' +
+    '<div class="st">Preparando el código…</div>' +
+    '<p class="txd txs">Buscando por dónde conectar con el equipo del compañero.</p></div>';
+}
+
+/* El código en pantalla. ⚠️ Se dice SIEMPRE cuánto le queda: caduca a los 3
+   minutos y, sin decirlo, el compañero se encontraría con un «ya caducó» que
+   parece un fallo de la aplicación. */
 function _ptUiCodigo(esInvitacion) {
   var quedan = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
   var min = Math.floor(quedan / 60000), seg = Math.floor((quedan % 60000) / 1000);
-  var svg = _ptUiBytes ? ptQrSvg(_ptUiBytes, 280) : '';
-  return '<div class="card">' +
-    '<div class="st">' + (esInvitacion ? 'Enséñale este código' : 'Enséñale tu respuesta') + '</div>' +
-    '<p class="txd txs">' + (esInvitacion
-      ? 'El compañero abre «Modo compartir» en su teléfono y escanea este código.'
-      : 'El compañero escanea este código y quedan vinculados.') + '</p>' +
-    '<div class="pt-qr">' + svg + '</div>' +
-    '<p class="txd txs" style="text-align:center;margin-top:10px" id="pt-cuenta">' +
-      (quedan > 0 ? ('Caduca en ' + min + ':' + (seg < 10 ? '0' : '') + seg)
-                  : 'Caducó — genera uno nuevo') + '</p>' +
-    '</div>' +
-    (esInvitacion
-      ? '<button class="btn bp bbl" onclick="ptUiEscanearRespuesta()">Ahora escanea su respuesta</button>' +
-        '<button class="btn bs bbl" onclick="ptUiMostrar()">Generar otro código</button>'
-      : '<p class="txd txs" style="text-align:center">Esperando a que el compañero lo escanee…</p>') +
-    '<button class="btn bs bbl" onclick="ptUiCancelar()">Cancelar</button>';
+  var svg = _ptUiBytes ? ptQrSvg(_ptUiBytes, 320) : '';
+  var h = '<div class="cp-code">' +
+    '<div class="cc-hd"><div class="cc-ti">' + (esInvitacion ? 'Enséñale este código' : 'Enséñale tu respuesta') + '</div>' +
+    '<div class="cc-de">' + (esInvitacion
+      ? 'El compañero abre «Modo compartir» y lo escanea.'
+      : 'El compañero lo escanea y quedan vinculados.') + '</div></div>' +
+    '<div class="pt-qr">' + (svg ||
+      '<div class="cc-mal">No se pudo dibujar el código aquí. Usa el archivo.</div>') + '</div>' +
+    '<div class="cc-pie"><span class="cc-pt' + (quedan > 0 ? ' viva' : '') + '"></span>' +
+    '<span id="pt-cuenta">' + (quedan > 0
+      ? ('Válido ' + min + ':' + (seg < 10 ? '0' : '') + seg + ' más')
+      : 'Caducó — genera uno nuevo') + '</span></div>' +
+    '</div>';
+  h += '<p class="txd txs cp-tip">Sube el brillo y deja unos 20 cm entre los dos teléfonos.</p>';
+  h += esInvitacion
+    ? '<button class="btn bp bbl" onclick="ptUiEscanearRespuesta()">Ahora escanea su respuesta</button>' +
+      '<button class="btn bs bbl" onclick="ptUiMostrar()">Generar otro código</button>'
+    : '<div class="cp-esperando"><span class="cp-giro chico"></span>Esperando a que el compañero lo escanee…</div>';
+  h += '<button class="btn bs bbl" onclick="ptUiCancelar()">Cancelar</button>';
+  return h;
 }
 
 /* ── VINCULADOS: QUÉ SE MANDA ────────────────────────────────────────────── */
 function _ptUiVinculado(e) {
   var np = _ptContar('p'), nc = _ptContar('c'), n = np + nc;
+  /* Los tres momentos del envío se nombran distinto: transfiriendo, entregado y
+     esperando su decisión, y listo. ⚠️ Un «enviando…» que dura dos minutos
+     porque el compañero no ha mirado la pantalla se lee como un cuelgue. */
+  var de = e.enviando
+    ? (e.entregado ? 'Le llegó — está revisando qué importar' : 'Transfiriendo al compañero…')
+    : 'Marca lo que quieras enviarle';
   var h = '<div class="pt-est"><div class="pe-pt"></div><div>' +
       '<div class="pe-ti">Vinculado con el compañero</div>' +
-      '<div class="pe-de">' + (e.enviando ? 'Enviando…' : 'Marca lo que quieras enviarle') + '</div>' +
+      '<div class="pe-de">' + de + '</div>' +
     '</div></div>';
   h += _ptUiRecibido(e);
   h += _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste');
   h += _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro');
   h += '<button class="btn bp bbl" id="cp-enviar" onclick="ptUiEnviar()"' + (n && !e.enviando ? '' : ' disabled') + '>' +
-       (e.enviando ? 'Enviando…' : (n ? ('Enviar al compañero (' + n + ')') : 'Enviar al compañero')) + '</button>';
+       (e.enviando ? (e.entregado ? 'Esperando su decisión…' : 'Enviando…')
+                   : (n ? ('Enviar al compañero (' + n + ')') : 'Enviar al compañero')) + '</button>';
+  h += '<button class="btn bs bbl" onclick="ptUiExportar()">Guardar un archivo en vez de enviarlo</button>';
   h += '<button class="btn bs bbl" onclick="ptUiDesvincular()">Desvincular</button>';
   return h;
 }
@@ -21781,9 +22311,13 @@ function ptUiMarcarTodo(k) {
 
 /* ── LAS DOS MITADES DEL VÍNCULO ─────────────────────────────────────────── */
 async function ptUiMostrar() {
-  toast('Preparando el código…');
+  _ptUiPaso = 'preparando'; renderCompartir();
   var inv = await ptCrearInvitacion();
-  if (!inv) { toast('No se pudo preparar el código'); return; }
+  if (!inv) {
+    _ptUiPaso = 'inicio'; renderCompartir();
+    toast('No se pudo preparar el código en este equipo. Usa «Compartir por archivo».');
+    return;
+  }
   _ptUiBytes = inv.bytes; _ptUiTs = inv.ts; _ptUiPaso = 'mostrando';
   renderCompartir(); _ptUiCuenta();
 }
@@ -21806,16 +22340,46 @@ function ptUiEscanear() {
 }
 function ptUiCancelar() { ptDesvincular(); _ptUiPaso = 'inicio'; _ptUiBytes = null; renderCompartir(); }
 
+/* ⚠️ El archivo se arma con lo MISMO que está marcado para enviar por el vínculo:
+   una sola selección para las dos vías. Si hubiera que marcar otra vez al cambiar
+   de vía, el respaldo costaría más que el camino que falló. */
+function ptUiExportar() {
+  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
+  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
+  if (!personas.length && !casos.length) { ptUiElegirParaArchivo(); return; }
+  ptExportarArchivo(personas, casos);
+}
+/* Sin nada marcado, la pantalla de inicio no enseña las listas: en vez de un
+   «marca algo primero» que no lleva a ninguna parte, se abren aquí mismo. */
+function ptUiElegirParaArchivo() {
+  _ptUiPaso = 'inicio';
+  openModal('<div class="mh"><h2>Qué le pasas al compañero</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="cf-sel">' + _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste') +
+    _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro') + '</div>' +
+    '<button class="btn bp bbl" onclick="ptUiExportarDesdeModal()">Guardar el archivo</button>');
+}
+async function ptUiExportarDesdeModal() {
+  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
+  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
+  if (!personas.length && !casos.length) { toast('Marca al menos una persona o una captura.'); return; }
+  closeModal();
+  await ptExportarArchivo(personas, casos);
+  _ptSel = { p: {}, c: {} };
+  renderCompartir();
+}
+
 /* ── ENVIAR ──────────────────────────────────────────────────────────────── */
 function ptUiEnviar() {
   var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
   var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
   var r = ptEnviarRegistros(personas, casos, function (res) {
     if (!res.ok) { toast('No se pudo enviar: ' + res.motivo); renderCompartir(); return; }
-    var n = res.p.nuevos + res.p.actualizados + res.c.nuevos + res.c.actualizados;
+    if (res.cancelado) { toast('El compañero no lo importó. Lo tuyo no cambió.'); renderCompartir(); return; }
+    var n = res.p.nuevos + res.p.actualizados + (res.p.fundidos || 0) +
+            res.c.nuevos + res.c.actualizados;
     /* ⚠️ Lo que se dice es lo que el COMPAÑERO hizo con el envío, no lo que este
-       teléfono mandó: «enviado» tiene que significar «llegó y quedó guardado». */
-    toast(n ? ('El compañero recibió ' + n + ' registro' + (n === 1 ? '' : 's'))
+       teléfono mandó: «enviado» tiene que significar «llegó y lo aceptó». */
+    toast(n ? ('El compañero importó ' + n + ' registro' + (n === 1 ? '' : 's'))
             : 'El compañero ya tenía todo lo que le enviaste');
     _ptSel = { p: {}, c: {} };
     renderCompartir();
@@ -21848,21 +22412,59 @@ function _ptUiCuenta() {
   if (!el || (_ptUiPaso !== 'mostrando' && _ptUiPaso !== 'respondiendo')) return;
   var q = Math.max(0, PT_INVIT_MS - (Date.now() - _ptUiTs));
   var m = Math.floor(q / 60000), s = Math.floor((q % 60000) / 1000);
-  el.textContent = q > 0 ? ('Caduca en ' + m + ':' + (s < 10 ? '0' : '') + s) : 'Caducó — genera uno nuevo';
+  el.textContent = q > 0 ? ('Válido ' + m + ':' + (s < 10 ? '0' : '') + s + ' más') : 'Caducó — genera uno nuevo';
+  var pt = document.querySelector('.cc-pt');
+  if (pt) pt.classList.toggle('viva', q > 0);
   if (q > 0) setTimeout(_ptUiCuenta, 1000);
 }
 
 /* ── EL LECTOR ─────────────────────────────────────────────────────────────
    Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo y
    aquí no se dispara nada — se lee solo en cuanto el código entra en el marco. */
+/* ⚠️ Los errores de cámara se traducen a lo que el funcionario puede HACER. Un
+   «no se pudo abrir la cámara» no distingue entre un permiso denegado —que se
+   arregla en los ajustes del teléfono— y una cámara ocupada por otra aplicación,
+   y las dos salidas son distintas. */
+function _ptCamMotivo(err) {
+  var n = (err && err.name) || '';
+  if (n === 'NotAllowedError' || n === 'SecurityError')
+    return 'La cámara está bloqueada. Permítela para esta aplicación en los ajustes del teléfono, o usa «Compartir por archivo».';
+  if (n === 'NotFoundError' || n === 'OverconstrainedError')
+    return 'No se encontró la cámara trasera de este equipo. Usa «Compartir por archivo».';
+  if (n === 'NotReadableError')
+    return 'Otra aplicación está usando la cámara. Ciérrala e inténtalo de nuevo.';
+  return 'No se pudo abrir la cámara. Usa «Compartir por archivo».';
+}
 function ptScanAbrir(pista, cb) {
   _ptScanCb = cb;
   var ov = document.getElementById('pt-scan'), vid = document.getElementById('pt-scan-video');
   document.getElementById('pt-scan-txt').textContent = pista;
+  _ptScanEstado('Abriendo la cámara…');
   ov.classList.add('on');
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 } } })
-    .then(function (s) { _ptScanStream = s; vid.srcObject = s; _ptScanBucle(); })
-    .catch(function () { toast('No se pudo abrir la cámara'); ptScanCerrar(); });
+  /* Se pide la resolución más alta que el equipo dé: cuantos más píxeles tenga
+     el símbolo en el fotograma, más lejos se puede leer. Si el equipo no puede,
+     `ideal` deja que entregue la que tenga en vez de fallar. */
+  navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+  })
+    .then(function (s) {
+      _ptScanStream = s; vid.srcObject = s;
+      /* ⚠️ `play()` EXPLÍCITO. El atributo `autoplay` no basta cuando la fuente
+         se asigna por JavaScript: en la política de reproducción de algunos
+         WebView el vídeo se queda pausado, con `videoWidth` correcto y sin
+         entregar un solo fotograma — el lector no ve nada y nada parece roto. */
+      var arranca = vid.play();
+      if (arranca && arranca.catch) arranca.catch(function () {});
+      _ptScanEstado('Apunta al código del compañero');
+      _ptScanBucle();
+    })
+    .catch(function (err) { toast(_ptCamMotivo(err)); ptScanCerrar(); });
+}
+/* Renglón de estado del lector: buscando · detectado · vinculando. Sin él, una
+   lectura que tarda es indistinguible de una que no va a llegar. */
+function _ptScanEstado(txt) {
+  var e = document.getElementById('pt-scan-est');
+  if (e) e.textContent = txt;
 }
 function ptScanCerrar() {
   if (_ptScanRaf) { cancelAnimationFrame(_ptScanRaf); _ptScanRaf = null; }
@@ -21878,6 +22480,7 @@ function _ptScanBucle() {
   var bytes = null;
   try { bytes = ptQrDeVideo(vid, cv); } catch (e) { bytes = null; }
   if (!bytes) return;
+  _ptScanEstado('Código detectado — conectando…');
   /* ⚠️ Se cierra la puerta ANTES de procesar: el bucle sigue corriendo y sin
      esto el mismo código se leería veinte veces mientras se resuelve la promesa,
      con veinte vínculos en marcha. */
@@ -21905,6 +22508,256 @@ function ptAlRecibir(rp, rc) {
 function _on(id) {
   var s = document.getElementById('screen-' + id);
   return !!(s && s.classList.contains('on'));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONFIRMAR ANTES DE IMPORTAR
+
+   ⚠️ Antes, lo que llegaba se guardaba solo. Nadie decidía nada y nadie veía qué
+   había entrado hasta ir a buscarlo. Ahora se enseña qué trae el envío, qué va a
+   pasar con cada cosa, y hace falta un toque para que entre — que es lo que
+   convierte «me llegó algo» en «acepté esto».
+
+   ⚠️ Y AQUÍ SE RESUELVEN LOS DUPLICADOS, que es donde el funcionario tiene la
+   información para decidir: él sabe si el Juan Pérez de su teléfono y el del
+   compañero son la misma persona. La aplicación propone lo más probable —que lo
+   sean, porque coinciden en documento— y deja cambiarlo persona por persona.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var _ptConfDecision = {};
+var _ptConfCb = null;
+
+function _ptResumenLinea(n, sing, plur) {
+  return n + ' ' + (n === 1 ? sing : plur);
+}
+function ptConfirmarImportacion(abierto, deQuien, cb) {
+  var locP = DB.getPersons(), locC = DB.getCases();
+  var cp = ptClasificar(abierto.personas, locP, 'p');
+  var cc = ptClasificar(abierto.casos, locC, 'c');
+  _ptConfDecision = {};
+  cp.conflictos.forEach(function (x) { _ptConfDecision[x.r.id] = PT_CONFLICTO_DEF; });
+  _ptConfCb = cb;
+
+  var total = abierto.personas.length + abierto.casos.length;
+  if (!total) {
+    _ptConfCb = null;
+    toast('El envío de ' + deQuien + ' no traía ningún registro que este equipo pueda leer.');
+    if (typeof cb === 'function') cb(false, {});
+    return;
+  }
+
+  var h = '<div class="mh"><h2>Revisa lo que llegó</h2>' +
+    '<button class="mx" onclick="ptConfCancelar()">✕</button></div>' +
+    '<p class="txd txs">Te lo envió ' + escHtml(deQuien) + '. Nada se guarda hasta que lo aceptes.</p>';
+
+  h += '<div class="cf-res">';
+  if (cp.nuevos.length) h += '<div class="cf-l"><b>' + _ptResumenLinea(cp.nuevos.length, 'persona nueva', 'personas nuevas') + '</b></div>';
+  if (cp.mismos.length) h += '<div class="cf-l">' + _ptResumenLinea(cp.mismos.length, 'persona que ya tienes', 'personas que ya tienes') + ' — se completan sus datos</div>';
+  if (cc.nuevos.length) h += '<div class="cf-l"><b>' + _ptResumenLinea(cc.nuevos.length, 'captura nueva', 'capturas nuevas') + '</b></div>';
+  if (cc.mismos.length) h += '<div class="cf-l">' + _ptResumenLinea(cc.mismos.length, 'captura que ya tienes', 'capturas que ya tienes') + ' — se completan sus datos</div>';
+  h += '</div>';
+
+  /* ⚠️ Lo que se rechazó se DICE, con su motivo. Un registro que desaparece en
+     silencio es la peor forma de perder un dato: nadie va a buscarlo. */
+  if (abierto.rechazados && abierto.rechazados.length) {
+    h += '<div class="cf-mal"><b>' + _ptResumenLinea(abierto.rechazados.length, 'registro no se pudo leer', 'registros no se pudieron leer') + '</b>' +
+      '<div class="txs">' + escHtml(abierto.rechazados.slice(0, 4).map(function (x) { return x.que + ': ' + x.motivo; }).join(' · ')) + '</div></div>';
+  }
+
+  if (cp.conflictos.length) {
+    h += '<div class="st">Ya tienes a estas personas</div>' +
+      '<p class="txd txs">Coinciden en el documento. Decide qué hacer con cada una.</p>' +
+      '<div class="cf-dups">';
+    cp.conflictos.forEach(function (x) {
+      var doc = (x.r.tipoDoc || 'CC') + ' ' + sinPuntos(x.r.numDoc || '');
+      h += '<div class="cf-d"><div class="cf-dn">' + escHtml(ptNombreDe(x.r)) + '</div>' +
+        '<div class="cf-dd">' + escHtml(doc) + ' — aquí figura como ' + escHtml(ptNombreDe(x.local)) + '</div>' +
+        '<div class="cf-do">' + _ptOpcDup(x.r.id, 'fundir', 'Es la misma') +
+        _ptOpcDup(x.r.id, 'aparte', 'Son distintas') +
+        _ptOpcDup(x.r.id, 'ignorar', 'Dejar la mía') + '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  h += '<div class="flx g8" style="flex-wrap:wrap;margin-top:14px">' +
+    '<button class="btn bs" onclick="ptConfCancelar()">No importar</button>' +
+    '<button class="btn bp" onclick="ptConfAceptar()">Importar</button></div>';
+  openModal(h);
+}
+function _ptOpcDup(id, val, txt) {
+  var on = _ptConfDecision[id] === val;
+  return '<button class="cf-op' + (on ? ' on' : '') + '" data-id="' + escAttr(id) + '" data-v="' + val +
+    '" onclick="ptConfDup(this.dataset.id,this.dataset.v)">' + escHtml(txt) + '</button>';
+}
+/* ⚠️ Se repinta SOLO la fila de esa persona: volver a pintar el diálogo entero
+   perdería el desplazamiento cuando llegan varias, y con una lista larga eso
+   obliga a buscar otra vez dónde se estaba. */
+function ptConfDup(id, val) {
+  _ptConfDecision[id] = val;
+  var bs = document.querySelectorAll('.cf-op[data-id="' + (window.CSS && CSS.escape ? CSS.escape(id) : id) + '"]');
+  for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', bs[i].dataset.v === val);
+}
+function ptConfAceptar() {
+  var cb = _ptConfCb, d = _ptConfDecision;
+  _ptConfCb = null;
+  closeModal();
+  if (typeof cb === 'function') cb(true, d);
+}
+function ptConfCancelar() {
+  var cb = _ptConfCb;
+  _ptConfCb = null;
+  closeModal();
+  if (typeof cb === 'function') cb(false, {});
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPARTIR POR ARCHIVO — EL RESPALDO QUE NUNCA FALLA
+
+   ⚠️ ESTA APLICACIÓN YA APRENDIÓ ESTA LECCIÓN UNA VEZ, con el envío de los
+   documentos: atar un entregable obligatorio a la primitiva más frágil de la
+   plataforma deja al funcionario sin salida el día que esa primitiva falla. Allí
+   la primitiva fiable resultó ser la descarga; aquí es exactamente la misma.
+
+   El código en pantalla necesita cámara, permiso, luz, pulso y que los dos
+   teléfonos estén en la misma red. Un archivo no necesita nada de eso: se guarda,
+   se pasa por donde el funcionario ya sabe pasar archivos —el chat de la patrulla,
+   el bluetooth del propio teléfono, un cable— y se abre en el otro equipo. No
+   sustituye al vínculo directo, que sigue siendo más rápido y no deja copias por
+   el camino; es lo que hay cuando el vínculo no se puede establecer.
+
+   ⚠️ VA CIFRADO, Y NO ES OPCIONAL. Dentro hay datos personales de un capturado, y
+   en una captura de menores los de un menor —Ley 1581 de 2012—. Un archivo sin
+   cifrar que pasa por un chat queda en la galería de los dos teléfonos y en la
+   copia de seguridad de ese chat. Se cifra con una clave de seis dígitos que la
+   aplicación genera y que el funcionario le DICE al compañero de viva voz: la
+   clave no viaja nunca por el mismo sitio que el archivo, que es lo único que
+   hace que cifrarlo sirva de algo.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var PT_ARCH_EXT = '.lexc';
+var PT_ARCH_MARCA = 'LEXC1';
+
+function ptClaveNumerica() {
+  var u = new Uint8Array(4);
+  crypto.getRandomValues(u);
+  var n = ((u[0] << 16) | (u[1] << 8) | u[2]) % 1000000;
+  return ('00000' + n).slice(-6);
+}
+/* La clave de seis dígitos se estira con muchas vueltas antes de cifrar: seis
+   dígitos son un millón de combinaciones, que a pelo se prueban en un momento.
+   Con el estirado, cada intento cuesta, y probarlas todas deja de ser gratis. */
+async function _ptClaveArchivo(pin, salt) {
+  var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 250000, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+/* Sobre del archivo: marca (5) + sal (16) + vector (12) + contenido cifrado. La
+   marca va en claro para poder decir «este archivo no es de la aplicación» antes
+   de pedirle al funcionario ninguna clave. */
+async function ptArchivoCifrar(paquete, pin) {
+  var salt = _ptAzar(16), iv = _ptAzar(12);
+  var k = await _ptClaveArchivo(pin, salt);
+  var datos = new TextEncoder().encode(JSON.stringify(paquete));
+  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, datos));
+  var out = new Uint8Array(5 + 16 + 12 + ct.length), i;
+  for (i = 0; i < 5; i++) out[i] = PT_ARCH_MARCA.charCodeAt(i);
+  out.set(salt, 5); out.set(iv, 21); out.set(ct, 33);
+  return out;
+}
+async function ptArchivoAbrir(buf, pin) {
+  var u = new Uint8Array(buf), i;
+  if (u.length < 34) return { ok: false, motivo: 'El archivo está incompleto.' };
+  for (i = 0; i < 5; i++) if (u[i] !== PT_ARCH_MARCA.charCodeAt(i))
+    return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
+  try {
+    var k = await _ptClaveArchivo(pin, u.slice(5, 21));
+    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(21, 33) }, k, u.slice(33));
+    var o = JSON.parse(new TextDecoder().decode(new Uint8Array(claro)));
+    return ptAbrirPaquete(o);
+  } catch (e) {
+    /* ⚠️ No se distingue «clave mal tecleada» de «archivo alterado», y es a
+       propósito: decirle a quien prueba claves cuál de las dos cosa pasa le está
+       diciendo cuándo va bien. Para el funcionario la salida es la misma. */
+    return { ok: false, motivo: 'La clave no coincide, o el archivo llegó dañado. Pídele al compañero que la repita.' };
+  }
+}
+
+/* ── EXPORTAR ───────────────────────────────────────────────────────────── */
+async function ptExportarArchivo(personas, casos) {
+  var n = (personas || []).length + (casos || []).length;
+  if (!n) { toast('Marca antes lo que quieras pasarle al compañero.'); return; }
+  var pin = ptClaveNumerica();
+  var bytes = await ptArchivoCifrar(ptPaquete(personas, casos), pin);
+  var nombre = 'LexCapture_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + PT_ARCH_EXT;
+  var url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+  var a = document.createElement('a');
+  a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  /* ⚠️ Se difiere la liberación: revocarla justo después del clic puede cancelar
+     la descarga antes de que el navegador la empiece. Misma lección que ya costó
+     un reporte en la descarga de los documentos. */
+  setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+
+  openModal(
+    '<div class="mh"><h2>Archivo guardado</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="txd txs">Quedó en Descargas como <b>' + escHtml(nombre) + '</b>, con ' +
+    _ptResumenLinea(n, 'registro dentro', 'registros dentro') + '.</p>' +
+    '<div class="cf-pin"><div class="cf-pin-t">Clave para abrirlo</div>' +
+    '<div class="cf-pin-n">' + pin.slice(0, 3) + ' ' + pin.slice(3) + '</div></div>' +
+    '<p class="txd txs">Pásale el archivo y <b>dile la clave de viva voz</b>.</p>' +
+    '<p class="txd txs">No la escribas en el mismo chat por el que mandes el archivo.</p>' +
+    '<p class="txd txs">Él toca «Recibir un archivo» y la teclea.</p>' +
+    '<button class="btn bp bbl" onclick="closeModal()">Entendido</button>');
+}
+
+/* ── IMPORTAR ───────────────────────────────────────────────────────────── */
+function ptImportarArchivo() {
+  var inp = document.getElementById('pt-arch');
+  if (!inp) return;
+  inp.value = '';
+  inp.click();
+}
+function ptArchivoElegido(inp) {
+  var f = inp && inp.files && inp.files[0];
+  if (!f) return;
+  if (f.size > PT_MAX_TOTAL_BYTES) { toast('Ese archivo es demasiado grande para importarlo.'); return; }
+  var lector = new FileReader();
+  lector.onload = function () { ptPedirClaveArchivo(lector.result, f.name); };
+  lector.onerror = function () { toast('No se pudo leer el archivo.'); };
+  lector.readAsArrayBuffer(f);
+}
+function ptPedirClaveArchivo(buf, nombre) {
+  window.__ptArchBuf = buf;
+  openModal(
+    '<div class="mh"><h2>Clave del archivo</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="txd txs">Teclea los seis dígitos que te dijo el compañero.</p>' +
+    '<p class="txd txs">Archivo: <b>' + escHtml(nombre) + '</b></p>' +
+    '<input class="fi cf-pin-in" id="pt-arch-pin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">' +
+    '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
+    '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
+    '<button class="btn bp" onclick="ptAbrirArchivoConClave()">Abrir</button></div>');
+  setTimeout(function () { var e = document.getElementById('pt-arch-pin'); if (e) e.focus(); }, 120);
+}
+async function ptAbrirArchivoConClave() {
+  var e = document.getElementById('pt-arch-pin');
+  var pin = (e && e.value || '').replace(/\D/g, '');
+  if (pin.length !== 6) { toast('La clave son seis dígitos.'); return; }
+  var buf = window.__ptArchBuf;
+  if (!buf) { closeModal(); return; }
+  toast('Abriendo el archivo…');
+  var r = await ptArchivoAbrir(buf, pin);
+  if (!r.ok) { toast(r.motivo); return; }
+  window.__ptArchBuf = null;
+  closeModal();
+  ptConfirmarImportacion(r, 'el archivo', async function (aceptado, decision) {
+    if (!aceptado) { toast('No se importó nada.'); return; }
+    var res = await ptAplicarPaquete(r, decision);
+    if (!res.ok) { toast(res.motivo); return; }
+    _ptRecibido.push({ ts: Date.now(), p: res.p, c: res.c });
+    renderCompartir();
+    if (typeof ptAlRecibir === 'function') { try { ptAlRecibir(res.p, res.c); } catch (e2) {} }
+  });
 }
 
 /* ── LA FRANJA DE ESTADO ───────────────────────────────────────────────────

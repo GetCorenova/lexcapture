@@ -5611,3 +5611,163 @@ E el modo individual intacto (8).
   el 2026-09-04 se adaptaron al menú de 5 ítems: como derivan la expectativa de `lcEstadoDocs` y
   miden el límite real en vez de un número escrito a mano, el menú volviendo a 4 no las movió.
   Anti-caché `?v=104` / `cache-v104`, `_BUILD=104`.
+
+## Auditoría del Modo compartir (2026-09-10) — el código era ilegible según la red del teléfono
+Reportado en campo: «el celular A genera un QR, B lo lee bien; B genera el suyo y A no lo lee». El
+encargo pedía auditar el módulo entero antes de tocar nada y decidir si el código QR es siquiera la
+tecnología correcta. Verificado con `verify_compartir.mjs` (**57 checks**, antes 43).
+
+### ⚠️ La premisa del reporte era equivocada, y decirlo cambió el trabajo
+El encargo daba por hecho que **los datos viajan dentro del código** y proponía como alternativa
+usarlo solo para emparejar. Medido: **ya era así**. En el código viajan 110-250 bytes de
+emparejamiento; las personas y las capturas van después por la conexión directa. La arquitectura
+—«código para emparejar + transferencia directa»— era la correcta desde el primer día y **no se
+cambió**. Lo que fallaba estaba dentro de ella.
+
+### La causa raíz: el tamaño del código no estaba acotado
+El descriptor de conexión llevaba **todas** las direcciones de red que el navegador expusiera, y eso
+no depende del rol —quién muestra y quién escanea— sino del **estado de red de cada equipo**. Medido
+generando los dos códigos con conjuntos de direcciones reales de Android:
+
+| Estado del teléfono | Código, ANTES | Código, AHORA |
+|---|---|---|
+| un solo wifi | 45×45 | 45×45 |
+| wifi + zona wifi | 45×45 | 45×45 |
+| wifi + datos + IPv6 | **61×61** | 45×45 |
+| teléfono cargado (3 IPv4 + 3 IPv6) | **61×61** | 49×49 |
+| con red privada virtual | **65×65** | 49×49 |
+| sin permiso de cámara (nombres locales) | **61×61** | 53×53 |
+
+- ⚠️ **Solo sirve lo que puede conectar dos teléfonos DE LA MISMA RED**: direcciones IPv4 privadas y
+  los nombres locales que el navegador pone en su lugar mientras no tiene permiso de cámara. Las
+  IPv6, la IP de los datos móviles y las de operador **no van a conectar nada aquí** y solo engordan
+  el código. `ptFiltrarCands` las descarta y deja tres como mucho.
+- ⚠️ **Un nombre local son 41 caracteres que en realidad son 16 BYTES**: es un identificador
+  hexadecimal más «.local». Guardarlo como texto costaba 42 bytes por dirección y con tres se llevaba
+  el código dos versiones más arriba — justo al tamaño que deja de leerse. Ahora viajan los 16 bytes
+  y el nombre se vuelve a escribir al otro lado (tipo de dirección 2; el 1, texto tal cual, se
+  conserva para lo que no encaje, así una forma no prevista viaja entera en vez de perderse).
+- **Tope duro** (`ptDescAjustado`, `PT_QR_VER_MAX = 10`): si no cabe, se recortan direcciones de una
+  en una —vienen ordenadas por utilidad— antes de rendirse. ⚠️ El límite lo pone **lo que se lee**, no
+  lo que cabe: el códec llega a la versión 20 y eso no significa que una cámara la lea.
+- ⚠️ **Se mide contra el MAYOR de los dos paquetes** (la invitación lleva la clave de sesión; la
+  respuesta va cifrada, +28 bytes), para que el código del compañero no salga ilegible justo después
+  del propio.
+
+### Y el lector amplificaba el fallo: analizaba 270 px de alto
+`PT_QR_MAX_LADO` valía 480, y eso no reducía «un poco» el fotograma: de una cámara de 1280×720
+dejaba **480×270**. Medido sobre fotogramas con inclinación, desenfoque y ruido:
+
+| Resolución de análisis | v10 (57) | v11 (61) | v12 (65) | v14 (73) | coste |
+|---|---|---|---|---|---|
+| 480×270 (antes) | 6/6 | **0/6** | **0/6** | **0/6** | 8 ms |
+| 720×405 (ahora) | 6/6 | 6/6 | 6/6 | 6/6 | 19 ms |
+
+A 24 fotogramas por segundo, 19 ms sobran. Se analiza además **el cuadro central** —donde el marco
+le pide al usuario que ponga el código— alternando con el fotograma entero, así un encuadre
+descuidado tampoco deja a nadie sin vincularse. Y se pide a la cámara la resolución más alta que dé.
+
+### ⚠️ El vídeo no se arrancaba, y el síntoma era idéntico a «no lee»
+`ptScanAbrir` asignaba la cámara al elemento de vídeo y confiaba en el atributo `autoplay`. Medido:
+con el elemento no visible el vídeo se queda **pausado**, con su medida correcta y sin entregar un
+solo fotograma — el lector analiza un lienzo vacío y no ve nada, sin que nada parezca roto. Ahora se
+llama a `play()` explícitamente, y `ptQrDeVideo` **mira si está corriendo y lo reanuda** en vez de
+mirar solo si tiene medidas. Es la misma familia de fallo que el `w:sz` ausente del acta: **lo que
+fallaba era la ausencia de la declaración**, y ninguna comprobación que mire valores la detecta.
+
+### Los otros diez hallazgos
+- ⚠️ **Un paquete malformado rompía el guardado y dejaba el almacén a medias.** Reproducido: un
+  registro con una rama de forma equivocada —una lista que llega como texto— lanzaba de verdad dentro
+  de `DB.saveCases`, con las personas ya guardadas y las capturas no. Y como `_ptRecibir` no recogía
+  nada, la confirmación no salía nunca y al que enviaba lo dejaba **treinta segundos en «enviando»**.
+  Ahora hay **formato declarado con versión** (`PT_ESQUEMA`), validación por registro (identificador,
+  tamaño, profundidad y las nueve ramas que tienen que ser listas) y `ptAbrirPaquete`, que **nunca
+  lanza**: devuelve lo usable y lo descartado con su motivo. ⚠️ La versión describe **el sobre, no el
+  contenido**: un teléfono con una versión más nueva se entiende con uno más viejo aunque sus
+  capturas lleven campos que el otro no conoce.
+- ⚠️ **La misma persona entraba DOS VECES.** Solo se comparaba el identificador interno, así que la
+  misma cédula registrada por los dos funcionarios —cada uno con el suyo— duplicaba la ficha sin
+  decir nada. Ahora se compara el **documento**, que es lo que identifica a una persona ante la ley,
+  y **se pregunta**: es la misma · son distintas · dejar la mía. ⚠️ **Sin documento no se supone
+  nada**: dos homónimos sin cédula son dos personas, y fundirlos sería peor que duplicarlos.
+  ⚠️ Al fundir **NO se le cambia el identificador a la ficha de aquí**: de él cuelgan las capturas de
+  este teléfono —los apartados 4, 5 y 6 del informe, las actas y los rótulos—, y cambiarlo las
+  dejaría apuntando a una persona que ya no existe. Lo que se toma del compañero son los DATOS.
+- **Se confirma antes de importar** (`ptConfirmarImportacion`): qué llegó, qué se rechazó y por qué,
+  y los duplicados se resuelven ahí, que es donde el funcionario tiene la información para decidir.
+  ⚠️ Lo rechazado **se dice**: un registro que desaparece en silencio es la peor forma de perder un
+  dato, porque nadie va a buscarlo.
+- ⚠️ **Dos esperas, no una.** Hasta el acuse de llegada lo que se espera es que el paquete CRUCE —30
+  segundos—; después, que una persona mire su pantalla y decida —5 minutos—. Sin el acuse, la
+  confirmación del usuario agotaba la espera y el envío se daba por fallido estando sobre la mesa.
+- **Un paquete entra ENTERO o no entra** (`ptAplicarPaquete`): si el guardado falla, el registro
+  vuelve a como estaba.
+- **Los errores de cámara dicen qué HACER**: permiso bloqueado, cámara ocupada por otra aplicación o
+  sin cámara trasera llevan a salidas distintas, y «no se pudo abrir la cámara» no distinguía ninguna.
+- Si el código no cabía, `ptQrSvg` devolvía cadena vacía y **la pantalla se quedaba en blanco**.
+
+### El respaldo que nunca falla: compartir por archivo
+⚠️ **Esta aplicación ya aprendió esta lección una vez**, con el envío de los documentos: atar un
+entregable obligatorio a la primitiva más frágil de la plataforma deja al funcionario sin salida el
+día que falla. El código necesita cámara, permiso, luz, pulso y la misma red; un archivo no necesita
+nada de eso.
+- `.lexc` **cifrado con AES-GCM** y una clave de **seis dígitos** que la aplicación genera y que el
+  funcionario le dice al compañero **de viva voz**. ⚠️ Dentro hay datos de un capturado, y en una
+  captura de menores los de un menor (Ley 1581 de 2012): un archivo sin cifrar que pasa por un chat
+  queda en la galería de los dos teléfonos y en la copia de seguridad de ese chat. **La clave no
+  viaja por el mismo sitio que el archivo — es lo único que hace que cifrarlo sirva de algo.**
+- La clave se estira con 250 000 vueltas de PBKDF2: seis dígitos son un millón de combinaciones, que
+  a pelo se prueban en un momento.
+- ⚠️ **No se distingue «clave mal tecleada» de «archivo alterado»**: decirle a quien prueba claves
+  cuál de las dos cosas pasa le está diciendo cuándo va bien.
+- ⚠️ **Está a la vista desde el principio, no escondido tras un fallo.** Ofrecérselo al funcionario
+  solo cuando ya ha perdido cinco minutos con la cámara es ofrecérselo tarde.
+- ⚠️ **Entra por la MISMA revisión y la misma puerta** que el vínculo (`ptConfirmarImportacion` →
+  `ptAplicarPaquete`): dos puertas con criterios distintos es el defecto que este proyecto ya pagó
+  entre descargar y enviar un documento.
+- **Se arma con lo MISMO que está marcado** para enviar por el vínculo: si hubiera que marcar otra
+  vez al cambiar de vía, el respaldo costaría más que el camino que falló.
+
+### Por qué NO se cambió de tecnología
+- **Nativo de Android (Nearby Connections)**: exige un complemento y **recompilar y volver a subir el
+  paquete a la tienda**. El usuario ya decidió lo contrario al montar este módulo — hoy el código web
+  se despliega con un `git push`. Sigue siendo el camino si algún día se recompila.
+- **Bluetooth o Wi-Fi Direct**: no tienen interfaz web dentro del envoltorio de esta aplicación.
+- **Transferir los datos dentro del propio código**: una captura son 5 KB, o sea unos 40 códigos
+  encadenados. Más lento y más frágil que lo que ya hay.
+- **Cambiar la biblioteca del código**: no hay biblioteca. El códec está escrito en la aplicación
+  porque es un solo archivo autónomo sin dependencias y en campo no hay red. **Y no era el problema**:
+  va y vuelve en las 20 versiones y lee sobre ruido puro sin inventar una sola lectura.
+
+### Rediseño visual
+El código se enmarca en una tarjeta con su título, su explicación y un pie que dice **cuánto le
+queda de validez**, con un punto que late mientras está vivo. ⚠️ **El código en sí no lleva encima ni
+un adorno**: ni logotipo en el centro, ni módulos redondeados, ni degradados —todo eso le roba
+capacidad de corrección de errores a un símbolo que ya se lee al límite—. Lo que se diseña es su
+marco. Sube de 280 a 320 px, con zona de silencio propia más el aire blanco de la tarjeta, y el fondo
+blanco es **fijo en los dos temas** (en modo oscuro un código claro no lo lee ninguna cámara: misma
+excepción del lienzo de la firma). El lector estrena escuadras en las cuatro esquinas —no un recuadro
+cerrado, que la cámara puede confundir con el borde del propio código— y un renglón de estado:
+buscando · código detectado · conectando. Estados nuevos de la pantalla: preparando, esperando a que
+lo escaneen, transfiriendo, le llegó y está revisando. Todo con tokens del sistema visual: **un solo
+color literal en el bloque**, el blanco del fondo del código.
+- ⚠️ **Ni una palabra técnica en pantalla**, y se retiró la línea que decía el tamaño del código en
+  módulos y bytes: era útil para diagnosticar y es jerga para el funcionario.
+
+### Lo que NO se tocó
+Ni un formulario, ni el flujo de flagrancia, ni el de orden judicial, ni un motor documental, ni una
+plantilla, ni un campo del modelo. `DB.saveCase` no tiene una sola rama del módulo y el formulario
+sigue midiendo «sucio» con la huella de siempre — hay checks que lo miden sobre el código fuente. El
+informe de una captura que llegó del compañero sale idéntico.
+
+- Regresiones en verde: **compartir 57** · fpj6 140 · incautación 141 · custodia 111 · entrega 111 ·
+  mejora1 157 · mejora6 32 · mejora8 72 · export 66 · firma 62 · personas 25 · expediente 13 ·
+  menú+expediente 16 · invitado 34 · almacén 12 · orden 33 · tema 39 · estadísticas 58 ·
+  despachos 53 · mejora7 67.
+  ⚠️ **Tres fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD**:
+  `verify_mejora6b` [47] y [53] y `verify_jerarquia` —los tres miden el mismo aviso de más de 110
+  caracteres de la pantalla de Ajustes, que cambió en el commit `21ae35b`— y `verify_ds`
+  («favorito con estrella SVG», mecanismo retirado el 2026-08-08). `verify_mejora7` [B23] es
+  **intermitente** y ya estaba documentado como tal: contra HEAD falló una corrida y contra este
+  build dio 67/67 tres veces seguidas.
+  Anti-caché `?v=105` / `cache-v105`, `_BUILD=105`.
