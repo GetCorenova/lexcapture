@@ -5857,3 +5857,210 @@ reponer lo que protegía**, y en dos casos el sustituto mide algo que no estaba 
   `verify_jerarquia`, que mide el mismo aviso de más de 110 caracteres que `mejora6b` [47]. Y
   `verify_ds` 9/10 («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
 - Anti-caché `?v=106` / `cache-v106`, `_BUILD=106`.
+
+## Sincronización entre los equipos del usuario (2026-09-18) — Fase 1: la web
+El usuario pidió dos cosas: que la aplicación funcione «tanto en Play Store como en la web para
+computadores», y que la información quede **sincronizada en todos sus equipos, cifrada, y accesible
+solo por él o por quien él permita**. Verificado con `verify_sync.mjs` (**50 checks**, nuevo).
+
+### Lo primero no había que construirlo
+La parte de «web para computadores» **ya estaba resuelta y nadie lo había dicho**: es la misma PWA de
+GitHub Pages, funciona en cualquier navegador de escritorio y se instala desde Chrome/Edge con su
+propio ícono y ventana. Lo único que faltaba era decírselo. (Queda apuntado, sin hacer: la Microsoft
+Store acepta una PWA empaquetada con PWABuilder casi sin trabajo — Windows no tiene el bug de
+compartir que obligó a envolver Android con Capacitor.)
+
+### La decisión de arquitectura: el Drive del propio usuario, no un servidor nuestro
+Se le presentaron las dos vías reales y eligió la primera:
+- **Drive del usuario (elegida)**: el bloque va cifrado en el equipo y se sube a la carpeta oculta
+  `appDataFolder` de su propia cuenta. Ni Google ni quien opera la aplicación pueden leerlo. Sin
+  infraestructura que pagar ni operar.
+- **Servidor propio «zero-knowledge»**: permitiría compartir de forma controlada con OTROS usuarios,
+  pero implica hosting, mantenimiento y asumir la responsabilidad de operar infraestructura con datos
+  de procedimientos judiciales y de menores — exactamente lo que este proyecto lleva evitando desde
+  el principio (Habeas Data, Ley 1581 de 2012).
+- ⚠️ **Esto es para LOS EQUIPOS DEL USUARIO, no para compartirle casos a un compañero.** Una clave
+  simétrica da acceso total y perpetuo a quien la tenga, sin revocación selectiva. Compartir casos
+  puntuales sigue siendo **Modo compartir** / archivo `.lexc`, que sí deja elegir qué mandar. No
+  intentar que un mismo mecanismo cubra los dos: la semántica de revocación se vuelve imposible.
+
+### La clave: separada del PIN, y por una razón medida
+⚠️ **No se puede reusar `_sessionKey`.** Cada equipo genera su PROPIA sal al configurar el PIN
+(`lc_key_salt`), así que dos equipos con el MISMO PIN tecleado derivan claves AES **distintas**: el
+blob que subiera uno no lo abriría el otro. La clave de sincronización son **16 bytes aleatorios**
+que el usuario transporta una vez a cada equipo (QR con el códec `ptQr*` que ya existe, o código
+escrito para el equipo sin cámara), y en reposo se guarda **cifrada bajo el PIN local** en `lc_sync`
+— mismo patrón que `lc_firmas`.
+- ⚠️ **No se estiran con PBKDF2 como sí hace el `.lexc`**: allá la entrada es una clave de seis
+  dígitos que hay que encarecer; aquí ya hay entropía completa y estirar no añadiría un bit. Se
+  expanden con **HKDF-SHA256**, que es la primitiva correcta para eso.
+- ⚠️ **Alfabeto Crockford base32** (sin I, L, O ni U) y al leer trata I/L como 1 y O como 0: son
+  justo los errores que comete una persona copiando 26 caracteres de una pantalla. Hay cuatro checks
+  que lo miden (minúsculas, guiones, espacios de más y las letras confundibles).
+- ⚠️ **Si se pierde el código y todos los equipos a la vez, lo de Drive queda ilegible para siempre.**
+  Es el precio exacto de que nadie más pueda leerlo. Por eso el código **se puede volver a mostrar en
+  cualquier momento**, no solo al activarlo, y la advertencia sale junto al código —que es el único
+  momento en que el funcionario puede actuar sobre ella—, no enterrada en otra pantalla.
+
+### El motor de fusión NO se reescribió
+Se reutiliza el de Modo compartir **tal cual**: `ptPaquete` arma el sobre, `ptAbrirPaquete` lo valida
+y `ptAplicarPaquete` lo aplica con rollback. Comprobado que son genéricos: la curación de «qué se
+manda» vivía solo en la UI, y el motor acepta la base completa sin cambios.
+- ⚠️ **Se sube el snapshot COMPLETO, no diferencias.** No es pereza: este proyecto ya construyó la
+  vía sofisticada —reloj lógico híbrido y marcas de versión por campo, en «Modo patrulla»— y **la
+  retiró entera** por complejidad frente al valor. Además no existe hoy un `updated` fiable por
+  registro (se estampa en 2 de más de 10 sitios que guardan un caso), así que una sincronización por
+  delta obligaría a retrofitear el choke-point de guardado. Volver a fundir lo que no cambió no hace
+  nada: `ptFundir` compara antes de escribir.
+- ⚠️ Rige la misma política de siempre: **lo que llega con dato gana, lo vacío no pisa nada, nada se
+  borra**. Con ella, un valor que se vacía a propósito en un equipo no se propaga — el valor viejo del
+  otro lo revive. Es una limitación **ya aceptada** por el proyecto para P2P y se hereda igual aquí.
+- ⚠️ `PT_SOLO_DUENO` sigue protegiendo **quién firma** (`servidor`, `dossierSnap`, `oj/firma`,
+  `oj/encabezado`) sobre una captura que el equipo YA tenía. Check [D7].
+- ⚠️ **La firma manuscrita NO viaja**, misma política que Modo compartir: es un rasgo biométrico y con
+  ella se suscriben documentos judiciales. Ni siquiera hay que filtrarla —vive en `lc_firmas`, fuera
+  del paquete— pero el check [C3] lo **mide**, que es distinto de suponerlo.
+
+### La configuración SÍ viaja (decisión del usuario), menos las marcas de migración
+`cfg` se agrega **fuera de `ptPaquete`**, para no cambiar lo que manda Modo compartir (allá pisaría
+la unidad del compañero; aquí es el mismo funcionario en otro equipo). Un lector viejo ignora la
+clave que no conoce, así que no hubo que subir `schemaVersion`.
+- ⚠️ **`SY_CFG_LOCAL` = `despachosMigrados`, `dossierSeccionesV`, `nuncAno` NO se sincronizan.** Son
+  bitácora interna: si viajaran, un equipo que todavía no ha corrido su migración recibiría la marca
+  de «ya migrado» y **se la saltaría para siempre**, dejando sus datos a medio convertir. Checks [C4]
+  y [D6].
+- Se funde **campo a campo con `ptFundir`**, no «gana la última versión entera»: con eso último,
+  cambiar la unidad en el teléfono y agregar un despacho en el computador perdería uno de los dos en
+  silencio. Check [D9].
+
+### El bug del Service Worker, que había que arreglar ANTES
+⚠️ `sw.js` hacía cache-first sobre **cualquier** GET sin mirar el origen. Con la sincronización
+encima, se habría quedado con la **descarga del snapshot de Drive** y la aplicación habría bajado
+para siempre la MISMA copia vieja, **sin dar un solo error**: parecería funcionar y no recibiría
+nada. Ahora solo se cachea lo del propio origen; lo de fuera va directo a la red. El arreglo es
+general y no una lista de dominios de Google — corrige la clase de fallo, no la instancia.
+
+### La bifurcación silenciosa en Drive
+⚠️ Drive **no impide dos archivos con el mismo nombre**, ni siquiera dentro de `appDataFolder`. Si
+dos equipos activan la sincronización a la vez, los dos pueden hacer «buscar → no existe → crear»
+antes de ver el del otro: cada uno se ancla al suyo y **se sincroniza consigo mismo para siempre**.
+Por eso se listan siempre todos, se funde el contenido de **todos** antes de borrar ninguno, y se
+conserva el **más antiguo** — criterio determinista, para que los dos equipos elijan el mismo
+superviviente.
+
+### Los disparadores: manual y al desbloquear. NADA MÁS, a propósito
+⚠️ Se descartó el sync automático tras cada guardado. `ptRecibirCasos` llama a `DB.saveCases` sobre el
+arreglo **completo**, que re-cifra y reescribe el blob entero de `localStorage` de forma síncrona: a
+intervalos cortos eso es una pausa de interfaz justo mientras el funcionario escribe. Manual + al
+desbloquear cubre el flujo real (trabajar en el teléfono, llegar al computador y encontrarlo al día)
+sin ese costo, y de paso **no hace falta tocar el choke-point de guardado**: el modo sin sincronizar
+no paga ni un byte (checks [H1]–[H3]).
+- ⚠️ **No se sincroniza con el formulario abierto** (check [E2]). El wizard trabaja sobre una COPIA
+  del caso y al guardar reemplaza el original: una fusión que entrara por debajo mientras está
+  abierto la borraría al terminar. Es la misma trampa que obligó a la capa de fusión de «Modo
+  patrulla», resuelta aquí con una guarda de una línea en vez de un motor.
+- El token de Google dura una hora y **este flujo no entrega refresco** (para eso haría falta un
+  servidor con un secreto, que no hay). La renovación silenciosa puede fallar por el endurecimiento
+  de cookies de terceros, así que el fallo **no es un error** sino un estado con salida: el botón
+  manual, que sí es un gesto del usuario y siempre puede volver a pedir el permiso.
+- ⚠️ **El script de Google se carga perezosamente**, solo al entrar a la pantalla o al sincronizar. Es
+  la primera dependencia de red que tiene la aplicación y el resto —diligenciar, producir un
+  documento— tiene que seguir arrancando sin red, que es como se usa en campo. Check [H4].
+
+### Lo que falta
+- **`SY_CLIENT_ID` está vacío**: hay que crear el proyecto en Google Cloud, habilitar Drive API,
+  configurar la pantalla de consentimiento con el scope `drive.appdata` (**no sensible**: no dispara
+  la verificación pesada de Google) y pegar aquí el ID de cliente web. Sin él la pantalla lo dice y
+  no ofrece un botón que no puede funcionar (check [F5]).
+- **Fase 2 — dentro de la app de Play Store.** Google bloquea el consentimiento OAuth dentro de un
+  WebView embebido (`disallowed_useragent`), y el wrapper de Capacitor cae ahí. Hay dos caminos y
+  **conviene medir el segundo antes de comprometerse**: (a) `@capacitor/browser` + esquema de URL
+  propio + nuevo `intent-filter` en el manifest; (b) la **Authorization API** nativa de Android
+  (`Identity.getAuthorizationClient()`), que es UI del sistema y devuelve por callback **sin
+  redirección ni intent-filter**. Las dos exigen código nativo, un Client ID tipo Android con el
+  SHA-1 del keystore de release, recompilar y **una actualización nueva en Play Console** — que hoy
+  está bloqueada de todos modos hasta que Google verifique la identidad de la cuenta.
+- ~~**Rotación de la clave**: si un equipo se pierde desbloqueado o alguien fotografía el QR, esa
+  clave sigue valiendo para siempre.~~ **HECHA** (2026-09-18) — ver «Cambiar la clave de
+  sincronización» al final del archivo.
+- **El techo real es `localStorage`** (5-10 MB por origen, con base64 inflando un 33%), no el
+  `PT_MAX_TOTAL_BYTES` de 8 MB que se calibró para el transporte P2P. Conviene vigilar el tamaño
+  antes de que un usuario real golpee el muro.
+- ⚠️ **Carrera aceptada**: si dos equipos sincronizan casi al mismo instante, el que suba último gana
+  en Drive con su propia fusión. No se pierde nada localmente — solo se retrasa un ciclo la
+  propagación de ese cambio. Se prefirió eso a implementar bloqueo optimista con ETags en la v1.
+
+### Verificación
+`verify_sync.mjs` (**50 checks**) en ocho secciones: la clave y su código (9) · el sobre cifrado (5) ·
+qué viaja y qué no (5) · **la fusión entre dos equipos** (9) · las guardas (4) · la pantalla (11) · el
+Service Worker (2) · el modo sin sincronizar (5).
+- ⚠️ **No toca Google, a propósito**: atar la regresión a una cuenta real la dejaría sin poder correr.
+  Lo que depende de Google (pedir permiso, subir, bajar) se prueba a mano una vez.
+- ⚠️ **[F1] mide el RECTÁNGULO de la pantalla, no el DOM.** Un check que solo consulta el DOM no dice
+  que la interfaz se vea: en el módulo anterior la pantalla se insertó fuera de `<main>`, salía en
+  blanco y la regresión daba verde igual.
+- ⚠️ **[F7] compara sin distinguir mayúsculas**: el sistema visual pinta los títulos de sección en
+  versalitas y `innerText` los devuelve en mayúsculas — el mismo tropiezo que ya dejó anotado la
+  suite de Modo compartir.
+- ⚠️ **[F9] atrapó un texto propio de 129 caracteres** que violaba la regla de 110 de la Mejora 6. Se
+  reescribió, y quedó mejor: la advertencia de pérdida total pasó de 160 a 106 caracteres y es más
+  contundente.
+- Regresiones en verde: **sync 50** · compartir 57 · almacén 13.
+  ⚠️ **Cuatro fallos PREEXISTENTES, idénticos a los ya documentados**: `verify_jerarquia` 65/66 y
+  `verify_mejora6b` [47] (el mismo aviso de más de 110 caracteres de Ajustes, del commit `21ae35b`),
+  `verify_mejora6b` [53] y `verify_ds` 9/10 («favorito con estrella SVG»).
+- Anti-caché `?v=107` / `cache-v107`, `_BUILD=107`.
+
+### Cambiar la clave de sincronización (2026-09-18) — lo que faltaba de la Fase 1
+Era el único pendiente de la Fase 1 que no dependía de Google, y quedó anotado como hueco al
+entregarla: sin rotación, la clave que un funcionario transporta a mano **sirve para siempre**. El día
+que un equipo se pierda desbloqueado o que alguien fotografíe el código por encima del hombro, quien
+lo tenga lee todo lo del usuario —capturas, personas, y en CESPA los datos de un menor— sin que exista
+ninguna forma de cortarlo. Es el complemento obligatorio de haber elegido una clave simétrica.
+Verificado con `verify_sync.mjs` (**68 checks**, antes 50).
+
+- ⚠️ **SE SINCRONIZA PRIMERO, CON LA CLAVE VIEJA, Y ESO ES LO QUE HACE QUE NO BORRE NADA.** Lo que
+  otro equipo haya subido y este todavía no haya fundido está cifrado con la clave que se va a
+  jubilar: subir el snapshot de aquí con la clave nueva sin bajar antes lo dejaría **ilegible para
+  siempre**, y el funcionario no vería ningún error — vería una captura que ya no está. Esa vuelta
+  previa deja además **un solo archivo** en Drive (funde y borra los duplicados), así que tampoco
+  puede quedarse un sobrante con la clave vieja. Checks [I5], [I7] y [I10].
+- ⚠️ **EL ORDEN DE LOS DOS ÚLTIMOS PASOS NO ES INTERCAMBIABLE**: primero se sube con la clave nueva y
+  **solo después** se guarda en este equipo. Al revés, una subida fallida dejaría al equipo con una
+  clave que no abre lo que hay en Drive — se cerraría la puerta a sí mismo. Con este orden, una
+  subida fallida deja todo exactamente como estaba y la clave vieja sigue sirviendo. La regresión lo
+  **provoca** ([I12], [I13]: se hace fallar la segunda subida) en vez de esperar a que pase.
+- ⚠️ **La única ventana mala que queda, dicha en voz alta**: si Drive ya quedó con la clave nueva y la
+  escritura local falla, este equipo la tiene solo en memoria. No se oculta — el aviso **entrega el
+  código nuevo** para que se anote y se pueda volver a vincular. Perder una clave en silencio es
+  peor que un error a la cara.
+- ⚠️ **LOS DEMÁS EQUIPOS QUEDAN FUERA, y eso NO es un efecto colateral: es la función.** Hay que
+  volver a vincularlos con el código nuevo, y **la pantalla lo dice antes de empezar**, en la tarjeta
+  y en la confirmación — enterarse cuando ya no se puede deshacer es la peor forma de descubrirlo.
+- **El equipo que se quedó atrás no se rompe ni pisa nada**: baja, no puede descifrar y
+  `sySincronizar` **retorna antes de subir**, así que no sobrescribe Drive con contenido de la clave
+  vieja. Lo que sí cambió es lo que le dice: el aviso daba por hecho que se había tecleado mal el
+  código, y ahora nombra **las dos** causas —código mal tecleado, o clave cambiada en otro equipo—,
+  porque desde ahí no se distinguen y la salida es la misma: volver a vincular.
+- **La rotación NO borra el archivo ni crea otro**: reescribe el mismo, así que no hay ventana en la
+  que Drive se quede sin nada.
+
+#### La regresión estrena un Drive de mentira, y por eso puede correr
+La suite no toca Google a propósito (atarla a una cuenta real la dejaría sin poder ejecutarse). Para
+esto se sustituyen **solo las seis funciones que hablan con la red** (`syToken`, `syListar`,
+`syCrear`, `syDescargar`, `sySubirBytes`, `syBorrar`) por un mapa de `id → bytes` dentro de la propia
+página. Lo que se mide es el módulo de verdad —el cifrado, la fusión, el orden de los pasos— de punta
+a punta: se comprueba descifrando los bytes que quedaron «en Drive» **con las dos claves**, y que
+abren con la nueva ([I8]) y **no** con la vieja ([I9]).
+- ⚠️ **Comprobado que las guardas no son vacías**: saboteando la rotación para que suba con la clave
+  actual, fallan **3 de los 18 checks nuevos** ([I4], [I9] y [I11]). Con el arreglo, 68/68.
+- ⚠️ La suite **no corre contra el build anterior**: `syRotarClave` no existía.
+- **La pantalla se miró**, no solo se consultó el DOM: la tarjeta nueva se capturó en tema claro y
+  oscuro, con su barra de acento, sus dos avisos y el botón secundario pintado y en una línea. Es la
+  lección que este proyecto ya pagó dos veces — un check que consulta el DOM no dice que la interfaz
+  se vea, y `.btn` a secas no pinta nada.
+- Regresiones en verde: **sync 68** · compartir 57 · almacén 13 · personas 25 · expediente 13 ·
+  ola1 38. ⚠️ **Siguen los cuatro fallos PREEXISTENTES ya documentados**: `verify_jerarquia` 65/66 y
+  `verify_mejora6b` [47] (el mismo aviso de más de 110 caracteres de Ajustes, del commit `21ae35b`),
+  `verify_mejora6b` [53] y `verify_ds` 9/10 («favorito con estrella SVG»).
+- Anti-caché `?v=108` / `cache-v108`, `_BUILD=108`.

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lexcapture-v8-cache-v106'
+const CACHE_NAME = 'lexcapture-v8-cache-v108'
 const ASSETS = [
   './',
   './index.html',
@@ -33,6 +33,15 @@ const isHTML = req =>
   req.mode === 'navigate' ||
   (req.headers.get('accept') || '').includes('text/html')
 
+// ⚠️ Solo se cachea lo de ESTE origen. Con cache-first sobre CUALQUIER GET, el
+// SW se quedaba con las respuestas de la API de Google Drive —la lista de
+// archivos y, peor, la descarga del snapshot— y la sincronización bajaba para
+// siempre la MISMA copia vieja, sin dar ningún error: parecía funcionar y no
+// recibía nada. Lo de fuera va directo a la red, sin pasar por la caché.
+const mismoOrigen = req => {
+  try { return new URL(req.url).origin === self.location.origin } catch (e) { return false }
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request
   if (req.method !== 'GET') return
@@ -49,6 +58,8 @@ self.addEventListener('fetch', e => {
     )
     return
   }
+
+  if (!mismoOrigen(req)) return
 
   e.respondWith(caches.match(req).then(cached => cached || fetch(req)))
 })

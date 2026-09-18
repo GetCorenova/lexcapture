@@ -396,6 +396,18 @@ body.pt{padding-top:36px}
   text-align:center;font-size:26px;letter-spacing:.32em;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 }
+/* El código de sincronización tiene 26 caracteres, no 6 dígitos: mismo lenguaje
+   visual que `.cf-pin` pero con un cuerpo que cabe y parte de renglón sin
+   cortar un grupo por la mitad. Se deja seleccionable para copiarlo de un
+   toque en el equipo que sí tiene teclado. */
+.sy-code{
+  margin:14px 0;padding:16px;border-radius:14px;text-align:center;
+  background:var(--accG);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:17px;font-weight:700;color:var(--acc);letter-spacing:.08em;
+  line-height:1.9;word-spacing:.1em;overflow-wrap:anywhere;
+  user-select:all;-webkit-user-select:all;
+}
 
 .pt-paso{display:flex;flex-direction:column;gap:12px}
 .pt-op{
@@ -1899,6 +1911,14 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>
     Modo compartir
   </div>
+  <!-- ⚠️ Aparte de Modo compartir a propósito: aquello le pasa registros
+       escogidos a OTRA persona; esto mantiene al día los equipos del MISMO
+       funcionario. Confundirlos lleva a entregarle a un compañero la llave de
+       todo en vez de los dos casos que necesitaba. -->
+  <div class="sb-item" data-screen="sync" onclick="syAbrir()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg>
+    Sincronización
+  </div>
   <div class="sb-sec">Análisis</div>
 
   <div class="sb-item" data-screen="estadisticas" onclick="go('estadisticas')">
@@ -2436,6 +2456,16 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane stack" id="cp-pane"></div>
   </section>
+
+  <section id="screen-sync" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Sincronización</h1>
+        <span class="sub">Tus capturas, en todos tus equipos</span>
+      </div>
+    </header>
+    <div class="pane stack" id="sy-pane"></div>
+  </section>
 </main>
 
 <!-- ====== RED / OFFLINE BADGE ====== -->
@@ -2502,6 +2532,10 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="sheet-item" onclick="closeSheet();ptAbrirCompartir()">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
     <div class="body"><div class="ti">Modo compartir</div><div class="de">Pasarle personas y capturas al compañero</div></div>
+  </button>
+  <button class="sheet-item" onclick="closeSheet();syAbrir()">
+    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg></div>
+    <div class="body"><div class="ti">Sincronización</div><div class="de">Tus capturas en todos tus equipos</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -2628,7 +2662,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir','sync'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2646,6 +2680,7 @@ function go(name) {
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
   if (name === 'compartir') renderCompartir();
+  if (name === 'sync') renderSync();
   if (name === 'ajustes') { loadAjustesFields(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -2771,7 +2806,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 106;
+var _BUILD = 108;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3355,6 +3390,12 @@ async function doUnlockPin() {
        lectura de la configuración; aquí se persiste y se anuncia. Un número que
        cambia solo tiene que verse cambiar. */
     lcNuncAvisoAno();
+    /* Sincronización oportunista al abrir sesión: es el momento en que el
+       funcionario llega a otro equipo y espera encontrar lo que hizo en el
+       anterior. Va DIFERIDA y sin esperarla — si no hay red, o Google pide
+       volver a autorizar, no pasa nada: la aplicación es offline-first y esto
+       es una mejora encima, nunca un requisito para trabajar. */
+    if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
 
@@ -3482,6 +3523,10 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_firmas');
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
+  /* La clave de sincronización entre los equipos del usuario: cifrada y en su
+     propia clave, igual que las firmas. Con el PIN de ESTE equipo se llega a
+     ella; sin PIN no hay sincronización posible. */
+  if (typeof syCargarEstado === 'function') await syCargarEstado();
   /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
      memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
      vuelva a abrir su formulario. No se fuerza ninguna escritura — el dato se
@@ -22712,6 +22757,614 @@ _ptAlEstado = function () {
   ptBarra();
   if (_on('compartir')) renderCompartir();
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SINCRONIZACIÓN ENTRE LOS EQUIPOS DEL USUARIO  ·  prefijo sy*
+
+   Qué resuelve: que las capturas, las personas y la configuración estén en
+   todos los equipos del funcionario (su teléfono, el computador de la estación)
+   sin que nadie más pueda leerlas — ni Google, ni quien opera esta aplicación.
+
+   ⚠️ NO ES «MODO COMPARTIR», Y LA DISTINCIÓN IMPORTA.
+   Modo compartir (pt*) pasa registros ESCOGIDOS a OTRA persona, en el momento,
+   por un canal directo entre dos teléfonos. Esto pasa TODO lo del usuario entre
+   SUS PROPIOS equipos, de forma diferida, sin que los dos estén encendidos a la
+   vez. Una clave simétrica da acceso total y perpetuo a quien la tenga, así que
+   este camino NO sirve para compartirle casos a un compañero: eso sigue siendo
+   Modo compartir, que sí permite elegir qué mandar y no entrega el resto.
+
+   ⚠️ NO HAY SERVIDOR PROPIO, y es la razón de que el diseño sea este. Los datos
+   son procedimientos judiciales y, en CESPA, de menores (Ley 1581 de 2012):
+   operar un servidor que los almacene —aunque fuera cifrado— es una
+   responsabilidad que este proyecto lleva evitando desde el primer día. Lo que
+   sube a Google Drive es un bloque cifrado en el equipo, en la carpeta oculta
+   de la propia cuenta del usuario, y la clave NUNCA sale de sus dispositivos.
+   Para Google ese archivo es ruido.
+
+   ⚠️ LA CLAVE DE SINCRONIZACIÓN ES SEPARADA DEL PIN, y no por gusto: cada
+   equipo genera su PROPIA sal al configurar el PIN (`lc_key_salt`), así que dos
+   equipos con el MISMO PIN tecleado derivan claves AES DISTINTAS. Reusar
+   `_sessionKey` haría un blob que solo el equipo que lo subió puede abrir. La
+   clave de sync son bytes aleatorios que el usuario transporta una vez a cada
+   equipo; en reposo se guarda cifrada bajo el PIN local, igual que las firmas.
+
+   ⚠️ SI SE PIERDE LA CLAVE Y TODOS LOS EQUIPOS A LA VEZ, lo que está en Drive
+   queda ilegible para siempre. Es el precio exacto de que nadie más pueda
+   leerlo; no hay copia de la clave en ninguna parte. Por eso se puede volver a
+   mostrar desde Ajustes en cualquier momento, no solo al configurarla.
+
+   ⚠️ LAS FIRMAS MANUSCRITAS NO VIAJAN, misma política que Modo compartir: son
+   un rasgo biométrico y con ellas se suscriben documentos judiciales. Se dibuja
+   una por equipo. Ni siquiera hay que filtrarlas: viven en `lc_firmas`, fuera
+   de lo que arma el paquete.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var SY_MARCA   = 'LXSY1';                 // sobre del bloque que vive en Drive
+var SY_ARCHIVO = 'lexcapture-sync.bin';   // nombre dentro de appDataFolder
+var SY_SCOPE   = 'https://www.googleapis.com/auth/drive.appdata';
+/* ⚠️ Identificador público de la aplicación ante Google. NO es un secreto (un
+   Client ID de tipo «Web» se publica en el código del cliente por diseño), pero
+   sin él la sincronización no puede arrancar: se crea una vez en Google Cloud
+   Console, con la cuenta del proyecto, y se pega aquí. */
+var SY_CLIENT_ID = '';
+
+/* Claves de configuración que NO se sincronizan. ⚠️ Son marcas de migración: si
+   viajaran, un equipo que todavía no ha corrido su migración recibiría la marca
+   de «ya migrado» y se la saltaría para siempre, dejando sus datos a medio
+   convertir. No son preferencias del usuario, son bitácora interna. */
+var SY_CFG_LOCAL = ['despachosMigrados', 'dossierSeccionesV', 'nuncAno'];
+
+var _syTok = '', _syTokExp = 0, _syGisP = null, _syCorriendo = false, _syEstado = null;
+
+/* ── ALFABETO DEL CÓDIGO DE RECUPERACIÓN ──────────────────────────────────
+   Crockford base32: sin I, L, O ni U. No es capricho — es el alfabeto pensado
+   para que un humano transcriba sin equivocarse, y al leer trata I y L como 1
+   y O como 0, que son justo los errores que se cometen copiando a mano. Son
+   16 bytes (128 bits) en 26 caracteres: se teclea UNA vez por equipo. */
+var SY_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+function syB32Enc(bytes) {
+  var bits = 0, val = 0, out = '', i;
+  for (i = 0; i < bytes.length; i++) {
+    val = (val << 8) | bytes[i]; bits += 8;
+    while (bits >= 5) { out += SY_B32.charAt((val >>> (bits - 5)) & 31); bits -= 5; }
+  }
+  if (bits > 0) out += SY_B32.charAt((val << (5 - bits)) & 31);
+  return out;
+}
+function syB32Dec(s) {
+  var t = String(s || '').toUpperCase().replace(/[IL]/g, '1').replace(/O/g, '0').replace(/[^0-9A-Z]/g, '');
+  var bits = 0, val = 0, out = [], i, d;
+  for (i = 0; i < t.length; i++) {
+    d = SY_B32.indexOf(t.charAt(i));
+    if (d < 0) return null;
+    val = (val << 5) | d; bits += 5;
+    if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; }
+  }
+  return new Uint8Array(out);
+}
+/* En grupos de cuatro para leerlo en voz alta y teclearlo sin perder el sitio. */
+function syCodigoBonito(k) { return String(k || '').replace(/(.{4})(?=.)/g, '$1-'); }
+
+/* ── LA CLAVE ─────────────────────────────────────────────────────────────
+   ⚠️ Los 16 bytes ya son aleatorios de verdad, así que NO se estiran con
+   PBKDF2 como sí hace el archivo .lexc: allá la entrada es una clave de seis
+   dígitos que hay que encarecer, aquí estirar no añadiría ni un bit. Se derivan
+   con HKDF, que es la primitiva correcta para expandir material que ya tiene
+   entropía completa. */
+function syClaveNueva() { return syB32Enc(_ptAzar(16)); }
+async function syClaveAES(bytes) {
+  var ikm = await crypto.subtle.importKey('raw', bytes, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('lexcapture-sync-v1') },
+    ikm, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+/* ── ESTADO LOCAL ─────────────────────────────────────────────────────────
+   `{k, fileId, ts}` en `lc_sync`, CIFRADO bajo el PIN de este equipo (mismo
+   patrón que `lc_firmas`): quien tenga el teléfono sigue necesitando el PIN
+   para llegar a la clave de sincronización. */
+function syEstado() { return _syEstado || { k: '', fileId: '', ts: 0 }; }
+function syVinculado() { return !!syEstado().k; }
+function syGuardarEstado(e) { _syEstado = e; return _lcEncSave('sync', e); }
+async function syCargarEstado() {
+  var enc = localStorage.getItem('lc_sync');
+  if (!enc) { _syEstado = null; return; }
+  try { _syEstado = JSON.parse(await _lcDecrypt(enc)); } catch (e) { _syEstado = null; }
+}
+async function syDesvincular() {
+  _syEstado = null; _syTok = ''; _syTokExp = 0;
+  try { localStorage.removeItem('lc_sync'); } catch (e) {}
+}
+
+/* ── EL SOBRE QUE VIVE EN DRIVE ───────────────────────────────────────────
+   marca (5) + vector (12) + contenido cifrado. Sin sal, porque sin PBKDF2 no
+   hay nada que salar. La marca va en claro para poder decir «esto no lo generó
+   la aplicación» sin intentar descifrar nada. */
+async function syCifrar(paquete, key) {
+  var iv = _ptAzar(12);
+  var datos = new TextEncoder().encode(JSON.stringify(paquete));
+  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, datos));
+  var out = new Uint8Array(5 + 12 + ct.length), i;
+  for (i = 0; i < 5; i++) out[i] = SY_MARCA.charCodeAt(i);
+  out.set(iv, 5); out.set(ct, 17);
+  return out;
+}
+async function syDescifrar(buf, key) {
+  var u = new Uint8Array(buf), i;
+  if (u.length < 18) return { ok: false, motivo: 'El archivo de sincronización está incompleto.' };
+  for (i = 0; i < 5; i++) if (u[i] !== SY_MARCA.charCodeAt(i))
+    return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
+  try {
+    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(5, 17) }, key, u.slice(17));
+    return { ok: true, o: JSON.parse(new TextDecoder().decode(new Uint8Array(claro))) };
+  } catch (e) {
+    /* La clave de este equipo no abre lo que hay allá. Son DOS causas y desde
+       aquí no se distinguen: o se tecleó mal el código al vincular, o la clave
+       se cambió en otro equipo y este se quedó con la vieja. El aviso nombra
+       las dos, porque la salida es la misma: volver a vincular. */
+    return { ok: false, motivo: 'La clave de este equipo no abre lo que hay en Drive. Si la cambiaste en otro equipo, vuelve a vincular.' };
+  }
+}
+
+/* ── QUÉ VIAJA ────────────────────────────────────────────────────────────
+   Se reutiliza `ptPaquete` TAL CUAL —el mismo sobre, la misma validación, el
+   mismo motor de fusión que Modo compartir— y se le añade la configuración,
+   que Modo compartir no manda a propósito (allá pisaría la unidad del
+   compañero; aquí es el mismo funcionario en otro equipo).
+   ⚠️ `cfg` se agrega FUERA de `ptPaquete` para no cambiar lo que manda Modo
+   compartir. Un lector viejo que reciba este sobre simplemente ignora la clave
+   que no conoce: por eso no hay que subir `schemaVersion`. */
+function syCfgParaEnviar() {
+  var raw; try { raw = JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { raw = {}; }
+  SY_CFG_LOCAL.forEach(function (k) { delete raw[k]; });
+  return raw;
+}
+function sySnapshot() {
+  var p = ptPaquete(DB.getPersons(), DB.getCases());
+  p.cfg = syCfgParaEnviar();
+  return p;
+}
+/* La configuración se funde con el MISMO motor que todo lo demás (`ptFundir`:
+   lo que viene con dato gana, lo vacío no pisa nada, nada se borra). Con «gana
+   la última versión entera» se perdería en silencio un cambio: cambiar la
+   unidad en el teléfono y agregar un despacho en el computador dejaría fuera
+   uno de los dos. */
+function syAplicarCfg(cfgRemota) {
+  if (!cfgRemota || typeof cfgRemota !== 'object' || Array.isArray(cfgRemota)) return 0;
+  var copia = JSON.parse(JSON.stringify(cfgRemota));
+  SY_CFG_LOCAL.forEach(function (k) { delete copia[k]; });
+  var local; try { local = JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { local = {}; }
+  var n = ptFundir(local, copia);
+  if (n) DB.saveConfig(local);
+  return n;
+}
+async function syAplicar(o) {
+  var abierto = ptAbrirPaquete(o);
+  if (!abierto.ok) return { ok: false, motivo: abierto.motivo };
+  /* Sin decisiones por registro: entre los equipos de UNA persona, dos fichas
+     con la misma cédula son la misma persona registrada dos veces, así que vale
+     el criterio por defecto (fundir). Preguntarlo, como sí hace Modo compartir
+     cuando llegan datos de otro funcionario, no tendría a quién preguntarle en
+     una sincronización que corre sola. */
+  var r = await ptAplicarPaquete(abierto, null);
+  if (!r.ok) return r;
+  r.cfg = syAplicarCfg(o.cfg);
+  return r;
+}
+
+/* ── GOOGLE ───────────────────────────────────────────────────────────────
+   ⚠️ El script de Google se carga PEREZOSAMENTE, solo al entrar a esta
+   pantalla o al sincronizar. Es la primera dependencia de red que tiene la
+   aplicación, y el resto —diligenciar una captura, producir un documento—
+   tiene que seguir arrancando sin red, que es como se usa en campo. */
+function syCargarGIS() {
+  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
+  if (_syGisP) return _syGisP;
+  _syGisP = new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = function () { res(); };
+    s.onerror = function () { _syGisP = null; rej(new Error('No se pudo contactar a Google. ¿Hay conexión?')); };
+    document.head.appendChild(s);
+  });
+  return _syGisP;
+}
+/* ⚠️ Este flujo NO entrega un token de refresco —para eso haría falta un
+   servidor con un secreto, que es justo lo que no hay— así que el token dura
+   una hora y se vuelve a pedir. La renovación silenciosa (`prompt:''`) puede
+   fallar por el endurecimiento de cookies de terceros de los navegadores; por
+   eso el fallo NO es un error de la aplicación sino un estado con salida:
+   «Reconectar con Google», que sí es un gesto del usuario y siempre funciona. */
+function syToken(interactivo) {
+  if (_syTok && _syTokExp > Date.now() + 60000) return Promise.resolve(_syTok);
+  if (!SY_CLIENT_ID) return Promise.reject(new Error('Falta configurar el identificador de Google de la aplicación.'));
+  return syCargarGIS().then(function () {
+    return new Promise(function (res, rej) {
+      var tc = google.accounts.oauth2.initTokenClient({
+        client_id: SY_CLIENT_ID, scope: SY_SCOPE,
+        callback: function (r) {
+          if (r && r.access_token) {
+            _syTok = r.access_token; _syTokExp = Date.now() + ((r.expires_in || 3600) * 1000);
+            res(_syTok);
+          } else rej(new Error('Google no entregó el permiso.'));
+        },
+        error_callback: function () { rej(new Error('reconectar')); }
+      });
+      tc.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
+    });
+  });
+}
+
+/* ── DRIVE ────────────────────────────────────────────────────────────────
+   Todo vive en `appDataFolder`: una carpeta oculta, propia de esta aplicación,
+   que no aparece en el Drive del usuario ni la ven otras aplicaciones. */
+function syDrive(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ Authorization: 'Bearer ' + _syTok }, opts.headers || {});
+  return fetch(url, opts).then(function (r) {
+    if (r.status === 401) { _syTok = ''; _syTokExp = 0; throw new Error('reconectar'); }
+    return r;
+  });
+}
+/* ⚠️ Drive NO impide dos archivos con el mismo nombre, ni siquiera aquí. Si dos
+   equipos activan la sincronización a la vez, los dos pueden hacer «buscar → no
+   existe → crear» antes de ver el del otro: cada uno se queda anclado al suyo y
+   a partir de ahí se sincroniza CONSIGO MISMO para siempre, sin un solo error a
+   la vista. Por eso se listan siempre todos y, si hay más de uno, se funden
+   todos y se conserva el más antiguo —criterio determinista, para que los dos
+   equipos elijan el MISMO superviviente. */
+async function syListar() {
+  var q = encodeURIComponent("name='" + SY_ARCHIVO + "' and trashed=false");
+  var r = await syDrive('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + q +
+                        '&fields=files(id,createdTime)&orderBy=createdTime');
+  if (!r.ok) throw new Error('No se pudo consultar Drive.');
+  var j = await r.json();
+  return (j.files || []);
+}
+async function syCrear() {
+  var r = await syDrive('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: SY_ARCHIVO, parents: ['appDataFolder'] })
+  });
+  if (!r.ok) throw new Error('No se pudo crear el archivo en Drive.');
+  return (await r.json()).id;
+}
+async function syDescargar(id, key) {
+  var r = await syDrive('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media');
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error('No se pudo descargar de Drive.');
+  var buf = await r.arrayBuffer();
+  if (!buf || buf.byteLength < 18) return null;   // recién creado, todavía vacío
+  return await syDescifrar(buf, key);
+}
+async function sySubirBytes(id, bytes) {
+  var r = await syDrive('https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(id) + '?uploadType=media', {
+    method: 'PATCH', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes
+  });
+  if (!r.ok) throw new Error('No se pudo subir a Drive.');
+}
+function syBorrar(id) {
+  return syDrive('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id), { method: 'DELETE' })
+    .catch(function () { /* si no se pudo borrar el sobrante, la próxima vuelta lo intenta otra vez */ });
+}
+
+/* ── UNA VUELTA DE SINCRONIZACIÓN ─────────────────────────────────────────
+   Bajar todo lo que haya → fundirlo en este equipo → subir el resultado ya
+   fundido. Drive queda como punto de encuentro, no como autoridad: lo que sube
+   es la UNIÓN de los dos lados, así que el siguiente equipo que baje recibe
+   también lo que trajo este.
+
+   ⚠️ Se sube el snapshot COMPLETO, no diferencias. No es pereza: este proyecto
+   ya construyó la vía sofisticada —reloj lógico híbrido y marcas de versión por
+   campo, en «Modo patrulla»— y la retiró entera por complejidad frente al valor
+   que daba. Una captura completa son unos 6 KB; el snapshot entero cabe de
+   sobra, y volver a fundir lo que no cambió no hace nada (`ptFundir` compara
+   antes de escribir).
+
+   ⚠️ NO se sincroniza con el formulario abierto. El wizard trabaja sobre una
+   COPIA del caso y al guardar reemplaza el original: si una fusión entrara por
+   debajo mientras está abierto, `wizSave` la borraría al terminar. */
+async function sySincronizar(interactivo) {
+  if (!_sessionKey) return { ok: false, motivo: 'Desbloquea con tu PIN antes de sincronizar.' };
+  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
+  if (typeof wc !== 'undefined' && wc) return { ok: false, motivo: 'Hay una captura abierta. Ciérrala y vuelve a sincronizar.' };
+  if (!navigator.onLine) return { ok: false, motivo: 'Sin conexión. Se sincroniza cuando vuelva la señal.' };
+  if (_syCorriendo) return { ok: false, motivo: 'Ya hay una sincronización en curso.' };
+  _syCorriendo = true;
+  try {
+    var st = syEstado();
+    await syToken(interactivo);
+    var key = await syClaveAES(syB32Dec(st.k));
+
+    var archivos = await syListar();
+    var res = null, i, bajado;
+    if (!archivos.length) {
+      st.fileId = await syCrear();
+    } else {
+      st.fileId = archivos[0].id;
+      /* Se funde lo de TODOS los archivos que aparezcan, no solo el elegido:
+         si hubo bifurcación, lo del sobrante no se pierde antes de borrarlo. */
+      for (i = 0; i < archivos.length; i++) {
+        bajado = await syDescargar(archivos[i].id, key);
+        if (bajado && bajado.ok) {
+          var r = await syAplicar(bajado.o);
+          if (r.ok && !res) res = r; else if (r.ok) { res.c.nuevos += r.c.nuevos; res.p.nuevos += r.p.nuevos; }
+        } else if (bajado && !bajado.ok && archivos.length === 1) {
+          return { ok: false, motivo: bajado.motivo };
+        }
+      }
+    }
+
+    await sySubirBytes(st.fileId, await syCifrar(sySnapshot(), key));
+    for (i = 1; i < archivos.length; i++) await syBorrar(archivos[i].id);
+
+    st.ts = Date.now();
+    await syGuardarEstado(st);
+    return { ok: true, r: res, duplicados: Math.max(0, archivos.length - 1) };
+  } catch (e) {
+    var m = (e && e.message) || 'error';
+    if (m === 'reconectar') return { ok: false, motivo: 'Google pidió volver a autorizar. Toca «Sincronizar ahora».', reconectar: true };
+    return { ok: false, motivo: m };
+  } finally { _syCorriendo = false; }
+}
+
+/* ── VINCULAR ─────────────────────────────────────────────────────────────
+   ⚠️ Vincular un equipo que YA tenía capturas propias NO reemplaza nada: baja
+   lo de Drive, lo FUNDE con lo de aquí y vuelve a subir la unión. El caso real
+   es un funcionario que usó semanas el computador de la estación antes de
+   configurar la sincronización; tratar la primera vez como un caso especial que
+   «trae» los datos le borraría su trabajo. */
+async function syVincular(codigo) {
+  var bytes = syB32Dec(codigo);
+  if (!bytes || bytes.length !== 16) return { ok: false, motivo: 'Ese código no tiene la forma de una clave de sincronización.' };
+  await syGuardarEstado({ k: syB32Enc(bytes), fileId: '', ts: 0 });
+  var r = await sySincronizar(true);
+  if (!r.ok) { await syDesvincular(); return r; }
+  return r;
+}
+async function syActivarNuevo() {
+  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0 });
+  return await sySincronizar(true);
+}
+
+/* ── CAMBIAR LA CLAVE ─────────────────────────────────────────────────────
+   Hace falta el día que un equipo se pierda desbloqueado, o que alguien
+   fotografíe el código por encima del hombro: sin esto, esa clave sirve para
+   siempre y no hay forma de revocarla. Es el complemento obligatorio de haber
+   elegido una clave simétrica que el usuario transporta a mano.
+
+   ⚠️ SE SINCRONIZA PRIMERO, CON LA CLAVE VIEJA, Y ES LO QUE HACE QUE ESTO NO
+   BORRE NADA. Lo que otro equipo haya subido y este todavía no haya fundido
+   está cifrado con la clave que se va a jubilar: si se sube el snapshot de aquí
+   con la clave nueva sin bajar antes, eso queda ilegible PARA SIEMPRE, y el
+   funcionario no vería ningún error —vería una captura que ya no está—. Esa
+   vuelta previa deja además UN solo archivo en Drive (funde y borra los
+   duplicados), así que no puede quedarse un sobrante con la clave vieja.
+
+   ⚠️ EL ORDEN DE LOS DOS ÚLTIMOS PASOS NO ES INTERCAMBIABLE: primero se sube
+   con la clave nueva y solo después se guarda aquí. Al revés, si la subida
+   falla, este equipo se queda con una clave que no abre lo que hay en Drive y
+   se cierra la puerta a sí mismo. Con este orden, una subida fallida deja todo
+   exactamente como estaba y la clave vieja sigue sirviendo.
+
+   ⚠️ LOS DEMÁS EQUIPOS QUEDAN FUERA, y eso NO es un efecto colateral: es
+   justamente lo que se pidió. Hay que volver a vincularlos con el código nuevo,
+   y la pantalla lo dice antes de empezar, no después. */
+async function syRotarClave() {
+  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
+
+  var previo = await sySincronizar(true);
+  if (!previo.ok) return previo;
+
+  if (_syCorriendo) return { ok: false, motivo: 'Ya hay una sincronización en curso.' };
+  _syCorriendo = true;
+  try {
+    var st = syEstado();
+    if (!st.fileId) return { ok: false, motivo: 'No se encontró el archivo en Drive. Sincroniza y vuelve a intentarlo.' };
+    await syToken(true);
+
+    var nueva = syClaveNueva();
+    await sySubirBytes(st.fileId, await syCifrar(sySnapshot(), await syClaveAES(syB32Dec(nueva))));
+
+    st.k = nueva; st.ts = Date.now();
+    try { await syGuardarEstado(st); }
+    catch (e) {
+      /* Drive ya está con la clave nueva y este equipo no la pudo guardar. La
+         tiene en memoria, así que la sesión sigue funcionando; lo que no puede
+         es perderse sin que el funcionario la vea. */
+      return { ok: false, clave: nueva,
+               motivo: 'La clave nueva quedó en Drive pero no se pudo guardar aquí. Anótala ya: ' + syCodigoBonito(nueva) };
+    }
+    return { ok: true, clave: nueva };
+  } catch (e) {
+    var m = (e && e.message) || 'error';
+    if (m === 'reconectar') return { ok: false, motivo: 'Google pidió volver a autorizar. Vuelve a intentarlo.' };
+    return { ok: false, motivo: m };
+  } finally { _syCorriendo = false; }
+}
+
+/* ── PANTALLA ─────────────────────────────────────────────────────────────
+   ⚠️ Ni una palabra técnica: nada de «token», «OAuth», «blob» ni «appData». El
+   funcionario ve sus equipos, su código y cuándo fue la última vez. */
+var _syOcupado = false, _syUltimo = '';
+
+function syAbrir() { go('sync'); }
+
+function syFecha(ts) {
+  if (!ts) return 'nunca';
+  var d = new Date(ts), h = Date.now() - ts;
+  if (h < 60000) return 'hace un momento';
+  if (h < 3600000) return 'hace ' + Math.round(h / 60000) + ' min';
+  if (h < 86400000) return 'hoy a las ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) +
+         ' a las ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+}
+
+function renderSync() {
+  var el = document.getElementById('sy-pane');
+  if (!el) return;
+  var st = syEstado(), h = '';
+
+  if (!SY_CLIENT_ID) {
+    el.innerHTML = '<div class="card"><div class="st">Falta un paso de instalación</div>' +
+      '<p class="oj-hint">Esta copia todavía no tiene configurado el acceso a Google Drive.</p></div>';
+    return;
+  }
+
+  if (!syVinculado()) {
+    h += '<div class="card"><div class="st">Tus capturas en todos tus equipos</div>' +
+         '<p class="oj-hint">Lo que registres en un equipo aparece en el otro, cifrado en tu propio ' +
+         'Google Drive: ni Google puede leerlo.</p>' +
+         '<button class="btn bp" onclick="syUiActivar()">Activar en este equipo</button>' +
+         '<button class="btn bs" onclick="syUiVincularPedir()">Ya lo activé en otro equipo</button>' +
+         '</div>';
+  } else {
+    h += '<div class="card"><div class="st">Sincronización activa</div>' +
+         '<div class="oj-auto">Última vez: ' + escHtml(syFecha(st.ts)) + '</div>' +
+         (_syUltimo ? '<div class="oj-auto">' + escHtml(_syUltimo) + '</div>' : '') +
+         '<button class="btn bp" onclick="syUiSincronizar()"' + (_syOcupado ? ' disabled' : '') + '>' +
+         (_syOcupado ? 'Sincronizando…' : 'Sincronizar ahora') + '</button>' +
+         '</div>';
+    h += '<div class="card"><div class="st">Agregar otro equipo</div>' +
+         '<p class="oj-hint">En el otro equipo, entra aquí y toca «Ya lo activé en otro equipo».</p>' +
+         '<button class="btn bs" onclick="syUiVerCodigo()">Ver el código de este equipo</button>' +
+         '<div id="sy-codigo"></div></div>';
+    h += '<div class="card"><div class="st">Cambiar la clave</div>' +
+         '<p class="oj-hint">Si perdiste un equipo o alguien vio tu código, cámbiala: el código viejo ' +
+         'deja de servir.</p>' +
+         '<p class="oj-hint">Los demás equipos dejan de sincronizar hasta que los vincules con el ' +
+         'código nuevo.</p>' +
+         '<button class="btn bs" onclick="syUiRotar()"' + (_syOcupado ? ' disabled' : '') + '>' +
+         'Cambiar la clave de sincronización</button></div>';
+    h += '<div class="card"><div class="st">Dejar de sincronizar</div>' +
+         '<p class="oj-hint">Este equipo deja de subir y de bajar. Lo que ya está guardado aquí se queda.</p>' +
+         '<button class="btn bs" onclick="syUiDesvincular()">Desvincular este equipo</button></div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ⚠️ El código se muestra bajo demanda y NO de entrada: es la llave de todo lo
+   del usuario, y dejarla pintada en una pantalla que se abre por error —o que
+   alguien mira por encima del hombro— es regalarla. */
+function syUiVerCodigo() {
+  var c = document.getElementById('sy-codigo'), st = syEstado();
+  if (!c || !st.k) return;
+  var bytes = syB32Dec(st.k);
+  c.innerHTML = '<p class="oj-hint">Escanéalo desde el otro equipo, o tecléalo tal cual.</p>' +
+    '<div class="pt-qr">' + ptQrSvg(bytes, 300) + '</div>' +
+    '<div class="sy-code">' + escHtml(syCodigoBonito(st.k)) + '</div>' +
+    '<p class="oj-hint">⚠️ Guarda este código. Si lo pierdes junto con todos tus equipos, lo que esté ' +
+    'en Drive no lo recupera nadie.</p>';
+}
+
+async function syUiActivar() {
+  if (!confirm('Se va a crear tu clave de sincronización y a conectar con tu Google Drive.\n\n' +
+               'Después tendrás que guardar el código que aparezca: es lo único que te deja ' +
+               'agregar otro equipo, y no se puede recuperar si se pierde.')) return;
+  _syOcupado = true; renderSync();
+  var r = await syActivarNuevo();
+  _syOcupado = false;
+  if (!r.ok) { await syDesvincular(); toast(r.motivo); renderSync(); return; }
+  _syUltimo = 'Se subieron tus datos por primera vez.';
+  renderSync(); syUiVerCodigo();
+  toast('Sincronización activada ✓');
+}
+
+function syUiVincularPedir() {
+  var h = '<div class="st">Agregar este equipo</div>' +
+          '<p class="oj-hint">Escanea el código del otro equipo, o tecléalo si este no tiene cámara.</p>' +
+          '<button class="btn bp" onclick="syUiEscanear()">Escanear el código</button>' +
+          '<div class="fg"><label class="fl" for="sy-cod">O tecléalo aquí</label>' +
+          '<input class="fi" id="sy-cod" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-…"></div>' +
+          '<button class="btn bs" onclick="syUiVincularCodigo()">Vincular este equipo</button>';
+  openModal(h);
+}
+function syUiEscanear() {
+  closeModal();
+  ptScanAbrir('Apunta al código del otro equipo', async function (bytes) {
+    if (!bytes || bytes.length !== 16) { toast('Ese código no es de sincronización.'); return false; }
+    await syUiVincularCon(syB32Enc(bytes));
+    return true;
+  });
+}
+function syUiVincularCodigo() {
+  var v = (document.getElementById('sy-cod') || {}).value || '';
+  closeModal();
+  syUiVincularCon(v);
+}
+async function syUiVincularCon(codigo) {
+  _syOcupado = true; renderSync();
+  var r = await syVincular(codigo);
+  _syOcupado = false;
+  if (!r.ok) { toast(r.motivo); renderSync(); return; }
+  _syUltimo = syResumen(r);
+  renderSync();
+  if (_on('capturas')) renderCases();
+  toast('Este equipo quedó sincronizado ✓');
+}
+
+function syResumen(r) {
+  if (!r || !r.r) return 'No había nada nuevo que traer.';
+  var p = r.r.p || {}, c = r.r.c || {}, t = [];
+  if (c.nuevos) t.push(c.nuevos + ' captura' + (c.nuevos === 1 ? '' : 's'));
+  if (p.nuevos) t.push(p.nuevos + ' persona' + (p.nuevos === 1 ? '' : 's'));
+  if (r.r.cfg) t.push('ajustes de tu unidad');
+  if (r.duplicados) t.push('(se unieron ' + r.duplicados + ' copias que se habían separado)');
+  return t.length ? 'Llegó: ' + t.join(', ') + '.' : 'No había nada nuevo que traer.';
+}
+
+async function syUiSincronizar() {
+  _syOcupado = true; renderSync();
+  var r = await sySincronizar(true);
+  _syOcupado = false;
+  _syUltimo = r.ok ? syResumen(r) : '';
+  renderSync();
+  if (!r.ok) { toast(r.motivo); return; }
+  if (_on('capturas')) renderCases();
+  toast('Sincronizado ✓');
+}
+
+/* ⚠️ La confirmación nombra la consecuencia ANTES, no después: cambiar la clave
+   deja fuera a los demás equipos del funcionario, y enterarse de eso cuando ya
+   no se puede deshacer es la peor forma de descubrirlo. */
+async function syUiRotar() {
+  if (!confirm('Se va a crear una clave de sincronización nueva.\n\n' +
+               'El código actual dejará de servir, y cada uno de tus otros equipos tendrá que ' +
+               'volver a vincularse con el código nuevo.\n\n' +
+               'Antes se bajará todo lo que haya en Drive, así que no se pierde nada.')) return;
+  _syOcupado = true; renderSync();
+  var r = await syRotarClave();
+  _syOcupado = false;
+  if (!r.ok) { toast(r.motivo); renderSync(); return; }
+  _syUltimo = 'La clave se cambió. Vuelve a vincular tus otros equipos.';
+  renderSync(); syUiVerCodigo();
+  toast('Clave cambiada ✓');
+}
+
+async function syUiDesvincular() {
+  if (!confirm('Este equipo dejará de sincronizarse.\n\nLo que ya está guardado aquí no se borra, y ' +
+               'lo que está en Drive tampoco. Puedes volver a vincularlo con el mismo código.')) return;
+  await syDesvincular();
+  _syUltimo = '';
+  renderSync();
+  toast('Este equipo ya no se sincroniza');
+}
+
+/* Al desbloquear. ⚠️ Diferido y en silencio: si falla no se le dice nada al
+   funcionario —no pidió sincronizar, está entrando a trabajar— y el estado real
+   queda a la vista cuando abra la pantalla de Sincronización. */
+function syAlDesbloquear() {
+  if (!syVinculado() || !SY_CLIENT_ID) return;
+  setTimeout(async function () {
+    var r = await sySincronizar(false);
+    if (r.ok) {
+      _syUltimo = syResumen(r);
+      if (_on('capturas')) renderCases();
+      if (_on('sync')) renderSync();
+    }
+  }, 2500);
+}
 
 // ====== SERVICE WORKER (Fase G) ======
 // NOTA: el SW solo funciona en HTTPS o localhost.
