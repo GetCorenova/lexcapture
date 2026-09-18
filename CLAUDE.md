@@ -5771,3 +5771,89 @@ informe de una captura que llegó del compañero sale idéntico.
   **intermitente** y ya estaba documentado como tal: contra HEAD falló una corrida y contra este
   build dio 67/67 tres veces seguidas.
   Anti-caché `?v=105` / `cache-v105`, `_BUILD=105`.
+
+## El modo invitado se retira (2026-09-18)
+Reportado en campo señalando el enlace de la pantalla de PIN: *«elimina la opción de usar como
+invitado, no tiene sentido esta opción debido a todo el tiempo que esta tomaría»*. Verificado con las
+33 suites de regresión; `verify_invitado.mjs` (34 checks) desaparece con el subsistema.
+
+- ⚠️ **Lo que lo invalidaba NO era su honestidad, que era su virtud.** El modo se diseñó para el
+  teléfono prestado y decía sin rodeos que nada se guardaba: barra ámbar permanente, toast propio y
+  «Listo en esta sesión» en vez de «Caso guardado ✓» — precisamente para no repetir el «Continuar sin
+  PIN» que se borró en la Fase H. Lo que lo invalida es **el TIEMPO**: un procedimiento son treinta o
+  cuarenta minutos de diligenciamiento, así que ofrecer que todo eso se pierda al cerrar no es una
+  alternativa razonable a pedir el PIN. Un modo perfectamente honesto puede seguir siendo una mala
+  oferta.
+- ⚠️ **Se retiró ENTERO, no solo su enlace**, y esa fue una decisión consultada antes de tocar nada:
+  quitando los dos `pin-forget` de las pantallas de PIN, `_guest` no podía volver a ser `true` nunca
+  y quedaban inalcanzables sus cinco funciones, la barra, su CSS y **ocho ramas** repartidas por el
+  almacenamiento. Es exactamente lo que ya costó una limpieza con las plantillas subidas
+  (2026-08-08): *«se cortó la lectura pero no se retiró el resto del subsistema, y se quedó cobrando
+  el peaje»*.
+- **Qué se fue**: los dos enlaces «Usar como invitado (sin guardar nada)»; `_guest`, `_guestCfg`,
+  `guestEntrar`, `guestSalir` y `guestToastGuardado`; el banner `#guest-bar` con su CSS y
+  `body.guest` (incluido el apilado con la franja del Modo compartir); y las ramas de `_lcEncSave`,
+  `DB.getConfig`, `DB.saveConfig`, `DB.clearDraft`, `_lcPurgarPlantillas`, `renderCases`, `fwGuardar`
+  y `ptDeviceId`. Los cuatro usos de `guestToastGuardado(msg)` vuelven a `toast(msg)` — mismo texto y
+  misma duración que tenían en la rama normal, así que ningún aviso cambia.
+- ⚠️ **Los comentarios que afirmaban que el modo existía se corrigieron, no se dejaron**: seis pasajes
+  justificaban decisiones reales con él («vive en `cfg` porque `DB.saveConfig` ya tiene rama de
+  invitado», «`DB.getConfig()` puede DEVOLVER null»). Un comentario que explica el porqué de algo con
+  una razón que ya no es cierta es peor que no tenerlo: el siguiente que lo lea deshará la decisión.
+- ⚠️ **La nota de retirada NO escribe los identificadores del módulo**, y no es un capricho de
+  redacción: `verify_almacen` [11] comprueba que no quedan **buscándolos en el archivo**, así que
+  nombrarlos en el propio comentario haría fallar la búsqueda. Es el mismo cuidado que ya se tuvo con
+  el idiom del techo de cifrado.
+
+### Las comprobaciones: doce suites, y ninguna baja su cuenta
+El modo invitado tenía checks repartidos en once suites además de la suya. **Ninguno se borró sin
+reponer lo que protegía**, y en dos casos el sustituto mide algo que no estaba medido:
+
+| Suite | Qué medía con el invitado | Qué mide ahora |
+|---|---|---|
+| **almacen** 12 → **13** | que en invitado no se escribiera un byte | que **no queda un resto** del subsistema (5 identificadores) **y** que sin sesión el guardado **rechaza** en vez de fingir |
+| **tema** 39 → **40** | contraste AA de la barra ámbar, en los dos temas | contraste AA de la **franja del Modo compartir** —la otra barra fija, que nunca se había medido— más la guarda estructural de `#0E1020` |
+| **firma** 62 | que el invitado pudiera firmar sin dejar rastro | que la firma se guarda **cifrada en `lc_firmas`** y **nunca en `lc_cfg`**, que va en claro |
+| **ola1** 38 | que el borrador no tocara el equipo prestado | que un borrador vivo **no suma una captura ni crea una persona** — la razón por la que vive en `lc_draft` |
+| **orden** 33 | que el invitado arrancara en los defectos | que **un equipo recién instalado** arranca en ellos, los persiste y **no toca ninguna otra clave** |
+| **custodia · entrega · incautación** 111 · 111 · 141 | que en invitado el documento saliera igual sin escribir | que **el motor documental no toca el almacén**: generar no escribe un byte |
+| **despachos** 53 | que el invitado registrara despachos en memoria | que un despacho **recién registrado ya decide el NUNC** en la misma sesión |
+| **nunc_ano** 39 | que el invitado viera el año vigente | que ajustar el año es una **lectura pura**: no fuerza ninguna escritura |
+| **compartir** 57 | que la identidad del equipo no se escribiera | que esa identidad es **estable** entre lecturas, que es lo que de verdad importa del mecanismo |
+
+- ⚠️ **`verify_compartir` tenía una bomba de relojería**: su check [D7] delimitaba el bloque CSS del
+  módulo con `indexOf('/* ═══ BANNER MODO INVITADO ═══')`. Al desaparecer ese comentario, `indexOf`
+  devuelve −1 y `slice(a, -1)` habría cortado **hasta el final del archivo**, midiendo «los colores
+  literales del Modo compartir» sobre 3,5 MB de HTML. No habría dado error: habría dado un resultado
+  falso. Delimitar un bloque por un comentario ajeno es frágil por definición; ahora apunta al banner
+  PWA, que sí es el vecino estable.
+- ⚠️ **Un check nuevo destapó un defecto de accesibilidad REAL y preexistente.** Al medir la franja
+  del Modo compartir salió **1,00:1** en los dos temas — y no era la franja: era la propia función de
+  la suite, que descarta el alfa (`rgb()` toma 3 componentes). Como `--ok-bg` es **el mismo verde de
+  `--ok` al 10 %**, fondo y texto salían del mismo color base. Componiendo el alfa sobre el fondo real
+  —que es lo que ve el ojo— el tema oscuro da 7,79:1 y **el claro daba 4,32:1: por debajo del 4,5 que
+  exige AA** para texto normal, y son 12,5 px. Corregido bajando `--ok-bg` en claro de `.10` a `.06`
+  → **4,56:1**. ⚠️ Se tocó el alfa y **no `--ok`**, que es un valor documentado en la tabla del Design
+  System v2; el alfa del `-bg` no lo está. Es un ajuste de contraste, no de paleta.
+- ⚠️ **`verify_almacen` [11b] provoca un `console.error` A PROPÓSITO** (el rechazo sin sesión se
+  registra: es el único canal de diagnóstico en campo), así que se descuenta de `errs` en el sitio en
+  vez de dejar que contamine el check de consola limpia, que vigila los errores **no** provocados por
+  la prueba.
+
+### Verificación
+- **Las dos pantallas de PIN se miraron en la app real**, no solo en el DOM: la de crear PIN queda sin
+  ningún enlace y la de desbloqueo con «Olvidé mi PIN» como única salida; al entrar, `body` no
+  arrastra clase ni relleno superior y la consola queda limpia. Es la lección de la fase 4 del
+  módulo anterior —*un check que consulta el DOM no dice que la interfaz se vea*—.
+- **33 suites en verde**: almacén 13 · ola1 38 · orden 33 · tema 40 · custodia 111 · incautación 141 ·
+  entrega 111 · firma 62 · despachos 53 · NUNC año 39 · compartir 57 · personas 25 · expediente 13 ·
+  menú+expediente 16 · simulador 41 · estadísticas 58 · grados 31 · mejora1 157 · mejora2 38 ·
+  mejora3 51 · mejora5 78 · mejora6 32 · mejora7 67 · mejora8 72 · vía CR 41 · jurisdicción 67 ·
+  multipersona · ola2 34 · ola3 33 · ola4 22 · fpj6 140 · export 66 · envío 39 · editable 28 ·
+  tipografía OJ 42 · fpj5 tipografía 48 · OJ 187.
+- ⚠️ **Cinco fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD con
+  `git stash`: fallan idénticos**. `verify_mejora6b` [47] y [53] y `verify_dossier_historico` [20] y
+  [21] (miden textos de la pantalla de Ajustes que cambiaron en el commit `21ae35b`), más
+  `verify_jerarquia`, que mide el mismo aviso de más de 110 caracteres que `mejora6b` [47]. Y
+  `verify_ds` 9/10 («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
+- Anti-caché `?v=106` / `cache-v106`, `_BUILD=106`.

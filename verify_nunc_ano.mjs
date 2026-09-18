@@ -22,7 +22,7 @@
      E. Que una captura por ORDEN JUDICIAL no se toca: ahí el número es el
         RADICADO DEL PROCESO y su año es el del proceso.
      F. Que el año se VE (un número que cambia solo tiene que verse cambiar).
-     G. Modo invitado: ni un byte en localStorage.                            */
+     G. El ajuste del año es una lectura pura: no escribe en localStorage.     */
 import { chromium } from 'playwright';
 import http from 'http';
 import { readFile } from 'fs/promises';
@@ -250,15 +250,21 @@ log(/4 últimos son el año/.test(pista) && /1 de enero/.test(pista),
 await page.click('button[onclick="closeModal()"]');
 await page.waitForTimeout(300);
 
-/* ═══ Parte G · Modo invitado: ni un byte ═════════════════════════════════ */
+/* ═══ Parte G · Ajustar el año es una LECTURA, no una escritura ═══════════ */
+/* ⚠️ Sustituye a la parte del modo invitado, que se retiró entero de la app. La
+   propiedad medida es la que de verdad importa del mecanismo: el año se ajusta
+   AL LEER la configuración, sobre la copia en memoria, y se persiste con el
+   guardado siguiente — nunca forzando una escritura por el mero hecho de abrir
+   la app. */
 const huella = () => page.evaluate(() => JSON.stringify(Object.keys(localStorage).sort().map(k => [k, (localStorage.getItem(k) || '').length])));
 const h1 = await huella();
-await page.evaluate(() => { _guest = true; _guestCfg = _cfgConDefaults({ despachosPropios: [{ id: 'g', clase: 'FISCALIA', nombre: 'X', nunc: '0500160008722020' }] }); });
-const G = await page.evaluate(() => ({ nunc: DB.getConfig().despachosPropios[0].nunc, aviso: lcNuncAvisoAno() }));
+const G = await page.evaluate(() => {
+  const cfg = _cfgConDefaults({ despachosPropios: [{ id: 'g', clase: 'FISCALIA', nombre: 'X', nunc: '0500160008722020' }] });
+  return { nunc: cfg.despachosPropios[0].nunc };
+});
 const h2 = await huella();
-log(G.nunc.slice(12) === '2027', 'El invitado también ve el número vigente (su configuración vive en memoria)', G.nunc);
-log(h1 === h2, '⚠️ Y no se escribe un byte en localStorage', h1 === h2 ? 'huella idéntica' : 'CAMBIÓ');
-await page.evaluate(() => { _guest = false; });
+log(G.nunc.slice(12) === '2027', 'Al leer la configuración, el número queda con el año vigente', G.nunc);
+log(h1 === h2, '⚠️ Y esa lectura no escribe un byte en localStorage', h1 === h2 ? 'huella idéntica' : 'CAMBIÓ');
 
 /* ═══ Parte H · El simulador arma el NUNC con su estructura ═══════════════ */
 const H = await page.evaluate(() => ({ inv: SIM.rNunc(''), respeta: SIM.rNunc('0500160008722021') }));

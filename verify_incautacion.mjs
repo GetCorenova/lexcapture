@@ -19,7 +19,7 @@
      H. Editable — ni un `lineRule="exact"`, que RECORTA lo que se escriba.
      I. Un solo cuerpo de letra para todo lo que rellena la app.
      J. Lo que NO se inventa: firmas, huella, expediente CAD, consecutivo.
-     K. Persistencia, modo invitado y consola limpia.
+     K. Persistencia, aislamiento del motor y consola limpia.
 
    Los .docx se escriben en el TEMPORAL del sistema y no en el directorio del
    proyecto: abrir uno en Word lo deja bloqueado y la siguiente corrida moriría
@@ -675,8 +675,8 @@ log(txtMenor.includes('identificado con TI.') && !txtMenor.includes('identificad
 log(difGeom(gTpl, geometria(docMenor.partes['word/document.xml'].toString('utf8'))).length === 0,
   'Y cambiar la etiqueta no mueve una sola medida del formato');
 
-/* ══ K · FORMULARIO, PERSISTENCIA E INVITADO ═══════════════════════════════ */
-console.log('\n── K · Formulario, persistencia y modo invitado ──');
+/* ══ K · FORMULARIO, PERSISTENCIA Y AISLAMIENTO ════════════════════════════ */
+console.log('\n── K · Formulario, persistencia y aislamiento del motor ──');
 
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(200);
@@ -754,17 +754,17 @@ const noTest = await page.evaluate(() => {
 });
 log(noTest === '', '⚠️ Y un caso de demostración no reconfigura el perfil del usuario', noTest || '(vacío)');
 
-/* Modo invitado: no se escribe un solo byte en localStorage. */
-const invitado = await page.evaluate(async () => {
+/* ⚠️ El motor documental no toca el almacén. Sustituye al check del modo
+   invitado, que se retiró entero de la app: mide la misma propiedad —generar no
+   escribe— sobre el único camino que existe ahora. */
+const aislado = await page.evaluate(async () => {
   const antes = JSON.stringify(Object.keys(localStorage).sort().map(k => [k, (localStorage[k] || '').length]));
-  _guest = true;
   const c = DB.getCase('ai-uri');
-  if (c) { c.incautacion = { capIdx: 0, obs: 'prueba invitado', firmante: null, updated: 1 }; await DB.saveCase(c); }
+  const out = c ? await buildActaIncautacionBlob({ caso: c }, 'CARTA') : null;
   const despues = JSON.stringify(Object.keys(localStorage).sort().map(k => [k, (localStorage[k] || '').length]));
-  _guest = false;
-  return antes === despues;
+  return antes === despues && !!out;
 });
-log(invitado, 'En modo invitado el acta no escribe un byte en localStorage');
+log(aislado, 'Generar el acta no escribe un byte en localStorage: el motor no toca el almacén');
 
 log(errores.length === 0, 'Consola sin errores', errores.slice(0, 3).join(' | ') || 'limpia');
 

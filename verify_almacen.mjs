@@ -95,15 +95,27 @@ log(/memoria del equipo está llena/.test(t10.cuota) && /sesión se cerró/.test
 console.log('     cuota  →', t10.cuota);
 console.log('     sesión →', t10.sesion);
 
-// [11] modo invitado sigue sin escribir un byte
+// [11] Ya no queda NINGUNA via que se salte el cifrado al guardar.
+// Sustituye al check del modo invitado, que se retiro entero: era la unica rama
+// que resolvia _lcEncSave sin clave de sesion. Lo que protegia —que nunca se
+// finja un guardado— se mide ahora sobre el camino real, y se anade la guarda
+// estructural de que no quede un resto del subsistema.
+const restos = ['_guest','guestEntrar','guestSalir','guestToastGuardado','guest-bar'];
+const vivos  = restos.filter(x => src.includes(x));
+log(vivos.length===0, '[11] No queda un solo resto del modo invitado en el archivo', vivos.join(', ')||'ninguno de los 5 identificadores');
 const t11=await page.evaluate(async()=>{
   const huella=()=>Object.keys(localStorage).map(k=>k+':'+localStorage.getItem(k).length).sort().join('|');
-  const a=huella(); _guest=true;
-  try{ const c=SIM.genFlagrancia('URI'); c.id='INV'; await DB.saveCase(c); }catch(e){}
-  const b=huella(); _guest=false;
-  return a===b;
+  const clave=_sessionKey; _sessionKey=null;
+  const a=huella(); let rechazo=false;
+  try{ await _lcEncSave('lc_cases','x'); }catch(e){ rechazo=true; }
+  const b=huella(); _sessionKey=clave;
+  return {igual:a===b, rechazo:rechazo};
 });
-log(t11, '[11] En modo invitado no se escribe un solo byte en el equipo');
+log(t11.rechazo && t11.igual, '[11b] Sin sesion activa el guardado RECHAZA y no escribe: nunca finge haber guardado');
+// El rechazo de [11b] se registra en consola A PROPOSITO (es el unico canal de
+// diagnostico en campo), asi que se descuenta aqui en vez de dejarlo contaminar
+// [12], que vigila los errores NO provocados por la propia prueba.
+for(let i=errs.length-1;i>=0;i--) if(/cifrado error lc_cases/.test(errs[i])) errs.splice(i,1);
 
 log(errs.length===0, '[12] Consola sin errores', errs.length?errs.slice(0,3):'');
 console.log('\n'+R.filter(Boolean).length+'/'+R.length+' comprobaciones');

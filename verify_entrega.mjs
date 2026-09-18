@@ -19,7 +19,7 @@
         se marcó.
      H. Un solo cuerpo de letra para todo lo que rellena la app.
      I. El resumen de la captura: los seis bloques, y ni un dato inventado.
-     J. Persistencia, perfil, modo invitado y consola limpia.
+     J. Persistencia, perfil, aislamiento del motor y consola limpia.
 
    Los .docx se escriben en el TEMPORAL del sistema y no en el directorio del
    proyecto: abrir uno en Word lo deja bloqueado y la siguiente corrida moriría
@@ -834,8 +834,8 @@ const menor = texto(await page.evaluate(async () => {
 log(menor.indexOf('2. APREHENDIDO(s)') >= 0 && menor.indexOf('CAPTURADO') < 0,
   '⚠️ En una aprehensión de menores dice «aprehendido», como el resto de la app');
 
-/* ══ J · PERSISTENCIA, PERFIL E INVITADO ═══════════════════════════════════ */
-console.log('\n── J · Persistencia, perfil, invitado y consola ──');
+/* ══ J · PERSISTENCIA, PERFIL Y AISLAMIENTO ════════════════════════════════ */
+console.log('\n── J · Persistencia, perfil, aislamiento y consola ──');
 
 await page.evaluate(id => abrirActaEntrega(id), idCaso);
 await page.waitForTimeout(500);
@@ -902,25 +902,25 @@ for (const [nombre, kind] of [['acta_entrega', 'F30'], ['resumen', 'RESUMEN']]) 
 }
 console.log('   .docx en', SALIDA);
 
-/* ⚠️ En modo invitado no se escribe un byte: el acta y el resumen funcionan en
-   memoria y mueren con la sesión (Habeas Data — datos de un capturado). */
-const inv = await page.evaluate(async () => {
-  const antes = JSON.stringify(Object.keys(localStorage).map(k => [k, localStorage[k].length]));
-  guestEntrar();
+/* ⚠️ El motor documental no toca el almacén. Sustituye al check del modo
+   invitado, que se retiró entero de la app: la propiedad medida es la misma
+   —generar no escribe— y con un caso mínimo los dos documentos salen igual. */
+const aislado = await page.evaluate(async () => {
   const c = { id: 'g1', tipo: 'URI', nunc: '', capturados: [{ id: 'p', priNom: 'A', priApe: 'B' }],
               victimas: [], testigos: [], elementos: [{ cant: 1, desc: 'un celular' }], lugar: {}, narracion: {} };
   await DB.saveCase(c);
   const c2 = DB.getCase('g1');
   const e = feActa(c2); e.forma = 'D'; e.recibeTipo = 'OTRO';
-  e.recibe = { nombre: 'Invitado Prueba', ident: '123' };
+  e.recibe = { nombre: 'Persona Prueba', ident: '123' };
   await DB.saveCase(c2);
+  const antes = JSON.stringify(Object.keys(localStorage).map(k => [k, localStorage[k].length]));
   const a = await buildActaEntregaBlob({ caso: DB.getCase('g1') }, 'CARTA');
   const r = await buildResumenBlob({ caso: DB.getCase('g1') }, 'CARTA');
   const despues = JSON.stringify(Object.keys(localStorage).map(k => [k, localStorage[k].length]));
   return { igual: antes === despues, acta: !!a, res: !!r };
 });
-log(inv.acta && inv.res, 'En modo invitado los dos documentos se generan igual');
-log(inv.igual, '⚠️ Y sin escribir un byte en localStorage', 'huella idéntica antes y después');
+log(aislado.acta && aislado.res, 'Con un caso mínimo los dos documentos se generan igual');
+log(aislado.igual, '⚠️ Y generarlos no escribe un byte en localStorage', 'huella idéntica antes y después');
 
 
 

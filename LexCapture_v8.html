@@ -148,7 +148,7 @@
   --accGlow:rgba(78,91,216,.22);
   --focus-ring:rgba(78,91,216,.25);
 
-  --ok:#0C7A4F;      --ok-bg:rgba(12,122,79,.10);
+  --ok:#0C7A4F;      --ok-bg:rgba(12,122,79,.06);
   --danger:#C7222F;  --errB:rgba(199,34,47,.07);
   --warn:#A85A12;    --warn-bg:rgba(168,90,18,.10);
   --info:#1663C7;    --info-bg:rgba(22,99,199,.09);
@@ -280,10 +280,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
    Todo con tokens del Design System v2: ni un color literal, ni un gradiente, ni
    un emoji. La única excepción es el fondo del código, y está justificada abajo. */
 
-/* Franja de estado. Mismo mecanismo que la del modo invitado, distinto color a
-   propósito: aquella es una ADVERTENCIA permanente (nada se está guardando) y
-   esta es un ESTADO — verde mientras dure el vínculo. Un estado normal pintado
-   de advertencia deja de leerse a los dos minutos. */
+/* Franja de estado. Discreta y permanente mientras dure el vínculo: sin ella,
+   estar vinculado sería indistinguible de no estarlo en cuanto se sale de la
+   pantalla. Verde porque es un ESTADO normal y no una advertencia — pintada de
+   alarma dejaría de leerse a los dos minutos. */
 #pt-barra{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
   align-items:center;gap:12px;padding:7px 14px;
@@ -300,10 +300,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   background:transparent;color:currentColor;font-size:12px;font-weight:600;cursor:pointer;
 }
 body.pt{padding-top:36px}
-/* Con las dos barras a la vez —un teléfono prestado que se vincula— se apilan en
-   vez de taparse. */
-body.guest #pt-barra{top:38px}
-body.guest.pt{padding-top:74px}
 
 /* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
    ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
@@ -478,24 +474,6 @@ body.guest.pt{padding-top:74px}
   padding:12px 28px;border-radius:999px;border:1px solid rgba(255,255,255,.35);
   background:rgba(0,0,0,.5);color:#fff;font-size:14px;font-weight:600;cursor:pointer;
 }
-/* ═══ BANNER MODO INVITADO ═══
-   Barra fija arriba del todo. Usa el ámbar de flagrancia: es una advertencia
-   permanente, no un estado neutro. */
-#guest-bar{
-  display:none;position:fixed;top:0;left:0;right:0;z-index:1400;
-  align-items:center;gap:12px;padding:8px 14px;
-  background:var(--flag-2);color:var(--acc-fg);
-  font-size:12.5px;line-height:1.35;
-}
-#guest-bar.on{display:flex}
-#guest-bar .gb-txt{flex:1;min-width:0}
-#guest-bar .gb-btn{
-  flex:0 0 auto;padding:6px 14px;border-radius:8px;
-  border:1px solid color-mix(in srgb,var(--acc-fg) 35%,transparent);
-  background:transparent;color:var(--acc-fg);font-size:12px;font-weight:600;cursor:pointer;
-}
-body.guest{padding-top:38px}
-
 /* ═══ BANNER PWA ═══ */
 #install-banner{
   display:none;position:fixed;bottom:84px;left:12px;right:12px;z-index:998;
@@ -2470,14 +2448,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 
 
 
-<!-- ====== BANNER MODO INVITADO ======
-     Visible en todo momento mientras dure la sesión: el invitado nunca debe
-     creer que sus capturas quedaron guardadas en el equipo. -->
-<div id="guest-bar">
-  <span class="gb-txt"><b>Modo invitado</b> · nada se guarda en este equipo — descarga tus documentos antes de salir</span>
-  <button class="gb-btn" onclick="guestSalir()">Salir</button>
-</div>
-
 <!-- ====== FRANJA DEL MODO COMPARTIR ======
      Discreta y permanente mientras dure el vínculo: sin ella, estar vinculado
      sería indistinguible de no estarlo en cuanto se sale de la pantalla. -->
@@ -2801,7 +2771,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 105;
+var _BUILD = 106;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3285,34 +3255,18 @@ function lcPedirExport(kind, nombreDoc, cb){
   if (cb) setTimeout(function(){ cb(sel); }, 0);
 }
 
-/* ═══ MODO INVITADO ═══
-   Para el funcionario que usa un teléfono prestado o un computador ajeno y no
-   puede (o no quiere) tocar los Ajustes ni el Perfil del dueño. Tiene TODOS los
-   formularios —orden judicial y flagrancia— y produce los documentos completos.
-   La contrapartida, dicha sin rodeos en pantalla: NADA se guarda en el equipo.
-   Ni capturas, ni personas, ni configuración: todo vive en memoria y se pierde
-   al cerrar. Por eso el invitado no necesita el PIN del dueño y tampoco ve ni
-   modifica un solo dato suyo. */
-var _guest = false, _guestCfg = null;
-function guestEntrar() {
-  _guest = true;
-  _guestCfg = _cfgConDefaults({});
-  _casesCache = []; _personsCache = []; _firmasCache = {};
-  _pinHide();
-  var b = document.getElementById('guest-bar'); if (b) b.classList.add('on');
-  document.body.classList.add('guest');
-  go('capturas'); renderCases();
-  toast('Modo invitado: los formularios y los documentos funcionan completos, pero nada queda guardado en este equipo', 8000);
-}
-function guestSalir() {
-  if (!confirm('Salir del modo invitado.\n\nLas capturas de esta sesión NO se guardaron en el equipo y se perderán.\n\n¿Descargaste ya los documentos que necesitas?')) return;
-  location.reload();
-}
-// Toast honesto: en invitado no se puede decir "guardado".
-function guestToastGuardado(msg) {
-  toast(_guest ? 'Listo en esta sesión — recuerda descargar el documento: en modo invitado nada se guarda' : msg,
-    _guest ? 6000 : 3000);
-}
+/* ── El MODO INVITADO se retiró ──────────────────────────────────────────────
+   Servía para el teléfono prestado: formularios y documentos completos, pero
+   nada guardado en el equipo. ⚠️ Lo que lo invalidaba no era su honestidad —que
+   estaba dicha en pantalla— sino el TIEMPO: un procedimiento son treinta o
+   cuarenta minutos de diligenciamiento, y ofrecer que todo eso se pierda al
+   cerrar no es una alternativa razonable a pedir el PIN.
+   ⚠️ Se retiró ENTERO —sus funciones, su barra ámbar, su CSS y las ramas que se
+   saltaban el almacenamiento— y no solo su enlace: un motor sin puerta que lo
+   alcance es lo que ya costó una limpieza con las plantillas subidas.
+   ⚠️ Los identificadores del módulo NO se escriben en este comentario a
+   propósito: la regresión comprueba que no quedan BUSCÁNDOLOS en el archivo
+   (verify_almacen [11]), igual que con el idiom del techo de cifrado. */
 
 /* ═══ PIN FLOW ═══ */
 function _pinOv(html) {
@@ -3329,8 +3283,7 @@ function showPinSetup() {
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-a" placeholder="Nuevo PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')document.getElementById(\'pin-b\').focus()">'+
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-b" placeholder="Confirmar PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doSetPin()">'+
     '<div class="pin-err" id="pin-err"></div>'+
-    '<button class="pin-btn" onclick="doSetPin()">Crear PIN</button>'+
-    '<div class="pin-forget" onclick="guestEntrar()">Usar como invitado (sin guardar nada)</div>'
+    '<button class="pin-btn" onclick="doSetPin()">Crear PIN</button>'
   );
   setTimeout(function(){ var el=document.getElementById('pin-a'); if(el) el.focus(); }, 120);
 }
@@ -3343,9 +3296,6 @@ function showPinEntry() {
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-e" placeholder="PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doUnlockPin()">'+
     '<div class="pin-err" id="pin-err"></div>'+
     '<button class="pin-btn" onclick="doUnlockPin()">Ingresar</button>'+
-    // Equipo prestado: el invitado hace su procedimiento sin el PIN del dueño y
-    // sin ver ni tocar sus datos.
-    '<div class="pin-forget" onclick="guestEntrar()">Usar como invitado (sin guardar nada)</div>'+
     '<div class="pin-forget" onclick="forgotPin()">Olvidé mi PIN</div>'
   );
   setTimeout(function(){ var el=document.getElementById('pin-e'); if(el) el.focus(); }, 120);
@@ -3458,10 +3408,6 @@ async function _lcDecrypt(b64) {
 }
 var _lcWriteChain = {};
 function _lcEncSave(key, val) {
-  // Invitado: los datos viven solo en las cachés en memoria (ya actualizadas por
-  // el llamador). No se escribe nada en el equipo — y se resuelve de verdad, así
-  // que el flujo continúa sin fingir un guardado que no ocurrió.
-  if (_guest) return Promise.resolve();
   if (!_sessionKey) {
     var err = new Error('Sin sesión activa — no se guardó');
     console.error('[LexCapture] cifrado error', key, err);
@@ -3571,8 +3517,7 @@ function _syncPersonsFromCases() {
 
 /* Borrador del wizard. Vive en su propia clave (`lc_draft`) y NO en `lc_cases`:
    una captura a medias no debe aparecer en la lista, ni en estadísticas, ni
-   crear una persona en el registro. En modo invitado `_lcEncSave` no escribe
-   nada, así que el borrador solo existe en memoria mientras dure la sesión. */
+   crear una persona en el registro. */
 var _draftCache = null;
 /* Firmas manuscritas por id de perfil: { <idPerfil>: {b64,w,h} }. En memoria
    mientras la sesión está abierta, cifradas en localStorage — mismo patrón que
@@ -3585,7 +3530,6 @@ var DB = {
   clearDraft: function() {
     if (_draftCache === null) return Promise.resolve();
     _draftCache = null;
-    if (_guest) return Promise.resolve();
     try { localStorage.removeItem('lc_draft'); } catch(e) {}
     return Promise.resolve();
   },
@@ -3626,14 +3570,10 @@ var DB = {
   savePerson: function(p) { var a=this.getPersons().slice(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
-    // Modo invitado: configuración propia en memoria. Ni se lee ni se escribe la
-    // del dueño del equipo (quien presta el teléfono no expone sus datos, y el
-    // invitado no le cambia los suyos).
-    if (_guest) return _guestCfg;
     var stored; try { stored=JSON.parse(localStorage.getItem('lc_cfg'))||{}; } catch(e) { stored={}; }
     return _cfgConDefaults(stored);
   },
-  saveConfig: function(c) { if (_guest) { _guestCfg=c; return; } localStorage.setItem('lc_cfg', JSON.stringify(c)); }
+  saveConfig: function(c) { localStorage.setItem('lc_cfg', JSON.stringify(c)); }
   /* La API de plantillas subidas (getTemplates/saveTemplate/getActiveTemplate…)
      se retiró junto con la pantalla: ningún documento de la app sale ya de un
      .docx que cargue el usuario. Ver _lcPurgarPlantillas(). */
@@ -3649,7 +3589,6 @@ var DB = {
    usuario (son formatos que la app se instalaba sola), y si alguien había
    cargado uno propio, ya no existe la vía que lo consumía. */
 function _lcPurgarPlantillas() {
-  if (_guest) return;                       // el invitado no toca localStorage
   try { if (localStorage.getItem('lc_templates') !== null) localStorage.removeItem('lc_templates'); }
   catch (e) { /* almacenamiento no disponible: nada que purgar */ }
   /* Cola de la colaboración en vivo, que se retiró: el Modo compartir manda
@@ -3861,8 +3800,7 @@ function filterCasos(f, el) {
    cual, es decir por orden de alta. Nadie se encuentra la lista dada vuelta al
    actualizar; quien quiera lo otro lo cambia con un toque y queda recordado.
    ⚠️ Vive en `cfg` (y no en una clave suelta de localStorage como el tema)
-   porque DB.saveConfig ya tiene rama de invitado: en un teléfono prestado la
-   preferencia es de la sesión y NO se escribe un byte en el equipo. */
+   porque es una preferencia del equipo y viaja con su configuración. */
 var LC_ORD = {
   capturas:{ key:'ordenCapturas', def:'rec', titulo:'Capturas' },
   personas:{ key:'ordenPersonas', def:'ant', titulo:'Personas' }
@@ -4021,7 +3959,7 @@ function lcAplicarOrden(arg) {
 
 function renderCases() {
   var el = document.getElementById('cl');
-  if (!_guest && !_sessionKey && localStorage.getItem('lc_key_salt')) {
+  if (!_sessionKey && localStorage.getItem('lc_key_salt')) {
     renderOrdenBtn('capturas', 0);   // con la lista bajo PIN no hay nada que ordenar
     if (el) el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Datos protegidos</h3><p>Ingresa tu PIN para acceder a las capturas.</p><button class="cta" onclick="showPinEntry()">Ingresar PIN</button></div>';
     var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = 'Datos protegidos';
@@ -4539,7 +4477,7 @@ async function wizSave() {
     }
     await Promise.all(jobs);
     await wizCerrarBorrador();      // ya es una captura: el borrador sobra
-    wc=null; go('capturas'); renderDraftSlot(); guestToastGuardado('Caso guardado ✓');
+    wc=null; go('capturas'); renderDraftSlot(); toast('Caso guardado ✓');
   } catch(e) {
     console.error('[LexCapture] error guardando caso', e);
     toast(_lcMsgGuardado(e, 'la captura'), 6000);
@@ -6898,7 +6836,7 @@ async function simSavePending(){
     toast('⚠️ Error guardando el caso simulado — vuelve a intentarlo.');
     return;
   }
-  guestToastGuardado('Caso guardado ✓');
+  toast('Caso guardado ✓');
   document.getElementById('sim-res').classList.add('hid');
   window._simCase=null; go('capturas');
 }
@@ -8059,7 +7997,7 @@ async function lcDossierExtraGuardar(){
   catch(e){ console.error('[LexCapture] error guardando datos del dossier',e); toast('⚠️ No se pudieron guardar los datos'); return; }
   closeModal();
   updateDosPreview(DB.getCase(_dosCasoId));   // el dossier se repinta ya con ellos
-  guestToastGuardado('Datos del dossier guardados ✓');
+  toast('Datos del dossier guardados ✓');
 }
 
 function copyDosTxt() {
@@ -10714,9 +10652,8 @@ function ccDescLineas(grupo) {
    aunque el perfil cambie de cargo o de compañero de patrulla. Mismo criterio
    que `ojCfgDoc` con el membrete. */
 function ccPerfilActivo() {
-  /* ⚠️ `|| {}` y no solo el try/catch: `DB.getConfig()` puede DEVOLVER null
-     (el modo invitado guarda su configuración en memoria y no existe hasta que
-     se entra), y entonces no lanza — se cae más abajo, al generar el documento. */
+  /* ⚠️ `|| {}` y no solo el try/catch: una lectura que DEVUELVA null no lanza,
+     así que el try no la atrapa — se caería más abajo, al generar el documento. */
   var cfg = {}; try { cfg = DB.getConfig() || {}; } catch (e) { }
   var p = null;
   (cfg.perfiles || []).forEach(function (x) { if (x.id === cfg.perfilActivo) p = x; });
@@ -13837,8 +13774,7 @@ function savePerfilForm(id) {
    ⚠️ NO vive en `cfg.perfiles[]`: `lc_cfg` se guarda en localStorage EN CLARO.
    Una firma manuscrita es un rasgo biométrico y con ella se suscriben documentos
    judiciales, así que va en `lc_firmas`, cifrada con AES-GCM igual que las
-   capturas. En modo invitado `_lcEncSave` no escribe un byte: la firma del
-   invitado existe solo en memoria y muere con la sesión.
+   capturas.
    ⚠️ PNG con fondo TRANSPARENTE: el lienzo nunca se rellena, solo se dibuja el
    trazo. Un fondo blanco taparía el papel al imprimirse sobre el bloque de firma.
 ═══════════════════════════════════════════════════════════════════════════ */
@@ -14002,7 +13938,7 @@ async function fwGuardar(id){
   // Se puede firmar SIN salir del procedimiento: si el wizard está abierto, su
   // bloque de firma refleja el trazo nuevo al instante.
   try{ ojRefrescarFirmaWiz(); }catch(_){}
-  toast(_guest?'Firma lista en esta sesión — no queda guardada en este equipo':'Firma guardada ✓');
+  toast('Firma guardada ✓');
 }
 async function fwEliminar(id){
   if(!confirm('¿Eliminar la firma guardada de este perfil?')) return;
@@ -16085,7 +16021,7 @@ function ojNuevoCaso(){
   return c;
 }
 /* Encabezado, custodia y firma: lo que esté configurado entra solo; lo que falte
-   se le pide al usuario en el paso 7 (equipo sin configurar o modo invitado). */
+   se le pide al usuario en el paso 7 (equipo sin configurar). */
 function ojPrellenarDeCfg(c,cfg){
   cfg=cfg||DB.getConfig();
   var perfil=ojPerfilActivo(cfg), e=c.oj.encabezado, cu=c.oj.custodia, fi=c.oj.firma;
@@ -16227,7 +16163,7 @@ function ojEstructura(){
        equivocado (misma regla que `lcDirParsear`). */
     custodia:{ estacion:'', direccion:'', barrio:'', ciudad:'', telefono:'', correo:'', web:'' },
     /* Quien firma. Se precarga del perfil activo; se puede diligenciar a mano
-       (equipo prestado o modo invitado, donde no hay perfil configurado). */
+       (equipo sin perfil configurado). */
     firma:{ grado:'', nombre:'', cargo:'', telefono:'', correo:'' }
   };
 }
@@ -19585,7 +19521,7 @@ async function ojGuardarCaso(silencioso){
     await DB.saveCase(wc, _wizBase ? JSON.parse(_wizBase) : null);   // misma razón que en wizSave
     await DB.savePerson(persona);
     await wizCerrarBorrador();      // ya es una captura: el borrador sobra
-    if(!silencioso) guestToastGuardado('Caso guardado ✓');
+    if(!silencioso) toast('Caso guardado ✓');
     return true;
   }catch(e){
     console.error('[LexCapture OJ] guardando caso',e);
@@ -20253,15 +20189,11 @@ function pwaDismiss() {
    hay otro equipo— y para nada más.
    ⚠️ Vive en clave propia y NO en `lc_cfg`: la configuración se exporta e
    importa entre equipos («Exportar config»), y dos teléfonos con la misma
-   identidad no se distinguirían.
-   ⚠️ En modo invitado se genera en memoria y no se escribe un byte —misma regla
-   que el resto del almacenamiento—, así que un teléfono prestado no queda
-   marcado. */
+   identidad no se distinguirían. */
 var PT_DEV_KEY = 'lc_device';
 var _ptDev = null;
 function ptDeviceId() {
   if (_ptDev) return _ptDev;
-  if (_guest) { _ptDev = 'g-' + uid(); return _ptDev; }
   try { _ptDev = localStorage.getItem(PT_DEV_KEY) || ''; } catch (e) { _ptDev = ''; }
   if (!_ptDev) {
     _ptDev = 'd-' + uid();

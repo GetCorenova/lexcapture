@@ -1,5 +1,5 @@
-/* Regresión del SISTEMA DE APARIENCIA (claro · oscuro · sistema) y de las dos
-   fugas de color que la auditoría midió.
+/* Regresión del SISTEMA DE APARIENCIA (claro · oscuro · sistema) y de las fugas
+   de color que la auditoría midió.
 
    Contexto de lo que se está protegiendo:
    1. El modo Sistema es un TERCER estado de la PREFERENCIA, no un tercer aspecto.
@@ -15,8 +15,8 @@
    3. El aspecto se resuelve ANTES de pintar (script del <head>), o el usuario ve
       un fogonazo del tema contrario en cada arranque.
    4. Los contrastes se MIDEN sobre el color computado real, no se leen del CSS:
-      la fuga de #guest-bar consistía justamente en que el valor declarado era
-      correcto en oscuro y quedaba congelado en claro. */
+      la fuga que destapó la auditoría consistía justamente en que el valor
+      declarado era correcto en oscuro y quedaba congelado en claro. */
 import { chromium } from 'playwright';
 import http from 'http';
 import { readFile } from 'fs/promises';
@@ -168,25 +168,40 @@ console.log('\n── VI · La preferencia se recuerda ──\n');
   await ctx.close();
 }
 
-console.log('\n── VII · Las dos fugas de color medidas ──\n');
+console.log('\n── VII · Las fugas de color medidas ──\n');
 {
-  /* La barra de invitado: el defecto era que #0E1020 (el --acc-fg del OSCURO)
-     quedaba escrito a pelo, así que en claro daba 3,11:1 sobre el ámbar oscuro. */
+  /* ⚠️ La barra del modo invitado era la otra fuga (#0E1020 —el --acc-fg del
+     OSCURO— escrito a pelo: 3,11:1 en claro) y se fue con el modo, que se retiró
+     entero de la app. Su sitio lo ocupa la OTRA barra fija de la aplicación, la
+     del Modo compartir, que nunca se había medido y corre el mismo riesgo; y lo
+     que protegía aquel check se conserva como guarda ESTRUCTURAL más abajo. */
+  /* ⚠️ Esta franja se pinta sobre un fondo SEMITRANSPARENTE (--ok-bg es el mismo
+     verde de --ok al 12 %), así que hay que componerlo sobre el fondo real de la
+     página antes de medir: leyendo el rgba a pelo, el fondo y el texto salen del
+     mismo color base y el contraste da 1,00:1 — un falso negativo. La barra
+     anterior era opaca y no lo necesitaba. */
+  const componer = (c, base) => {
+    const m = (c.match(/[\d.]+/g) || []).map(Number);
+    const b = (base.match(/[\d.]+/g) || []).map(Number);
+    const a = m.length > 3 ? m[3] : 1;
+    return 'rgb(' + [0, 1, 2].map(i => Math.round(m[i] * a + (b[i] ?? 255) * (1 - a))).join(',') + ')';
+  };
   for (const tema of ['dark', 'light']) {
     const { ctx, page } = await abrir({ pref: tema });
     await page.waitForTimeout(500);
     const m = await page.evaluate(() => {
-      const b = document.getElementById('guest-bar');
+      const b = document.getElementById('pt-barra');
       if (!b) return null;
       b.classList.add('on');
       const cs = getComputedStyle(b);
-      const btn = b.querySelector('.gb-btn');
-      return { fg: cs.color, bg: cs.backgroundColor, btnFg: btn ? getComputedStyle(btn).color : null };
+      const btn = b.querySelector('.pb-btn');
+      return { fg: cs.color, bg: cs.backgroundColor, btnFg: btn ? getComputedStyle(btn).color : null,
+               base: getComputedStyle(document.body).backgroundColor };
     });
-    if (!m) { log(false, `Barra de invitado en ${tema}`, 'no se encontró #guest-bar'); }
+    if (!m) { log(false, `Franja del Modo compartir en ${tema}`, 'no se encontró #pt-barra'); }
     else {
-      const c = contraste(m.fg, m.bg);
-      log(c >= 4.5, `Barra de modo invitado en ${tema}: cumple AA para texto normal`, c.toFixed(2) + ':1');
+      const c = contraste(m.fg, componer(m.bg, m.base));
+      log(c >= 4.5, `Franja del Modo compartir en ${tema}: cumple AA para texto normal`, c.toFixed(2) + ':1');
       log(m.btnFg === m.fg, `  …y su botón usa el mismo color de primer plano`, m.btnFg);
     }
     await ctx.close();
@@ -207,6 +222,19 @@ console.log('\n── VII · Las dos fugas de color medidas ──\n');
   const cph = contraste(ph.fg, ph.bg);
   log(cph >= 4.5, 'Texto guía del lienzo de firma sobre su fondo blanco fijo', cph.toFixed(2) + ':1');
   await ctx.close();
+
+  /* ⚠️ Guarda estructural del defecto que costó la barra de invitado: #0E1020 es
+     el primer plano del tema OSCURO y solo puede vivir como valor del token. En
+     una regla de componente congelaría ese tema dentro del otro, que es
+     exactamente la fuga que se midió —y que no se detecta leyendo el valor, que
+     era correcto, sino viendo DÓNDE está escrito. */
+  const hojaCss = (await readFile(join(ROOT, 'LexCapture_v8.html'), 'utf8'));
+  const usos = hojaCss.slice(hojaCss.indexOf('<style>'), hojaCss.indexOf('</style>'))
+    .split('\n').filter(l => /#0E1020/i.test(l));
+  const malos = usos.filter(l => !/--acc-fg\s*:/.test(l));
+  log(usos.length > 0 && malos.length === 0,
+    '#0E1020 solo se declara como valor de --acc-fg, nunca dentro de un componente',
+    malos.length ? malos[0].trim().slice(0, 70) : usos.length + ' definición(es) del token');
 }
 
 console.log('\n── VIII · Tokens nuevos y --text-3 corregido ──\n');

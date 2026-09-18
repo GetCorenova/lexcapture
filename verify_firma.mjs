@@ -500,32 +500,28 @@ await writeFile(join(ROOT, 'verify_firma_salida.docx'), Buffer.from(bytes));
 log(bytes.length > 20000, 'Se genera el .docx completo para revisarlo en Word',
   Math.round(bytes.length / 1024) + ' KB → verify_firma_salida.docx');
 
-/* ═══════════ 9 · MODO INVITADO ═══════════ */
-// El teléfono prestado puede firmar, pero no deja rastro en el equipo.
-const huellaAntes = await page.evaluate(() =>
-  Object.keys(localStorage).sort().map(k => k + ':' + (localStorage.getItem(k) || '').length).join('|'));
-await page.evaluate(() => {
-  guestEntrar();
-  const cfg = DB.getConfig();
-  cfg.perfiles = [{ id: 'g1', grado: 'Patrullero', nombre: 'INVITADO PRESTADO', cargo: 'Patrullero' }];
-  cfg.perfilActivo = 'g1';
-  DB.saveConfig(cfg);
-  go('perfil'); renderPerfilScreen();
+/* ═══════════ 9 · LA FIRMA VA CIFRADA, Y EN SU PROPIA CLAVE ═══════════ */
+/* ⚠️ Sustituye al bloque del modo invitado, que se retiró entero de la app. Lo
+   que de verdad protege este dato es dónde vive: una firma manuscrita es un
+   rasgo biométrico y con ella se suscriben documentos judiciales, así que NO
+   puede estar en `lc_cfg` —que se guarda en claro— sino en `lc_firmas`, cifrada
+   con AES-GCM igual que las capturas. Eso no estaba medido. */
+const firmaCifrada = await page.evaluate(() => {
+  const f = DB.getFirma('p1');
+  const crudo = localStorage.getItem('lc_firmas') || '';
+  const cfgCrudo = localStorage.getItem('lc_cfg') || '';
+  const trozo = f && f.b64 ? f.b64.slice(0, 48) : null;
+  return {
+    tiene: !!(f && f.b64),
+    hayClave: !!crudo,
+    enClaro: !!(trozo && crudo.includes(trozo)),
+    enCfg: !!(trozo && cfgCrudo.includes(trozo)) || /"b64"/.test(cfgCrudo)
+  };
 });
-await page.waitForTimeout(250);
-await page.evaluate(() => openFirmaModal('g1'));
-await page.waitForTimeout(400);
-await firmar(page);
-await page.evaluate(async () => { await fwGuardar('g1'); });
-await page.waitForTimeout(300);
-const invitado = await page.evaluate(() => ({
-  tiene: !!DB.getFirma('g1'),
-  huella: Object.keys(localStorage).sort().map(k => k + ':' + (localStorage.getItem(k) || '').length).join('|')
-}));
-log(invitado.tiene === true, 'El invitado puede firmar y usar su firma durante la sesión');
-log(invitado.huella === huellaAntes,
-  'La firma del invitado NO escribe un solo byte en el equipo del dueño',
-  invitado.huella === huellaAntes ? 'huella de localStorage idéntica' : 'CAMBIÓ el almacenamiento');
+log(firmaCifrada.tiene && firmaCifrada.hayClave && !firmaCifrada.enClaro,
+  'La firma se guarda CIFRADA en su propia clave lc_firmas', firmaCifrada.hayClave ? 'lc_firmas presente, sin el PNG en claro' : 'no hay lc_firmas');
+log(firmaCifrada.enCfg === false,
+  '⚠️ Y NUNCA en lc_cfg, que se guarda en claro: es un rasgo biométrico');
 
 log(consoleErrors.length === 0, 'Sin errores de consola en todo el recorrido',
   consoleErrors.slice(0, 3).join(' | ') || 'consola limpia');

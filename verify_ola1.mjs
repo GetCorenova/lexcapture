@@ -337,32 +337,40 @@ const trasNuevo = await page.evaluate(() => ({
 log(trasNuevo.enWizard === true && trasNuevo.numero === '',
   '«Empezar de nuevo» descarta el anterior y abre una captura limpia');
 
-/* ─────────── 12. Modo invitado: el borrador no toca el equipo ─────────── */
+/* ─────────── 12. El borrador NO es una captura ─────────── */
+/* ⚠️ Sustituye al check del modo invitado, que se retiró entero de la app. Lo
+   que se mide aquí es la razón por la que el borrador vive en su propia clave y
+   no en `lc_cases`: una captura a medias no puede aparecer en la lista, ni en
+   las estadísticas, ni crear una persona en el registro. */
 await page.evaluate(() => { wc = null; DB.clearDraft(); });
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-const huellaAntes = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return JSON.stringify(o);
-});
-await page.evaluate(() => guestEntrar());
-await page.waitForTimeout(300);
+await page.fill('#pin-e', '246813');
+await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForTimeout(700);
+/* ⚠️ Se mide el DELTA, no el total: a esta altura de la suite ya hay una captura
+   guardada (la del punto 11, que sí terminó). Lo que se comprueba es que el
+   borrador nuevo no suma ninguna. */
+const previo = await page.evaluate(() => ({ casos: DB.getCases().length, personas: DB.getPersons().length }));
 await page.evaluate(() => startWizard('OJ'));
 await page.waitForTimeout(250);
 await page.evaluate(() => ojAbrirRequerido());
 await page.waitForTimeout(200);
-await page.fill('#oj-r-pn', 'INVITADO');
+await page.fill('#oj-r-pn', 'BORRADOR SUELTO');
 await page.evaluate(() => ojGuardarRequerido());
 await page.waitForTimeout(200);
 await page.click('button[onclick="wizNext()"]');
 await page.waitForTimeout(400);
-const invitado = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return { huella: JSON.stringify(o), enMemoria: !!DB.getDraft(), enDisco: !!localStorage.getItem('lc_draft') };
-});
-log(invitado.enMemoria === true, 'En modo invitado el borrador funciona dentro de la sesión');
-log(invitado.enDisco === false && invitado.huella === huellaAntes,
-  'Pero no escribe un solo byte en el equipo prestado');
+const suelto = await page.evaluate(() => ({
+  hayBorrador: !!DB.getDraft(),
+  casos: DB.getCases().length,
+  personas: DB.getPersons().length,
+  nombres: DB.getPersons().map(p => (p.priNom || '') + ' ' + (p.priApe || '')).join(' | ')
+}));
+log(suelto.hayBorrador === true && suelto.casos === previo.casos,
+  'Con un borrador vivo, la lista de capturas no crece: un borrador no es una captura', 'lc_cases sigue en ' + suelto.casos);
+log(suelto.personas === previo.personas && !/BORRADOR SUELTO/i.test(suelto.nombres),
+  'Y tampoco ha creado una persona en el registro', 'lc_persons sigue en ' + suelto.personas);
 
 log(consoleErrors.length === 0, 'Consola limpia', consoleErrors.slice(0, 3).join(' | '));
 

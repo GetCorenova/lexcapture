@@ -20,7 +20,7 @@
       devuelve '' para un elemento inexistente y eso ya se ha pagado antes.
    7. Que la semilla de migración no invente despachos en un equipo recién
       instalado (el error de 'CANDELARIA' en `nombreEstacion`).
-   8. Que en modo invitado no se escriba un byte. */
+   8. Que registrar un despacho alimente el NUNC en la misma sesión. */
 import { chromium } from 'playwright';
 import http from 'http';
 import { readFile } from 'fs/promises';
@@ -381,31 +381,25 @@ const noResucita = await page.evaluate(() => {
 log(noResucita === 0,
   '⚠️ Borrar todos los despachos NO los resucita en la lectura siguiente (la marca `despachosMigrados`)');
 
-/* ═══ Parte J · Modo invitado ═════════════════════════════════════════════ */
-const huellaAntes = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return JSON.stringify(o);
-});
-await page.reload({ waitUntil: 'load' });
-await page.waitForTimeout(500);
-await page.evaluate(() => guestEntrar());
-await page.waitForTimeout(600);
-const invitado = await page.evaluate(async () => {
+/* ═══ Parte J · Un despacho recién registrado ya manda ════════════════════ */
+/* ⚠️ Sustituye a la parte del modo invitado, que se retiró entero de la app. Lo
+   que se mide es la regla vigente: el NUNC viaja CON el despacho, así que en
+   cuanto se registra uno y queda predeterminado, es el suyo el que sale — sin
+   recargar y sin tocar ninguna clave que no sea la configuración. */
+const recien = await page.evaluate(async () => {
+  const foto = () => Object.keys(localStorage).sort().filter(k => k !== 'lc_cfg').map(k => k + ':' + (localStorage.getItem(k) || '').length).join('|');
+  const antes = foto();
   const cfg = DB.getConfig();
-  cfg.despachosPropios = [{ id: 'g1', clase: 'FISCALIA', tipo: 'FISCALIA', nombre: 'URI prestada', nunc: '0500160011202611' }];
+  cfg.despachosPropios = [{ id: 'g1', clase: 'FISCALIA', tipo: 'FISCALIA', nombre: 'URI nueva', nunc: '0500160011202611' }];
   cfg.despachoDefecto = { URI: 'g1' };
   DB.saveConfig(cfg);
   go('despachos');
   await new Promise(r => setTimeout(r, 300));
-  return { n: (DB.getConfig().despachosPropios || []).length, nunc: lcDespNunc('URI') };
+  return { n: (DB.getConfig().despachosPropios || []).length, nunc: lcDespNunc('URI'), soloCfg: antes === foto() };
 });
-log(invitado.n === 1 && invitado.nunc === '0500160011202611',
-  'El invitado puede registrar sus despachos y usarlos en la sesión', JSON.stringify(invitado));
-const huellaDespues = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return JSON.stringify(o);
-});
-log(huellaDespues === huellaAntes, 'Y no escribe un solo byte en el almacenamiento del dueño');
+log(recien.n === 1 && recien.nunc === '0500160011202611',
+  'Un despacho recién registrado ya decide el NUNC en la misma sesión', JSON.stringify(recien));
+log(recien.soloCfg, '⚠️ Y no toca ninguna clave del almacenamiento que no sea la configuración');
 
 log(consoleErrors.length === 0, 'Sin errores de consola', consoleErrors.join(' | '));
 console.log(`\n${n - fails}/${n} checks OK`);

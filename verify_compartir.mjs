@@ -581,7 +581,7 @@ const d6 = await page.evaluate(() => {
 log(d6.length === 0, '[D6] La pantalla no usa una sola palabra técnica', d6.join(', '));
 
 // [D7] Sistema visual: sin emojis y sin colores propios fuera de los tokens.
-const bloqueCss = src.slice(src.indexOf('/* ═══ MODO COMPARTIR ═══'), src.indexOf('/* ═══ BANNER MODO INVITADO ═══'));
+const bloqueCss = src.slice(src.indexOf('/* ═══ MODO COMPARTIR ═══'), src.indexOf('/* ═══ BANNER PWA ═══ */'));
 const cssSinComentarios = bloqueCss.replace(/\/\*[\s\S]*?\*\//g, '');
 const literales = (cssSinComentarios.match(/#[0-9a-fA-F]{3,6}\b/g) || []);
 const emojis = await page.evaluate(() => {
@@ -998,18 +998,19 @@ const e6 = await page.evaluate(() => {
 });
 log(e6 === null, '[E6] La cola cifrada del modelo anterior se borra del equipo');
 
-// [E7] Modo invitado: la identidad no escribe un byte.
+// [E7] La identidad del equipo se escribe UNA vez y no se regenera.
+// ⚠️ Sustituye al check del modo invitado, que se retiró entero de la app. Lo
+// que importa del mecanismo es que sea estable: si cambiara en cada arranque,
+// los dos teléfonos dejarían de reconocerse entre envíos.
 const e7 = await page.evaluate(() => {
   const foto = () => JSON.stringify(Object.keys(localStorage).sort().map(k => [k, (localStorage.getItem(k) || '').length]));
+  const uno = ptDeviceId();
   const antes = foto();
-  const g = _guest, dev = _ptDev;
-  _guest = true; _ptDev = null;
-  const id = ptDeviceId();
-  const despues = foto();
-  _guest = g; _ptDev = dev;
-  return { igual: antes === despues, fmt: /^g-/.test(id) };
+  _ptDev = null;                 // se olvida la copia en memoria
+  const dos = ptDeviceId();      // y la vuelve a leer del equipo
+  return { igual: antes === foto(), estable: uno === dos, fmt: /^d-/.test(uno) };
 });
-log(e7.igual && e7.fmt, '[E7] En modo invitado no se escribe un solo byte en el equipo');
+log(e7.igual && e7.estable && e7.fmt, '[E7] La identidad del equipo es estable y no se reescribe en cada lectura');
 
 // [E8] La consola, limpia en los dos equipos.
 log(errs.length === 0, '[E8] Consola sin errores en los dos teléfonos', errs.slice(0, 3).join(' · '));

@@ -14,7 +14,7 @@
      E. El FPJ-7, casilla por casilla, y su dependencia de la cadena.
      F. Lo que NO se inventa: firmas, consecutivo, historia clínica, reverso.
      G. El compañero de patrulla y la entidad, sin institución en el código.
-     H. Persistencia, id de los elementos, modo invitado y consola limpia.       */
+     H. Persistencia, id de los elementos, aislamiento del motor y consola.      */
 import { chromium } from 'playwright';
 import http from 'http';
 import { readFile, writeFile } from 'fs/promises';
@@ -719,8 +719,8 @@ log(/function rtOrigenDatos\([\s\S]{0,240}?ccResolverOrigen/.test(fuenteHtml),
 log(!/function rt(Perfil|Companero)/.test(fuenteHtml),
   'Y no escribe uno propio para el perfil ni para el compañero');
 
-/* ══ H · PERSISTENCIA, IDs, INVITADO Y CONSOLA ═════════════════════════════ */
-console.log('\n── H · Persistencia, ids de los elementos, invitado y consola ──');
+/* ══ H · PERSISTENCIA, IDs, AISLAMIENTO Y CONSOLA ══════════════════════════ */
+console.log('\n── H · Persistencia, ids de los elementos, aislamiento y consola ──');
 
 const guardado = await page.evaluate(id => {
   const c = DB.getCase(id);
@@ -754,23 +754,24 @@ log(JSON.stringify(idsTrasEditar.antes) === JSON.stringify(idsTrasEditar.despues
 log(new Set(idsTrasEditar.despues).size === 3,
   'Y son distintos entre sí: cada elemento tiene el suyo');
 
-/* Modo invitado: el teléfono prestado no escribe un byte. */
-const invitado = await page.evaluate(async () => {
-  const huella = () => JSON.stringify(Object.keys(localStorage).sort().map(k => [k, localStorage.getItem(k).length]));
-  const antes = huella();
-  guestEntrar();
-  const c = { id: 'cc-guest', tipo: 'URI', nunc: '0500160001202601', fechaProc: '2026-08-20',
+/* ⚠️ El motor documental no toca el almacén. Sustituye al check del modo
+   invitado, que se retiró entero de la app: la propiedad medida es la misma
+   —generar un documento no puede escribir nada— y ahora se mide sobre el único
+   camino que existe. Con un caso mínimo, además, el FPJ-8 sale completo. */
+const aislado = await page.evaluate(async () => {
+  const c = { id: 'cc-min', tipo: 'URI', nunc: '0500160001202601', fechaProc: '2026-08-20',
     conductas: ['Hurto'], lugar: { dir: 'CL 1', muni: 'Medellín' }, capturados: [{ id: 'g1', priNom: 'A', priApe: 'B' }],
     elementos: [{ cant: 1, desc: 'celular' }],
     narracion: { fechaCapD: '20', fechaCapM: '08', fechaCapA: '2026', horaCapH: '10', horaCapM: '00' } };
   await DB.saveCase(c);
-  const out = await LC_DOCS.FPJ8.build({ caso: DB.getCase('cc-guest'), grupo: ccGrupos(DB.getCase('cc-guest'))[0] });
+  const huella = () => JSON.stringify(Object.keys(localStorage).sort().map(k => [k, localStorage.getItem(k).length]));
+  const antes = huella();
+  const out = await LC_DOCS.FPJ8.build({ caso: DB.getCase('cc-min'), grupo: ccGrupos(DB.getCase('cc-min'))[0] });
   const despues = huella();
-  _guest = false; _guestCfg = null;
   return { igual: antes === despues, ok: !!(out && out.blob && out.blob.size > 20000) };
 });
-log(invitado.ok, 'En modo invitado el documento sale igual');
-log(invitado.igual, '⚠️ Y no escribe un solo byte en el almacenamiento del dueño del teléfono');
+log(aislado.ok, 'Con un caso mínimo el documento sale igual de completo');
+log(aislado.igual, '⚠️ Y generarlo no escribe un solo byte en el almacenamiento');
 
 /* El PDF abre de verdad: lo comprueba el visor de Edge, no la app. */
 const edge = await chromium.launch({ channel: 'msedge' });

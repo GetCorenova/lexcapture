@@ -10,7 +10,7 @@
       independientes.
    4. Que ordenar sea SOLO ordenar: ni el formulario, ni el modelo, ni el
       almacén cambian por mirar la lista de otra manera.
-   5. Que en modo invitado la preferencia no escriba un byte en el equipo. */
+   5. Que un equipo recién instalado arranque en los defectos documentados. */
 import { chromium } from 'playwright';
 import http from 'http';
 import { readFile } from 'fs/promises';
@@ -238,33 +238,34 @@ await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);
 log(await page.$eval('#ord-capturas', b => b.hidden), 'Con las capturas bajo PIN, el control de orden está oculto');
 
-/* ═══ Parte F · Modo invitado: ni un byte en el equipo ═══ */
-const huellaAntes = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return JSON.stringify(o);
-});
+/* ═══ Parte F · Un equipo recién instalado arranca en los defectos ═══ */
+/* ⚠️ Sustituye a la parte del modo invitado, que se retiró entero de la app. Lo
+   que protegía sigue vigente por otra vía: el defecto de cada pantalla es EL
+   COMPORTAMIENTO QUE YA TENÍA —Capturas por `created` descendente, Personas por
+   orden de alta—, así que nadie se encuentra la lista dada vuelta al actualizar;
+   y ordenar sigue sin tocar ninguna clave que no sea la configuración. */
+await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
-await page.waitForTimeout(500);
-await page.click('div.pin-forget:has-text("Usar como invitado")');
-await page.waitForTimeout(500);
-const invitado = await page.evaluate(() => {
-  const antes = lcOrden('personas');
+await page.waitForTimeout(600);
+const nuevo = await page.evaluate(() => {
+  const cap = lcOrden('capturas'), per = lcOrden('personas');
   lcAplicarOrden('personas:az'); lcAplicarOrden('capturas:za');
-  return { antes, per: lcOrden('personas'), cap: lcOrden('capturas') };
+  return { cap, per, per2: lcOrden('personas'), cap2: lcOrden('capturas') };
 });
-// El dueño dejó Personas en 'rec' y Capturas en 'ant': el invitado arranca en
-// los valores por defecto, o sea que ni siquiera LEE los del dueño.
-log(invitado.antes === 'ant' && invitado.per === 'az' && invitado.cap === 'za',
-  'El invitado arranca en los valores por defecto (no en los del dueño) y puede cambiarlos', JSON.stringify(invitado));
-const huellaDespues = await page.evaluate(() => {
-  const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); }
-  return JSON.stringify(o);
+log(nuevo.cap === 'rec' && nuevo.per === 'ant' && nuevo.per2 === 'az' && nuevo.cap2 === 'za',
+  'Sin nada guardado, cada lista arranca en su defecto documentado y se puede cambiar', JSON.stringify(nuevo));
+const persistido = await page.evaluate(() => {
+  try { const c = JSON.parse(localStorage.getItem('lc_cfg')) || {}; return c.ordenPersonas + '/' + c.ordenCapturas; }
+  catch (e) { return 'ERROR'; }
 });
-log(huellaDespues === huellaAntes, 'Y no escribe un solo byte en el almacenamiento del dueño');
-const duenoIntacto = await page.evaluate(() => {
-  try { return (JSON.parse(localStorage.getItem('lc_cfg')) || {}).ordenPersonas; } catch (e) { return 'ERROR'; }
+log(persistido === 'az/za', 'La elección queda escrita en la configuración del equipo', persistido);
+const soloCfg = await page.evaluate(() => {
+  const foto = () => Object.keys(localStorage).sort().filter(k => k !== 'lc_cfg').map(k => k + ':' + (localStorage.getItem(k) || '').length).join('|');
+  const antes = foto();
+  lcAplicarOrden('personas:rec'); lcAplicarOrden('capturas:az');
+  return antes === foto();
 });
-log(duenoIntacto === 'rec', 'La preferencia del dueño queda como estaba', duenoIntacto);
+log(soloCfg, '⚠️ Y ordenar no toca ninguna otra clave del almacenamiento: ordenar es SOLO ordenar');
 
 log(consoleErrors.length === 0, 'Sin errores de consola', consoleErrors.join(' | '));
 console.log(`\n${n - fails}/${n} checks OK`);
