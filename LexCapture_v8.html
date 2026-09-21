@@ -946,6 +946,25 @@ body.pt{padding-top:36px}
 .b-csp{background:var(--cspB);color:var(--cspT);border:1px solid var(--cspBd)}
 .b-oj{background:var(--ojB);color:var(--oj-2);border:1px solid var(--ojBd)}
 .b-test{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent)}
+/* Captura que se sincroniza con el compañero. Verde porque es un ESTADO normal,
+   el mismo criterio y los mismos tokens que la franja del Modo compartir: no es
+   una advertencia y pintada de alarma dejaría de leerse a los dos minutos. */
+.b-sync{background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 32%,transparent)}
+.b-sync svg{width:11px;height:11px;flex:0 0 auto}
+/* El mismo estado, dicho entero, en el expediente. Apagado cuando no hay vínculo
+   vivo: la captura se sigue sincronizando, pero no en este momento, y fingir lo
+   contrario haría que el funcionario esperara algo que no está pasando. */
+.exp-sync{
+  display:flex;align-items:flex-start;gap:10px;margin:0 0 12px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--surface-2);border:1px solid var(--border);
+  font-size:12px;line-height:1.45;color:var(--text-2);
+}
+.exp-sync b{display:block;color:var(--text);font-size:12.5px;margin-bottom:2px}
+.exp-sync .dot{flex:0 0 auto;width:8px;height:8px;margin-top:5px;border-radius:999px;background:var(--text-3)}
+.exp-sync.viva{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 28%,transparent)}
+.exp-sync.viva b{color:var(--ok)}
+.exp-sync.viva .dot{background:var(--ok)}
 .b-urg{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
 .b-venc{background:var(--errB);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 50%,transparent);animation:pulse-venc 1.6s var(--ease) infinite}
 .b-builtin{background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
@@ -2806,7 +2825,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 108;
+var _BUILD = 109;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3624,6 +3643,33 @@ var DB = {
      .docx que cargue el usuario. Ver _lcPurgarPlantillas(). */
 };
 
+/* ── AVISO DE «SE GUARDÓ UN DOCUMENTO POSTERIOR» ───────────────────────────
+   Lo disparan los cinco guardados que diligencian algo DESPUÉS de la captura
+   —acta de derechos, cadena de custodia, rótulo, acta de incautación y acta de
+   entrega— y lo escucha quien quiera enterarse. Hoy solo lo escucha el Modo
+   compartir, para propagárselo al compañero sin que nadie tenga que reenviar
+   nada.
+
+   ⚠️ ES UN AVISO NEUTRO Y NO UNA LLAMADA AL MÓDULO, y esa es toda la gracia.
+   Si los guardados llamaran directamente a `pt…` el módulo dejaría de estar
+   aislado: hoy, fuera de él, solo se le llama desde su propia pantalla. Con
+   este punto la dependencia va al revés —el módulo se engancha aquí— y el día
+   que la sincronización con los equipos del propio usuario quiera enterarse de
+   lo mismo, se engancha en el mismo sitio en vez de sembrar otra llamada.
+
+   ⚠️ NO SE ENGANCHA EN `DB.saveCases`, que sería el sitio obvio, por dos
+   razones medidas. Una: ahí pasa TODA escritura, así que el modo individual
+   —un equipo sin vínculo, que es el caso normal— pagaría una comprobación en
+   cada guardado. Dos, y más importante: lo que llega del compañero también se
+   guarda por ahí, así que cada equipo devolvería en eco lo que acaba de
+   recibir. Colgando el aviso de los cinco guardados de documentos, el eco no
+   existe por construcción. */
+var lcAlGuardarDoc = null;
+function lcDocGuardado(idCaso) {
+  if (!idCaso || typeof lcAlGuardarDoc !== 'function') return;
+  try { lcAlGuardarDoc(idCaso); } catch (e) {}
+}
+
 /* ── Purga de «lc_templates» ────────────────────────────────────────────────
    La clave guardaba las dos plantillas de Disposición integradas, en claro y
    con su escudo a resolución completa: ~3,6 MB de la cuota de localStorage,
@@ -4040,6 +4086,9 @@ function renderCases() {
     var tipoLbl = c.tipo==='OJ'?'Judicial':c.tipo;
     var urgBadge = lcPlazo36(c, now).badge;
     var testBadge = c.isTest?'<span class="badge b-test">Demo</span>':'';
+    /* Una captura que se actualiza sola tiene que decirlo en la lista: si no,
+       verla cambiar es indistinguible de verla estropearse. */
+    var syncBadge = lcBadgeSync(c);
     var extra = nCap>1?' <span class="txd" style="font-size:.75rem">(+'+(nCap-1)+' más)</span>':'';
     var conducta = (c.conductas||[]).filter(Boolean)[0]||c.delitoOrden||'Sin conducta';
     /* ⚠️ La tarjeta abre el EXPEDIENTE, no el wizard. Tocarla entraba a
@@ -4049,7 +4098,7 @@ function renderCases() {
        ahí (o desde el menú ⋮) se edita a propósito. */
     return '<div class="cc-wrap"><div class="cc" onclick="abrirDossierCaso(\''+c.id+'\')">'+
       '<div class="cc-top">'+
-        '<div class="cc-badges"><span class="badge '+tbadge+'">'+tipoLbl+'</span>'+urgBadge+testBadge+'</div>'+
+        '<div class="cc-badges"><span class="badge '+tbadge+'">'+tipoLbl+'</span>'+urgBadge+syncBadge+testBadge+'</div>'+
         '<div class="cc-name">'+cap+extra+'</div>'+
         '<div class="cc-conducta">'+conducta+'</div>'+
       '</div>'+
@@ -4059,6 +4108,22 @@ function renderCases() {
       '</div>'+
     '</div><div class="cc-lbar" style="background:'+barColor+'"></div></div>';
   }).join('');
+}
+
+/* Insignia de «esta captura se sincroniza» — PUNTO ÚNICO, igual que el plazo:
+   la pintan la lista y el expediente y no pueden decir cosas distintas.
+   ⚠️ Se pinta si la captura está COMPARTIDA, aunque ahora mismo no haya vínculo:
+   lo que informa es que el compañero también la tiene y que sus documentos van a
+   llegar solos, no si el canal está abierto en este segundo. El canal se ve en la
+   franja de arriba, que es donde corresponde. */
+function lcBadgeSync(c) {
+  if (typeof ptEstaCompartida !== 'function' || !ptEstaCompartida(c)) return '';
+  var u = ptUltimaAuto(c), t = 'Se sincroniza con el compañero';
+  if (u && u.ts) t += ' · lo actualizó ' + (u.por || 'el compañero') + ' ' + ptHace(u.ts);
+  return '<span class="badge b-sync" title="' + escAttr(t) + '">' +
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.5-4M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.5 4"></path>' +
+    '<path d="M3 20v-4h4M21 4v4h-4"></path></svg>Sincroniza</span>';
 }
 
 /* Plazo del art. 28 C.P. (36 horas) — PUNTO ÚNICO.
@@ -7965,7 +8030,12 @@ function renderExpediente(caso) {
   /* ── Documentos, agrupados. Reutiliza `.type-card`, el mismo componente de
      tarjeta que la pantalla «Nueva captura»: no se estrena un patrón visual
      para esto. Un formato nuevo se agrega en `lcEstadoDocs` y aparece aquí. ── */
+  /* ⚠️ VA ENCIMA DE LOS DOCUMENTOS Y NO EN OTRO SITIO: son exactamente estos
+     documentos los que viajan solos, así que el aviso pertenece a este bloque.
+     Dice también quién fue el último en actualizarlos, porque un expediente que
+     cambia solo sin decir quién lo cambió no se puede defender ante nadie. */
   box.innerHTML='<div class="st" style="margin-top:0">Documentos</div>'+
+    lcExpSyncHtml(caso)+
     docs.map(function(d){
       var ok=!d.falta.length;
       return '<button class="type-card '+d.tc+'" onclick="'+d.accion+'(\''+caso.id+'\')">'+
@@ -7987,6 +8057,21 @@ function renderExpediente(caso) {
     '<button class="btn bs bbl" style="margin-top:14px" onclick="editCase(\''+caso.id+'\')">'+
     'Editar la captura</button>';
   cont.style.display='block';
+}
+
+/* El renglón de «esto se sincroniza» del expediente. Vacío si la captura no se
+   comparte con nadie, que es el caso normal: una aplicación que anuncia que algo
+   no está pasando es ruido. */
+function lcExpSyncHtml(caso) {
+  if (typeof ptEstaCompartida !== 'function' || !ptEstaCompartida(caso)) return '';
+  var u = ptUltimaAuto(caso), viva = false;
+  try { viva = !!(ptEstado().activa && ptSuscritoCon(caso, _ptPar)); } catch (e) {}
+  var det = viva
+    ? 'Lo que diligencies aquí le llega al compañero al momento.'
+    : 'Se pondrán al día la próxima vez que se vinculen.';
+  if (u && u.ts) det += ' Última actualización: ' + escHtml(u.por || 'el compañero') + ', ' + ptHace(u.ts) + '.';
+  return '<div class="exp-sync' + (viva ? ' viva' : '') + '">' +
+    '<span class="dot"></span><div><b>Se sincroniza con el compañero</b>' + det + '</div></div>';
 }
 
 function updateDosPreview(caso) {
@@ -10078,6 +10163,7 @@ async function f6Guardar() {
     toast(_lcMsgGuardado(e, 'el acta'), 6000);
     return null;
   }
+  lcDocGuardado(ctx.id);
   return { caso: DB.getCase(ctx.id), idx: ctx.idx };
 }
 /* Autoguardado al cerrar el modal (también al tocar fuera). Lo llama
@@ -11167,6 +11253,7 @@ async function ccGuardar() {
     toast(_lcMsgGuardado(e, 'la cadena de custodia'), 6000);
     return null;
   }
+  lcDocGuardado(_ccCtx.id);
   return DB.getCase(_ccCtx.id);
 }
 function ccAutoguardar() {
@@ -11398,6 +11485,7 @@ async function rtGuardar() {
     toast(_lcMsgGuardado(e, 'el rótulo'), 6000);
     return null;
   }
+  lcDocGuardado(_rtCtx.id);
   return DB.getCase(_rtCtx.id);
 }
 function rtAutoguardar() {
@@ -12235,6 +12323,7 @@ async function aiGuardar() {
   }
   if (datos.firmante && datos.firmante.origen === 'PERFIL')
     aiRecordarEntidad(c, datos.firmante.entidad);
+  lcDocGuardado(ctx.id);
   return DB.getCase(ctx.id) || c;
 }
 // Lo llama `closeModal()`: lo que se acaba de escribir no se pierde por cerrar.
@@ -13143,6 +13232,7 @@ async function feGuardar() {
     return null;
   }
   feRecordarContacto(c, datos.entrega);
+  lcDocGuardado(ctx.id);
   return DB.getCase(ctx.id) || c;
 }
 // Lo llama `closeModal()`: lo que se acaba de escribir no se pierde por cerrar.
@@ -20585,20 +20675,25 @@ async function ptRecibirPersonas(lista, decision) {
 /* ⚠️ Se guarda con `saveCases` y NO con `saveCase`: el caso ya viene fundido y
    pasarlo por el guardado de uno en uno no aportaría nada y sí volvería a
    recorrer la lista entera por cada captura recibida. */
-async function ptRecibirCasos(lista) {
-  var a = DB.getCases().slice(), res = { nuevos: 0, actualizados: 0, nombres: [] }, i;
+async function ptRecibirCasos(lista, dev) {
+  var a = DB.getCases().slice(), res = { nuevos: 0, actualizados: 0, nombres: [] }, i, marcadas = 0;
   (lista || []).forEach(function (c) {
     if (!c || !c.id) return;
     i = a.findIndex(function (x) { return x.id === c.id; });
     if (i < 0) {
       var nuevo = ptParaEnviar(c);
       if (!nuevo) return;
-      a.push(nuevo); res.nuevos++; res.nombres.push(ptEtiquetaCaso(nuevo));
+      a.push(nuevo); i = a.length - 1; res.nuevos++; res.nombres.push(ptEtiquetaCaso(nuevo));
     } else if (ptFundir(a[i], c, { protegerDueno: true })) {
       res.actualizados++; res.nombres.push(ptEtiquetaCaso(a[i]));
     }
+    /* ⚠️ Queda compartida con quien la mandó AUNQUE no haya cambiado nada. Que
+       la captura ya estuviera igual aquí no quita que los dos la tengan, y es
+       eso —no el cambio— lo que decide si sus documentos posteriores viajan
+       solos a partir de ahora. */
+    if (dev && i >= 0 && !ptSuscritoCon(a[i], dev)) { ptMarcarSusc(a[i], dev); marcadas++; }
   });
-  if (res.nuevos || res.actualizados) await DB.saveCases(a);
+  if (res.nuevos || res.actualizados || marcadas) await DB.saveCases(a);
   return res;
 }
 
@@ -20608,11 +20703,19 @@ async function ptRecibirCasos(lista) {
    sabe con qué mitad — que es exactamente lo que pasaba. Ahora las dos mitades se
    preparan en memoria, se guardan, y si algo se cae se devuelve el registro
    completo a como estaba antes de empezar. */
-async function ptAplicarPaquete(abierto, decision) {
+/* ⚠️ `dev` ES EXPLÍCITO Y NO SALE DEL PAQUETE, y la distinción importa: el mismo
+   motor lo usan el canal del Modo compartir, el archivo de intercambio y la
+   sincronización con los equipos del propio usuario. Solo en el primero consta
+   que al otro lado hay un COMPAÑERO con el que seguir al día. Deducirlo del
+   `origen` del paquete haría que una captura bajada del propio computador del
+   funcionario se marcara como compartida con un compañero que no existe, y la
+   lista lo anunciaría. El archivo tampoco marca: quien lo abre no sabe si el que
+   lo generó va a vincularse con él. */
+async function ptAplicarPaquete(abierto, decision, dev) {
   var personasAntes = DB.getPersons().slice(), casosAntes = DB.getCases().slice();
   try {
     var rp = await ptRecibirPersonas(abierto.personas, decision);
-    var rc = await ptRecibirCasos(abierto.casos);
+    var rc = await ptRecibirCasos(abierto.casos, dev || '');
     return { ok: true, p: rp, c: rc, rechazados: abierto.rechazados || [] };
   } catch (e) {
     try { await DB.savePersons(personasAntes); await DB.saveCases(casosAntes); } catch (e2) {}
@@ -20620,6 +20723,217 @@ async function ptAplicarPaquete(abierto, decision) {
              p: { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] },
              c: { nuevos: 0, actualizados: 0, nombres: [] }, rechazados: abierto.rechazados || [] };
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LO QUE SE DILIGENCIA DESPUÉS VIAJA SOLO
+
+   El reparto de la patrulla no termina cuando se manda la captura. El compañero
+   se queda con ella y diligencia lo que viene después: el acta de derechos, la
+   cadena de custodia, el rótulo de cada elemento, el acta de incautación y la de
+   entrega. Hasta ahora eso se quedaba en su teléfono salvo que volviera a marcar
+   la captura y a enviarla a mano, una vez por cada documento.
+
+   Ahora no: mientras los dos estén vinculados, cada uno de esos cinco guardados
+   le llega al otro solo, sin que nadie marque ni envíe nada.
+
+   ⚠️ EL FORMULARIO DE LA CAPTURA NO SE PROPAGA, Y ES UNA DECISIÓN DEL USUARIO.
+   Un procedimiento no se diligencia entre dos a la vez: la captura se sigue
+   mandando con un envío explícito que alguien decide y ve salir. Lo que viaja
+   solo son los documentos POSTERIORES, que es donde de verdad se reparte el
+   trabajo. De ahí que lo que sale por el canal no sea la captura, sino un
+   RECORTE suyo con esas cinco ramas y nada más.
+
+   ⚠️ Y ESE RECORTE ES ADEMÁS LO QUE IMPIDE QUE ESTO REVIERTA NADA. Si se mandara
+   la captura entera en cada guardado, el último que guardara pisaría con sus
+   valores viejos lo que el otro acabara de escribir en el formulario. Con el
+   recorte no hay nada del formulario que pisar: las ramas que viajan son
+   justamente las que el otro no está tocando.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Las cinco ramas que produce cada documento posterior. Coinciden una a una con
+   los cinco guardados que avisan por `lcDocGuardado`. */
+var PT_AUTO_RAMAS = ['actas', 'custodia', 'rotulos', 'incautacion', 'entrega'];
+
+/* ⚠️ Y SEIS CAMPOS DEL CAPTURADO, que parecen del formulario y no lo son: el acta
+   de derechos los pide y `f6Guardar` los escribe dentro de `capturados[i]` porque
+   son atributos de la persona, no del procedimiento. Sin ellos, el acta que
+   imprimiera este equipo saldría distinta de la que imprime el compañero para la
+   MISMA persona y el MISMO procedimiento, que es peor que no sincronizar. Viajan
+   estos seis y ni uno más: el nombre, el documento y la dirección del capturado
+   siguen siendo del formulario, y el formulario no se propaga. */
+var PT_AUTO_PERSONA = ['nombreIdentitario', 'lgbti', 'lgbtiCual', 'etnia', 'comunidadEtnica', 'redes'];
+
+/* El recorte que sale por el canal. Devuelve null si no hay nada que propagar:
+   una captura sin ningún documento diligenciado no tiene por qué ocupar el
+   canal. */
+function ptRecorte(c) {
+  if (!c || !c.id) return null;
+  var out = { id: c.id }, hay = false;
+  PT_AUTO_RAMAS.forEach(function (k) {
+    if (c[k] === undefined || c[k] === null || ptVacio(c[k])) return;
+    out[k] = ptCanon(c[k]); hay = true;
+  });
+  var caps = [];
+  (c.capturados || []).forEach(function (p) {
+    if (!p || !p.id) return;
+    var r = { id: p.id }, tiene = false;
+    PT_AUTO_PERSONA.forEach(function (k) { if (!ptVacio(p[k])) { r[k] = p[k]; tiene = true; } });
+    if (tiene) caps.push(r);
+  });
+  if (caps.length) { out.capturados = caps; hay = true; }
+  return hay ? out : null;
+}
+
+/* ⚠️ UN CAPTURADO QUE AQUÍ NO EXISTE NO SE CREA. `ptPonerRuta` crea el elemento
+   que no encuentra, que es justo lo que hace falta cuando llega una víctima nueva
+   en un envío completo; pero aquí sería meter media persona —con su identificador
+   y sus seis atributos, y sin nombre— en el apartado 4 de un informe de captura.
+   Si el capturado no está, es que este equipo no tiene la misma versión de la
+   captura, y eso se arregla con un envío de la captura, no inventando a nadie. */
+function ptFundirAuto(local, recorte) {
+  if (!local || !recorte) return 0;
+  var copia = JSON.parse(JSON.stringify(recorte)), hay = {};
+  if (copia.capturados) {
+    (local.capturados || []).forEach(function (p) { if (p && p.id) hay[p.id] = 1; });
+    copia.capturados = copia.capturados.filter(function (p) { return p && hay[p.id]; });
+    if (!copia.capturados.length) delete copia.capturados;
+  }
+  delete copia.id;
+  return ptFundir(local, copia);
+}
+
+/* ── QUÉ CAPTURAS ESTÁN COMPARTIDAS, Y CON QUIÉN ──────────────────────────
+   ⚠️ VIVE EN `c._sync` Y EMPIEZA POR GUION BAJO A PROPÓSITO: `ptAplanar` y
+   `ptCanon` saltan esas claves, así que esta marca NO viaja por el canal ni entra
+   en la huella del caso. Es estado local —con quién compartió ESTE equipo ESTA
+   captura— y no contenido del procedimiento: cada teléfono lleva el suyo.
+
+   ⚠️ Y se persiste con el caso, así que sobrevive a cerrar la aplicación. Eso es
+   lo que hace que al volver a vincularse con el mismo compañero se pongan al día
+   solos, sin que nadie reenvíe la captura. */
+function ptSusc(c) {
+  if (!c._sync || typeof c._sync !== 'object' || Array.isArray(c._sync)) c._sync = {};
+  if (!c._sync.devs || typeof c._sync.devs !== 'object') c._sync.devs = {};
+  return c._sync;
+}
+function ptMarcarSusc(c, dev) {
+  if (!c || !dev) return;
+  ptSusc(c).devs[dev] = Date.now();
+}
+function ptSuscritoCon(c, dev) {
+  return !!(c && c._sync && c._sync.devs && dev && c._sync.devs[dev]);
+}
+function ptEstaCompartida(c) {
+  return !!(c && c._sync && c._sync.devs && Object.keys(c._sync.devs).length);
+}
+/* Quién la actualizó por última vez y cuándo. Lo pintan la tarjeta y el
+   expediente: una captura que cambia sola sin decir quién la cambió es
+   indistinguible de una que se estropeó. */
+function ptUltimaAuto(c) {
+  return (c && c._sync && c._sync.ult) ? c._sync.ult : null;
+}
+
+/* Nombre corto de quien está sentado en este teléfono, para que el otro pueda
+   decir quién le actualizó la captura. Sale del perfil activo; sin perfil
+   configurado va vacío y la pantalla dice «el compañero», que es cierto. */
+function ptMiNombre() {
+  try {
+    var cfg = DB.getConfig() || {}, p = null;
+    (cfg.perfiles || []).forEach(function (x) { if (x && x.id === cfg.perfilActivo) p = x; });
+    if (!p) return '';
+    var g = (typeof lcAbrevGrado === 'function' ? lcAbrevGrado(p.grado) : '') || '';
+    return ((g ? g + ' ' : '') + (p.nombre || '')).trim();
+  } catch (e) { return ''; }
+}
+
+/* ── EL DISPARO ───────────────────────────────────────────────────────────
+   ⚠️ CON ESPERA, y no por elegancia: el acta se guarda también al cerrar el modal
+   y al tocar fuera, así que diligenciar una cadena de custodia con tres elementos
+   dispara varios guardados seguidos. Sin la espera saldría un mensaje por cada
+   uno. Se acumulan las capturas tocadas y se manda una sola vez. */
+var PT_AUTO_ESPERA = 1200;
+var _ptAutoPend = {};      // capturas tocadas que todavía no han salido
+var _ptAutoReloj = null;
+var _ptAutoUlt = 0;        // cuándo salió lo último, para la franja
+
+function ptAutoDoc(idCaso) {
+  if (!idCaso) return;
+  _ptAutoPend[idCaso] = 1;
+  if (_ptAutoReloj) clearTimeout(_ptAutoReloj);
+  _ptAutoReloj = setTimeout(ptAutoSalida, PT_AUTO_ESPERA);
+}
+
+/* ⚠️ SIN VÍNCULO NO SE PIERDE NADA Y TAMPOCO SE ENCOLA EN DISCO. La captura queda
+   marcada como compartida en `c._sync`, así que al volver a vincularse se manda
+   entera por `ptPonerseAlDia`. Una cola aparte sería un segundo sitio donde vive
+   lo mismo, y este proyecto ya retiró una por eso. */
+function ptAutoSalida() {
+  _ptAutoReloj = null;
+  var dev = _ptPar, vivo = !!(ptEstado().activa && dev);
+  var ids = Object.keys(_ptAutoPend);
+  /* ⚠️ SE VACÍA AQUÍ, SALGA O NO SALGA NADA. Sin vínculo esta lista no sirve
+     para nada: la puesta al día no se apoya en ella sino en `c._sync`, que vive
+     dentro de la captura y sobrevive a cerrar la aplicación. Guardar aquí lo que
+     está esperando sería un segundo sitio donde vive lo mismo —y creciendo sin
+     tope mientras el funcionario trabaja sin compañero, que es lo normal—. */
+  _ptAutoPend = {};
+  if (!vivo || !ids.length) return;
+  var envios = [];
+  ids.forEach(function (id) {
+    var c = DB.getCase(id);
+    if (!c || !ptSuscritoCon(c, dev)) return;   // no la comparte con él: no se manda
+    var r = ptRecorte(c);
+    if (r) envios.push(r);
+  });
+  if (!envios.length) return;
+  ptEnviar({ t: 'auto', d: envios, por: ptMiNombre() });
+}
+
+/* Al conocer al compañero, cada lado manda lo que tenga de las capturas que
+   comparte con ÉL. Es lo que pone al día lo que se diligenció mientras no estaban
+   vinculados —que en campo es la mayor parte del tiempo— sin que nadie reenvíe
+   nada.
+   ⚠️ Va con su `hola` y no con la apertura del canal: hasta que no se sabe con
+   quién se está hablando no se puede decidir qué capturas le tocan. */
+function ptPonerseAlDia() {
+  var dev = _ptPar;
+  if (!ptEstado().activa || !dev) return;
+  var envios = [];
+  DB.getCases().forEach(function (c) {
+    if (!ptSuscritoCon(c, dev)) return;
+    var r = ptRecorte(c);
+    if (r) envios.push(r);
+  });
+  if (!envios.length) return;
+  ptEnviar({ t: 'auto', d: envios, por: ptMiNombre(), aldia: 1 });
+}
+
+/* ── LO QUE LLEGA SOLO ────────────────────────────────────────────────────
+   ⚠️ NO PREGUNTA, Y ESA ES LA DIFERENCIA CON UN ENVÍO. El diálogo de confirmación
+   existe para decidir sobre registros NUEVOS que manda otro funcionario. Esto es
+   la actualización de una captura que este equipo YA aceptó y que consta como
+   compartida con él: preguntarlo una vez por cada acta que el compañero diligencia
+   convertiría la sincronización en una interrupción.
+
+   ⚠️ Y NUNCA CREA UNA CAPTURA. Si la que llega no está aquí, o está y no consta
+   como compartida con quien la manda, se descarta. Así esto no puede meter
+   capturas por una puerta que nadie abrió: para que una captura entre en este
+   teléfono sigue haciendo falta un envío, con su diálogo y su aceptación. */
+async function ptRecibirAuto(lista, dev, por) {
+  var a = DB.getCases().slice(), n = 0, tocadas = [], i;
+  (lista || []).forEach(function (r) {
+    if (!r || !r.id) return;
+    i = a.findIndex(function (x) { return x.id === r.id; });
+    if (i < 0) return;
+    if (!ptSuscritoCon(a[i], dev)) return;
+    if (!ptFundirAuto(a[i], r)) return;
+    ptSusc(a[i]).ult = { por: por || '', ts: Date.now() };
+    n++; tocadas.push(ptEtiquetaCaso(a[i]));
+  });
+  if (!n) return { n: 0, nombres: [] };
+  await DB.saveCases(a);
+  return { n: n, nombres: tocadas };
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -21710,6 +22024,7 @@ var _ptRol = 0;           // 0 muestra el código, 1 lo escanea
 var _ptLatido = null;
 var _ptEmparejado = false;// ya hay canal: el código se agotó
 var _ptPar = null;        // identificador del equipo del compañero
+var _ptParNom = '';       // y su nombre, para poder decir con quién se está
 var _ptDesde = 0, _ptVisto = 0;
 var _ptEnvio = null;      // envío en curso, esperando la confirmación del otro
 var _ptEnvioReloj = null;
@@ -21727,8 +22042,19 @@ function ptEstado() {
     desde: _ptDesde,
     enviando: _ptEnvio ? (_ptEnvio.p + _ptEnvio.c) : 0,
     entregado: !!(_ptEnvio && _ptEnvio.llego),
+    compartidas: ptCuantasCompartidas(),
+    ultimo: _ptAutoUlt,
     recibido: _ptRecibido.slice()
   };
+}
+/* Cuántas capturas se sincronizan solas con el compañero que hay al otro lado.
+   ⚠️ Cero mientras no haya vínculo: lo que se cuenta es lo que está VIVO ahora,
+   no lo que alguna vez se compartió. */
+function ptCuantasCompartidas() {
+  if (!_ptPar) return 0;
+  var n = 0;
+  try { DB.getCases().forEach(function (c) { if (ptSuscritoCon(c, _ptPar)) n++; }); } catch (e) {}
+  return n;
 }
 function _ptAviso() { if (typeof _ptAlEstado === 'function') { try { _ptAlEstado(ptEstado()); } catch (e) {} } }
 
@@ -21827,7 +22153,7 @@ function _ptPrepararCanal(ch) {
     _ptEmparejado = true;
     _ptVisto = Date.now();
     _ptLatido = setInterval(function () { ptEnviar({ t: 'ping' }); }, PT_LATIDO_MS);
-    ptEnviar({ t: 'hola', dev: ptDeviceId() });
+    ptEnviar({ t: 'hola', dev: ptDeviceId(), nom: ptMiNombre() });
     _ptAviso();
   };
   ch.onclose = function () { _ptPararLatido(); _ptCerrarEnvio(); _ptAviso(); };
@@ -21872,7 +22198,37 @@ async function _ptRecibirAhora(datos) {
 
   if (m.t === 'ping') { ptEnviar({ t: 'pong' }); return; }
   if (m.t === 'pong') return;
-  if (m.t === 'hola') { _ptPar = m.dev || null; _ptAviso(); return; }
+  /* ⚠️ Aquí, y no al abrirse el canal, es donde empieza la puesta al día: hasta
+     este mensaje no se sabe con quién se está hablando, y sin saberlo no se puede
+     decidir qué capturas le tocan a ese compañero. `nom` puede no venir —un
+     equipo con una versión anterior no lo manda— y entonces la pantalla dice «el
+     compañero», que es cierto. */
+  if (m.t === 'hola') {
+    _ptPar = m.dev || null;
+    _ptParNom = m.nom || '';
+    _ptAviso();
+    ptPonerseAlDia();
+    return;
+  }
+
+  /* Lo que el compañero diligenció después de la captura, llegando solo. */
+  if (m.t === 'auto') {
+    if (!_ptPar || !Array.isArray(m.d)) return;
+    var ra = await ptRecibirAuto(m.d, _ptPar, m.por || _ptParNom);
+    ptEnviar({ t: 'autook', n: ra.n });
+    if (ra.n) {
+      _ptAviso();
+      if (typeof ptAlRecibirAuto === 'function') { try { ptAlRecibirAuto(ra, m.por || _ptParNom, !!m.aldia); } catch (e) {} }
+    }
+    return;
+  }
+  /* El otro lado confirma que lo aplicó. Solo mueve la marca de hora de la
+     franja: un acuse con diálogo por cada acta sería justo la interrupción que
+     esto viene a quitar. */
+  if (m.t === 'autook') {
+    if (m.n) { _ptAutoUlt = Date.now(); _ptAviso(); }
+    return;
+  }
 
   /* Un registro del envío en curso. ⚠️ Se acumula y NO se guarda todavía: un
      envío se aplica entero o no se aplica, así el compañero no se queda con la
@@ -21904,7 +22260,7 @@ async function _ptRecibirAhora(datos) {
     ptEnviar({ t: 'llego', id: m.id, p: abierto.personas.length, c: abierto.casos.length });
     ptConfirmarImportacion(abierto, 'el compañero', async function (aceptado, decision) {
       var r = aceptado
-        ? await ptAplicarPaquete(abierto, decision)
+        ? await ptAplicarPaquete(abierto, decision, _ptPar)
         : { ok: true, cancelado: true, p: { nuevos: 0, actualizados: 0, fundidos: 0, ignorados: 0, nombres: [] },
             c: { nuevos: 0, actualizados: 0, nombres: [] }, rechazados: abierto.rechazados };
       if (aceptado && r.ok) { _ptRecibido.push({ ts: Date.now(), p: r.p, c: r.c }); }
@@ -21935,6 +22291,12 @@ async function _ptRecibirAhora(datos) {
   if (m.t === 'ok') {
     if (_ptEnvio && _ptEnvio.id === m.id) {
       var cb = _ptEnvio.cb;
+      /* ⚠️ Se marca solo si el compañero ACEPTÓ. Si canceló el diálogo, la
+         captura no está en su teléfono y darla por compartida haría que este
+         equipo le mandara actualizaciones de algo que él no tiene. */
+      if (!m.cancelado && !m.rechazado && _ptEnvio.ids && _ptEnvio.ids.length) {
+        try { await ptMarcarCompartidas(_ptEnvio.ids, _ptPar); } catch (e) {}
+      }
       _ptCerrarEnvio();
       _ptAviso();
       if (typeof cb === 'function') {
@@ -21974,7 +22336,11 @@ function ptEnviarRegistros(personas, casos, cb) {
   personas = personas || []; casos = casos || [];
   if (!personas.length && !casos.length) return { ok: false, motivo: 'nada que enviar' };
   var id = uid();
-  _ptEnvio = { id: id, p: personas.length, c: casos.length, cb: cb, ts: Date.now(), llego: false };
+  _ptEnvio = { id: id, p: personas.length, c: casos.length, cb: cb, ts: Date.now(), llego: false,
+    /* Los identificadores de las capturas que van en este envío. Cuando el
+       compañero confirme que las guardó, quedan marcadas como compartidas con
+       él y a partir de ahí sus documentos posteriores viajan solos. */
+    ids: casos.map(function (x) { return x && x.id; }).filter(Boolean) };
   /* ⚠️ Si el compañero no contesta no se queda «enviando» para siempre: se avisa
      y se puede volver a intentar. Un estado que no termina nunca es
      indistinguible de uno que falló. */
@@ -21990,6 +22356,22 @@ function ptEnviarRegistros(personas, casos, cb) {
   return { ok: true, id: id };
 }
 
+/* Deja constancia de que estas capturas se comparten con ese compañero. Es lo
+   que abre la puerta a que sus documentos posteriores viajen solos, en los dos
+   sentidos: el que envía marca al confirmarse el envío y el que recibe marca al
+   guardarlo. */
+async function ptMarcarCompartidas(ids, dev) {
+  if (!dev || !ids || !ids.length) return 0;
+  var a = DB.getCases().slice(), n = 0;
+  ids.forEach(function (id) {
+    var i = a.findIndex(function (x) { return x.id === id; });
+    if (i < 0 || ptSuscritoCon(a[i], dev)) return;
+    ptMarcarSusc(a[i], dev); n++;
+  });
+  if (n) await DB.saveCases(a);
+  return n;
+}
+
 /* ⚠️ Desvincular cierra el CANAL y nada más: lo que ya se recibió está guardado
    en este teléfono como cualquier otro registro suyo, y no se toca. */
 function ptDesvincular() {
@@ -21999,6 +22381,13 @@ function ptDesvincular() {
   try { if (_ptPc) _ptPc.close(); } catch (e) {}
   _ptCanal = null; _ptPc = null; _ptEmparejado = false; _ptBuf = [];
   _ptClave = null; _ptClaveQr = null; _ptRaw = null; _ptSid = null; _ptPar = null;
+  _ptParNom = '';
+  /* ⚠️ Lo que estuviera esperando a salir NO se pierde: la captura sigue
+     marcada como compartida, así que al volver a vincularse `ptPonerseAlDia`
+     la manda entera. Lo que se descarta es el temporizador, que apuntaría a un
+     canal que ya no existe. */
+  if (_ptAutoReloj) { clearTimeout(_ptAutoReloj); _ptAutoReloj = null; }
+  _ptAutoPend = {};
   _ptAviso();
 }
 function ptVinculoCaducado() {
@@ -22103,7 +22492,7 @@ function renderCompartir() {
   if (!pane) return;
   var sub = document.getElementById('cp-sub');
   if (sub) sub.textContent = e.activa
-    ? 'Vinculado con el compañero'
+    ? (_ptParNom ? 'Vinculado con ' + _ptParNom : 'Vinculado con el compañero')
     : 'Pásale al compañero las personas y capturas que ya tienes';
   if (e.activa) _ptUiPaso = 'vinculado';
   else if (_ptUiPaso === 'vinculado') _ptUiPaso = 'inicio';
@@ -22120,6 +22509,14 @@ function _ptUiInicio() {
     '<p class="txd txs">Al vincularse se las pasan, y quedan guardadas en los dos equipos.</p>' +
     '<p class="txd txs">Quien arme la captura las agrega con «Buscar existente», sin volver a escribirlas.</p>' +
     '</div>' +
+    /* ⚠️ Esto hay que contarlo aquí. La aplicación empieza a mandar cosas sola
+       en cuanto se comparte una captura, y una función que ocurre por debajo sin
+       que nadie la haya anunciado no se distingue de un fallo. */
+    '<div class="card"><div class="st">Las actas se ponen al día solas</div>' +
+    '<p class="txd txs">Cuando le pasas una captura, los dos quedan con la misma.</p>' +
+    '<p class="txd txs">Desde ahí, lo que cualquiera diligencie después le llega solo al otro.</p>' +
+    '<p class="txd txs">Derechos, incautación, cadena de custodia, rótulos y entrega.</p>' +
+    '<p class="txd txs">Los datos de la captura no: esos se envían a mano, como siempre.</p></div>' +
     '<div class="card"><div class="st">Antes de vincular</div>' +
     '<p class="txd txs">Los dos teléfonos deben estar en la misma red wifi.</p>' +
     '<p class="txd txs">Si no hay ninguna, uno activa su zona wifi. No hace falta internet ni datos.</p></div>' +
@@ -22197,9 +22594,13 @@ function _ptUiVinculado(e) {
      porque el compañero no ha mirado la pantalla se lee como un cuelgue. */
   var de = e.enviando
     ? (e.entregado ? 'Le llegó — está revisando qué importar' : 'Transfiriendo al compañero…')
-    : 'Marca lo que quieras enviarle';
+    : (e.compartidas
+        ? (e.compartidas + ' captura' + (e.compartidas === 1 ? '' : 's') + ' al día' +
+           (e.ultimo ? ' · ' + ptHace(e.ultimo) : '') + '. Marca lo que quieras enviarle.')
+        : 'Marca lo que quieras enviarle');
+  var quien = _ptParNom ? escHtml(_ptParNom) : 'el compañero';
   var h = '<div class="pt-est"><div class="pe-pt"></div><div>' +
-      '<div class="pe-ti">Vinculado con el compañero</div>' +
+      '<div class="pe-ti">Vinculado con ' + quien + '</div>' +
       '<div class="pe-de">' + de + '</div>' +
     '</div></div>';
   h += _ptUiRecibido(e);
@@ -22487,6 +22888,32 @@ function _on(id) {
   return !!(s && s.classList.contains('on'));
 }
 
+/* ── LO QUE LLEGÓ SOLO, DICHO SIN INTERRUMPIR ─────────────────────────────
+   ⚠️ Se avisa, pero con un aviso y no con un diálogo. Que una captura cambie
+   sola sin que nadie lo diga es indistinguible de que se haya estropeado; pero
+   un diálogo por cada acta que el compañero diligencia convertiría la
+   sincronización en una interrupción, que es justo lo que viene a quitar.
+
+   ⚠️ La puesta al día del momento de vincularse no dice nada. Ahí llega de golpe
+   todo lo que se diligenció mientras no estaban conectados, y es un estado, no
+   una novedad: se ve en la franja y en las capturas, que se repintan. */
+function ptAlRecibirAuto(ra, por, alDia) {
+  if (!ra || !ra.n) return;
+  try { if (_on('capturas')) renderCases(); } catch (e) {}
+  try { if (_on('dossier') && typeof renderExpediente === 'function') renderExpediente(); } catch (e) {}
+  if (alDia) return;
+  var quien = por || 'el compañero';
+  toast(ra.n === 1
+    ? quien + ' actualizó los documentos de ' + ra.nombres[0]
+    : quien + ' actualizó los documentos de ' + ra.n + ' capturas');
+}
+
+/* ⚠️ EL ENGANCHE VA AQUÍ Y NO AL REVÉS. Los cinco guardados de documentos avisan
+   por `lcDocGuardado`, que es un punto neutro; es el módulo el que se apunta a
+   escucharlo. Si fuera al contrario —que cada guardado llamara a `ptAutoDoc`—
+   este módulo dejaría de estar aislado del resto de la aplicación. */
+lcAlGuardarDoc = ptAutoDoc;
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CONFIRMAR ANTES DE IMPORTAR
 
@@ -22747,9 +23174,28 @@ function ptBarra() {
   b.classList.toggle('on', e.activa);
   document.body.classList.toggle('pt', e.activa);
   if (!e.activa) return;
-  b.querySelector('.pb-txt').innerHTML = e.enviando
-    ? '<b>Enviando al compañero</b> · ' + e.enviando + ' registro' + (e.enviando === 1 ? '' : 's')
-    : '<b>Vinculado con el compañero</b> · listo para enviar';
+  var con = _ptParNom ? escHtml(_ptParNom) : 'el compañero';
+  var txt;
+  if (e.enviando) {
+    txt = '<b>Enviando a ' + con + '</b> · ' + e.enviando + ' registro' + (e.enviando === 1 ? '' : 's');
+  } else if (e.compartidas) {
+    /* ⚠️ Con capturas compartidas la franja dice que se SINCRONIZA, no que está
+       «listo para enviar»: a partir de ahí los documentos viajan solos y decirle
+       al funcionario que tiene que enviar algo sería mentirle. */
+    txt = '<b>En línea con ' + con + '</b> · ' + e.compartidas + ' captura' +
+          (e.compartidas === 1 ? '' : 's') + ' al día' +
+          (e.ultimo ? ' · ' + ptHace(e.ultimo) : '');
+  } else {
+    txt = '<b>Vinculado con ' + con + '</b> · listo para enviar';
+  }
+  b.querySelector('.pb-txt').innerHTML = txt;
+}
+/* «hace 2 min», para que la franja diga algo comprobable y no solo un rótulo. */
+function ptHace(ts) {
+  var d = Date.now() - ts;
+  if (d < 45000) return 'sincronizado ahora';
+  if (d < 3600000) return 'hace ' + Math.round(d / 60000) + ' min';
+  return 'hace ' + Math.round(d / 3600000) + ' h';
 }
 /* La capa de abajo avisa; aquí se traduce a pantalla. Es el único punto que las
    une: el transporte no sabe que hay una interfaz. */

@@ -975,10 +975,41 @@ const permitidas = ['ptAbrirCompartir', 'renderCompartir', 'ptScanCerrar', 'ptUi
   'ptUiDesvincularSi', 'ptUiEscanearRespuesta', 'ptUiMarcarTodo', 'ptArchivoElegido',
   'ptUiExportar', 'ptImportarArchivo', 'ptConfAceptar', 'ptConfCancelar', 'ptConfDup',
   'ptUiExportarDesdeModal', 'ptAbrirArchivoConClave'];
-const intrusas = llamadas.filter(n => permitidas.indexOf(n) < 0);
-log(intrusas.length === 0,
-  '[E3] Fuera del módulo solo se le llama desde la navegación y la pantalla',
-  llamadas.length + ' llamadas: ' + [...new Set(llamadas)].join(', '));
+/* ⚠️ Y DOS CONSULTAS DE SOLO LECTURA, que no son lo mismo que una llamada desde
+   otro módulo. Desde que los documentos posteriores se sincronizan solos, la
+   lista de capturas y el expediente preguntan si una captura se comparte, para
+   poder decirlo: `lcBadgeSync` y `lcExpSyncHtml`. No le piden al módulo que haga
+   nada, le preguntan un estado.
+
+   Lo que este check vigila sigue siendo el aislamiento, así que no basta con
+   añadir sus nombres a la lista: se exige que TODAS esas consultas vivan dentro
+   de esas dos funciones y que las dos empiecen por la guarda `typeof`, para que
+   el día que el módulo no esté la lista y el expediente se pinten igual. */
+const CONSULTAS = ['ptEstaCompartida', 'ptUltimaAuto', 'ptHace', 'ptEstado', 'ptSuscritoCon'];
+function cuerpoDe(nombre) {
+  const i = antes.indexOf('function ' + nombre + '(');
+  if (i < 0) return '';
+  let n = 0, j = antes.indexOf('{', i);
+  for (let k = j; k < antes.length; k++) {
+    if (antes[k] === '{') n++;
+    else if (antes[k] === '}' && --n === 0) return antes.slice(i, k + 1);
+  }
+  return '';
+}
+const lectores = ['lcBadgeSync', 'lcExpSyncHtml'].map(cuerpoDe);
+const guardadas = lectores.length === 2 && lectores.every(c =>
+  c && /typeof ptEstaCompartida !== 'function'/.test(c));
+/* Fuera de esos dos lectores no puede quedar ni una consulta suelta. */
+const fuera = antes.split('').length && CONSULTAS.filter(n => {
+  const total = (antes.match(new RegExp('\\b' + n + '\\s*\\(', 'g')) || []).length;
+  const dentro = lectores.reduce((a, c) => a + (c.match(new RegExp('\\b' + n + '\\s*\\(', 'g')) || []).length, 0);
+  return total > dentro;
+});
+const intrusas = llamadas.filter(n => permitidas.indexOf(n) < 0 && CONSULTAS.indexOf(n) < 0);
+log(intrusas.length === 0 && guardadas && fuera.length === 0,
+  '[E3] Fuera del módulo solo se le llama desde su pantalla, y las consultas van protegidas',
+  llamadas.length + ' llamadas' + (intrusas.length ? ' · intrusas: ' + intrusas.join(', ') : '') +
+  (fuera.length ? ' · sueltas: ' + fuera.join(', ') : '') + (guardadas ? '' : ' · sin guarda typeof'));
 
 // [E4] Ningún motor documental sabe que esta capa existe.
 const motor = src.slice(src.indexOf('function buildFPJBlob'), src.indexOf('function buildFPJBlob') + 40000);

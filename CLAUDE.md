@@ -6064,3 +6064,133 @@ abren con la nueva ([I8]) y **no** con la vieja ([I9]).
   `verify_mejora6b` [47] (el mismo aviso de más de 110 caracteres de Ajustes, del commit `21ae35b`),
   `verify_mejora6b` [53] y `verify_ds` 9/10 («favorito con estrella SVG»).
 - Anti-caché `?v=108` / `cache-v108`, `_BUILD=108`.
+
+## Las actas se ponen al día solas (2026-09-20)
+Reportado como requerimiento: el reparto de la patrulla no termina cuando se manda la captura. El
+compañero se queda con ella y diligencia lo que viene después —acta de derechos, cadena de custodia,
+rótulo, acta de incautación y acta de entrega— y eso **se quedaba en su teléfono** salvo que volviera
+a marcar la captura y a enviarla a mano, una vez por cada documento. Ahora, mientras los dos estén
+vinculados, cada uno de esos cinco guardados le llega al otro solo. Verificado con
+`verify_sincro.mjs` (**32 checks**, nuevo).
+
+### ⚠️ El requerimiento describía una arquitectura que esta aplicación no tiene
+Nombraba Supabase, Firebase, WebSockets, SQLite, Room, WatermelonDB y CoreData, y pedía
+«sincronización en tiempo real en segundo plano» contra una «base de datos remota». Aquí no hay
+ninguna de esas cosas ni puede haberlas: un solo HTML sin servidor, `localStorage` cifrado, y una
+política —datos de procedimientos judiciales y de menores en CESPA, Ley 1581 de 2012— que este
+proyecto lleva desde el principio sin operar infraestructura que los almacene.
+- ⚠️ **Se midió antes de construir, y tres partes del requerimiento YA ESTABAN HECHAS**: el
+  `case_id` compartido (la fusión es por `c.id`, los dos teléfonos tienen literalmente el mismo y el
+  registro no se duplica), las actas colgando del mismo procedimiento (`actas[]` por persona,
+  `custodia`, `rotulos[]` por elemento, `incautacion`, `entrega`) y el *last-write-wins* por campo
+  (`ptFundir` aplana a rutas y lo que llega con dato pisa lo local). **Faltaba solo la
+  propagación**, no el modelo ni el motor de fusión.
+- ⚠️ **Y una parte NO ES POSIBLE, dicho antes de empezar**: una aplicación web no ejecuta código con
+  la app cerrada, y sin servidor no hay forma de despertarla. «En segundo plano» aquí significa
+  *mientras los dos tengan la aplicación abierta y vinculada*, y al volver a vincularse se ponen al
+  día. El usuario eligió ese alcance sobre las otras dos salidas que se le presentaron (un buzón en
+  Drive, que exige internet y desbloquear el permiso de Google dentro de la app —lo que obliga a
+  recompilar y resubir el paquete—, y un servidor propio, que es lo que el proyecto evita).
+
+### ⚠️ El formulario de la captura NO se propaga, y eso es lo que impide que esto revierta nada
+Decisión del usuario, coherente con la del 2026-09-07: un procedimiento no se diligencia entre dos a
+la vez. La captura se sigue mandando con un envío explícito que alguien decide y ve salir.
+- Lo que sale por el canal **no es la captura, es un RECORTE suyo** (`ptRecorte`): las cinco ramas de
+  documentos y nada más. Si se mandara entera en cada guardado, el último que guardara pisaría con
+  sus valores viejos lo que el otro acabara de escribir. Con el recorte **no hay nada del formulario
+  que pisar**. ⚠️ Comprobado saboteando el recorte para que devuelva la captura entera: el check
+  [A8] falla y el dato de A sale revertido por el de B.
+- ⚠️ **Y SEIS CAMPOS DEL CAPTURADO QUE PARECEN DEL FORMULARIO Y NO LO SON**
+  (`PT_AUTO_PERSONA`: nombre identitario, LGBTI y su «¿cuál?», etnia, comunidad y redes). El acta de
+  derechos los pide y `f6Guardar` los escribe dentro de `capturados[i]` porque son atributos de la
+  persona. Sin ellos, el acta que imprimiera un equipo saldría distinta de la del otro para la MISMA
+  persona y el MISMO procedimiento. Viajan esos seis y ni uno más: el nombre, el documento y la
+  dirección siguen siendo del formulario.
+
+### El aviso es NEUTRO, y por eso el módulo sigue aislado
+Los cinco guardados llaman a **`lcDocGuardado(idCaso)`**, un punto que no sabe que existe el Modo
+compartir; es el módulo el que se apunta a escucharlo (`lcAlGuardarDoc = ptAutoDoc`). Si los
+guardados llamaran a `pt…` directamente, el módulo dejaría de estar aislado —hoy, fuera de él, solo
+se le llama desde su propia pantalla— y el día que la sincronización con los equipos del usuario
+quiera enterarse de lo mismo, se engancha en el mismo sitio en vez de sembrar otra llamada.
+- ⚠️ **NO se engancha en `DB.saveCases`, que era el sitio obvio, por dos razones medidas.** Una: ahí
+  pasa TODA escritura, así que el modo individual —el caso normal— pagaría una comprobación en cada
+  guardado. Dos, y más importante: **lo que llega del compañero también se guarda por ahí**, así que
+  cada equipo devolvería en eco lo que acaba de recibir. Colgando el aviso de los cinco guardados de
+  documentos, **el eco no existe por construcción** (check [A12]: 0 reenvíos).
+- ⚠️ **Con espera de 1,2 s**, y no por elegancia: el acta se guarda también al cerrar el modal y al
+  tocar fuera, así que diligenciar una cadena de custodia con tres elementos dispara varios guardados
+  seguidos.
+
+### Qué capturas se sincronizan, y con quién
+`c._sync = {devs:{…}, ult:{por, ts}}`. ⚠️ **Empieza por guion bajo a propósito**: `ptAplanar` y
+`ptCanon` saltan esas claves, así que la marca **no viaja por el canal ni entra en la huella** del
+caso. Es estado local de cada teléfono, no contenido del procedimiento. Y se persiste con el caso,
+así que **sobrevive a cerrar la aplicación**: es lo que hace que al volver a vincularse con el mismo
+compañero se pongan al día solos, sin que nadie reenvíe la captura (`ptPonerseAlDia`, disparada por
+el saludo del otro y no por la apertura del canal, porque hasta ese mensaje no se sabe con quién se
+está hablando).
+- Una captura queda compartida cuando **se envía y el compañero acepta** (si canceló el diálogo, no
+  está en su teléfono y marcarla haría que se le mandaran actualizaciones de algo que no tiene) y
+  cuando **se recibe**, aunque no haya cambiado nada: lo que decide no es el cambio, es que los dos
+  la tengan.
+- ⚠️ **Sin vínculo no se encola nada en disco.** `ptAutoSalida` vacía lo pendiente salga o no salga:
+  la puesta al día no se apoya en esa lista sino en `c._sync`. Guardar ahí lo que espera sería un
+  segundo sitio donde vive lo mismo, creciendo sin tope mientras el funcionario trabaja sin
+  compañero, que es lo normal. **Este proyecto ya retiró una cola por eso.**
+
+### Las dos cosas que una actualización automática NO puede hacer
+- ⚠️ **NUNCA CREA UNA CAPTURA.** Si la que llega no está aquí, o está y no consta como compartida con
+  quien la manda, se descarta. Para que una captura entre en un teléfono sigue haciendo falta un
+  envío, con su diálogo y su aceptación: esto no puede meter capturas por una puerta que nadie abrió.
+- ⚠️ **NI UN CAPTURADO.** `ptPonerRuta` crea el elemento que no encuentra —lo que hace falta cuando
+  llega una víctima nueva en un envío completo—, pero aquí sería meter **media persona**, con su
+  identificador y sus seis atributos y sin nombre, **en el apartado 4 de un informe de captura**. Si
+  el capturado no está, es que ese equipo no tiene la misma versión de la captura, y eso se arregla
+  con un envío, no inventando a nadie (`ptFundirAuto`).
+- ⚠️ **Y no pregunta.** El diálogo de confirmación existe para decidir sobre registros NUEVOS que
+  manda otro funcionario; esto actualiza una captura que el equipo YA aceptó. Preguntarlo una vez por
+  cada acta convertiría la sincronización en una interrupción.
+
+### ⚠️ Defecto encontrado de paso: el sync de Drive marcaba un compañero que no existe
+`ptAplicarPaquete` lo usan los tres caminos —el canal, el archivo `.lexc` y la sincronización con
+los equipos del propio usuario—, y solo en el primero consta que al otro lado hay un **compañero**.
+Deducir el compañero del `origen` del paquete hacía que **una captura bajada del propio computador
+del funcionario se marcara como compartida**, y la lista lo anunciaría. Ahora el compañero se pasa
+**explícito** (`ptAplicarPaquete(abierto, decision, dev)`) y solo el canal lo pasa. El archivo
+tampoco marca: quien lo abre no sabe si el que lo generó va a vincularse con él.
+
+### Lo que se ve
+Franja: **«En línea con PT LUZ MARIN · 1 captura al día · hace 1 min»** — con capturas compartidas
+deja de decir «listo para enviar», que sería mentirle al funcionario. Insignia **«Sincroniza»** en la
+tarjeta de la lista, con quién la actualizó y cuándo en su `title`. Renglón en el **expediente**,
+encima de los documentos que se sincronizan, que es a lo que pertenece; apagado cuando no hay vínculo
+vivo, porque la captura se sigue sincronizando pero no en ese momento. Y la pantalla del Modo
+compartir **lo explica**: una función que empieza a mandar cosas sola sin que nadie la haya anunciado
+no se distingue de un fallo. Todo con tokens del Design System v2 y los mismos verdes de la franja,
+que es un ESTADO y no una advertencia. Comprobado en los **dos temas**, mirando el render.
+
+### Verificación
+`verify_sincro.mjs` (**32 checks**) en tres secciones: **A** la propagación entre dos contextos de
+navegador —dos almacenamientos, dos identidades: dos teléfonos—, con el vínculo pasando por el código
+QR de verdad y con la cadena de custodia diligenciada **por el camino real del modal**; **B** lo que
+no cambia; **C** lo que se ve.
+- ⚠️ **Comprobado que las guardas no son vacías**: saboteando el recorte y el filtro de capturados
+  fallan **3 de los 32** ([A8] con el formulario revertido, [A10] con el capturado fantasma creado y
+  [B6] con la captura entera saliendo por el canal).
+- ⚠️ **`verify_compartir` [E3] se adaptó, y NO relajándolo.** Medía el aislamiento con una lista
+  blanca de nombres; ahora, además, exige que las cinco consultas nuevas de la lista y el expediente
+  vivan **dentro de `lcBadgeSync` y `lcExpSyncHtml`** y que las dos empiecen por la guarda
+  `typeof`, para que el día que el módulo no esté esas pantallas se pinten igual. **Sigue en 57/57.**
+- Regresiones en verde: **sincro 32** · compartir 57 · sync 68 · almacén 13 · fpj6 140 · custodia 111 ·
+  incautación 141 · entrega 111 · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 · mejora6 32 ·
+  mejora8 72 · OJ 187 · export 66 · firma 62 · editable 28 · tipografía OJ 42 · fpj5 tipografía 48 ·
+  envío 39 · personas 25 · expediente 13 · menú+expediente 16 · orden 33 · tema 40 · grados 31 ·
+  despachos 53 · jurisdicción 67 · vía CR 41 · NUNC año 39 · estadísticas 58 · simulador 41 ·
+  multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22.
+  ⚠️ **Cuatro fallos PREEXISTENTES, comprobados ejecutando las suites contra el build de HEAD con
+  `git stash`: fallan idénticos.** `verify_ds` 9/10 («favorito con estrella SVG»),
+  `verify_mejora6b` [47] y [53] y `verify_jerarquia` 65/66 (los tres miden textos de la pantalla de
+  Ajustes que cambiaron en el commit `21ae35b`) y `verify_dossier_historico` [20] y [21].
+  `verify_mejora7` [B23] es **intermitente** y ya estaba documentado como tal.
+- Anti-caché `?v=109` / `cache-v109`, `_BUILD=109`.
