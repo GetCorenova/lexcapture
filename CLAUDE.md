@@ -1,4 +1,9 @@
 # LexCapture v8.0 RC — Contexto Maestro del Proyecto
+
+> ⚠️ **¿Vas a publicar en Play Store? Lee `PUBLICAR.md`, no este archivo.**
+> Ahí está el estado medido, el orden de las seis fases, las dos decisiones
+> irreversibles y lo que hace falta pedirle al usuario. Este archivo es la
+> historia del producto.
 <!-- Versión: v8.0 RC | Release Candidate: 2026-07-14 | Fase H re-ejecutada (ver sección Fase H más abajo) -->
 
 ## Qué es este proyecto

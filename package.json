@@ -13,7 +13,9 @@
     "deploy:web": "node scripts/deploy-web.mjs",
     "deploy:playstore": "node scripts/deploy-playstore.mjs",
     "verify": "node scripts/verify.mjs",
-    "test": "node scripts/build-web.mjs --check"
+    "test": "node scripts/build-web.mjs --check",
+    "store:assets": "node scripts/store-assets.mjs",
+    "store:feature": "node scripts/store-feature.mjs"
   },
   "keywords": [
     "pwa",
