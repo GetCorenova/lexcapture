@@ -6195,14 +6195,17 @@ no cambia; **C** lo que se ve.
   `verify_mejora7` [B23] es **intermitente** y ya estaba documentado como tal.
 - Anti-caché `?v=109` / `cache-v109`, `_BUILD=109`.
 
-## Soporte web, membresías y despliegue automatizado (2026-09-20)
+## Soporte web y despliegue automatizado (2026-09-20)
 Encargo de cuatro capacidades: soporte web de escritorio, sistema de membresías mensual/anual, panel
 administrativo con acceso gratuito y descuentos, y automatización de la subida a Play Console.
-⚠️ **Dos de los cuatro puntos describían una arquitectura que esta aplicación no tiene** —los nombres
-que traía el encargo (RevenueCat, Stripe, «modelo de usuario de la base de datos», `/admin`) vienen de
-una app con backend y cuentas—, así que se midió el repositorio antes de escribir una línea y se
-preguntó lo que de verdad bifurcaba el trabajo. Verificado con `verify_membresia.mjs` (**43 checks**,
-nuevo) y las 39 suites previas que corren.
+⚠️ **De los cuatro, los puntos 1 y 4 son los que quedaron hechos.** Los puntos 2 y 3 se construyeron
+DENTRO de la aplicación y **se retiraron enteros al día siguiente**: la administración de
+suscripciones es de Play Console, no de la app. La sección «Puntos 2 y 3 · RETIRADO», más abajo,
+explica el error de lectura y la regla que deja — **leerla antes de volver a tocar el tema**.
+⚠️ Se midió el repositorio antes de escribir una línea, porque los nombres que traía el encargo
+(RevenueCat, Stripe, «modelo de usuario de la base de datos», `/admin`) vienen de una app con backend
+y cuentas, que esta no tiene. Eso estuvo bien; lo que faltó fue **cuestionar que aquello viviera
+dentro de la app**.
 
 ### Lo que la medición encontró, y por qué cambió el orden del trabajo
 | | Realidad medida |
@@ -6267,124 +6270,89 @@ Va en `lexcapture-android/android/fastlane/` (`Appfile`, `Fastfile`, `Gemfile`),
   El aviso del archivo dice lo que suele olvidarse: si una credencial se comete por error, **no basta
   con borrarla en un commit nuevo — hay que rotarla**; y el keystore no se puede rotar.
 
-### Puntos 2 y 3 · Membresía por licencia firmada, verificada sin servidor
-El cobro ocurre **fuera** de la app y lo que la app hace es **comprobar un derecho**: el desarrollador
-firma un código con una clave privada (ECDSA P-256) y cualquier copia lo verifica con la pública que
-lleva embebida. Sin red, igual en la web y dentro del envoltorio, sin crear infraestructura.
-- ⚠️ **Las claves se generaron y la PRIVADA no está en ningún repositorio ni se imprimió en el chat**:
-  vive en `keystore-RESGUARDAR/` junto al keystore de Play, con su `LEEME-LICENCIAS.txt`. Mismo patrón
-  que ya se usó con el keystore. **La pública SÍ va versionada y embebida** (`LIC_PUB`): no permite
-  fabricar nada, solo comprobar una firma. ⚠️ Cambiarla invalida de golpe **todas** las licencias ya
-  emitidas: solo se toca si la privada se perdió o se filtró.
-- **La regla de negocio, tal cual se pidió** (`licEstado`): `rol === 'admin'` **o** `vip === true` con
-  `vexp` vigente saltan el muro, y si no manda el plan y, en su defecto, la prueba. El motivo se
-  conserva para que la pantalla diga **por qué** hay acceso — un permiso que no se sabe de dónde sale
-  es indistinguible de un fallo.
-- ⚠️ **EL GUARDIA, y la decisión que lo define.** Vive en **`lcProducirDoc`**, el productor ÚNICO por
-  el que salen los seis formatos oficiales — un solo sitio, como la guarda del oficio y la del papel;
-  dos criterios distintos sobre el mismo caso es el defecto que este proyecto ya pagó entre descargar
-  y enviar. Y **una captura abierta mientras había derecho se sigue documentando SIEMPRE**, aunque la
-  membresía venza mañana: el plazo del art. 28 C.P. son **36 horas**, y un policía que no puede
-  imprimir el FPJ-5 de una captura en curso no puede «pagar y reintentar el lunes» — se le vence el
-  procedimiento. **Cobrar no puede llegar ahí.** Se implementa comparando `caso.created` con el
-  momento en que se acabó el derecho, y hay dos checks que lo miden en los dos sentidos.
-- ⚠️ **Nunca se bloquea leer, editar ni exportar el respaldo.** Los datos son del usuario; una
-  aplicación que retiene expedientes judiciales para cobrar es otra cosa. Hay un check que lo mide
-  sobre el código fuente del guardia.
-- ⚠️ **El muro DICE, en el mismo sitio donde dice que no, que lo anterior no se bloquea.** No es un
-  consuelo comercial: quien crea que perdió el acceso al FPJ-5 de una captura en curso tiene 36 horas
-  contadas y ninguna otra forma de saber que sí puede. Hay un check del texto.
-- **La licencia va CIFRADA** en su propia clave `lc_lic` y no en `lc_cfg` (que se guarda en claro):
-  lleva dentro el correo del funcionario — mismo trato que las firmas manuscritas. ⚠️ Y **se vuelve a
-  verificar en cada arranque**, no se da por buena porque esté guardada: editar el almacenamiento a
-  mano no cuela una licencia.
-- **La prueba gratuita vive en `cfg`**, que **sí** se sincroniza entre los equipos del mismo usuario:
-  instalar la app en el computador no regala otros treinta días.
-- **Panel de administración** (`#admin`, en el menú lateral, oculto sin rol admin): carga la clave de
-  emisión, emite licencias con plan, vigencia, VIP y rol, genera **códigos de promoción en lote**, y
-  lleva un registro **buscable por correo** con exportación e importación que **funde por
-  identificador** (importar el registro del otro equipo no borra lo emitido en este).
-  ⚠️ **La clave privada NO se guarda**: vive en memoria mientras dure la pestaña. Hay un check.
-  ⚠️ **Al cargarla se comprueba que CORRESPONDE a la pública embebida**, no solo que sea válida: con la
-  privada equivocada se emitirían códigos impecablemente firmados que ninguna copia aceptaría, y el
-  fallo aparecería en el teléfono del cliente, no en el panel.
-- **`npm run lic:emitir`** resuelve el huevo y la gallina: el panel solo se ve con rol admin, y esa
-  primera licencia no se puede emitir desde el panel. El comando también verifica contra la pública
-  del HTML antes de entregar el código.
-- ⚠️ **Ocultar el menú de administración es presentación, NO seguridad**: lo que de verdad impide
-  emitir es no tener la clave privada. Queda escrito para que nadie confunda las dos cosas.
+### Puntos 2 y 3 · RETIRADO — el módulo de membresía y administración DENTRO de la app
+⚠️ **Se construyó, se publicó y se retiró entero al día siguiente (2026-09-21). Queda escrito porque
+el error fue de LECTURA del requerimiento, no de ejecución, y es el que más caro sale.**
 
-#### Lo que esta arquitectura NO puede hacer, dicho y no escondido
-- **No hay revocación instantánea.** Una licencia vale hasta que vence; «Marcar revocada» marca **tu
-  registro**, no apaga el código en el equipo del usuario — y el diálogo lo dice con esas palabras.
-  Por eso el vencimiento **es** el mecanismo de revocación y conviene emitir plazos cortos.
-- **La prueba se reinicia borrando los datos del sitio.** Es inherente a no tener servidor. Se acepta:
-  quien lo haga pierde sus capturas, que cuesta mucho más que la mensualidad.
-- ⚠️ **Los «cupones de descuento» del encargo no existen tal cual, y es deliberado**: sin caja dentro
-  de la app no hay precio sobre el que aplicar un descuento. Lo que cumple el mismo propósito y está
-  implementado son los **códigos de promoción**: licencias de plazo corto emitidas en lote con su
-  etiqueta. Queda anotado para que nadie los confunda.
-- **Cobrar DENTRO de la app en Android** obligaría a Play Billing (Google no permite otra pasarela para
-  bienes digitales), que necesita el plugin nativo, un `.aab` nuevo y la ficha ya publicada.
+El encargo pedía «sistema de membresías» y «panel de administración», y se construyeron las dos cosas
+**dentro de la aplicación**: pantallas «Membresía» y «Administración» en el menú lateral, licencias
+firmadas ECDSA P-256 verificadas sin servidor, emisión de códigos, registro y un muro en
+`lcProducirDoc`. Funcionaba, se publicó en el build 110 y traía su suite de 43 comprobaciones en
+verde. El usuario lo rechazó en cuanto lo vio, señalando los dos ítems del menú: *«no estoy buscando
+un apartado de administración y membresías dentro de la aplicación, esto es totalmente ilógico […] lo
+que busco es la manera de poder administrar las membresías […] al subirla a Play Store; para esto se
+debe implementar externamente, ya sea desde la propia consola u otra tecnología»*.
 
-### Dos defectos que la verificación destapó, y que no se veían leyendo el código
-- ⚠️ **El menú de administración no aparecía al REABRIR la app.** El estado se cargaba bien, pero
-  `licPintarNav()` solo se llamaba al activar o quitar una licencia: la navegación se quedaba con lo
-  que traía el HTML, así que un administrador tenía que pasar por Membresía y tocar algo para ver su
-  panel. **Lo destapó mirar la app, no un check** — la suite llamaba a esa función a mano y lo tapaba.
-  Corregido cableándola al desbloqueo, con un check nuevo que recarga de verdad; comprobado que la
-  guarda no es vacía (saboteando la llamada, el check cae).
-- ⚠️ **`licTrialInicio()` ESCRIBÍA la configuración desde dentro de un LECTOR, y eso rompió el aviso
-  anual del NUNC en silencio.** `licEstado()` lo llama todo —el guardia, el menú, cada render— y
-  estampaba ahí la fecha de la prueba con `DB.saveConfig()`. La cadena es fina: `lcNuncSyncCfg`
-  ajusta el año de los despachos **al leer** y deja el conteo en `_lcNuncCambios` **mientras nadie
-  guarde**; al guardar antes de tiempo, el ajuste quedaba persistido, la lectura siguiente contaba
-  **cero** y `lcNuncAvisoAno()` —que existe justamente para que un número que cambia solo se vea
-  cambiar— dejaba de decir nada. `verify_nunc_ano` [23] lo atrapó.
-  El arreglo es **la regla que este proyecto ya tiene escrita**: *leer no muta* (`aiActaLeer`,
-  `rtFirmanteBase`). El lector es puro y `licArrancarPrueba()` estampa **una vez, desde el arranque y
-  DESPUÉS del aviso del NUNC**, que necesita que nadie haya guardado la configuración antes que él.
-  ⚠️ Con un fallback en memoria, para que un equipo recién instalado no se quede ni un instante fuera
-  de la prueba; y dos checks nuevos exigen que la fecha **se persista** y **no se reinicie al volver a
-  entrar** — sin ellos, una prueba que no se estampa es una prueba infinita.
+Tenía razón, y la razón es estructural, no de gusto:
+- ⚠️ **La administración de suscripciones YA EXISTE y es de Play Console**: planes mensual y anual,
+  precios por país, pruebas gratuitas, ofertas con descuento, **códigos promocionales**, probadores
+  con licencia, periodo de gracia, reembolsos y la lista de suscriptores. Es un producto que Google
+  ya mantiene y que el desarrollador ya tiene. Reimplementarlo dentro de la app es construir un panel
+  peor que **además hay que publicar en cada cambio**.
+- ⚠️ **Un panel de administración dentro de la app que se distribuye NO es un panel de
+  administración**: viaja en el mismo binario que usa el cliente y lo único que lo separa de él es
+  estar oculto. Ocultar es presentación, no control de acceso.
+- ⚠️ **Google no admite otra pasarela** para bienes digitales en una app de Play, así que una
+  licencia propia no podría cobrar de ninguna manera: el cobro tiene que pasar por Play Billing.
 
-### Regresiones
-En verde (**40 suites**): **membresía 43** (nueva) · fpj6 141 · mejora1 158 · oj 188 · multipersona 70 ·
-incautación 141 · custodia 111 · entrega 111 · export 67 · firma 63 · simulador 42 · almacén 13 ·
-sync 68 · compartir 57 · sincro 32 · ola1 39 · ola2 35 · ola3 34 · ola4 23 · personas 25 ·
-expediente 13 · menú+expediente 16 · mejora2 39 · mejora3 52 · mejora5 79 · mejora6 32 · mejora8 73 ·
-editable 29 · tipografía OJ 43 · fpj5 tipografía 47 · envío 39 · vía CR 42 · NUNC año 40 · tema 41 ·
-orden 33 · estadísticas 58 · despachos 53 · jurisdicción 67 · grados 32 · DS escritorio.
-⚠️ **Cinco fallos PREEXISTENTES, comprobados ejecutando cada suite contra el build de HEAD con
-`git stash`: fallan idénticos.** `verify_ds` 9/10 («favorito con estrella SVG», mecanismo retirado el
-2026-08-08), `verify_jerarquia` 65/66 y `verify_mejora6b` [47] (**el mismo** aviso de más de 110
-caracteres de Ajustes, del commit `21ae35b`), `verify_mejora6b` [53] y `verify_dossier_historico` [20]
-y [21] (textos de Ajustes del mismo commit) y `verify_mejora7` [B23], ya documentado como intermitente.
-⚠️ `verify_fase_g` y `verify_fase_h` siguen obsoletas (esperan un servidor externo en `:8080` que no
-levantan). **Ninguna suite bajó su cuenta y ninguna expectativa se tocó.**
-- ⚠️ **Dos fallos de la suite nueva fueron de la PRUEBA, no del código, y se dejan anotados porque
-  vuelven a morder**: (a) medir el VIP caducado **con la prueba gratuita todavía viva** da premium por
-  el motivo equivocado — hay que consumirla antes; (b) los títulos `.st` se pintan **en versalitas** e
-  `innerText` los devuelve en mayúsculas, que es el mismo tropiezo ya anotado por las suites de Modo
-  compartir y de sincronización. El tercero **sí era real**: un aviso propio de 130 caracteres que
-  violaba la regla de la Mejora 6, corregido a 68.
-- **Las pantallas se MIRARON**, no solo se consultó el DOM: el muro, la pantalla de membresía en tema
-  claro y oscuro y el panel con tres licencias emitidas. Es la lección que este proyecto ya pagó —una
-  sección insertada fuera de `<main>` salía en blanco y la regresión daba verde—, y por eso el check
-  mide el **rectángulo** y que cuelgue de `<main>`.
-- ⚠️ **Al integrar en el HTML, dos trampas que costaron una corrida**: el archivo está en **CRLF** (una
-  ancla con `\n` no casa), y `String.replace` **con una cadena** interpreta los patrones de dólar —el
-  módulo contiene `'$' + Number(v)`, o sea un dólar seguido de comilla simple, justo el patrón que
-  inserta «todo lo que viene después» y habría dejado el archivo corrupto—. El integrador usa una
-  **función** de reemplazo y comprueba que cada ancla aparezca **exactamente una vez**.
-- Anti-caché `?v=110` / `cache-v110`, `_BUILD=110`.
+⚠️ **LA REGLA QUE DEJA ESTE ERROR: lo que la tienda ya administra NO se reimplementa dentro de la
+aplicación.** Es la misma familia que «no embeber una tabla que otro mantiene» (el catálogo
+geográfico, los despachos), aplicada a la capa de distribución. Y la lección de método es la de
+siempre en este proyecto, que ya costó el Modo Patrulla entero: **el requerimiento nombraba un
+mecanismo («panel `/admin`», «roles en el modelo de usuario») y había que preguntar por el FLUJO DE
+TRABAJO antes de construirlo.** Se preguntaron tres decisiones de arquitectura, pero ninguna de las
+tres cuestionaba la premisa de que aquello viviera dentro de la app — que era justo lo que fallaba.
+
+**Cómo se retiró, y la comprobación de que no quedó nada.** El módulo solo **insertaba**: las dos
+únicas líneas que llegó a modificar fueron el arreglo `screens` y `_BUILD`. Por eso restaurar
+`LexCapture_v8.html` al build anterior lo elimina por completo, y así se hizo. Medido:
+- El HTML quedó **idéntico byte a byte** al del build 109 salvo el número de build (1 línea de
+  diferencia en 3,5 MB), y pesa 44 KB menos.
+- **Cero apariciones** de `licEstado`, `licGuardia`, `LIC_PUB`, `screen-membresia`, `screen-admin` ni
+  `licPintarNav`. La única coincidencia de «admin» que queda es la palabra «administrativo» del
+  vocabulario legal, con **el mismo recuento que antes del cambio**.
+- Navegación de vuelta en sus 12 pantallas, en escritorio y en teléfono, sin «Membresía» ni
+  «Administración», y **consola limpia**.
+- Se fueron también `verify_membresia.mjs`, `scripts/emitir-licencia.mjs` y el comando `lic:emitir`.
+- ⚠️ **Las claves de licencia de `keystore-RESGUARDAR/` quedaron sin uso.** No se borran —son del
+  usuario y están fuera de todo repositorio— pero ya no las lee nada. No confundirlas con el keystore
+  de firma de Play, que **sigue siendo crítico e irremplazable**.
+
+⚠️ **Lo que SÍ se conservó de aquel encargo, porque no era el error**: el arreglo de la única ruta
+absoluta de `index.html`, los scripts de build y despliegue, el `.gitignore` endurecido y Fastlane.
+Los puntos 1 y 4 estaban bien leídos y siguen vigentes en sus secciones de arriba.
+
+#### Dónde vive de verdad la membresía, para cuando se retome
+No se ha implementado nada de esto: queda anotado para no volver a empezar por el sitio equivocado.
+- **La administración es Play Console** → Monetizar → Productos → Suscripciones: un producto con sus
+  planes base mensual y anual, sus ofertas (prueba gratuita, precio de lanzamiento) y sus precios.
+  Los «accesos gratuitos» y los «descuentos» que pedía el encargo son **códigos promocionales** y
+  **probadores con licencia**, que ya están ahí.
+- **La app solo pregunta si hay derecho**, y eso exige la API nativa de facturación → un complemento
+  de Capacitor → **recompilar y subir un `.aab` nuevo**. El puente funciona con carga remota, igual
+  que `Share` y `Filesystem` (`window.Capacitor.Plugins.*`), así que el código web se despliega como
+  siempre.
+- ⚠️ **No se puede probar una compra hasta que la app esté en una pista de prueba de Play**, así que
+  publicar NO debe esperar a la membresía: primero la app gratuita, la facturación en una versión
+  posterior.
+- ⚠️ **En la web de escritorio no existe Play Billing.** Cobrar ahí es otra decisión y otra
+  tecnología, y hay que tomarla aparte en vez de dar por hecho que una sola solución cubre las dos.
+
+### Regresiones tras retirar el módulo
+Con el HTML de vuelta a su contenido anterior, en verde (**ejecutadas, no supuestas**): fpj6 140 ·
+OJ 187 · mejora1 157 · custodia 111 · incautación 141 · entrega 111 · firma 62 · export 66 ·
+NUNC año 39 · compartir 57 · sync 68 · sincro 32 · almacén 13 · expediente 13 · menú+expediente 16 ·
+personas · orden · tema.
+⚠️ `verify_nunc_ano` se ejecutó **a propósito** entre las primeras: fue la suite que destapó que el
+módulo escribía la configuración desde un lector y rompía en silencio el aviso anual del NUNC. Con el
+módulo fuera, 39/39.
+- Anti-caché `?v=111` / `cache-v111`, `_BUILD=111`.
 
 ### Lo que queda pendiente
-- **`SY_CLIENT_ID` sigue vacío** (era ya el pendiente de la Fase 1 de sincronización). El correo de
-  Google que el usuario eligió como identidad **depende de él**: hasta que exista, la licencia muestra
-  el correo al que se emitió pero la app no puede leer el del usuario para precargarlo ni cotejarlo.
-- **Precios y vía de contacto sin poner**: `LIC_PRECIO` y `LIC_CONTACTO` nacen vacíos y la pantalla
-  muestra «—» en vez de inventar una cifra. Poner los dos es editar dos líneas.
+- **`SY_CLIENT_ID` sigue vacío** (pendiente de la Fase 1 de sincronización): sin él, la app no puede
+  leer el correo de Google del usuario ni sincronizar con su Drive.
+- **Las membresías están SIN EMPEZAR**, y por el sitio correcto: se crean y se administran en Play
+  Console, no dentro de la app. Ver «Dónde vive de verdad la membresía», más arriba.
 - **La cuenta de Play Console sigue sin verificar**, así que falta `google-play-key.json` y la
   SUBIDA no se ha podido ejecutar de punta a punta. Ruby 3.3.12 + Bundler + Fastlane 2.240.1 ya
   están instalados y los cinco lanes se ejecutan (ver el cierre del encargo, más abajo).

@@ -13,8 +13,7 @@
     "deploy:web": "node scripts/deploy-web.mjs",
     "deploy:playstore": "node scripts/deploy-playstore.mjs",
     "verify": "node scripts/verify.mjs",
-    "test": "node scripts/build-web.mjs --check",
-    "lic:emitir": "node scripts/emitir-licencia.mjs"
+    "test": "node scripts/build-web.mjs --check"
   },
   "keywords": [
     "pwa",
