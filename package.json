@@ -1,15 +1,27 @@
 {
-  "name": "crear-app",
-  "version": "1.0.0",
-  "description": "",
-  "main": "sw.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "lexcapture",
+  "version": "8.0.0",
+  "description": "LexCapture — registro de capturas y generación de documentos legales en campo. PWA autónoma (un solo HTML), offline-first, con envoltorio nativo Android por carga remota.",
+  "private": true,
   "type": "commonjs",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "build:web:check": "node scripts/build-web.mjs --check",
+    "build:android": "node scripts/build-android.mjs",
+    "build:android:check": "node scripts/build-android.mjs --check",
+    "serve:web": "node scripts/serve-web.mjs",
+    "deploy:web": "node scripts/deploy-web.mjs",
+    "deploy:playstore": "node scripts/deploy-playstore.mjs",
+    "verify": "node scripts/verify.mjs",
+    "test": "node scripts/build-web.mjs --check",
+    "lic:emitir": "node scripts/emitir-licencia.mjs"
+  },
+  "keywords": [
+    "pwa",
+    "offline-first",
+    "capacitor"
+  ],
+  "license": "UNLICENSED",
   "devDependencies": {
     "playwright": "^1.61.0"
   }

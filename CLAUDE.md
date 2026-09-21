@@ -6194,3 +6194,294 @@ no cambia; **C** lo que se ve.
   Ajustes que cambiaron en el commit `21ae35b`) y `verify_dossier_historico` [20] y [21].
   `verify_mejora7` [B23] es **intermitente** y ya estaba documentado como tal.
 - Anti-caché `?v=109` / `cache-v109`, `_BUILD=109`.
+
+## Soporte web, membresías y despliegue automatizado (2026-09-20)
+Encargo de cuatro capacidades: soporte web de escritorio, sistema de membresías mensual/anual, panel
+administrativo con acceso gratuito y descuentos, y automatización de la subida a Play Console.
+⚠️ **Dos de los cuatro puntos describían una arquitectura que esta aplicación no tiene** —los nombres
+que traía el encargo (RevenueCat, Stripe, «modelo de usuario de la base de datos», `/admin`) vienen de
+una app con backend y cuentas—, así que se midió el repositorio antes de escribir una línea y se
+preguntó lo que de verdad bifurcaba el trabajo. Verificado con `verify_membresia.mjs` (**43 checks**,
+nuevo) y las 39 suites previas que corren.
+
+### Lo que la medición encontró, y por qué cambió el orden del trabajo
+| | Realidad medida |
+|---|---|
+| Estructura | **Un HTML autónomo de 3,6 MB** + `sw.js` + `manifest.json`. Sin bundler, sin framework |
+| `package.json` | Solo Playwright como dev-dep, para las suites. Ningún script de build |
+| Android | Carpeta **hermana** `lexcapture-android/`, **que no es este repo ni es un repo git**. Capacitor con **carga remota** a GitHub Pages |
+| Backend | Ninguno, por decisión documentada (Habeas Data, Ley 1581/2012) |
+| Usuarios | **No existen.** Hay un PIN local; el OAuth que hay pide solo `drive.appdata`, ni el correo |
+| Pagos / roles | `grep` de `suscrip\|billing\|stripe\|revenuecat\|premium\|licen` → **0 coincidencias** |
+
+⚠️ **Se preguntó antes de construir, y la razón está escrita en este mismo archivo**: el Modo Patrulla
+(2026-09-07) se implementó al pie de la letra de un requerimiento que nombraba mecanismos, funcionaba
+entero, y se tiró completo porque describía **un mecanismo y no el flujo de trabajo**. Unas mil líneas.
+Construir aquí RevenueCat + Stripe + Supabase a ciegas era repetirlo a mayor escala. Las tres
+decisiones del usuario: **licencia firmada verificada sin servidor** · **prueba gratis y después se
+bloquea generar, nunca lo empezado** · **identidad por el correo de Google que ya existe**.
+
+### Punto 1 · Soporte web — ya estaba, salvo un fallo de portabilidad y los scripts
+La app **ya es** una aplicación web y corre en cualquier navegador de escritorio; la abstracción de
+archivos que pedía el encargo también existía y ya era web-first: todo sale por `Blob` → `<a download>`
+y `_capNative()` es el **único** punto donde se toma la rama nativa (Filesystem + Share), inerte fuera
+del envoltorio. No había que abstraer nada.
+- ⚠️ **Lo que sí estaba roto: `index.html` tenía la ÚNICA ruta absoluta del proyecto**, clavada a
+  `/lexcapture/`. Servida desde cualquier otro sitio —localhost, la raíz de un dominio, un paquete de
+  escritorio— el redirect daba **404**, y el resto del proyecto (el `sw.js`, el `manifest`, el registro
+  del Service Worker) ya era relativo. Ahora es `./LexCapture_v8.html`. Comprobado reproduciendo el
+  defecto: con la ruta absoluta el navegador llega a una página 404 (título vacío, sin `_BUILD`); con
+  la relativa la app carga entera desde `localhost:8080/`, registra su Service Worker y no da un solo
+  error de consola.
+- **`npm run build:web`** sube los **tres** tokens anti-caché a la vez (`index.html ?v=N`,
+  `sw.js cache-vN`, `_BUILD` dentro del HTML), que hasta ahora se subían a mano y son el origen del
+  defecto ya documentado como «el usuario veía builds viejos»; pasa **`node --check`** sobre los
+  bloques `<script>` extraídos —la comprobación que este archivo manda hacer siempre, porque un `*`
+  seguido de `/` dentro de un comentario cierra el comentario y deja la página en blanco—; y exige
+  **cero recursos externos**, que es lo que permite arrancar sin cobertura.
+  ⚠️ **Comprobado que las dos guardas no son vacías**: desincronizando un token y metiendo el comentario
+  que rompe el script, el build falla en las dos.
+- **`npm run build:android`** comprueba keystore, JDK, SDK y versionCode antes de invocar Gradle.
+  ⚠️ Su comentario deja escrito lo que más confusión causa: **el `.aab` NO lleva el código web dentro**
+  (carga remota), así que un cambio en la app se publica con `deploy:web` y llega a los teléfonos ya
+  instalados **sin recompilar ni pasar por Play Console**. Recompilar solo hace falta si cambia el
+  envoltorio.
+- **`npm run serve:web`** sirve la app en local sin dependencias: una PWA abierta con doble clic
+  (`file://`) no registra el Service Worker ni se instala, así que no se puede probar de verdad.
+
+### Punto 4 · Fastlane — escrito y listo, con tres bloqueos externos reales
+Va en `lexcapture-android/android/fastlane/` (`Appfile`, `Fastfile`, `Gemfile`), con los lanes
+`preflight` · `bump_version` · `build` · `deploy_internal` · `promote_closed`, y
+**`npm run deploy:playstore`** como comando único.
+- ⚠️ **Tres bloqueos que no dependen del código, y el script los dice con su solución en vez de morir
+  con «command not found»**: (a) **no hay Ruby ni Fastlane** en esta PC; (b) **falta
+  `google-play-key.json`**, que exige la cuenta de Play Console **verificada** —sigue pendiente desde
+  el 2026-07-23—; y (c) ⚠️ **la PRIMERA versión de una ficha no se puede subir por API**: Google exige
+  subir ese primer `.aab` a mano por la consola web, y hasta entonces la API responde 403 con un
+  mensaje que no dice que la causa sea esa.
+- La ficha (descripción, capturas, categoría) se marca `skip_upload_*` a propósito: subirla desde una
+  copia local desactualizada pisaría el texto ya publicado. Y se sube como **borrador**, no publicado.
+- ⚠️ **`.gitignore` endurecido en los dos sitios.** Este repositorio **se publica** (es el que sirve
+  GitHub Pages), así que cubre `google-play-key.json`, `*.jks`, `keystore.properties`, `.env` y
+  `*-PRIVADA.json`. Comprobado con `git check-ignore` que los bloquea **y** que no ignora de más.
+  El aviso del archivo dice lo que suele olvidarse: si una credencial se comete por error, **no basta
+  con borrarla en un commit nuevo — hay que rotarla**; y el keystore no se puede rotar.
+
+### Puntos 2 y 3 · Membresía por licencia firmada, verificada sin servidor
+El cobro ocurre **fuera** de la app y lo que la app hace es **comprobar un derecho**: el desarrollador
+firma un código con una clave privada (ECDSA P-256) y cualquier copia lo verifica con la pública que
+lleva embebida. Sin red, igual en la web y dentro del envoltorio, sin crear infraestructura.
+- ⚠️ **Las claves se generaron y la PRIVADA no está en ningún repositorio ni se imprimió en el chat**:
+  vive en `keystore-RESGUARDAR/` junto al keystore de Play, con su `LEEME-LICENCIAS.txt`. Mismo patrón
+  que ya se usó con el keystore. **La pública SÍ va versionada y embebida** (`LIC_PUB`): no permite
+  fabricar nada, solo comprobar una firma. ⚠️ Cambiarla invalida de golpe **todas** las licencias ya
+  emitidas: solo se toca si la privada se perdió o se filtró.
+- **La regla de negocio, tal cual se pidió** (`licEstado`): `rol === 'admin'` **o** `vip === true` con
+  `vexp` vigente saltan el muro, y si no manda el plan y, en su defecto, la prueba. El motivo se
+  conserva para que la pantalla diga **por qué** hay acceso — un permiso que no se sabe de dónde sale
+  es indistinguible de un fallo.
+- ⚠️ **EL GUARDIA, y la decisión que lo define.** Vive en **`lcProducirDoc`**, el productor ÚNICO por
+  el que salen los seis formatos oficiales — un solo sitio, como la guarda del oficio y la del papel;
+  dos criterios distintos sobre el mismo caso es el defecto que este proyecto ya pagó entre descargar
+  y enviar. Y **una captura abierta mientras había derecho se sigue documentando SIEMPRE**, aunque la
+  membresía venza mañana: el plazo del art. 28 C.P. son **36 horas**, y un policía que no puede
+  imprimir el FPJ-5 de una captura en curso no puede «pagar y reintentar el lunes» — se le vence el
+  procedimiento. **Cobrar no puede llegar ahí.** Se implementa comparando `caso.created` con el
+  momento en que se acabó el derecho, y hay dos checks que lo miden en los dos sentidos.
+- ⚠️ **Nunca se bloquea leer, editar ni exportar el respaldo.** Los datos son del usuario; una
+  aplicación que retiene expedientes judiciales para cobrar es otra cosa. Hay un check que lo mide
+  sobre el código fuente del guardia.
+- ⚠️ **El muro DICE, en el mismo sitio donde dice que no, que lo anterior no se bloquea.** No es un
+  consuelo comercial: quien crea que perdió el acceso al FPJ-5 de una captura en curso tiene 36 horas
+  contadas y ninguna otra forma de saber que sí puede. Hay un check del texto.
+- **La licencia va CIFRADA** en su propia clave `lc_lic` y no en `lc_cfg` (que se guarda en claro):
+  lleva dentro el correo del funcionario — mismo trato que las firmas manuscritas. ⚠️ Y **se vuelve a
+  verificar en cada arranque**, no se da por buena porque esté guardada: editar el almacenamiento a
+  mano no cuela una licencia.
+- **La prueba gratuita vive en `cfg`**, que **sí** se sincroniza entre los equipos del mismo usuario:
+  instalar la app en el computador no regala otros treinta días.
+- **Panel de administración** (`#admin`, en el menú lateral, oculto sin rol admin): carga la clave de
+  emisión, emite licencias con plan, vigencia, VIP y rol, genera **códigos de promoción en lote**, y
+  lleva un registro **buscable por correo** con exportación e importación que **funde por
+  identificador** (importar el registro del otro equipo no borra lo emitido en este).
+  ⚠️ **La clave privada NO se guarda**: vive en memoria mientras dure la pestaña. Hay un check.
+  ⚠️ **Al cargarla se comprueba que CORRESPONDE a la pública embebida**, no solo que sea válida: con la
+  privada equivocada se emitirían códigos impecablemente firmados que ninguna copia aceptaría, y el
+  fallo aparecería en el teléfono del cliente, no en el panel.
+- **`npm run lic:emitir`** resuelve el huevo y la gallina: el panel solo se ve con rol admin, y esa
+  primera licencia no se puede emitir desde el panel. El comando también verifica contra la pública
+  del HTML antes de entregar el código.
+- ⚠️ **Ocultar el menú de administración es presentación, NO seguridad**: lo que de verdad impide
+  emitir es no tener la clave privada. Queda escrito para que nadie confunda las dos cosas.
+
+#### Lo que esta arquitectura NO puede hacer, dicho y no escondido
+- **No hay revocación instantánea.** Una licencia vale hasta que vence; «Marcar revocada» marca **tu
+  registro**, no apaga el código en el equipo del usuario — y el diálogo lo dice con esas palabras.
+  Por eso el vencimiento **es** el mecanismo de revocación y conviene emitir plazos cortos.
+- **La prueba se reinicia borrando los datos del sitio.** Es inherente a no tener servidor. Se acepta:
+  quien lo haga pierde sus capturas, que cuesta mucho más que la mensualidad.
+- ⚠️ **Los «cupones de descuento» del encargo no existen tal cual, y es deliberado**: sin caja dentro
+  de la app no hay precio sobre el que aplicar un descuento. Lo que cumple el mismo propósito y está
+  implementado son los **códigos de promoción**: licencias de plazo corto emitidas en lote con su
+  etiqueta. Queda anotado para que nadie los confunda.
+- **Cobrar DENTRO de la app en Android** obligaría a Play Billing (Google no permite otra pasarela para
+  bienes digitales), que necesita el plugin nativo, un `.aab` nuevo y la ficha ya publicada.
+
+### Dos defectos que la verificación destapó, y que no se veían leyendo el código
+- ⚠️ **El menú de administración no aparecía al REABRIR la app.** El estado se cargaba bien, pero
+  `licPintarNav()` solo se llamaba al activar o quitar una licencia: la navegación se quedaba con lo
+  que traía el HTML, así que un administrador tenía que pasar por Membresía y tocar algo para ver su
+  panel. **Lo destapó mirar la app, no un check** — la suite llamaba a esa función a mano y lo tapaba.
+  Corregido cableándola al desbloqueo, con un check nuevo que recarga de verdad; comprobado que la
+  guarda no es vacía (saboteando la llamada, el check cae).
+- ⚠️ **`licTrialInicio()` ESCRIBÍA la configuración desde dentro de un LECTOR, y eso rompió el aviso
+  anual del NUNC en silencio.** `licEstado()` lo llama todo —el guardia, el menú, cada render— y
+  estampaba ahí la fecha de la prueba con `DB.saveConfig()`. La cadena es fina: `lcNuncSyncCfg`
+  ajusta el año de los despachos **al leer** y deja el conteo en `_lcNuncCambios` **mientras nadie
+  guarde**; al guardar antes de tiempo, el ajuste quedaba persistido, la lectura siguiente contaba
+  **cero** y `lcNuncAvisoAno()` —que existe justamente para que un número que cambia solo se vea
+  cambiar— dejaba de decir nada. `verify_nunc_ano` [23] lo atrapó.
+  El arreglo es **la regla que este proyecto ya tiene escrita**: *leer no muta* (`aiActaLeer`,
+  `rtFirmanteBase`). El lector es puro y `licArrancarPrueba()` estampa **una vez, desde el arranque y
+  DESPUÉS del aviso del NUNC**, que necesita que nadie haya guardado la configuración antes que él.
+  ⚠️ Con un fallback en memoria, para que un equipo recién instalado no se quede ni un instante fuera
+  de la prueba; y dos checks nuevos exigen que la fecha **se persista** y **no se reinicie al volver a
+  entrar** — sin ellos, una prueba que no se estampa es una prueba infinita.
+
+### Regresiones
+En verde (**40 suites**): **membresía 43** (nueva) · fpj6 141 · mejora1 158 · oj 188 · multipersona 70 ·
+incautación 141 · custodia 111 · entrega 111 · export 67 · firma 63 · simulador 42 · almacén 13 ·
+sync 68 · compartir 57 · sincro 32 · ola1 39 · ola2 35 · ola3 34 · ola4 23 · personas 25 ·
+expediente 13 · menú+expediente 16 · mejora2 39 · mejora3 52 · mejora5 79 · mejora6 32 · mejora8 73 ·
+editable 29 · tipografía OJ 43 · fpj5 tipografía 47 · envío 39 · vía CR 42 · NUNC año 40 · tema 41 ·
+orden 33 · estadísticas 58 · despachos 53 · jurisdicción 67 · grados 32 · DS escritorio.
+⚠️ **Cinco fallos PREEXISTENTES, comprobados ejecutando cada suite contra el build de HEAD con
+`git stash`: fallan idénticos.** `verify_ds` 9/10 («favorito con estrella SVG», mecanismo retirado el
+2026-08-08), `verify_jerarquia` 65/66 y `verify_mejora6b` [47] (**el mismo** aviso de más de 110
+caracteres de Ajustes, del commit `21ae35b`), `verify_mejora6b` [53] y `verify_dossier_historico` [20]
+y [21] (textos de Ajustes del mismo commit) y `verify_mejora7` [B23], ya documentado como intermitente.
+⚠️ `verify_fase_g` y `verify_fase_h` siguen obsoletas (esperan un servidor externo en `:8080` que no
+levantan). **Ninguna suite bajó su cuenta y ninguna expectativa se tocó.**
+- ⚠️ **Dos fallos de la suite nueva fueron de la PRUEBA, no del código, y se dejan anotados porque
+  vuelven a morder**: (a) medir el VIP caducado **con la prueba gratuita todavía viva** da premium por
+  el motivo equivocado — hay que consumirla antes; (b) los títulos `.st` se pintan **en versalitas** e
+  `innerText` los devuelve en mayúsculas, que es el mismo tropiezo ya anotado por las suites de Modo
+  compartir y de sincronización. El tercero **sí era real**: un aviso propio de 130 caracteres que
+  violaba la regla de la Mejora 6, corregido a 68.
+- **Las pantallas se MIRARON**, no solo se consultó el DOM: el muro, la pantalla de membresía en tema
+  claro y oscuro y el panel con tres licencias emitidas. Es la lección que este proyecto ya pagó —una
+  sección insertada fuera de `<main>` salía en blanco y la regresión daba verde—, y por eso el check
+  mide el **rectángulo** y que cuelgue de `<main>`.
+- ⚠️ **Al integrar en el HTML, dos trampas que costaron una corrida**: el archivo está en **CRLF** (una
+  ancla con `\n` no casa), y `String.replace` **con una cadena** interpreta los patrones de dólar —el
+  módulo contiene `'$' + Number(v)`, o sea un dólar seguido de comilla simple, justo el patrón que
+  inserta «todo lo que viene después» y habría dejado el archivo corrupto—. El integrador usa una
+  **función** de reemplazo y comprueba que cada ancla aparezca **exactamente una vez**.
+- Anti-caché `?v=110` / `cache-v110`, `_BUILD=110`.
+
+### Lo que queda pendiente
+- **`SY_CLIENT_ID` sigue vacío** (era ya el pendiente de la Fase 1 de sincronización). El correo de
+  Google que el usuario eligió como identidad **depende de él**: hasta que exista, la licencia muestra
+  el correo al que se emitió pero la app no puede leer el del usuario para precargarlo ni cotejarlo.
+- **Precios y vía de contacto sin poner**: `LIC_PRECIO` y `LIC_CONTACTO` nacen vacíos y la pantalla
+  muestra «—» en vez de inventar una cifra. Poner los dos es editar dos líneas.
+- **La cuenta de Play Console sigue sin verificar**, así que falta `google-play-key.json` y la
+  SUBIDA no se ha podido ejecutar de punta a punta. Ruby 3.3.12 + Bundler + Fastlane 2.240.1 ya
+  están instalados y los cinco lanes se ejecutan (ver el cierre del encargo, más abajo).
+- **Microsoft Store**: la misma PWA se puede empaquetar con PWABuilder casi sin trabajo, y Windows no
+  tiene el bug de compartir que obligó a envolver Android con Capacitor. No se hizo — no se pidió.
+
+### Cerrando el encargo: compilar de verdad y resolver las dependencias (2026-09-21)
+La entrega anterior dejó dos partes del encargo original sin cumplir del todo —«verifica que las
+compilaciones web y móvil pasen sin errores» y «resuelve dependencias faltantes»—: la compilación de
+Android solo se había comprobado en **prerrequisitos** (`--check`), y Ruby/Fastlane seguían sin
+instalar. Al cerrarlas salieron **ocho defectos, todos en mi propio trabajo**, y ninguno se veía sin
+ejecutar exactamente aquello que se estaba verificando.
+
+⚠️ **El hilo que los une, y es la lección de la sesión**: `node --check` y `ruby -c` validan la
+**sintaxis**, no el programa. Los ocho pasaron esas comprobaciones sin una queja. Un script de
+despliegue que nadie ha ejecutado no está verificado, está escrito — y aquí «escrito» llegó a
+significar un lane que **corrompía el archivo del que depende compilar**.
+
+#### Lo que salió al compilar Android de verdad
+- ⚠️ **`build:android` no compilaba: la ruta del proyecto lleva ESPACIOS.** Con `shell:true` en
+  Windows, Node concatena el comando sin entrecomillar y cmd.exe lo parte en el primer espacio:
+  «"D:\…\Proyectos" no se reconoce como un comando». El segundo intento —invocar solo `gradlew.bat`
+  confiando en el directorio de trabajo— **tampoco funciona**: cmd.exe no lo encuentra. La única
+  forma que va es la **ruta absoluta entrecomillada**, con la tarea dentro de la misma cadena (en el
+  arreglo de argumentos, Node los concatena sin escapar y avisa de obsolescencia por ello).
+- ⚠️ **Y la primera «compilación correcta» no compiló nada.** Gradle dio `BUILD SUCCESSFUL` con todo
+  `UP-TO-DATE` y el `.aab` resultante **era del 23 de julio**: correcto por incremental, inútil como
+  verificación. Solo `clean bundleRelease` prueba algo — **177 tareas ejecutadas**, `.aab` nuevo de
+  3,05 MB y `jarsigner -verify` → **`jar verified.`**. ⚠️ Comprobar la fecha del artefacto, no el
+  mensaje de Gradle.
+- ⚠️ **`deploy:playstore` tenía un `ReferenceError` que `node --check` NO detecta.** Usaba
+  `readdirSync` sin importarlo: la sintaxis es válida y el fallo solo aparece al ejecutar.
+- ⚠️ **Ruby recién instalado NO está en el PATH de una terminal ya abierta** (Windows solo lo entrega
+  a procesos nuevos), así que el script habría dicho «Ruby no está instalado» **justo después de
+  instalarlo**, que es el peor momento para decirlo. `rubyEnPath()` lo busca en los sitios de
+  RubyInstaller y antepone su carpeta al PATH de los procesos hijos.
+- ⚠️ **La versión de Ruby salía en blanco** por lo mismo de los espacios: con los argumentos en el
+  arreglo y `shell:true`, a ruby le llega «-e print RUBY_VERSION» en tres trozos — evalúa `print` y
+  busca un archivo llamado `RUBY_VERSION`.
+
+**Lo instalado**: Ruby 3.3.12 con DevKit (`winget --source winget`, porque el origen de Microsoft
+Store falla en esta máquina con error de certificado) + Bundler 2.5.22 + **Fastlane 2.240.1** por
+`bundle install` con `path vendor/bundle` (103 gemas). ⚠️ `vendor/bundle/` y `.bundle/` van al
+`.gitignore` del proyecto Android; **`Gemfile.lock` SÍ se versiona**: fija la versión exacta con la
+que se desplegó.
+
+#### Los tres bugs del Fastfile, que solo aparecen EJECUTÁNDOLO
+Los tres estaban en un archivo que yo mismo había dado por bueno con `ruby -c` → `Syntax OK`.
+
+- ⚠️ **`bump_version` CORROMPÍA `app/build.gradle`.** Escribía el prefijo capturado con una
+  retroreferencia dentro de una cadena **entre comillas dobles**, y en Ruby una barra seguida de 1
+  entre comillas dobles **no es la retroreferencia al grupo 1**: es el escape octal del carácter de
+  control 0x01. Medido, no deducido: esa cadena da los bytes `[1, 52]`, o sea que «versionCode 3»
+  quedaba en «<0x01>4» y el archivo del que sale el build entero dejaba de ser válido. Ahora el
+  prefijo se devuelve **desde un bloque** (`$1`), que no depende de ninguna sutileza de comillas.
+  ⚠️ Y la trampa es de familia, no de lenguaje: **la plantilla de JavaScript rechazó el mismo `\1`
+  como escape octal** mientras escribía el script del arreglo, y el heredoc del shell colapsaba las
+  barras dobles. Tres capas seguidas maltratando el mismo carácter.
+- ⚠️ **Todas las rutas relativas del Fastfile apuntaban a donde no están.** Fastlane ejecuta el
+  **cuerpo de un lane** con el directorio de trabajo en `fastlane/`, y **cada acción** un nivel más
+  arriba, en la raíz del proyecto. No es suposición: está en `runner.rb` de la gema —`Dir.chdir`
+  a `FastlaneFolder.path` para el lane, y `Dir.chdir("..")`, comentado *«go up from the fastlane
+  folder, to the project folder»*, para la acción—. O sea que **una misma cadena relativa significa
+  dos cosas distintas** según la use Ruby plano (`File.read`, `File.exist?`) o una acción
+  (`upload_to_play_store`, `validate_play_store_json_key`), y el Fastfile mezclaba las dos: el lane
+  moría con «No such file or directory @ rb_sysopen - app/build.gradle».
+  ⚠️ **Tampoco sirve colgarlas de `FastlaneFolder.path`**: devuelve una ruta **relativa**
+  (`./fastlane/`), así que arrastra el mismo problema. La raíz se **busca hacia arriba y se comprueba
+  por su contenido**, de modo que da igual desde qué directorio se invoque fastlane y da igual si una
+  versión futura de la gema cambia su `chdir`. Si no aparece, se dice; no se devuelve una ruta a
+  ciegas con la que fallaría algo más adelante.
+- ⚠️ **`File.write` reescribía los 71 finales de línea del archivo.** En Windows convierte cada LF a
+  CRLF: `app/build.gradle` está en **LF** y el lane lo devolvía en **CRLF** (2 793 → 2 864 bytes),
+  así que subir el versionCode un número producía un diff de **archivo entero** para un cambio de un
+  carácter. Con `binread`/`binwrite` los bytes van y vuelven tal cual. ⚠️ **No se vio con `diff` a
+  secas** —marcaba las 71 líneas como distintas con contenido idéntico— ni con `grep -c` del CR, que
+  contó 71 en los dos archivos; hizo falta contar las secuencias con Ruby.
+
+#### Cómo se verificó, ahora sí ejecutando
+- **Los cinco lanes cargan** (`preflight`, `bump_version`, `build`, `deploy_internal`,
+  `promote_closed`) con su descripción, **invocando desde `android/` y desde `android/fastlane/`**.
+- **`bump_version` de punta a punta sobre el `app/build.gradle` real** (con respaldo, y restaurado
+  después): `versionCode 1 → 2`, **0 bytes de diferencia de tamaño**, **exactamente una línea
+  distinta** y los 71 finales de línea intactos.
+- **`preflight` ejecuta su cuerpo y dispara su guarda** nombrando la ruta **absoluta** de la clave
+  ausente, idéntica desde los dos directorios de invocación — que es lo que prueba que `raiz` no
+  resolvió a `fastlane/`.
+- ⚠️ **Lo que sigue sin poder ejecutarse de punta a punta es la SUBIDA**, y no por el código: falta
+  `google-play-key.json`, que exige la cuenta de Play Console **verificada**. `deploy:playstore
+  --check` da hoy `✓ Ruby 3.3.12` · `✓ Fastlane disponible (por Bundler, versión fijada)` ·
+  `✓ firma configurada`, y el único `✗` es esa clave. Y aunque estuviera, **la primera versión de una
+  ficha no se sube por API**.
+- Sin tocar nada de la app: `build:web --check` en verde (build 110, 2 bloques de script válidos,
+  cero recursos externos), los **7 scripts** pasan `node --check` y `verify_membresia` sigue en
+  **43/43**.
+
+⚠️ **Lección de método, propia de esta sesión**: el bucle que esperaba a `bundle install` buscaba
+«error» y casó con la gema **`google-cloud-errors`**, así que di por terminada una instalación que
+seguía corriendo y concluí que Fastlane fallaba. Un patrón de espera tiene que casar con **líneas de
+estado** (`^Bundle complete`, `^EXIT=`), no con subcadenas que aparecen en los datos.

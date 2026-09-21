@@ -4,13 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>LexCapture v8</title>
+  <link rel="manifest" href="./manifest.json">
   <script>
-    // Redirect to the main app. El token ?v se sube en cada despliegue para
-    // forzar que el navegador/CDN descarguen el HTML nuevo (evita caché vieja).
-    window.location.replace('/lexcapture/LexCapture_v8.html?v=109');
+    // Redirect a la app. El token ?v lo sube `npm run build:web` en cada
+    // despliegue para forzar que el navegador/CDN descarguen el HTML nuevo.
+    //
+    // ⚠️ La ruta es RELATIVA a propósito. Estuvo clavada a '/lexcapture/…',
+    // así que la app solo arrancaba servida desde una ruta con ese nombre:
+    // en localhost, en la raíz de un dominio o dentro de un paquete de
+    // escritorio el redirect daba 404 y no se veía nada. Con './' funciona
+    // desde cualquier host y cualquier subcarpeta, que es lo que hace que la
+    // misma copia sirva para GitHub Pages, para un servidor local y para el
+    // envoltorio nativo. El resto del proyecto (sw.js, manifest, el registro
+    // del Service Worker) ya era relativo.
+    window.location.replace('./LexCapture_v8.html?v=110');
   </script>
 </head>
 <body>
   <p>Redirigiendo a LexCapture...</p>
+  <noscript>
+    <p>Esta aplicación necesita JavaScript.
+       <a href="./LexCapture_v8.html">Abrir LexCapture</a>.</p>
+  </noscript>
 </body>
 </html>

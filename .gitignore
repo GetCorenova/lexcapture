@@ -34,3 +34,42 @@ verify_fpj6_*.docx
 
 # Salidas de verify_mejora1 (aire entre elementos del numeral 7)
 verify_mejora1_aire-*.docx
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECRETOS — este repositorio SE PUBLICA (es el que sirve GitHub Pages), así
+# que cualquier cosa de estas que caiga aquí quedaría a la vista de todo el
+# mundo y en el historial para siempre. Hoy el keystore y la clave de servicio
+# viven fuera de cualquier repo a propósito; esto es la red por si se mueven.
+#
+# ⚠️ Si alguna vez se comete uno de estos por error, NO basta con borrarlo en
+# un commit nuevo: hay que ROTAR la credencial (crear otra clave de servicio
+# en Google Cloud). El keystore no se puede rotar — perder su control obliga a
+# publicar la app como una ficha nueva.
+# ─────────────────────────────────────────────────────────────────────────────
+google-play-key.json
+*-play-key.json
+play-store-credentials.json
+
+# Clave PRIVADA de emisión de licencias. Con ella se firman las membresías:
+# quien la tenga puede emitirse acceso prémium y emitir a nombre del
+# desarrollador. Vive en keystore-RESGUARDAR/, fuera de todo repositorio.
+# ⚠️ La PÚBLICA sí va versionada — está embebida en la app a propósito y no
+# permite fabricar nada, solo comprobar una firma.
+*-PRIVADA.json
+*PRIVADA*
+*.jks
+*.keystore
+keystore.properties
+.env
+.env.*
+!.env.example
+
+# Fastlane: informes y metadatos descargados de Play Console
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+**/metadata/android/**/changelogs/default.txt
+
+# Salidas locales del build web
+verify_web_desktop.png
