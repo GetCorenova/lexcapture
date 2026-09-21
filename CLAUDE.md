@@ -6481,3 +6481,127 @@ Los tres estaban en un archivo que yo mismo había dado por bueno con `ruby -c` 
 «error» y casó con la gema **`google-cloud-errors`**, así que di por terminada una instalación que
 seguía corriendo y concluí que Fastlane fallaba. Un patrón de espera tiene que casar con **líneas de
 estado** (`^Bundle complete`, `^EXIT=`), no con subcadenas que aparecen en los datos.
+
+### La cuenta quedó verificada, y con ella salieron dos defectos de publicación (2026-09-21)
+Google aprobó la verificación de identidad de la cuenta de Play Console —pendiente desde el 23 de
+julio— y la consola pasó a ofrecer «Crear app». Al preparar de verdad la primera subida salieron
+**dos cosas que habrían llegado rotas a la tienda**, ninguna visible desde el navegador.
+
+#### ⚠️ El lector de códigos y la foto de la cédula NO funcionaban dentro de la app publicada
+Medido en el emulador, no supuesto: dentro del envoltorio, `navigator.mediaDevices.getUserMedia`
+devolvía **`NotAllowedError: Permission denied`** aunque el equipo tuviera cámara —el AVD declara
+`hw.camera.back=virtualscene`, así que el fallo no era de hardware— y **sin mostrar ningún diálogo**.
+El funcionario no tenía forma de arreglarlo: no había permiso que conceder en ninguna pantalla.
+- **Causa: la ausencia de una declaración.** Un WebView solo puede pedir la cámara si la
+  APLICACIÓN declara `android.permission.CAMERA`. En la web la concede el navegador; Capacitor no la
+  declara por su cuenta y el plugin de cámara no está instalado (solo filesystem, share y purchases).
+  Es la misma familia que el `w:sz` ausente del acta y el `rPr` ausente del pie del oficio: **mirar
+  qué valores hay no detecta nada, porque el defecto es que no hay ninguno**.
+- Afectaba a los **dos** usos de la cámara: `ptScanAbrir` (vincular con el compañero en Modo
+  compartir, que es la vía principal) y `openCamera` (la foto del documento de identidad).
+- ⚠️ **`<uses-feature android:required="false">` no es opcional aquí.** Declarar el permiso hace que
+  Play dé por **requerido** el hardware `android.hardware.camera` y `camera.autofocus`, y esconda la
+  app en los equipos que no lo tienen. En LexCapture la cámara es prescindible: sin ella se
+  diligencia y se generan los seis documentos igual, y las dos funciones que la usan ya avisan solas
+  (`_ptCamMotivo` distingue permiso bloqueado, cámara ocupada y sin cámara trasera, y remite al
+  respaldo por archivo). Por eso se declaran **no requeridas**.
+- **Verificado con el ciclo completo, no solo con el arreglo puesto**: con el manifiesto anterior,
+  `NotAllowedError` y ningún diálogo; con el nuevo, aparece el diálogo del sistema («Allow LexCapture
+  to take pictures and record video?») y `getUserMedia` entrega `camera2 1, facing back`, 30 fps,
+  `facingMode: environment`. Comprobado además que el `.aab` de release lleva el permiso en su
+  manifiesto fusionado y que la app instalada desde ese build arranca sin excepciones.
+- ⚠️ **El socket de depuración del WebView NO existe en una compilación de release** (Capacitor solo
+  lo abre en debug), así que para instrumentar por CDP hay que medir sobre `assembleDebug`, que
+  fusiona el mismo manifiesto. El release se comprueba aparte: manifiesto fusionado, instalación,
+  arranque y ausencia de excepciones.
+- ⚠️ **Regla que deja**: una función web que dependa de una API del dispositivo hay que probarla
+  **dentro del envoltorio**. El navegador y el WebView no tienen los mismos permisos, y el envoltorio
+  es justamente lo que nunca pasa por las suites de Playwright.
+
+#### ⚠️ La política de privacidad llevaba dos meses diciendo cosas que ya no eran ciertas
+`privacy.html` era del 14 de julio y describía una app que ya no existe. Play **exige que la política
+y el formulario de seguridad de los datos coincidan**, y declarar de menos es motivo de rechazo. Lo
+que había quedado falso, palabra por palabra:
+
+| Decía | Desde cuándo es falso |
+|---|---|
+| «Ningún dato se envía a servidores externos» | Sincronización con el Drive del usuario (2026-09-18) |
+| «No requiere cuenta ni registro en línea» | La misma: pide la cuenta de Google si se activa |
+| «Solo utiliza el almacenamiento local del dispositivo» | Ahora hay INTERNET, CAMERA y BILLING |
+| No mencionaba compras | El `.aab` declara `com.android.vending.BILLING` |
+| No mencionaba el Modo compartir | 2026-09-07 |
+
+Reescrita a 15 apartados, con uno propio para la copia en Drive (cifrada en el equipo, en
+`appDataFolder`, clave que nunca sale), otro para el Modo compartir, otro para la cámara (las
+imágenes no salen del equipo) y otro para las suscripciones (Google Play cobra; RevenueCat recibe
+**solo** el comprobante y un identificador de instalación, nunca capturas ni personas), más una tabla
+de los tres permisos y para qué sirve cada uno. Renderiza en los dos temas, sin desborde a 420 px y
+sin errores de consola.
+- ⚠️ **Al añadir cualquier función que mueva datos fuera del equipo, tocar también este archivo.** Es
+  la pieza del proyecto que más fácil se queda atrás, porque nada la ejecuta y ninguna suite la mide.
+
+#### Y un orden que la guía tenía mal
+La guía de publicación ponía «crear las suscripciones» **antes** de subir el paquete. No se puede:
+Play no deja crear productos hasta que exista un `.aab` subido que declare facturación. Corregido a
+seis fases — crear la app · RevenueCat · ficha y primera subida · suscripciones · vincular las dos
+consolas · pruebas cerradas.
+- ⚠️ **Dos decisiones irreversibles al crear la app**, las dos en la fase 1: marcar **Gratuita** (de
+  gratuita a de pago no se puede cambiar nunca una vez publicada; al revés sí) y el **nombre del
+  paquete**, que lo fija el primer `.aab` y ya no se puede tocar.
+- ⚠️ **La primera versión de una ficha no se sube por API**: `npm run deploy:playstore` sirve a
+  partir de la segunda, y hasta entonces responde 403 sin decir que la causa es esa.
+- El `.aab` listo para subir: **6 068 969 bytes**, `jar verified.`, `versionCode 1`, `minSdk 24`,
+  `targetSdk 36`, y cuatro permisos en el manifiesto fusionado: INTERNET, ACCESS_NETWORK_STATE,
+  CAMERA y `com.android.vending.BILLING`.
+
+## La foto de la cédula se retira del formulario de personas (2026-09-21)
+Reportado en campo con el pantallazo del formulario y el botón de cámara señalado: *«elimina la
+opción de capturar datos con la cámara, esto la verdad es importante»*, precisado enseguida —*«me
+refiero cuando se toman los datos de las personas, víctimas o capturados; para lo demás hay que
+mantenerlo»*— y con el motivo de fondo: *«cuando se usa para leer cédulas, esto es complicado,
+muchas personas ni cédula cargan»*.
+
+- ⚠️ **El botón NO capturaba ningún dato, y su nombre decía lo contrario.** `openCamera('pm')` abría
+  la cámara a pantalla completa, tomaba una foto, la enseñaba en un modal con el texto «usa esta
+  foto como referencia para llenar los campos» y **la descartaba**: no se guardaba, no se adjuntaba
+  al registro, no rellenaba una sola casilla y no había OCR por ninguna parte. El prefijo que
+  recibía (`_camTarget`) **se asignaba y no se leía nunca** — el rellenado automático para el que
+  se guardaba jamás se implementó. Dos toques y un permiso del sistema para acabar tecleando lo
+  mismo mirando en la pantalla una cédula que el funcionario tiene en la mano.
+- ⚠️ **Y el motivo del usuario lo remata**: el caso corriente es que la persona **no lleve** el
+  documento encima, así que el camino que la app ofrecía en primer plano era el que menos veces se
+  puede recorrer. Los datos salen de lo que la persona declara y de la consulta al sistema, no de
+  una foto.
+- **Retirado entero**, no solo su botón: el overlay a pantalla completa con su vídeo y su lienzo,
+  el bloque CSS (`.cam-ov`, `.cam-bar` y sus cinco reglas), las dos variables de estado y las tres
+  funciones. Es la lección de las plantillas subidas (2026-08-08) y del modo invitado (2026-09-18):
+  *cortar la entrada y dejar el resto del subsistema es quedarse pagando el peaje*. Quitando el
+  botón, nada podía volver a abrir aquel overlay. Medido: **cero apariciones** de los nueve
+  identificadores del subsistema, y `getUserMedia` pasa de dos usos a uno.
+- ⚠️ **EL LECTOR DE CÓDIGOS DEL MODO COMPARTIR NO SE TOCA, y el permiso CAMERA del manifiesto de
+  Android TAMPOCO** («para lo demás hay que mantenerlo»). Es la vía principal para vincular los dos
+  teléfonos y tiene overlay, cámara y ciclo de vida propios: no compartía una línea con lo
+  retirado. Comprobado sobre el manifiesto —`uses-permission CAMERA` y los dos `uses-feature
+  required="false"` intactos— y con `verify_compartir` **57/57**.
+- ⚠️ **El comentario del lector justificaba su diseño con algo que iba a dejar de existir**
+  («overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo»). Reescrito: un
+  comentario que explica un porqué con una razón que ya no es cierta es peor que no tenerlo, porque
+  el siguiente que lo lea deshará la decisión.
+- ⚠️ **La política de privacidad prometía algo que el código NUNCA hizo**: decía que la fotografía
+  del documento de identidad se tomaba «para adjuntarla al registro». No se adjuntaba a nada. El
+  apartado 7 y la tabla de permisos quedan con **la única función que de verdad usa la cámara**, el
+  lector de vinculación, y añaden que los registros también se pueden pasar por archivo cifrado sin
+  usar la cámara. ⚠️ Play exige que la política y el formulario de seguridad de los datos coincidan:
+  esta es la pieza del proyecto que más fácil se queda atrás, porque nada la ejecuta y ninguna suite
+  la mide.
+- **Se miró la pantalla, no solo el DOM**: el botón iba con `float:right` **dentro** del `<label>`
+  del campo «Número», así que lo que había que comprobar era que la etiqueta no quedara con un hueco
+  ni descuadrada. Capturado el formulario en los **dos temas**: «Número» queda igual que las demás
+  etiquetas del panel y la consola sale limpia. Es la lección de la pantalla que se insertó fuera de
+  `<main>` y salía en blanco con la regresión en verde.
+- Regresiones en verde: personas 25 · compartir 57 · fpj6 140 · mejora1 157 · mejora5 78 · tema 40 ·
+  expediente 13 · sincro 32 · multipersona.
+  ⚠️ **Un fallo PREEXISTENTE**: `verify_jerarquia` 65/66 — el aviso de más de 110 caracteres de
+  Ajustes sobre los marcadores del asunto del oficio, ya documentado; **comprobado que esa cadena
+  está en el HTML de HEAD**, y no tiene relación con el formulario de personas.
+  Anti-caché `?v=112` / `cache-v112`, `_BUILD=112`.

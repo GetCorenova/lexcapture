@@ -1245,13 +1245,6 @@ body.pt{padding-top:36px}
 .tpl-chip:hover{background:var(--hover)}
 .tpl-chip:active,.tpl-chip.on{border-color:transparent;color:var(--acc);background:var(--accG)}
 
-/* ═══ CÁMARA ═══ */
-.cam-ov{position:fixed;inset:0;z-index:250;background:#000;display:none;flex-direction:column}
-.cam-ov.open{display:flex}
-.cam-ov video{flex:1;object-fit:cover}
-.cam-bar{display:flex;gap:12px;padding:20px;background:rgba(0,0,0,.8);justify-content:center}
-.cam-bar button{padding:14px 28px;border-radius:12px;border:none;font-size:15px;font-weight:600;cursor:pointer;min-height:52px}
-
 /* ═══ SIMULADOR ═══ */
 .simr{
   border:1px solid var(--border);border-radius:var(--radius);
@@ -2626,19 +2619,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div id="act-items"></div>
 </div>
 
-<!-- ====== CÁMARA ====== -->
-<div class="cam-ov" id="cam-ov">
-  <video id="cam-video" autoplay playsinline></video>
-  <canvas id="cam-canvas" style="display:none"></canvas>
-  <div class="cam-bar">
-    <button onclick="capturePhoto()" style="background:var(--acc);color:var(--acc-fg)">Capturar</button>
-    <button onclick="closeCamera()" style="background:#2A2E38;color:#fff">Cerrar</button>
-  </div>
-</div>
-
 <!-- ====== LECTOR DE CÓDIGOS (modo compartir) ======
-     Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo
-     y aquí no se dispara nada — se lee solo en cuanto el código entra al marco. -->
+     Overlay propio, sin botón de disparo: el código se lee solo en cuanto entra
+     al marco, así que aquí no se captura nada a mano. -->
 <!-- Selector del archivo de intercambio. Oculto: lo dispara el botón de la pantalla. -->
 <input type="file" id="pt-arch" accept=".lexc,application/octet-stream" style="display:none" onchange="ptArchivoElegido(this)">
 <div id="pt-scan">
@@ -2685,7 +2668,6 @@ var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil',
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
-var _camStream = null, _camTarget = '';
 
 function go(name) {
   if (screens.indexOf(name) < 0) return;
@@ -2825,7 +2807,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 111;
+var _BUILD = 112;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -5710,7 +5692,7 @@ function openPersonModal(key,idx,p,showSenas,showRole){
     '<option value="CE" '+(p.tipoDoc==='CE'?'selected':'')+'>CE</option><option value="Pasaporte" '+(p.tipoDoc==='Pasaporte'?'selected':'')+'>Pasaporte</option>'+
     '<option value="DIE" '+(p.tipoDoc==='DIE'?'selected':'')+'>DIE</option>'+
     '</select></div>'+
-    '<div class="fg"><label class="fl">Número <button class="btn bs" style="padding:2px 8px;font-size:.65rem;float:right" onclick="openCamera(\'pm\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></button></label>'+
+    '<div class="fg"><label class="fl">Número</label>'+
     '<input class="fi mono" id="pm-numDoc" value="'+(p.numDoc||'')+'" inputmode="numeric"></div></div>'+
     '<div class="fg"><label class="fl">Expedido en</label><input class="fi" id="pm-expEn" value="'+escAttr(p.expEn)+'"></div>'+
     /* El nombre completo es la segunda entidad de este panel: sus cuatro partes
@@ -6979,27 +6961,23 @@ function shareDosWA(){
   enviarDossierCaso(_dosCasoId);
 }
 
-function openCamera(prefix){
-  _camTarget=prefix;
-  var ov=document.getElementById('cam-ov'),vid=document.getElementById('cam-video');
-  ov.classList.add('open');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}})
-    .then(function(s){_camStream=s;vid.srcObject=s;})
-    .catch(function(){toast('No se pudo acceder a la cámara');closeCamera();});
-}
-function closeCamera(){
-  if(_camStream){_camStream.getTracks().forEach(function(t){t.stop();});_camStream=null;}
-  document.getElementById('cam-ov').classList.remove('open');
-}
-function capturePhoto(){
-  var vid=document.getElementById('cam-video'),can=document.getElementById('cam-canvas');
-  can.width=vid.videoWidth;can.height=vid.videoHeight;can.getContext('2d').drawImage(vid,0,0);
-  var img=can.toDataURL('image/jpeg',0.85); closeCamera();
-  openModal('<div class="mh"><h2>Foto de cédula</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
-    '<img src="'+img+'" style="width:100%;border-radius:var(--radius);margin-bottom:12px">'+
-    '<p class="txd txs">Usa esta foto como referencia para llenar los campos.</p>'+
-    '<button class="btn bp bbl mt8" onclick="closeModal()">Continuar llenando</button>');
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   LA FOTO DEL DOCUMENTO DE IDENTIDAD SE RETIRÓ (2026-09-21)
+
+   El formulario de persona traía un botón de cámara junto al número de documento
+   y NO capturaba ningún dato: abría la cámara a pantalla completa, tomaba una
+   foto, la enseñaba en un modal con el texto «úsala como referencia para llenar
+   los campos» y la descartaba. No se guardaba, no se adjuntaba al registro y no
+   rellenaba una sola casilla — costaba dos toques y un permiso del sistema para
+   acabar tecleando lo mismo mirando en la pantalla una cédula que el funcionario
+   tiene en la mano.
+   ⚠️ La política de privacidad decía que la imagen se adjuntaba al registro:
+   prometía algo que el código nunca hizo. Quedó corregida junto con esto.
+   ⚠️ EL PERMISO CAMERA DEL MANIFIESTO DE ANDROID SE QUEDA. Lo necesita el lector
+   de códigos del Modo compartir, que es la vía principal para vincular los dos
+   teléfonos y tiene overlay, cámara y ciclo de vida propios: no comparte una
+   línea con lo retirado.
+═══════════════════════════════════════════════════════════════════════════ */
 
 /* ═══════════════════════════════════════════
    FASE C — DOSSIER
