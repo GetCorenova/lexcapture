@@ -6322,19 +6322,47 @@ tres cuestionaba la premisa de que aquello viviera dentro de la app — que era 
 absoluta de `index.html`, los scripts de build y despliegue, el `.gitignore` endurecido y Fastlane.
 Los puntos 1 y 4 estaban bien leídos y siguen vigentes en sus secciones de arriba.
 
-#### Dónde vive de verdad la membresía, para cuando se retome
-No se ha implementado nada de esto: queda anotado para no volver a empezar por el sitio equivocado.
-- **La administración es Play Console** → Monetizar → Productos → Suscripciones: un producto con sus
-  planes base mensual y anual, sus ofertas (prueba gratuita, precio de lanzamiento) y sus precios.
-  Los «accesos gratuitos» y los «descuentos» que pedía el encargo son **códigos promocionales** y
-  **probadores con licencia**, que ya están ahí.
-- **La app solo pregunta si hay derecho**, y eso exige la API nativa de facturación → un complemento
-  de Capacitor → **recompilar y subir un `.aab` nuevo**. El puente funciona con carga remota, igual
-  que `Share` y `Filesystem` (`window.Capacitor.Plugins.*`), así que el código web se despliega como
-  siempre.
-- ⚠️ **No se puede probar una compra hasta que la app esté en una pista de prueba de Play**, así que
-  publicar NO debe esperar a la membresía: primero la app gratuita, la facturación en una versión
-  posterior.
+#### Dónde vive de verdad la membresía — decidido con el usuario (2026-09-21)
+Elegido por el usuario tras la retirada: **RevenueCat**, y **solo en Android** por ahora.
+- **La administración es Play Console** → Monetizar → Productos → Suscripciones: **una** suscripción
+  (`lexcapture_premium`) con **dos planes base**, `mensual` (P1M) y `anual` (P1Y), sus ofertas de
+  prueba gratuita y sus precios por país. Los «accesos gratuitos» y los «descuentos» que pedía el
+  encargo son **códigos promocionales** y **probadores con licencia**, que ya están ahí. ⚠️ El ID de
+  una suscripción **no se puede cambiar nunca**.
+- **RevenueCat añade el panel externo** que el encargo quería: ver suscriptores y **conceder acceso a
+  una persona concreta**, más validación de recibos en su servidor sin montar ninguno. ⚠️ Solo recibe
+  recibos de compra y un identificador de app: **no ve capturas, personas ni documentos**, que es lo
+  que lo hace compatible con la regla de Habeas Data de este proyecto.
+- ⚠️ **La app solo pregunta «¿tiene el derecho `premium`?»**, nunca por un producto concreto: así
+  añadir mañana un plan trimestral no toca una línea de código.
+
+**Envoltorio Android: PREPARADO Y VERIFICADO** (`lexcapture-android`, que no es un repositorio git).
+- `@revenuecat/purchases-capacitor@13.6.0` — es la que pide `@capacitor/core >= 8.0.0`, que es la
+  versión del envoltorio. `npx cap sync android` lo registra: 3 plugins (filesystem, share, purchases).
+- Medido, no supuesto: `clean bundleRelease` → **BUILD SUCCESSFUL**, 213 tareas ejecutadas,
+  `jarsigner -verify` → **`jar verified.`**, y el SDK está de verdad en el `.dex` (1 475 referencias a
+  revenuecat, 35 a BillingClient). ⚠️ `strings` sobre el `.dex` da **falso negativo** en esta máquina;
+  hay que buscar con `grep -a` sobre el binario.
+- **Instalado y arrancado en el emulador Pixel_7**: el proceso vive, sin excepciones fatales, y la
+  pantalla de PIN se dibuja cargando el build web remoto. ⚠️ Hubo que **desinstalar** la copia vieja
+  (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`: la de julio estaba firmada con otra clave).
+- ⚠️ **El `.aab` pasa de 3,11 a 6,07 MB** y el manifiesto final gana **`com.android.vending.BILLING`**
+  y `ACCESS_NETWORK_STATE`. Eso hace que Play marque la ficha como «Compras dentro de la aplicación»
+  y **obliga a declarar el historial de compras en el formulario de seguridad de los datos**.
+- ⚠️ **Las 2 vulnerabilidades altas de `npm audit` NO son de RevenueCat**: cuelgan de
+  `@capacitor/cli` (`@xmldom/xmldom`, `brace-expansion`), que es herramienta **de compilación** y no
+  viaja dentro del `.aab`. Ya estaban antes.
+
+⚠️ **Lo que falta para escribir el código web es la clave pública de RevenueCat** (`goog_…`), que el
+usuario obtiene creando el proyecto. Sin ella no hay nada que cablear — mismo patrón que
+`SY_CLIENT_ID`. ⚠️ **No se puede probar una compra hasta que la app esté en una pista de Play**, y
+las pruebas cerradas de 14 días son obligatorias para una cuenta personal: **son la única ventana
+para validar el flujo de compra antes de vender**, así que conviene que el `.aab` que se suba a esa
+pista ya lleve la facturación dentro.
+⚠️ **Reglas del muro, cuando se escriba**: vive en `lcProducirDoc` (productor único), **falla
+ABIERTO** —si no se puede comprobar el derecho, deja pasar—, no bloquea nunca una captura ya
+empezada, y jamás bloquea leer, editar ni exportar el respaldo. El plazo del art. 28 C.P. son 36
+horas: dejar a un policía sin su FPJ-5 cuesta infinitamente más que una mensualidad sin cobrar.
 - ⚠️ **En la web de escritorio no existe Play Billing.** Cobrar ahí es otra decisión y otra
   tecnología, y hay que tomarla aparte en vez de dar por hecho que una sola solución cubre las dos.
 
