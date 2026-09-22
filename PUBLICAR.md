@@ -1,6 +1,6 @@
-# Subir LexCapture a Play Store — punto de partida
+# Subir Flagrante a Play Store — punto de partida
 
-> Escrito el 2026-09-21 contra el **build 113**. Empezar el chat nuevo leyendo
+> Escrito el 2026-09-21 contra el **build 114** (la app se renombró a Flagrante ese día). Empezar el chat nuevo leyendo
 > **este archivo**, no el `CLAUDE.md` entero (son 4 000 líneas de historia del
 > producto; aquí está solo lo que hace falta para publicar).
 >
@@ -15,12 +15,12 @@
 |---|---|
 | Cuenta de Play Console | ✅ **verificada** (21-09-2026). Ya aparece «Crear app» |
 | App creada en Play Console | ❌ **no** — es la fase 1 |
-| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · 6 068 969 B · `jar verified` · versionCode 1 · minSdk 24 · targetSdk 36 |
+| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · 6 009 151 B · `jar verified` · versionCode 1 · paquete `com.getcorenova.flagrante` · ícono de Flagrante dentro · minSdk 24 · targetSdk 36 |
 | Permisos del manifiesto fusionado | `INTERNET`, `ACCESS_NETWORK_STATE`, `CAMERA` (opcional), `com.android.vending.BILLING` |
-| Código web publicado | ✅ build 113 en https://getcorenova.github.io/lexcapture/ |
+| Código web publicado | ⚠️ **build 113** en https://getcorenova.github.io/lexcapture/ — el 114 (renombrado) está listo y **sin desplegar** |
 | Ficha de tienda | ✅ `Crear App/store-listing.md` — versionada, se publica con el repo |
 | Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html (actualizada 21-09) |
-| Ícono 512×512 | ✅ `Crear App/icon-512.png` |
+| Ícono 512×512 | ✅ `Crear App/icon-store-512.png` — a sangre, sin transparencia: Google aplica su propio redondeo |
 | Gráfico de funciones 1024×500 | ✅ `lexcapture-android/store/feature-graphic-1024x500.png` |
 | Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` (1080×2400, del build 113) |
 | Proyecto en RevenueCat | ❌ **no** — falta, y con él la clave pública |
@@ -48,11 +48,11 @@ comando `npm run deploy:playstore` sirve **a partir de la segunda** subida.
 - **Gratuita o de pago** → marcar **Gratuita**. De gratuita a de pago no se puede
   cambiar nunca una vez publicada; al revés sí. La suscripción es una compra
   dentro de la app, así que la app es gratuita.
-- **Nombre del paquete** → lo fija el primer `.aab`: `com.getcorenova.lexcapture`.
+- **Nombre del paquete** → lo fija el primer `.aab`: `com.getcorenova.flagrante`.
   No se puede cambiar después.
 
 ### Fase 2 · RevenueCat
-1. Crear el proyecto y la app de Android (`com.getcorenova.lexcapture`).
+1. Crear el proyecto y la app de Android (`com.getcorenova.flagrante`).
 2. Copiar la **clave pública** (empieza por `goog_`).
 3. Sin esa clave no hay nada que cablear en el código — mismo caso que
    `SY_CLIENT_ID`. **Pedírsela al usuario antes de escribir una línea.**
@@ -68,7 +68,7 @@ comando `npm run deploy:playstore` sirve **a partir de la segunda** subida.
 4. Subir `app-release.aab` a **pruebas internas** desde el navegador.
 
 ### Fase 4 · Suscripciones (solo después de subir el `.aab`)
-Monetizar → Productos → Suscripciones → **una** suscripción `lexcapture_premium`
+Monetizar → Productos → Suscripciones → **una** suscripción `flagrante_premium`
 con **dos planes base**: `mensual` (P1M) y `anual` (P1Y), con sus ofertas de
 prueba gratuita y sus precios por país.
 ⚠️ **El ID de una suscripción no se puede cambiar nunca.**

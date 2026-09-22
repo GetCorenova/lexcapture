@@ -1,6 +1,6 @@
-# LexCapture — Web (deploy PWA)
+# Flagrante — Web (deploy PWA)
 
-Paquete estático de la PWA **LexCapture**, listo para hostear en HTTPS (GitHub Pages / Netlify / Cloudflare Pages).
+Paquete estático de la PWA **Flagrante**, listo para hostear en HTTPS (GitHub Pages / Netlify / Cloudflare Pages).
 Este repositorio contiene **solo** los archivos públicos necesarios para servir la app. El código fuente de
 desarrollo (plantillas .docx, documentos internos, fases) se mantiene aparte y **no** se publica aquí.
 

@@ -9,6 +9,7 @@
     "build:web:check": "node scripts/build-web.mjs --check",
     "build:android": "node scripts/build-android.mjs",
     "build:android:check": "node scripts/build-android.mjs --check",
+    "gen:icons": "node scripts/gen-icons.mjs",
     "serve:web": "node scripts/serve-web.mjs",
     "deploy:web": "node scripts/deploy-web.mjs",
     "deploy:playstore": "node scripts/deploy-playstore.mjs",

@@ -1,36 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="bg" x1="80" y1="40" x2="440" y2="480" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#16273f"/>
-      <stop offset="1" stop-color="#0a1120"/>
-    </linearGradient>
-    <linearGradient id="amber" x1="180" y1="150" x2="330" y2="380" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#fbbf24"/>
-      <stop offset="1" stop-color="#d97706"/>
-    </linearGradient>
-    <linearGradient id="cyan" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#22d3ee"/>
-      <stop offset="1" stop-color="#00a7b8"/>
-    </linearGradient>
-  </defs>
-
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <rect x="10" y="10" width="492" height="492" rx="108" fill="none" stroke="#ffffff" stroke-opacity="0.05" stroke-width="2"/>
-
-  <!-- Viewfinder / marco de captura -->
-  <g fill="none" stroke="url(#cyan)" stroke-width="24" stroke-linecap="round">
-    <path d="M126 176 V150 Q126 126 150 126 H176"/>
-    <path d="M386 176 V150 Q386 126 362 126 H336"/>
-    <path d="M126 336 V362 Q126 386 150 386 H176"/>
-    <path d="M386 336 V362 Q386 386 362 386 H336"/>
+  <!-- Flagrante · la F del procedimiento, sobre su regla de firma,
+       dentro del encuadre de la captura. Sin gradientes ni relieve. -->
+  <rect width="512" height="512" rx="116" fill="#111E31"/>
+  <rect x="11" y="11" width="490" height="490" rx="105" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+  <g fill="none" stroke="#A9763A" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 124 V104 A26 26 0 0 1 104 78 H124"/>
+    <path d="M434 124 V104 A26 26 0 0 0 408 78 H388"/>
+    <path d="M78 388 V408 A26 26 0 0 0 104 434 H124"/>
+    <path d="M434 388 V408 A26 26 0 0 1 408 434 H388"/>
   </g>
-
-  <!-- Punto de captura activa -->
-  <circle cx="256" cy="126" r="9" fill="url(#cyan)"/>
-
-  <!-- Monograma L -->
-  <g fill="url(#amber)">
-    <rect x="212" y="168" width="58" height="178" rx="16"/>
-    <rect x="212" y="288" width="118" height="58" rx="16"/>
+  <g fill="#E8A54F">
+    <rect x="200.56" y="131.04" width="38.72" height="198.88"/>
+    <rect x="170.64" y="131.04" width="176" height="35.2"/>
+    <rect x="325.52" y="131.04" width="21.12" height="54.56"/>
+    <rect x="200.56" y="213.76" width="117.92" height="31.68"/>
+    <rect x="299.12" y="213.76" width="19.36" height="47.52"/>
+    <rect x="165.36" y="310.56" width="109.12" height="19.36"/>
+    <rect x="151.28" y="359.84" width="209.44" height="21.12" rx="4.4"/>
   </g>
 </svg>

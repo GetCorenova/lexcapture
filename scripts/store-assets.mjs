@@ -1,5 +1,5 @@
-/* Recursos graficos de la ficha de Play Store: capturas del telefono y
-   grafico de funciones 1024x500.
+/* Capturas de telefono para la ficha de Play Store.
+   El grafico de funciones lo hace store-feature.mjs, no este script.
    Se regeneran cuando la interfaz cambia — una ficha que ensena una app que ya
    no existe es motivo de rechazo, y las de julio mostraban hasta un error en rojo.
    Los datos son del SIMULADOR: inventados, con correos en el dominio reservado

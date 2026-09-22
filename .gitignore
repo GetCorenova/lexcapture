@@ -73,3 +73,9 @@ fastlane/test_output
 
 # Salidas locales del build web
 verify_web_desktop.png
+
+# Propuestas de icono generadas con IA: material de trabajo, 3,5 MB de
+# borradores descartados. Este repositorio se sirve en GitHub Pages, asi
+# que no tiene por que cargar con ellas. Se quedan en disco.
+Propuesta Icono*.png
+Propuesta Icono*.jpg

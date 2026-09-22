@@ -10,13 +10,13 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-512.png">
-<meta name="apple-mobile-web-app-title" content="LexCapture">
-<!-- LexCapture | Auditoría: 2026-06-16 | Release: 2026-07-14 -->
+<meta name="apple-mobile-web-app-title" content="Flagrante">
+<!-- Flagrante | Auditoría: 2026-06-16 | Release: 2026-07-14 -->
 <meta name="description" content="Aplicación para el registro de capturas y generación de documentos legales en campo">
-<title>LexCapture — Gestión de Capturas</title>
+<title>Flagrante — Gestión de Capturas</title>
 <style>
 /* ═══════════════════════════════════════════════════════════════════
-   LexCapture Design System v2 — 2026-07-18
+   Flagrante Design System v2 — 2026-07-18
    Arquitectura: todos los colores fluyen por tokens; el tema claro
    solo redefine tokens (no componentes). Los nombres legados
    (--acc, --bg2, --tx, --rs…) se mantienen como alias porque el JS
@@ -98,6 +98,14 @@
 
   /* — Elevación (oscuro: sombra mínima, la superficie hace el trabajo) — */
   --sh-1:0 1px 2px rgba(0,0,0,.30);
+
+  /* — Anillo del logotipo. La baldosa del logo es navy en los DOS temas: es la
+       misma del ícono del lanzador, y ese no cambia con el tema (se entrega uno
+       solo). Sobre superficie clara necesita entonces un canto propio que la
+       integre, en vez de quedar como un bloque oscuro pegado. Solo se redefine
+       el token; el componente no se toca. — */
+  --logo-ring:rgba(163,174,199,.16);
+  --logo-halo:0 1px 2px rgba(0,0,0,.30);
   --sh-2:0 4px 14px rgba(0,0,0,.35);
   --sh-3:0 20px 50px rgba(0,0,0,.50);
   --shadow:var(--sh-2);
@@ -169,6 +177,10 @@
   --mailc:#1663C7; --mail-fg:#FFFFFF;
 
   --sh-1:0 1px 2px rgba(23,26,34,.06),0 1px 1px rgba(23,26,34,.04);
+
+  /* Anillo ámbar + halo suave: ata la baldosa navy del logo al blanco */
+  --logo-ring:rgba(217,142,53,.45);
+  --logo-halo:0 0 0 3px rgba(232,165,79,.12),0 1px 3px rgba(23,26,34,.10);
   --sh-2:0 2px 6px rgba(23,26,34,.05),0 10px 28px rgba(23,26,34,.07);
   --sh-3:0 4px 12px rgba(23,26,34,.08),0 28px 64px rgba(23,26,34,.16);
   --shadow:var(--sh-2);
@@ -714,9 +726,9 @@ body.pt{padding-top:36px}
 .sb-brand{display:flex;align-items:center;gap:12px;padding:6px 10px 20px}
 .sb-logo-wrap{
   width:44px;height:44px;border-radius:12px;flex-shrink:0;
-  border:1px solid var(--border);
+  border:1.5px solid var(--logo-ring);
   display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden;
-  box-shadow:var(--sh-1);
+  box-shadow:var(--logo-halo);
 }
 .sb-logo-wrap img{width:100%;height:100%;object-fit:cover}
 .sb-brand .nm{font-weight:650;font-size:15px;letter-spacing:-.01em}
@@ -1896,9 +1908,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <!-- ====== SIDEBAR (desktop ≥900px) ====== -->
 <aside id="sidebar">
   <div class="sb-brand">
-    <div class="sb-logo-wrap"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iYmciIHgxPSI4MCIgeTE9IjQwIiB4Mj0iNDQwIiB5Mj0iNDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iIzE2MjczZiIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwYTExMjAiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImFtYmVyIiB4MT0iMTgwIiB5MT0iMTUwIiB4Mj0iMzMwIiB5Mj0iMzgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2ZiYmYyNCIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkOTc3MDYiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImN5YW4iIHgxPSIxMjAiIHkxPSIxMjAiIHgyPSIzOTIiIHkyPSIzOTIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMjJkM2VlIi8+CiAgICAgIDxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzAwYTdiOCIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CgogIDxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTE2IiBmaWxsPSJ1cmwoI2JnKSIvPgogIDxyZWN0IHg9IjEwIiB5PSIxMCIgd2lkdGg9IjQ5MiIgaGVpZ2h0PSI0OTIiIHJ4PSIxMDgiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMiIvPgoKICA8IS0tIFZpZXdmaW5kZXIgLyBtYXJjbyBkZSBjYXB0dXJhIC0tPgogIDxnIGZpbGw9Im5vbmUiIHN0cm9rZT0idXJsKCNjeWFuKSIgc3Ryb2tlLXdpZHRoPSIyNCIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIj4KICAgIDxwYXRoIGQ9Ik0xMjYgMTc2IFYxNTAgUTEyNiAxMjYgMTUwIDEyNiBIMTc2Ii8+CiAgICA8cGF0aCBkPSJNMzg2IDE3NiBWMTUwIFEzODYgMTI2IDM2MiAxMjYgSDMzNiIvPgogICAgPHBhdGggZD0iTTEyNiAzMzYgVjM2MiBRMTI2IDM4NiAxNTAgMzg2IEgxNzYiLz4KICAgIDxwYXRoIGQ9Ik0zODYgMzM2IFYzNjIgUTM4NiAzODYgMzYyIDM4NiBIMzM2Ii8+CiAgPC9nPgoKICA8IS0tIFB1bnRvIGRlIGNhcHR1cmEgYWN0aXZhIC0tPgogIDxjaXJjbGUgY3g9IjI1NiIgY3k9IjEyNiIgcj0iOSIgZmlsbD0idXJsKCNjeWFuKSIvPgoKICA8IS0tIE1vbm9ncmFtYSBMIC0tPgogIDxnIGZpbGw9InVybCgjYW1iZXIpIj4KICAgIDxyZWN0IHg9IjIxMiIgeT0iMTY4IiB3aWR0aD0iNTgiIGhlaWdodD0iMTc4IiByeD0iMTYiLz4KICAgIDxyZWN0IHg9IjIxMiIgeT0iMjg4IiB3aWR0aD0iMTE4IiBoZWlnaHQ9IjU4IiByeD0iMTYiLz4KICA8L2c+Cjwvc3ZnPgo=" alt="LexCapture"></div>
+    <div class="sb-logo-wrap"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj4KICA8IS0tIEZsYWdyYW50ZSDCtyBsYSBGIGRlbCBwcm9jZWRpbWllbnRvLCBzb2JyZSBzdSByZWdsYSBkZSBmaXJtYSwKICAgICAgIGRlbnRybyBkZWwgZW5jdWFkcmUgZGUgbGEgY2FwdHVyYS4gU2luIGdyYWRpZW50ZXMgbmkgcmVsaWV2ZS4gLS0+CiAgPHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIHJ4PSIxMTYiIGZpbGw9IiMxMTFFMzEiLz4KICA8cmVjdCB4PSIxMSIgeT0iMTEiIHdpZHRoPSI0OTAiIGhlaWdodD0iNDkwIiByeD0iMTA1IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS1vcGFjaXR5PSIwLjA4IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8ZyBmaWxsPSJub25lIiBzdHJva2U9IiNBOTc2M0EiIHN0cm9rZS13aWR0aD0iMTgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+CiAgICA8cGF0aCBkPSJNNzggMTI0IFYxMDQgQTI2IDI2IDAgMCAxIDEwNCA3OCBIMTI0Ii8+CiAgICA8cGF0aCBkPSJNNDM0IDEyNCBWMTA0IEEyNiAyNiAwIDAgMCA0MDggNzggSDM4OCIvPgogICAgPHBhdGggZD0iTTc4IDM4OCBWNDA4IEEyNiAyNiAwIDAgMCAxMDQgNDM0IEgxMjQiLz4KICAgIDxwYXRoIGQ9Ik00MzQgMzg4IFY0MDggQTI2IDI2IDAgMCAxIDQwOCA0MzQgSDM4OCIvPgogIDwvZz4KICA8ZyBmaWxsPSIjRThBNTRGIj4KICAgIDxyZWN0IHg9IjIwMC41NiIgeT0iMTMxLjA0IiB3aWR0aD0iMzguNzIiIGhlaWdodD0iMTk4Ljg4Ii8+CiAgICA8cmVjdCB4PSIxNzAuNjQiIHk9IjEzMS4wNCIgd2lkdGg9IjE3NiIgaGVpZ2h0PSIzNS4yIi8+CiAgICA8cmVjdCB4PSIzMjUuNTIiIHk9IjEzMS4wNCIgd2lkdGg9IjIxLjEyIiBoZWlnaHQ9IjU0LjU2Ii8+CiAgICA8cmVjdCB4PSIyMDAuNTYiIHk9IjIxMy43NiIgd2lkdGg9IjExNy45MiIgaGVpZ2h0PSIzMS42OCIvPgogICAgPHJlY3QgeD0iMjk5LjEyIiB5PSIyMTMuNzYiIHdpZHRoPSIxOS4zNiIgaGVpZ2h0PSI0Ny41MiIvPgogICAgPHJlY3QgeD0iMTY1LjM2IiB5PSIzMTAuNTYiIHdpZHRoPSIxMDkuMTIiIGhlaWdodD0iMTkuMzYiLz4KICAgIDxyZWN0IHg9IjE1MS4yOCIgeT0iMzU5Ljg0IiB3aWR0aD0iMjA5LjQ0IiBoZWlnaHQ9IjIxLjEyIiByeD0iNC40Ii8+CiAgPC9nPgo8L3N2Zz4K" alt="Flagrante"></div>
     <div>
-      <div class="nm">LexCapture</div>
+      <div class="nm">Flagrante</div>
     </div>
   </div>
 
@@ -2502,7 +2514,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <!-- ====== BANNER INSTALACION PWA ====== -->
 <div id="install-banner">
   <div class="ib-txt">
-    Instalar LexCapture como app
+    Instalar Flagrante como app
     <span>Funciona 100% sin internet</span>
   </div>
   <button class="ib-btn" onclick="pwaInstall()">Instalar</button>
@@ -2807,7 +2819,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 113;
+var _BUILD = 114;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3327,7 +3339,7 @@ function showPinSetup() {
 function showPinEntry() {
   _pinOv(
     '<div class="pin-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'+
-    '<div class="pin-title">LexCapture</div>'+
+    '<div class="pin-title">Flagrante</div>'+
     '<div class="pin-sub">Ingresa tu PIN para acceder a los datos.</div>'+
     '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-e" placeholder="PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doUnlockPin()">'+
     '<div class="pin-err" id="pin-err"></div>'+
@@ -3402,7 +3414,7 @@ async function doUnlockPin() {
 
 function forgotPin() {
   if (!confirm('¿Olvidaste tu PIN?\n\nSe BORRARÁN TODOS los datos: capturas, personas y configuración.\n\nEsta acción NO se puede deshacer.')) return;
-  if (!confirm('Confirmación final: se eliminarán TODOS los datos de LexCapture. ¿Continuar?')) return;
+  if (!confirm('Confirmación final: se eliminarán TODOS los datos de Flagrante. ¿Continuar?')) return;
   localStorage.clear();
   location.reload();
 }
@@ -3452,7 +3464,7 @@ var _lcWriteChain = {};
 function _lcEncSave(key, val) {
   if (!_sessionKey) {
     var err = new Error('Sin sesión activa — no se guardó');
-    console.error('[LexCapture] cifrado error', key, err);
+    console.error('[Flagrante] cifrado error', key, err);
     return Promise.reject(err);
   }
   var prev = _lcWriteChain[key] || Promise.resolve();
@@ -3461,7 +3473,7 @@ function _lcEncSave(key, val) {
   }).then(function(enc){
     localStorage.setItem('lc_'+key, enc);
   });
-  _lcWriteChain[key] = result.catch(function(e){console.error('[LexCapture] cifrado error',key,e);});
+  _lcWriteChain[key] = result.catch(function(e){console.error('[Flagrante] cifrado error',key,e);});
   return result;
 }
 /* Guardado cifrado de una colección con REVERSIÓN de su caché en memoria.
@@ -4571,7 +4583,7 @@ async function wizSave() {
     await wizCerrarBorrador();      // ya es una captura: el borrador sobra
     wc=null; go('capturas'); renderDraftSlot(); toast('Caso guardado ✓');
   } catch(e) {
-    console.error('[LexCapture] error guardando caso', e);
+    console.error('[Flagrante] error guardando caso', e);
     toast(_lcMsgGuardado(e, 'la captura'), 6000);
   }
 }
@@ -6924,7 +6936,7 @@ async function simSavePending(){
     }
     await Promise.all(jobs);
   }catch(e){
-    console.error('[LexCapture] error guardando caso simulado',e);
+    console.error('[Flagrante] error guardando caso simulado',e);
     toast('⚠️ Error guardando el caso simulado — vuelve a intentarlo.');
     return;
   }
@@ -6940,7 +6952,7 @@ async function simEditPending(){
     await DB.saveCase(c);
     await Promise.all((c.capturados||[]).map(function(p){return DB.savePerson(Object.assign({},p,{rol:'Capturado'}));}));
   }catch(e){
-    console.error('[LexCapture] error guardando caso simulado',e);
+    console.error('[Flagrante] error guardando caso simulado',e);
     toast('⚠️ Error guardando el caso simulado — vuelve a intentarlo.');
     return;
   }
@@ -8102,7 +8114,7 @@ async function lcDossierExtraGuardar(){
   function v(id){ var el=document.getElementById(id); return el?el.value.trim():''; }
   caso.spoa=v('dx-spoa'); caso.numIncidente=v('dx-inc'); caso.recibe=v('dx-recibe');
   try { await DB.saveCase(caso); }
-  catch(e){ console.error('[LexCapture] error guardando datos del dossier',e); toast('⚠️ No se pudieron guardar los datos'); return; }
+  catch(e){ console.error('[Flagrante] error guardando datos del dossier',e); toast('⚠️ No se pudieron guardar los datos'); return; }
   closeModal();
   updateDosPreview(DB.getCase(_dosCasoId));   // el dossier se repinta ya con ellos
   toast('Datos del dossier guardados ✓');
@@ -10137,7 +10149,7 @@ async function f6Guardar() {
     await DB.saveCase(c);
     await DB.savePerson(Object.assign({}, DB.getPerson(cap.id) || {}, cap, { rol:'Capturado' }));
   } catch (e) {
-    console.error('[LexCapture] error guardando el acta', e);
+    console.error('[Flagrante] error guardando el acta', e);
     toast(_lcMsgGuardado(e, 'el acta'), 6000);
     return null;
   }
@@ -10904,7 +10916,7 @@ function buildCustodiaBlob(ctx) {
       pdf: true, avisos: avisos, papel: ''
     };
   } catch (e) {
-    console.error('[LexCapture] error generando la cadena de custodia', e);
+    console.error('[Flagrante] error generando la cadena de custodia', e);
     toast('Error generando la cadena de custodia: ' + e.message, 7000);
     return null;
   }
@@ -10964,7 +10976,7 @@ function buildRotuloBlob(ctx) {
       pdf: true, avisos: avisos, papel: ''
     };
   } catch (e) {
-    console.error('[LexCapture] error generando el rótulo', e);
+    console.error('[Flagrante] error generando el rótulo', e);
     toast('Error generando el rótulo: ' + e.message, 7000);
     return null;
   }
@@ -11227,7 +11239,7 @@ async function ccGuardar() {
   if (!ccAplicarAlModelo(c)) return null;
   try { await DB.saveCase(c); }
   catch (e) {
-    console.error('[LexCapture] error guardando la cadena de custodia', e);
+    console.error('[Flagrante] error guardando la cadena de custodia', e);
     toast(_lcMsgGuardado(e, 'la cadena de custodia'), 6000);
     return null;
   }
@@ -11459,7 +11471,7 @@ async function rtGuardar() {
   rtPoner(c, r);
   try { await DB.saveCase(c); }
   catch (e) {
-    console.error('[LexCapture] error guardando el rótulo', e);
+    console.error('[Flagrante] error guardando el rótulo', e);
     toast(_lcMsgGuardado(e, 'el rótulo'), 6000);
     return null;
   }
@@ -11818,7 +11830,7 @@ function aiRecordarEntidad(c, entidad) {
     if (!p || p.entidad) return;
     (cfg.perfiles || []).forEach(function (x) { if (x.id === p.id) x.entidad = entidad; });
     DB.saveConfig(cfg);
-  } catch (e) { console.error('[LexCapture] recordando la entidad del acta', e); }
+  } catch (e) { console.error('[Flagrante] recordando la entidad del acta', e); }
 }
 
 /* Los elementos, numerados. ⚠️ Se transcriben con `lcEmpLinea`, la MISMA
@@ -12108,7 +12120,7 @@ function buildActaIncautacionBlob(ctx, papel) {
     return { blob: blob, fname: aiNombreArchivo(m), label: 'Acta de incautación de elementos',
              files: files, papel: pid, noPDF: true };
   } catch (e) {
-    console.error('[LexCapture] generando acta de incautación', e);
+    console.error('[Flagrante] generando acta de incautación', e);
     toast('Error generando el acta de incautación: ' + e.message);
     return null;
   }
@@ -12295,7 +12307,7 @@ async function aiGuardar() {
   c.incautacion = acta;
   try { await DB.saveCase(c); }
   catch (e) {
-    console.error('[LexCapture] error guardando el acta de incautación', e);
+    console.error('[Flagrante] error guardando el acta de incautación', e);
     toast(_lcMsgGuardado(e, 'el acta de incautación'), 6000);
     return null;
   }
@@ -12917,7 +12929,7 @@ async function buildActaEntregaBlob(ctx, papel) {
     return { blob:blob, fname:feNombreArchivo(m), label:'Acta de entrega de elementos (FPJ-30)',
              files:files, papel:pid, noPDF:true };
   } catch (e) {
-    console.error('[LexCapture] generando acta de entrega', e);
+    console.error('[Flagrante] generando acta de entrega', e);
     toast('Error generando el acta de entrega: ' + e.message);
     return null;
   }
@@ -13183,7 +13195,7 @@ function feRecordarContacto(c, f) {
       if (f.correo && !d.correo) { d.correo = f.correo; toca = true; }
     });
     if (toca) DB.saveConfig(cfg);
-  } catch (e) { console.error('[LexCapture] recordando el contacto de la entrega', e); }
+  } catch (e) { console.error('[Flagrante] recordando el contacto de la entrega', e); }
 }
 async function feGuardar() {
   var ctx = _feCtx, datos = feLeer();
@@ -13205,7 +13217,7 @@ async function feGuardar() {
   c.entrega = e;
   try { await DB.saveCase(c); }
   catch (err) {
-    console.error('[LexCapture] error guardando el acta de entrega', err);
+    console.error('[Flagrante] error guardando el acta de entrega', err);
     toast(_lcMsgGuardado(err, 'el acta de entrega'), 6000);
     return null;
   }
@@ -13559,7 +13571,7 @@ function buildResumenBlob(ctx, papel) {
     return { blob:blob, fname:rsNombreArchivo(c), label:'Resumen de la captura',
              files:files, papel:OJX_PAPEL, noPDF:true };
   } catch (e) {
-    console.error('[LexCapture] generando el resumen de la captura', e);
+    console.error('[Flagrante] generando el resumen de la captura', e);
     toast('Error generando el resumen: ' + e.message);
     return null;
   } finally {
@@ -13587,7 +13599,7 @@ async function simShowDossier(){
   if(!window._simCase) return;
   var c=window._simCase;
   try{ await DB.saveCase(c); }
-  catch(e){ console.error('[LexCapture] error guardando caso simulado',e); toast('⚠️ Error guardando el caso simulado'); return; }
+  catch(e){ console.error('[Flagrante] error guardando caso simulado',e); toast('⚠️ Error guardando el caso simulado'); return; }
   _dosCasoId=c.id;
   go('dossier');
 }
@@ -15633,7 +15645,7 @@ async function _unzipBufAsync(buf){
     var data=arr.slice(ds,ds+cSz);
     if(method===8){
       if(typeof DecompressionStream==='undefined'){
-        console.warn('[LexCapture F] DecompressionStream no disponible:',nm);
+        console.warn('[Flagrante F] DecompressionStream no disponible:',nm);
         decompressFailed=true;
       } else {
         try{
@@ -15646,7 +15658,7 @@ async function _unzipBufAsync(buf){
           var out=new Uint8Array(tot),off=0;
           chs.forEach(function(c){out.set(c,off);off+=c.length;});
           data=out;
-        }catch(e){console.warn('[LexCapture F] DEFLATE:',nm,e);decompressFailed=true;}
+        }catch(e){console.warn('[Flagrante F] DEFLATE:',nm,e);decompressFailed=true;}
       }
     }
     files[nm]=data;
@@ -19373,7 +19385,7 @@ async function buildOficioOJBlob(c,papel){
     return {blob:blob, fname:ojNombreArchivo(c), label:'Oficio de puesta a disposición',
             origen:paquete.origen, files:files, papel:OJX_PAPEL};
   }catch(e){
-    console.error('[LexCapture OJ] generando oficio',e);
+    console.error('[Flagrante OJ] generando oficio',e);
     toast('Error generando el oficio: '+e.message);
     return null;
   }
@@ -19637,7 +19649,7 @@ async function ojGuardarCaso(silencioso){
     if(!silencioso) toast('Caso guardado ✓');
     return true;
   }catch(e){
-    console.error('[LexCapture OJ] guardando caso',e);
+    console.error('[Flagrante OJ] guardando caso',e);
     toast(_lcMsgGuardado(e, 'la captura'), 6000);
     return false;
   }
@@ -20190,7 +20202,7 @@ function lcImprimir(out){
         toast('Vista de impresión lista ('+n+' página'+(n===1?'':'s')+' en '+plan.papel.lbl+') — elige «Guardar como PDF»',7000);
       }
     }catch(e){
-      console.error('[LexCapture] vista de impresión',e);
+      console.error('[Flagrante] vista de impresión',e);
       toast('No se pudo abrir la vista de impresión — el .docx sí se puede descargar');
     }
   };
@@ -20213,7 +20225,7 @@ document.addEventListener('DOMContentLoaded', function() {
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);
   else go('capturas');
-  console.log('[LexCapture] Fase E OK — AES-GCM + PIN PBKDF2');
+  console.log('[Flagrante] Fase E OK — AES-GCM + PIN PBKDF2');
   if (!localStorage.getItem('lc_key_salt')) {
     showPinSetup();
   } else {
@@ -20256,7 +20268,7 @@ function initPwaPrompt() {
   window.addEventListener('appinstalled', function() {
     document.getElementById('install-banner').style.display = 'none';
     _installPrompt = null;
-    toast('LexCapture instalada correctamente');
+    toast('Flagrante instalada correctamente');
   });
 }
 function pwaInstall() {
@@ -23071,7 +23083,7 @@ async function ptExportarArchivo(personas, casos) {
   if (!n) { toast('Marca antes lo que quieras pasarle al compañero.'); return; }
   var pin = ptClaveNumerica();
   var bytes = await ptArchivoCifrar(ptPaquete(personas, casos), pin);
-  var nombre = 'LexCapture_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + PT_ARCH_EXT;
+  var nombre = 'Flagrante_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + PT_ARCH_EXT;
   var url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
   var a = document.createElement('a');
   a.href = url; a.download = nombre;
@@ -23796,8 +23808,8 @@ function syAlDesbloquear() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
-      .then(function(reg) { console.log('[LexCapture] SW registrado:', reg.scope); })
-      .catch(function(err) { console.warn('[LexCapture] SW no disponible (requiere HTTPS):', err); });
+      .then(function(reg) { console.log('[Flagrante] SW registrado:', reg.scope); })
+      .catch(function(err) { console.warn('[Flagrante] SW no disponible (requiere HTTPS):', err); });
   });
 }
 </script>

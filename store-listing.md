@@ -1,4 +1,4 @@
-# Ficha de Play Store — LexCapture
+# Ficha de Play Store — Flagrante
 
 > Actualizada el 2026-09-21 contra el build 113. La versión de julio quedó en
 > `lexcapture-android/store-listing.julio.bak.md` (fuera del repo): describía una app sin sincronización, sin Modo
@@ -7,8 +7,8 @@
 > Seguridad de los datos digan lo mismo.** Si se toca una, revisar las tres.
 > Política publicada: https://getcorenova.github.io/lexcapture/privacy.html
 
-## Nombre de la app (máx. 30) — 10 usados
-LexCapture
+## Nombre de la app (máx. 30) — 9 usados
+Flagrante
 
 ## Descripción breve (máx. 80) — 71 usados
 Registro de capturas en campo: documentos legales automáticos y offline
@@ -17,7 +17,7 @@ Registro de capturas en campo: documentos legales automáticos y offline
 Productividad (Productivity)
 
 ## Descripción completa (máx. 4000)
-LexCapture es una herramienta de trabajo en campo para digitalizar el registro de capturas y aprehensiones según el procedimiento penal colombiano (Ley 906 de 2004). Está pensada para usarse con el teléfono en la mano, sin conexión a internet.
+Flagrante es una herramienta de trabajo en campo para digitalizar el registro de capturas y aprehensiones según el procedimiento penal colombiano (Ley 906 de 2004). Está pensada para usarse con el teléfono en la mano, sin conexión a internet.
 
 Reemplaza el llenado manual en papel: se diligencia una sola vez y la aplicación produce los documentos del procedimiento con esos mismos datos.
 
@@ -52,7 +52,7 @@ Quien quiera puede activar una copia cifrada en su propia cuenta de Google Drive
 SUSCRIPCIÓN
 La aplicación ofrece una suscripción mensual o anual para generar documentos. La compra se realiza a través de Google Play.
 
-LexCapture es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado.
+Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado.
 
 ## Datos de contacto
 - Correo: getcorenova@gmail.com
@@ -93,7 +93,7 @@ Qué declarar:
    contactos, ni recopilación de datos para el desarrollador.
 4. **Los datos de trabajo (capturas, personas, documentos) NO se recopilan.** Viven
    cifrados en el dispositivo. El envío de un documento por WhatsApp o correo lo
-   dispara el usuario hacia la app que él elige; LexCapture no transmite nada por
+   dispara el usuario hacia la app que él elige; Flagrante no transmite nada por
    su cuenta.
 5. **El paso de datos entre dos equipos (Modo compartir) es directo entre los dos
    teléfonos** por la red local, cifrado, sin servidor intermedio.

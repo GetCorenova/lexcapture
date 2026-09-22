@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * build:web — prepara el despliegue web de LexCapture.
+ * build:web — prepara el despliegue web de Flagrante.
  *
  * Esta aplicación no tiene bundler ni framework: es UN HTML autónomo que se
  * sirve tal cual. Así que "compilar para web" aquí son dos cosas concretas, y
@@ -39,7 +39,7 @@ const SW = join(RAIZ, 'sw.js');
 const TOKENS = [
   { nom: 'index.html → ?v=',    ruta: INDEX, re: /(LexCapture_v8\.html\?v=)(\d+)/,        g: 2 },
   { nom: 'sw.js → cache-v',     ruta: SW,    re: /(lexcapture-v8-cache-v)(\d+)/,          g: 2 },
-  { nom: 'LexCapture → _BUILD', ruta: APP,   re: /(var\s+_BUILD\s*=\s*)(\d+)/,            g: 2 },
+  { nom: 'Flagrante → _BUILD' , ruta: APP,   re: /(var\s+_BUILD\s*=\s*)(\d+)/,            g: 2 },
 ];
 
 const arg = process.argv.slice(2);

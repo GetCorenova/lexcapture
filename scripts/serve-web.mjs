@@ -45,7 +45,7 @@ createServer((req, res) => {
   });
   createReadStream(abs).pipe(res);
 }).listen(PUERTO, () => {
-  console.log(`\n  LexCapture sirviéndose desde ${RAIZ}`);
+  console.log(`\n  Flagrante sirviéndose desde ${RAIZ}`);
   console.log(`\n  →  http://localhost:${PUERTO}\n`);
   console.log('  Ctrl+C para parar.\n');
 });

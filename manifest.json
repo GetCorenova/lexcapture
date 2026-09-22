@@ -1,6 +1,6 @@
 {
-  "name": "LexCapture — Gestión de Capturas",
-  "short_name": "LexCapture",
+  "name": "Flagrante — Gestión de Capturas",
+  "short_name": "Flagrante",
   "description": "Aplicación para el registro de capturas y generación de documentos legales en campo",
   "start_url": "./",
   "scope": "./",

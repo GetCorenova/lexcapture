@@ -6610,3 +6610,116 @@ muchas personas ni cédula cargan»*.
   Ajustes sobre los marcadores del asunto del oficio, ya documentado; **comprobado que esa cadena
   está en el HTML de HEAD**, y no tiene relación con el formulario de personas.
   Anti-caché `?v=112` / `cache-v112`, `_BUILD=112`.
+
+## La app pasa a llamarse FLAGRANTE (2026-09-21)
+El usuario pidió cambiar el nombre **antes de publicar**: *«es un nombre en inglés que nadie conoce,
+la aplicación está diseñada solo para Colombia […] quiero corregirlo antes que sea más difícil
+hacerlo»*. Sus tres condiciones: en español, sin aludir a ninguna institución pública y sin infringir
+las normas de Play Store. Verificado con 12 suites de regresión y mirando la app en los dos temas.
+
+- **«Flagrante» estaba libre**: cero apps y cero marcas registradas. ⚠️ Y de ahí salió una regla que
+  conviene recordar para cualquier nombre futuro: **toda la familia `capt-` y los latinajos en `-um`
+  están minados** porque esa raíz la comparte el inglés. **Una palabra que solo existe en español
+  tiene muchísima menos competencia global de marca.**
+- **43 sustituciones en la app web + 14 en la documentación**, una por una y con informe, nunca un
+  reemplazo global.
+
+### ⚠️ Lo que NO se tocó, y por qué
+Cuatro identificadores técnicos que nadie ve y que **romperían datos reales**:
+
+| Identificador | Qué pasaría si se cambia |
+|---|---|
+| `info: 'lexcapture-sync-v1'` (HKDF) | **deja ilegible para siempre** todo lo sincronizado en el Drive del usuario |
+| `SY_ARCHIVO = 'lexcapture-sync.bin'` | el equipo dejaría de encontrar su propia copia en Drive |
+| `PT_MARCA = 'lexcapture'` | dos teléfonos con builds distintos no se vincularían |
+| `createDataChannel('lexcapture')` | lo mismo, en la capa del canal |
+
+Y tres cosas más, por motivos de despliegue: **el archivo sigue llamándose `LexCapture_v8.html`**
+(lo referencian ~40 suites y el `sw.js`), **el repositorio sigue siendo `lexcapture`** (el `.aab` ya
+firmado carga desde `getcorenova.github.io/lexcapture/`: renombrarlo dejaría tiesas las apps ya
+instaladas) y el **alias del keystore** sigue siendo `lexcapture` — el keystore es irremplazable.
+- ⚠️ **Se comprobó leyendo los valores DESDE LA APP CORRIENDO**, no buscándolos en el archivo:
+  `PT_MARCA` y `SY_ARCHIVO` se imprimieron desde el navegador tras el cambio.
+- ⚠️ **Extensión `.lexc` conservada** (Modo compartir). El nombre generado ya sale como
+  `Flagrante_20260921.lexc`; la extensión es un identificador de formato, como `.docx`, y cambiarla
+  obligaría a aceptar las dos al importar para no dejar tirado un archivo ya exportado. Queda anotado
+  por si algún día se decide lo contrario.
+
+### El paquete de Android SÍ cambió — decisión del usuario, y era la última ventana
+`com.getcorenova.lexcapture` → **`com.getcorenova.flagrante`** (`namespace`, `applicationId`,
+`package_name`, `custom_url_scheme`, y `MainActivity.java` movido de carpeta).
+⚠️ **El nombre del paquete queda fijo PARA SIEMPRE en cuanto se sube el primer `.aab`**, y aparece en
+la URL de la ficha. Se comprobó en `PUBLICAR.md` que la app **todavía no estaba creada en Play
+Console** antes de proponerlo: esa era la única ventana que quedaba.
+
+## El ícono: de «LC» a la F de Flagrante (2026-09-21)
+Tres propuestas del usuario generadas con IA y una construida a mano. Se eligió la vectorial, con el
+azul de la propuesta 2 del usuario. Todo lo regenera `npm run gen:icons`
+(`scripts/gen-icons.mjs`), que lleva la comprobación de zona segura dentro y **aborta** si no cabe.
+
+- **Qué es**: una **F serif dibujada como TRAZADOS** —no como texto— sobre su **regla de firma**,
+  dentro del **encuadre de la captura**. Ámbar `#E8A54F` (el `--flag-2` del Design System) sobre azul
+  `#111E31`. Plano: sin gradientes, sin relieve y sin emblema ninguno.
+- ⚠️ **Trazados y no una fuente**: con `font-family` el ícono dependería de que Georgia esté instalada
+  **en el equipo que genera los PNG y en el teléfono**. Un ícono que cambia de forma según la máquina
+  no es un ícono.
+- ⚠️ **Poco contraste de asta, a propósito.** Una serifa fina pierde los trazos delgados a 32 px.
+- ⚠️ **La regla es MÁS ANCHA que la letra** (238 contra 206). Con el mismo ancho que los brazos, a
+  32 px el conjunto **se lee como una E**. Sobresaliendo, solo puede leerse como una línea de firma.
+
+### ⚠️ La zona segura: el cálculo que hay que hacer bien
+La esquina del encuadre **no está en su coordenada `(m,m)`**: es un arco de radio `rr` con un trazo
+de grosor `b` encima, así que sobresale por la diagonal.
+`extremo = √2·(256 − m − rr) + rr + b/2` = **250 px**, no 228.
+- Medido sin el trazo daba **1,6 px de menos** y el encuadre se salía sin que nada avisara. La
+  primera escala elegida (0,82) **falló la comprobación del propio generador**: 205,0 > 204,8. La
+  buena es **0,81** → 202,5.
+- ⚠️ **Las dos zonas seguras NO son la misma**, y confundirlas deja el ícono mal en uno de los dos
+  sitios:
+
+| | Zona segura | Escala del dibujo |
+|---|---|---|
+| PWA maskable (512) | círculo r = 204,8 (80 %) | **0,81** |
+| Ícono adaptativo de Android (108 dp) | solo el cuadrado central de **72 dp** | **0,682** |
+
+- ⚠️ **Android recorta PRIMERO al 72/108 central y enmascara DESPUÉS**, así que en el teléfono el
+  dibujo sale **1,5× más grande** que la capa. Una vista previa que enmascara la capa entera hace
+  creer que el ícono quedó pequeño — y llevaría a agrandarlo de más.
+
+### ⚠️ El hallazgo grave: el `.aab` llevaba el logo por defecto de Capacitor
+**El ícono que se ve en el teléfono NO sale del `manifest.json` de la PWA: sale de los recursos del
+envoltorio.** Nunca se reemplazaron: el `.aab` que figuraba como «listo para subir» habría instalado
+la app con **la X azul de Capacitor**, y `ic_launcher_background` estaba en blanco. Salió de **mirar
+los archivos**, no de leer código. `gen-icons.mjs` genera ahora las **15 imágenes** (`ic_launcher`,
+`_round` y `_foreground` en 5 densidades) y reescribe el color de fondo.
+- ⚠️ **La capa frontal del ícono adaptativo EXIGE transparencia**, así que un `.jpg` —como llegó la
+  propuesta 2— no puede ser el ícono del lanzador, por bonito que sea.
+
+### Por qué se descartaron las propuestas generadas con IA
+Las tres compartían el mismo defecto medido: **el encuadre a 40-55 px de margen donde necesita 111**,
+o sea la esquina a ~305 px del centro contra los 204,8 de la zona segura → **las cuatro esquinas
+cortadas** por la máscara circular. Además la primera traía **silueta de policía uniformado, bandera
+de Colombia y esposas**, que es exactamente lo que el de-branding de julio quitó y lo que el filtro
+de Play Store castiga; y un **mapa con pin**, que anuncia una función que la app **eliminó a
+propósito** (`ojGPS` y el campo de coordenadas se fueron en Mejora 3, obs. 3).
+- ⚠️ **De la propuesta 2 sí se adoptó su azul** (`#111E31`): más cálido que el casi-negro anterior.
+  Lo que no servía era el archivo, no la idea.
+
+### El borde del logotipo dentro de la app
+La baldosa del logo es azul en los **dos** temas —es la misma del lanzador, y **ese no cambia con el
+tema: se entrega uno solo**—, así que sobre superficie clara necesitaba un canto propio para no
+quedar como un bloque oscuro pegado. Resuelto **con dos tokens**, como manda el Design System v2
+(*el tema claro solo redefine tokens, no componentes*): `--logo-ring` y `--logo-halo`, gris frío en
+oscuro y **anillo ámbar + halo** en claro. `.sb-logo-wrap` los consume y no sabe nada del tema.
+
+### Y un detalle de la ficha de Play
+`PUBLICAR.md` apuntaba a `icon-512.png`, que trae **las esquinas ya redondeadas y transparentes** —y
+Google aplica **su propio** redondeo encima—. Nuevo `icon-store-512.png`, a sangre y sin
+transparencia.
+
+- Regresiones en verde (12): compartir 57 · expediente 13 · menú+expediente 16 · personas 25 ·
+  tema 40 · fpj6 140 · OJ 187 · sincro 32 · sync 68 · mejora1 157 · orden 33 · tipografía OJ 42.
+  `verify_ds` 9/10 con su fallo preexistente de siempre («favorito con estrella SVG»).
+  ⚠️ `verify_fase_g` era la **única** suite que esperaba el nombre viejo (`includes('LexCapture')`),
+  y ya estaba obsoleta desde antes por otro motivo.
+  Anti-caché `?v=114` / `cache-v114`, `_BUILD=114`.
