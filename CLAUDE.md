@@ -6877,3 +6877,97 @@ introducido para él: `.sb-logo-wrap` vuelve a `border:1px solid var(--border)` 
 - **Medido antes y después** componiendo `.sb-logo-wrap` con los valores reales de los dos temas,
   lado a lado. Regresiones: tema 40 · DS 9/10 (su fallo preexistente de siempre) · expediente 13.
   Anti-caché `?v=117` / `cache-v117`, `_BUILD=117`.
+
+## Limpieza previa a la publicación (2026-09-22)
+Encargo antes de subir a Play Store: retirar los archivos que no cumplen ninguna función y el
+código que la aplicación no usa, con todo lo retirado a una carpeta `Depuración/` por si algo hacía
+falta. Regla del usuario: *«tienes totalmente prohibido borrar algo que no esté verificado que
+cumple una funcionalidad»*. Verificado con **las 44 suites** y mirando la app en los dos temas.
+
+- ⚠️ **El hallazgo que daba urgencia al encargo: este repositorio SE PUBLICA en GitHub Pages**, así
+  que sus 51 MB estaban descargables por cualquiera — 11 MB de capturas de pruebas, 6,7 MB de
+  `.docx` generados, los formatos oficiales en blanco, los `.docx` de requerimientos con datos de
+  ejemplo y **tres versiones antiguas de la aplicación** (6,1 MB). Nada de eso servía a nadie ahí.
+  Quedó en **7,3 MB**: la app, sus iconos, `privacy.html`, las 44 suites, los 4 documentos que esas
+  suites leen y la documentación.
+
+### El método, y por qué importó
+- ⚠️ **NINGÚN archivo se movió sin rastrear antes quién lo usa.** De `Documentos/` (32 archivos,
+  17 MB) las suites solo leen **4**, comprobado buscando las lecturas efectivas
+  (`readFile`/`join`/`existsSync`) y no las menciones: los demás salían en comentarios que explican
+  de dónde vino una plantilla, que no es lo mismo que leerlos.
+- ⚠️ **Lo que se verificó EJECUTÁNDOLO, no leyendo.** `verify_fase_g` y `verify_fase_h` mueren las
+  dos contra un `localhost:8080` que no levantan → obsoletas, como decía este archivo. Pero
+  `verify_ds_desktop.mjs` —que apuntaba a la carpeta de una sesión de trabajo antigua y parecía
+  basura— **corre y genera sus 4 capturas sin un error**: se queda. `lexcapture-web/` se movió solo
+  tras comprobar que no tenía cambios sin guardar y que **todos sus commits existen también aquí**.
+- ⚠️ **El detector de código muerto daba «0 candidatas» y estaba ROTO.** Se validó envenenándolo con
+  tres funciones muertas inyectadas a propósito: no encontró ninguna. La causa era que el heredoc
+  del shell convertía `\\b` en `\b` — el **carácter de retroceso**, no el límite de palabra —, así
+  que el contador daba 0 apariciones para todo. **Un detector que no se prueba contra un caso
+  conocido no dice «está limpio», dice «no sé».** Arreglado escribiendo los scripts a archivo en vez
+  de por el shell, encontró 11 candidatas.
+- ⚠️ **De esas 11, NUEVE las usan las suites de regresión** (`descargarFPJ`, `lcPapelesDe`,
+  `lcExportSoloWord`, `ptHuella`…). Este archivo ya avisaba de algunas; borrarlas habría roto siete
+  suites para ahorrar 20 líneas.
+
+### Lo retirado del código: 25 fragmentos
+Quedaron **2 funciones** sin ningún consumidor —`copiarDossierCaso()` (copiar el dossier vive en
+`copyDosTxt`) y `ojTexto()` (su gemela `ojBytes` sí se usa)— y **23 reglas CSS**, casi todas
+residuos de subsistemas que este archivo ya daba por retirados y cuyo CSS se quedó: `.tpl-*`
+(plantillas subidas, 2026-08-08), `.share-btn`/`.share-grid`, `.b-urg`/`.b-venc`/`.b-builtin` con su
+`@keyframes pulse-venc`, `.desp-fav` («Favoritos»→«Predeterminado»), `.exp-grid`, `.choice`,
+`.av-*`, `.sec-title`, `.sb-sep`, `.fg-auto`, `.bt`, `.bml`.
+- ⚠️ **La garantía de que ninguna se llamaba por un nombre construido es estructural**: la app no
+  tiene **ni un** `eval(`, `window[` ni `new Function` — comprobado sobre el archivo. Si un
+  identificador aparece una sola vez, esa vez es su declaración y nada más.
+- ⚠️ **`.exp-opt` se conservó aunque estaba pegada a `.exp-grid`** bajo el mismo comentario
+  «DIÁLOGO DE EXPORTACIÓN»: se **reutiliza** en los selectores de persona y de elemento (`f6Abrir`,
+  `rtAbrir`, `aiAbrir`). Ir por bloques y no clase por clase se la habría llevado por delante.
+- ⚠️ **NO se tocaron** las variables CSS sin uso aparente (este archivo advierte que los nombres
+  legados son alias del JS, y los tokens de estado se crearon a propósito), las utilidades `.txg`,
+  `.aic` y `.jcb` —viven bajo el comentario «UTILIDADES (contrato con el JS)», mismo criterio— ni
+  los comentarios que explican retiros anteriores (`.wz-falta`, `.oj-persona`): esas reglas ya no
+  existen y lo que queda es el porqué, que vale más que su espacio.
+- El script de limpieza **exige que cada fragmento aparezca exactamente una vez** y, si alguno no
+  cumple, **no escribe el archivo**: un reemplazo a ciegas sobre 3,7 MB es la forma de romper algo
+  sin enterarse. 25 de 25 aplicados.
+
+### Dos defectos de higiene que salieron por el camino
+- ⚠️ **`node_modules/` NUNCA estuvo en el `.gitignore`.** Se destapó porque un `git add -A` metió
+  sus 18 MB al índice. Y el `.gitignore` ignoraba las salidas de las suites **por nombre, una a
+  una**, así que cada suite nueva colaba las suyas hasta que alguien se acordaba — de ahí los 11 MB
+  de capturas publicadas. Ahora van por patrón (`verify_*.png`, `verify_*.docx`…), así que una suite
+  nueva queda cubierta sola. ⚠️ Un archivo **ya rastreado no se ignora** aunque esté en el
+  `.gitignore`: los dos PNG de `verify_custodia` necesitaron `git rm --cached`.
+- ⚠️ **El `README.md` describía OTRO repositorio.** Decía que `index.html` era «una copia de
+  `LexCapture_v8.html` renombrada» y que el material de desarrollo «no se publica aquí» — las dos
+  cosas falsas: `index.html` es el redirect con el token anti-caché, y sí se estaba publicando todo.
+  Era el README del clon `lexcapture-web`. Reescrito con lo que de verdad se sirve.
+- **`.git` pasó de 268 MB a 37 MB** con `git gc`: tenía **1 492 objetos sueltos sin empaquetar**
+  (`size-pack: 0`). No reescribe la historia — los 130 commits siguen accesibles y `git fsck` sale
+  limpio.
+
+### Lo que NO se tocó, con su motivo
+- **`keystore-RESGUARDAR/`** — el keystore es irremplazable.
+- **`lexcapture-android/`** — es el entorno de compilación y contiene **el `.aab` firmado listo para
+  subir**, compilado hoy (posterior al último cambio de ícono). Sus 227 MB son en su mayoría
+  artefactos regenerables, pero limpiarlos la víspera de publicar es riesgo sin beneficio: se hace
+  después con `gradlew clean` (~78 MB) y borrando `android/vendor/` (85 MB, `bundle install` lo
+  rehace). Sí se retiraron `screen1..10.png`, capturas de julio en la raíz que no referencia nadie —
+  la ficha usa las 5 de `store/`.
+- ⚠️ **Los formatos oficiales en blanco** (FPJ-5 URI/CESPA, FPJ-6, FPJ-30, acta de incautación)
+  están en `Depuración/06-documentos/formatos-oficiales-en-blanco/`. **La app no los lee** —ya
+  viajan embebidos en base64— pero son la **fuente** para regenerar una plantilla. No borrarlos.
+- **`www/index.html`** del envoltorio aún dice «LexCapture» en su `<title>`: es el placeholder que
+  se ve un instante antes de la carga remota, y cambiarlo obliga a recompilar el `.aab` ya listo.
+
+### Regresiones
+**40/44 suites en verde.** Las 4 en rojo —`verify_ds` 9/10, `verify_jerarquia` 65/66,
+`verify_mejora6b` 65/67 y `verify_dossier_historico` [20] y [21]— son las **cuatro que este archivo
+ya daba por preexistentes**, y ⚠️ **se comprobó ejecutándolas contra el HTML de antes de la limpieza:
+fallan idénticas**. Importaba hacerlo con `verify_ds`, cuyo check en rojo es «favorito con estrella
+SVG» y en esta limpieza se retiró `.desp-fav`: el fallo es el mismo con y sin el cambio, porque el
+mecanismo se había retirado del JS el 2026-08-08 y lo que quedaba era CSS sin consumidor.
+Verificado además **mirando la app**, no solo el DOM: 12 capturas de las 6 pantallas en los dos
+temas, sin un error de consola. Anti-caché `?v=118` / `cache-v118`, `_BUILD=118`.

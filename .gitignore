@@ -1,39 +1,44 @@
+# Sistema
 Thumbs.db
 .DS_Store
 ~$*
-verify_oj_salida.docx
-verify_simulador_oj.docx
-verify_simulador_fpj_uri.docx
-verify_simulador_fpj_cespa.docx
-verify_mejora1_uri.docx
-verify_mejora1_cespa.docx
-verify_mejora1_legado.docx
-verify_mejora1_golden.docx
-verify_mejora1_num2uri.docx
-verify_mejora1_num2cespa.docx
-verify_mejora1_num2hueco.docx
-verify_mejora1_num2una.docx
-verify_mejora1_genuri.docx
-verify_mejora1_gencespa.docx
-verify_mejora1_genmulti.docx
-verify_m2_*.docx
-verify_m2_*.pdf
-verify_m2_*.png
 ~WRL*.tmp
 
-# Salidas de verify_firma (documento y render de revisión)
-verify_firma_salida.docx
-verify_firma_salida.pdf
+# Dependencias: se reinstalan con `npm install`. 18 MB que no tienen por que
+# viajar en un repositorio que ademas SE PUBLICA en GitHub Pages.
+node_modules/
 
-# Salida de verify_editable + respaldos que deja la reparación de un .docx
-verify_editable_oj.docx
+# ─────────────────────────────────────────────────────────────────────────────
+# SALIDAS DE LAS SUITES DE REGRESION
+#
+# Las suites escriben documentos y capturas al lado del codigo para poder
+# abrirlos en Word y revisarlos a ojo. Son REGENERABLES: se rehacen corriendo
+# la suite. Antes se ignoraban por NOMBRE, uno a uno, asi que cada suite nueva
+# colaba sus salidas al repositorio hasta que alguien se acordaba de anadirlas
+# — de ahi los 11 MB de capturas y los 6,7 MB de .docx que llego a publicar.
+# Con patrones, una suite nueva queda cubierta sola.
+#
+# ⚠️ Los .mjs NO entran aqui: el codigo de las suites SI se versiona.
+# ⚠️ Los iconos tampoco: `icon-*.png` son parte de la app y van versionados.
+# ─────────────────────────────────────────────────────────────────────────────
+verify_*.png
+verify_*.docx
+verify_*.pdf
+verify_m2_*
+audit_*.png
+jer_*.png
+m3_*.png
+m7_*.png
+mejora1_*.png
+sincro_*.png
+ola*.png
+
+# Respaldos que deja la reparacion de un .docx
 *.docx.bak
 
-# Salida suelta de una corrida anterior de verify_fpj6 (ahora escribe en el temporal del sistema)
-verify_fpj6_*.docx
-
-# Salidas de verify_mejora1 (aire entre elementos del numeral 7)
-verify_mejora1_aire-*.docx
+# Propuestas de icono generadas con IA: material de trabajo descartado.
+Propuesta Icono*.png
+Propuesta Icono*.jpg
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECRETOS — este repositorio SE PUBLICA (es el que sirve GitHub Pages), así

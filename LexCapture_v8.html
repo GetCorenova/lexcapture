@@ -269,7 +269,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #net-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
 
 /* ═══ DIÁLOGO DE EXPORTACIÓN ═══ */
-.exp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0 16px}
 .exp-opt{
   display:flex;flex-direction:column;gap:2px;text-align:left;cursor:pointer;
   padding:12px 14px;border-radius:12px;border:1.5px solid var(--border);
@@ -568,28 +567,6 @@ body.pt{padding-top:36px}
 .tab:hover{background:var(--hover)}
 .tab.on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
 
-/* ═══ CHOICE (lista de opciones grandes) ═══ */
-.choice{
-  display:flex;align-items:center;gap:14px;
-  padding:14px 16px;border-radius:var(--radius);
-  border:1px solid var(--border);
-  background:var(--surface-1);
-  text-align:left;width:100%;
-  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease);
-}
-.choice:hover{background:var(--surface-2)}
-.choice:active{transform:scale(.99)}
-.choice .lic{
-  width:48px;height:48px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.choice .lic svg{width:24px;height:24px;stroke-width:1.8}
-.choice .body{flex:1;min-width:0}
-.choice .ti{font-size:15px;font-weight:600;margin-bottom:2px;color:var(--text)}
-.choice .de{font-size:13px;color:var(--text-2);line-height:1.4}
-.choice .arr{color:var(--text-3)}
-.choice.flag .lic{background:var(--flag-bg);color:var(--flag-2)}
-.choice.oj .lic{background:var(--oj-bg);color:var(--oj-2)}
 
 /* ═══ ESTADÍSTICAS — centro de análisis operativo (2026-08-31) ═══
    Reingeniería completa: de «tarjetas con un número cada una» a una lectura
@@ -657,34 +634,7 @@ body.pt{padding-top:36px}
 .stat-act-col.now .stat-act-lbl{color:var(--acc);font-weight:700}
 .stat-act-cap{font-size:12.5px;color:var(--text-2);margin-top:10px;min-height:16px}
 
-/* ═══ PLANTILLAS (grid) ═══ */
-.tpl-grid{display:grid;grid-template-columns:1fr;gap:12px}
-.tpl-card{
-  background:var(--surface-1);border:1px solid var(--border);
-  border-radius:var(--radius);padding:16px;box-shadow:var(--sh-1);
-  display:flex;align-items:center;gap:14px;
-}
-.tpl-card .ic{
-  width:44px;height:44px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;
-}
-.tpl-card.flag .ic{background:var(--flag-bg);color:var(--flag-2)}
-.tpl-card.oj .ic{background:var(--oj-bg);color:var(--oj-2)}
-.tpl-card .ic svg{width:22px;height:22px;stroke-width:1.7}
-.tpl-card .body{flex:1;min-width:0}
-.tpl-card .ti{font-size:15px;font-weight:600}
-.tpl-card .de{font-size:12px;color:var(--text-3);margin-top:2px}
-.tpl-card .badge{
-  font-size:11px;color:var(--text-3);
-  padding:3px 8px;border-radius:6px;
-  background:var(--surface-2);border:1px solid var(--border);
-}
 
-.sec-title{
-  font-size:11px;line-height:15px;font-weight:650;color:var(--text-3);
-  text-transform:uppercase;letter-spacing:.07em;
-  margin:8px 4px -4px;
-}
 
 /* ═══ BOTTOM NAV ═══ */
 #bottombar{
@@ -739,7 +689,6 @@ body.pt{padding-top:36px}
 .sb-item:hover{background:var(--hover);color:var(--text)}
 .sb-item.on{background:var(--accG);color:var(--acc);font-weight:600}
 .sb-item svg{width:18px;height:18px;stroke-width:1.8}
-.sb-sep{height:1px;background:var(--border);margin:8px 6px}
 .sb-sec{
   font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
   color:var(--text-3);padding:18px 12px 6px;user-select:none;
@@ -828,26 +777,6 @@ body.pt{padding-top:36px}
 }
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ═══ SHARE GRID ═══ */
-.share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
-.share-btn{
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:14px 4px;border-radius:12px;
-  background:var(--surface-2);border:1px solid var(--border);
-  color:var(--text);font-size:11px;font-weight:500;
-  transition:background var(--d1) var(--ease);
-}
-.share-btn:hover{background:var(--surface-3)}
-.share-btn:active{background:var(--pressed)}
-.share-btn .lic{
-  width:40px;height:40px;border-radius:12px;
-  display:flex;align-items:center;justify-content:center;
-}
-.share-btn.wa .lic{background:var(--ok-bg);color:var(--ok)}
-.share-btn.em .lic{background:var(--uriB);color:var(--uriT)}
-.share-btn.cp .lic{background:var(--surface-3);color:var(--text-2)}
-.share-btn.dl .lic{background:var(--flag-bg);color:var(--flag-2)}
-.share-btn .lic svg{width:20px;height:20px;stroke-width:1.8}
 
 /* ═══ UTILIDADES (contrato con el JS) ═══ */
 .hid{display:none!important}
@@ -928,15 +857,10 @@ body.pt{padding-top:36px}
 .bs{background:var(--surface-2);border:1px solid var(--border);color:var(--text)}
 .bs:hover{background:var(--surface-3);border-color:var(--border-strong)}
 .bs:active{background:var(--pressed)}
-.bt{background:var(--accG);border:1px solid transparent;color:var(--acc)}
-.bt:hover{background:color-mix(in srgb,var(--acc) 16%,transparent)}
-.bt:active{background:color-mix(in srgb,var(--acc) 22%,transparent)}
 .bd{background:var(--errB);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent);color:var(--danger)}
 .bd:active{background:color-mix(in srgb,var(--danger) 18%,transparent)}
 .bwa{background:var(--wa);color:var(--wa-fg)}
 .bwa:active{filter:brightness(.92);transform:scale(.985)}
-.bml{background:var(--mailc);color:var(--mail-fg)}
-.bml:active{filter:brightness(.92)}
 .boj{background:var(--oj-bg);border:1px solid var(--ojBd);color:var(--oj-2)}
 .boj:active{background:color-mix(in srgb,var(--oj) 20%,transparent)}
 .bsm{padding:8px 14px;font-size:13px;min-height:38px}
@@ -973,10 +897,6 @@ body.pt{padding-top:36px}
 .exp-sync.viva{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 28%,transparent)}
 .exp-sync.viva b{color:var(--ok)}
 .exp-sync.viva .dot{background:var(--ok)}
-.b-urg{background:var(--warn-bg);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
-.b-venc{background:var(--errB);color:var(--danger);border:1px solid color-mix(in srgb,var(--danger) 50%,transparent);animation:pulse-venc 1.6s var(--ease) infinite}
-.b-builtin{background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
-@keyframes pulse-venc{0%,100%{opacity:1}50%{opacity:.55}}
 
 /* ═══ TARJETA DE CASO ═══ */
 .cc{
@@ -1071,7 +991,6 @@ body.pt{padding-top:36px}
 /* Destello breve cuando la app rellena un campo sola: el usuario ve QUE se
    rellenó y QUÉ se rellenó, en vez de encontrárselo escrito sin explicación. */
 .fi-auto{border-color:var(--ok)!important;background:var(--ok-bg)!important;transition:background .5s,border-color .5s}
-.fg-auto{font-size:11.5px;color:var(--ok);margin-top:4px}
 /* ⚠️ .wz-falta y .wz-ok se retiraron con la barra de aviso del progreso: el
    punto rojo del paso y el asterisco del campo dicen lo mismo sin ocupar un
    renglón. Ver renderWiz(). */
@@ -1214,9 +1133,6 @@ body.pt{padding-top:36px}
   display:flex;align-items:center;justify-content:center;
   font-size:14px;font-weight:700;letter-spacing:.02em;
 }
-.av-uri{background:var(--uriB);color:var(--uriT);border:1px solid var(--uriBd)}
-.av-csp{background:var(--cspB);color:var(--cspT);border:1px solid var(--cspBd)}
-.av-oj{background:var(--ojB);color:var(--oj-2);border:1px solid var(--ojBd)}
 .prow-body{flex:1;min-width:0}
 .prow-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .prow-meta{display:flex;align-items:center;gap:8px;margin-top:3px;min-width:0}
@@ -1242,16 +1158,6 @@ body.pt{padding-top:36px}
 .sheet-item.danger .ti{color:var(--danger)}
 .sheet-item.danger .lic{background:var(--errB);border-color:transparent;color:var(--danger)}
 
-/* ═══ CHIPS DE PLANTILLA ═══ */
-.tpl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-.tpl-chip{
-  padding:7px 13px;border-radius:999px;min-height:34px;
-  font-size:12px;font-weight:600;
-  background:transparent;border:1px solid var(--border);color:var(--text-2);cursor:pointer;
-  transition:all var(--d1) var(--ease);
-}
-.tpl-chip:hover{background:var(--hover)}
-.tpl-chip:active,.tpl-chip.on{border-color:transparent;color:var(--acc);background:var(--accG)}
 
 /* ═══ SIMULADOR ═══ */
 .simr{
@@ -1435,15 +1341,6 @@ body.pt{padding-top:36px}
 }
 .desp-usar:hover{background:color-mix(in srgb,var(--acc) 18%,transparent)}
 .desp-usar:active{background:color-mix(in srgb,var(--acc) 24%,transparent)}
-.desp-fav{
-  padding:8px 12px;min-height:38px;border-radius:10px;
-  border:1px solid var(--border);background:var(--surface-2);color:var(--text-3);
-  font:inherit;font-size:13px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-  transition:all var(--d1) var(--ease);
-}
-.desp-fav svg{width:16px;height:16px;stroke-width:2}
-.desp-fav.on{border-color:color-mix(in srgb,var(--flag-2) 40%,transparent);color:var(--flag-2);background:var(--flag-bg)}
 .desp-search{
   width:100%;padding:12px 14px;min-height:48px;border-radius:10px;
   border:1px solid var(--border);background:var(--field);color:var(--text);
@@ -1880,9 +1777,7 @@ body.pt{padding-top:36px}
   /* Estadísticas: en pantalla ancha los dos rankings caben lado a lado — el
      móvil (foco real de la app) los apila, que es lo que ya hace `.stack`. */
   .stat-rank-2col{display:grid;grid-template-columns:1fr 1fr;align-items:start}
-  .tpl-grid{grid-template-columns:repeat(2,1fr)}
   .toast{bottom:32px}
-  .share-grid{grid-template-columns:repeat(4,1fr);max-width:480px}
   .wnav{position:static;box-shadow:none;background:transparent;border-top:none;padding:16px 0;backdrop-filter:none;-webkit-backdrop-filter:none}
   .wpn{padding-bottom:24px}
 }
@@ -2815,7 +2710,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 117;
+var _BUILD = 118;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -6084,15 +5979,6 @@ function _dossierShareMail(id) {
   var c = DB.getCase(id); if (!c) return;
   var cap = (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : 'captura';
   location.href = 'mailto:?subject='+encodeURIComponent('Dossier — '+cap)+'&body='+encodeURIComponent(_dosTexto(id));
-}
-// Copia el dossier al portapapeles (misma primitiva de fallback que copyDosTxt).
-function copiarDossierCaso(id) {
-  var c = DB.getCase(id);
-  if (!c) { toast('Caso no encontrado'); return; }
-  var txt = _dosTexto(id);
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(txt).then(function(){ toast('Dossier copiado ✓'); }).catch(function(){ _copyFallback(txt); });
-  } else { _copyFallback(txt); }
 }
 
 
@@ -18632,7 +18518,6 @@ var OJ_XMLDECL='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
    hoja (como en el original); las siguientes llevan encabezado vacío. El pie
    con «Página N de M» va en todas. */
 function ojBytes(s){ return new TextEncoder().encode(s); }
-function ojTexto(b){ return new TextDecoder().decode(b); }
 function ojB64Bytes(b64){
   var raw=atob(b64||''), out=new Uint8Array(raw.length);
   for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);

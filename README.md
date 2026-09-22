@@ -1,25 +1,55 @@
-# Flagrante — Web (deploy PWA)
+# Flagrante
 
-Paquete estático de la PWA **Flagrante**, listo para hostear en HTTPS (GitHub Pages / Netlify / Cloudflare Pages).
-Este repositorio contiene **solo** los archivos públicos necesarios para servir la app. El código fuente de
-desarrollo (plantillas .docx, documentos internos, fases) se mantiene aparte y **no** se publica aquí.
+Aplicación para el registro de capturas y la generación de los documentos legales que
+las acompañan, para uso en campo. **PWA de un solo archivo**, sin servidor y sin
+dependencias externas: funciona sin conexión, que es como se usa.
 
-## Contenido
-- `index.html` — la aplicación (single-file PWA). Es una copia de `LexCapture_v8.html` renombrada.
-- `manifest.json` — manifiesto PWA (`start_url` y `scope` en la raíz).
-- `sw.js` — service worker (offline, cache-first).
-- `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `icon.svg` — íconos.
-- `privacy.html` — política de privacidad (requerida por Google Play).
-- `.nojekyll` — desactiva el procesado Jekyll en GitHub Pages.
+**En vivo:** https://getcorenova.github.io/lexcapture/
 
-## Cómo actualizar la app
-Cuando cambie la app en el repo de desarrollo, copiar el HTML nuevo sobre `index.html`:
+> Este repositorio **es** el que sirve GitHub Pages: un `git push` publica.
+
+## Qué se sirve
+
+| Archivo | Para qué |
+|---|---|
+| `LexCapture_v8.html` | La aplicación entera: interfaz, lógica y las plantillas de los seis documentos oficiales embebidas en base64 |
+| `index.html` | Redirige a la app con el token `?v=N` que fuerza al navegador a descargar la versión nueva |
+| `sw.js` | Service Worker: caché offline. El HTML va siempre a red primero |
+| `manifest.json` | Manifiesto PWA |
+| `icon-*.png`, `icon.svg` | Íconos. Los genera `npm run gen:icons` desde `icon.svg` |
+| `privacy.html` | Política de privacidad (la exige Google Play) |
+| `.nojekyll` | Desactiva el procesado Jekyll de GitHub Pages |
+
+## Comandos
 
 ```bash
-cp "../Crear App/LexCapture_v8.html" index.html
-git add index.html && git commit -m "update app" && git push
+npm run build:web          # valida: sintaxis de los <script>, cero recursos externos, peso
+npm run serve:web          # sirve en local (hace falta http:// para que el SW se registre)
+npm run deploy:web         # valida, commitea y publica
+npm run verify             # lista las suites de regresión
+npm run verify -- <nombre> # corre las que casen con ese nombre
+npm run gen:icons          # regenera los íconos desde icon.svg
 ```
 
-## URLs una vez publicado (GitHub Pages)
-- App:      `https://<usuario>.github.io/<repo>/`
-- Privacidad: `https://<usuario>.github.io/<repo>/privacy.html`
+## Verificación
+
+44 suites de Playwright sobre la aplicación real (`verify_*.mjs`). No son pruebas
+unitarias: abren la app, diligencian formularios, generan los `.docx` y `.pdf` y los
+miden. Se corren por nombre; `--todas` las ejecuta en serie y tarda.
+
+Las capturas y los documentos que producen **no se versionan** (`.gitignore`): se
+regeneran corriendo la suite.
+
+## Android
+
+El envoltorio vive fuera de este repositorio, en `../lexcapture-android` (Capacitor).
+Usa **carga remota**: el `.aab` no lleva el código web dentro, así que un cambio en la
+app se publica con `deploy:web` y llega a los teléfonos ya instalados **sin recompilar
+ni pasar por Play Console**. Solo hay que recompilar si cambia el envoltorio.
+
+## Documentación
+
+- `CLAUDE.md` — la historia del producto y el porqué de cada decisión. Es la memoria del
+  proyecto: conviene leerlo antes de tocar nada.
+- `PUBLICAR.md` — la guía de publicación en Play Store, con sus decisiones irreversibles.
+- `store-listing.md` — los textos de la ficha de la tienda.
