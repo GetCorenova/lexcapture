@@ -6858,3 +6858,22 @@ En el ícono adaptativo de Android, que solo garantiza el cuadrado central de 72
 - Validación `build:web --check`: los tres tokens en **116**, los dos bloques de script con sintaxis
   válida y cero recursos externos. Regresiones: tema 40 · expediente 13.
   Anti-caché `?v=116` / `cache-v116`, `_BUILD=116`.
+
+### El contorno dorado del logotipo, retirado (2026-09-22)
+El usuario lo señaló en cuanto lo vio: *«¿por qué ese contorno dorado? ¿Es necesario? Se ve feo»*.
+No era necesario, y esto **revierte los tokens `--logo-ring` / `--logo-halo`** que se habían
+introducido para él: `.sb-logo-wrap` vuelve a `border:1px solid var(--border)` +
+`box-shadow:var(--sh-1)`, exactamente como estaba antes del cambio de nombre
+(`git show 6519f08:LexCapture_v8.html`). Los dos pares de tokens se borran: no los usaba nada más.
+
+- ⚠️ **El diagnóstico original del problema estaba mal.** El anillo se añadió para que la baldosa
+  azul «no se viera rara» sobre una superficie clara — pero navy sobre blanco es **contraste
+  máximo**, así que el canto ya se define solo. Lo que sí hacía el anillo era **teñir la marca**: un
+  aro ámbar al 45 % más un halo de 3 px alrededor de un logotipo que ya tiene su propia paleta. Es
+  decoración resolviendo un problema que no existía.
+- ⚠️ **En tema oscuro casi no se notaba** (`rgba(163,174,199,.16)`, gris frío) y por eso pasó las
+  revisiones anteriores; el dorado vivía **solo en el tema claro**, que es donde el usuario lo vio.
+  **Mirar una pieza en un solo tema no es mirarla.**
+- **Medido antes y después** componiendo `.sb-logo-wrap` con los valores reales de los dos temas,
+  lado a lado. Regresiones: tema 40 · DS 9/10 (su fallo preexistente de siempre) · expediente 13.
+  Anti-caché `?v=117` / `cache-v117`, `_BUILD=117`.
