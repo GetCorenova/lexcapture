@@ -4,6 +4,9 @@
    no existe es motivo de rechazo, y las de julio mostraban hasta un error en rojo.
    Los datos son del SIMULADOR: inventados, con correos en el dominio reservado
    .test. NUNCA subir capturas de un procedimiento real (Ley 1581 de 2012).
+   ⚠️ 360x640 con factor 3 = 1080x1920, que es 9:16 EXACTO. Play rechaza una
+   captura de telefono mas alargada que eso: a 360x800 salian 1080x2400 (2,22:1)
+   y la consola las marcaba "Necesita recorte".
    Uso:  node scripts/store-assets.mjs            */
 import { chromium } from 'playwright';
 import { createServer } from 'http';
@@ -17,7 +20,7 @@ const server=createServer((q,r)=>{const p=join(ROOT,decodeURIComponent(q.url.spl
  if(!existsSync(p)){r.writeHead(404);r.end();return;} r.writeHead(200,{'Content-Type':MIME[extname(p)]||'application/octet-stream'});r.end(readFileSync(p));});
 await new Promise(r=>server.listen(8097,r));
 const b=await chromium.launch({headless:true});
-const page=await (await b.newContext({viewport:{width:360,height:800},deviceScaleFactor:3,hasTouch:true,isMobile:true})).newPage();
+const page=await (await b.newContext({viewport:{width:360,height:640},deviceScaleFactor:3,hasTouch:true,isMobile:true})).newPage();
 const errs=[]; page.on('console',m=>m.type()==='error'&&errs.push(m.text())); page.on('pageerror',e=>errs.push('PE:'+e.message));
 await page.goto('http://localhost:8097/LexCapture_v8.html',{waitUntil:'load'});
 await page.evaluate(()=>localStorage.clear()); await page.reload({waitUntil:'load'}); await page.waitForTimeout(500);

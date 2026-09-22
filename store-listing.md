@@ -1,8 +1,8 @@
 # Ficha de Play Store — Flagrante
 
-> Actualizada el 2026-09-21 contra el build 113. La versión de julio quedó en
-> `lexcapture-android/store-listing.julio.bak.md` (fuera del repo): describía una app sin sincronización, sin Modo
-> compartir, sin suscripción y con solo dos documentos.
+> Actualizada el **2026-09-22** contra el **build 118**, con el nombre **Flagrante**.
+> ⚠️ Las URL siguen diciendo `lexcapture` a propósito: el `.aab` ya firmado carga
+> desde ese repositorio y renombrarlo dejaría tiesas las apps ya instaladas.
 > ⚠️ **Play exige que la ficha, la política de privacidad y el formulario de
 > Seguridad de los datos digan lo mismo.** Si se toca una, revisar las tres.
 > Política publicada: https://getcorenova.github.io/lexcapture/privacy.html
@@ -17,12 +17,18 @@ Registro de capturas en campo: documentos legales automáticos y offline
 Productividad (Productivity)
 
 ## Descripción completa (máx. 4000)
+> ⚠️ **Versión 1 (build 118):** se retiraron los párrafos de COPIA DE SEGURIDAD y
+> SUSCRIPCIÓN. Ninguna de las dos funciona en este build — el identificador de
+> Google está vacío y no hay código de compras. Anunciar en la tienda una función
+> que la app no tiene es motivo de rechazo por ficha engañosa. **Se reponen cuando
+> cada una exista de verdad, y entonces hay que actualizar también Seguridad de
+> los datos y la Clasificación del contenido.**
 Flagrante es una herramienta de trabajo en campo para digitalizar el registro de capturas y aprehensiones según el procedimiento penal colombiano (Ley 906 de 2004). Está pensada para usarse con el teléfono en la mano, sin conexión a internet.
 
 Reemplaza el llenado manual en papel: se diligencia una sola vez y la aplicación produce los documentos del procedimiento con esos mismos datos.
 
 DOCUMENTOS QUE GENERA
-• Informe de Captura en Flagrancia (FPJ-5), en sus dos formatos: adultos (URI) y adolescentes (CESPA).
+• Informe de Captura en Flagrancia (FPJ-5), en sus dos formatos: para adultos y para adolescentes.
 • Acta de Derechos del Capturado (FPJ-6), una por cada persona.
 • Acta de Incautación de Elementos.
 • Registro de Cadena de Custodia (FPJ-8) y Rótulo de EMP y EF (FPJ-7).
@@ -45,12 +51,6 @@ Toda la información se guarda cifrada (AES-256) en el propio dispositivo y la a
 
 TRABAJO EN PAREJA
 Dos equipos se vinculan mostrando un código en pantalla y se pasan las personas y las capturas ya registradas, directamente entre los dos teléfonos por la misma red wifi, sin pasar por ningún servidor. También se pueden pasar por archivo cifrado.
-
-COPIA DE SEGURIDAD OPCIONAL
-Quien quiera puede activar una copia cifrada en su propia cuenta de Google Drive, para tener la misma información en el teléfono y en el computador. Se cifra en el dispositivo antes de subirla y la clave no sale de los equipos del usuario: nadie más puede leerla. Es opcional y viene desactivada.
-
-SUSCRIPCIÓN
-La aplicación ofrece una suscripción mensual o anual para generar documentos. La compra se realiza a través de Google Play.
 
 Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado.
 
@@ -109,3 +109,44 @@ Qué declarar:
 Herramienta de productividad, sin contenido generado por usuarios visible para
 terceros, sin chat, sin publicidad. El contenido que el usuario escribe es de
 trabajo y no sale del dispositivo salvo por las vías que él dispara.
+
+## Acceso a la app (formulario de Play) — ⚠️ CONTESTAR CON INSTRUCCIONES
+**Respuesta: «Todas las funciones están disponibles sin acceso especial.»** No hay
+cuenta, ni registro, ni credenciales que entregar: el PIN lo crea el propio
+revisor en su equipo y solo protege lo que él mismo guarde.
+
+⚠️ **Pero hay que escribir las instrucciones igualmente**, porque **la primera
+pantalla que ve quien abre la app es «Configurar seguridad — crea un PIN»**
+(comprobado abriéndola como usuario nuevo) y sin una línea de contexto se lee
+como un muro de registro. Texto sugerido para el campo de instrucciones:
+
+> La app pide crear un PIN de 4 dígitos la primera vez. Es una clave local que el
+> propio usuario elige para cifrar los datos en su dispositivo: no es una cuenta,
+> no se registra en ningún servidor y no hace falta ninguna credencial nuestra.
+> Escriba cualquier PIN (por ejemplo 1234), confírmelo y entrará a la app.
+> Para ver la app con datos, use «GENERAR CASO FICTICIO» en la pantalla inicial:
+> crea una captura de demostración con datos inventados.
+
+## Anuncios
+**No.** La app no contiene publicidad ni identificadores de publicidad.
+
+## Público objetivo y contenido
+**Solo adultos (18+).** Es una herramienta de trabajo para funcionarios de policía
+judicial; no está dirigida a menores ni tiene atractivo para ellos.
+⚠️ Que la app trate procedimientos con **adolescentes** (CESPA, Ley 1098 de 2006)
+**no cambia esta respuesta**: los menores son el sujeto del procedimiento que el
+funcionario documenta, nunca el usuario de la app.
+
+## ⚠️ ¿App gubernamental? — NO
+Play pregunta si la app está asociada a un gobierno o desarrollada en su nombre.
+**La respuesta es NO** y hay que poder sostenerla: la app **no menciona ninguna
+institución** — el usuario escribe la suya en Ajustes—, el ícono es un monograma
+y no un escudo, y el vocabulario legal (FPJ-5, NUNC, URI, CESPA) es del sistema
+judicial colombiano, no la marca de una entidad. Es el de-branding de 2026-07-14.
+⚠️ Si alguna vez se reintroduce un nombre de institución o un logo tipo escudo
+**en el código**, esta respuesta deja de ser cierta y la ficha se cae.
+
+## Categoría de la ficha y etiquetas
+- Categoría: **Productividad**
+- ⚠️ Play marcará la ficha como **«Compras dentro de la aplicación»** por el
+  permiso `BILLING`, aunque el muro todavía no esté escrito. Es correcto.
