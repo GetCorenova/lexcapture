@@ -6971,3 +6971,75 @@ SVG» y en esta limpieza se retiró `.desp-fav`: el fallo es el mismo con y sin 
 mecanismo se había retirado del JS el 2026-08-08 y lo que quedaba era CSS sin consumidor.
 Verificado además **mirando la app**, no solo el DOM: 12 capturas de las 6 pantallas en los dos
 temas, sin un error de consola. Anti-caché `?v=118` / `cache-v118`, `_BUILD=118`.
+
+## La sincronización con Drive queda cableada (2026-09-22)
+Era el pendiente que la Fase 1 dejó anotado —«`SY_CLIENT_ID` está vacío»— y, de paso, **el último
+riesgo real de rechazo que quedaba en la ficha**: sin identificador, la pantalla de Sincronización
+salía con el cartel «Falta un paso de instalación», o sea una pantalla sin salida que además le dice
+al revisor que la aplicación está incompletamente instalada. Verificado con `verify_sync.mjs`
+(**72 checks**, antes 68).
+
+- **Creado el cliente de OAuth** en Google Cloud (proyecto `Flagrante`): tipo **aplicación web**,
+  origen de JavaScript `https://getcorenova.github.io` y **sin URI de redireccionamiento** — la
+  librería de Google que usa la app (`accounts.google.com/gsi/client`) devuelve el token por
+  JavaScript y no los usa. ⚠️ El **secreto del cliente no se usa, no se guarda y no se descarga**:
+  un cliente web lo publica todo en el código por diseño, y sin redireccionamiento registrado no hay
+  flujo que pudiera aprovecharlo.
+- ⚠️ **Las cuatro cosas que hacen falta en Google Cloud, y ninguna es el código**: Drive API
+  habilitada · pantalla de consentimiento configurada · `drive.appdata` registrado **como permiso NO
+  sensible** (por eso no dispara la verificación pesada de Google) · y la app **publicada**. Con la
+  app en estado «Prueba» solo autoriza a los correos que se añadan a mano, así que la
+  sincronización parecería rota para cualquier otro.
+- ⚠️ **Información de la marca hay que completarla**, aunque no se cargue logotipo: Google no
+  habilita «Publicar app» sin ella. **El logotipo se deja vacío a propósito** — subirlo dispara la
+  verificación de marca, que son semanas.
+
+### ⚠️ Dentro de la app de Play Store esto NO PUEDE funcionar, y por eso no se ofrece
+Google **bloquea su pantalla de consentimiento en un WebView embebido** (`disallowed_useragent`), y
+el envoltorio de Capacitor es exactamente eso. O sea que en la app de la tienda el botón «Activar en
+este equipo» abriría un error de Google. **Un botón que no funciona es motivo de rechazo**, así que
+el menú no enseña la entrada.
+- **`syDisponible()` es el punto único** —`!_capNative()`— y lo consultan **el menú y la propia
+  pantalla**, que no pueden discrepar. `syPintarNav()` oculta las dos entradas (`nav-sync` en el
+  panel lateral y `mas-sync` en el sheet «Más»).
+- ⚠️ **Se oculta con `display`, NO con el atributo `hidden`**: una regla de autor
+  (`.sb-item{display:flex}`) gana sobre el `display:none` del navegador y el ítem seguiría ocupando
+  su renglón. Es la misma trampa de los `<details>` plegables de la Ola 3 y del control de orden de
+  las listas.
+- ⚠️ **`syPintarNav()` se llama DOS veces, al arrancar y al desbloquear.** Con carga remota el puente
+  de Capacitor puede inyectarse **después** de que la página se pinte, así que en el arranque
+  `_capNative()` puede mentir; al desbloquear han pasado ya varios segundos. No es un temporizador
+  inventado: es el momento del ciclo de vida en el que el dato ya es fiable.
+- `renderSync()` conserva una **guarda** por si se llega por el hash: dice que la sincronización es
+  de la versión web en vez de enseñar un botón que fallaría. Ocultar la entrada evita el callejón;
+  la guarda evita la mentira si alguien llega por otra puerta.
+- ⚠️ **Esto NO toca el `.aab`.** El envoltorio carga la web remota, así que el candado llegó a
+  cualquier teléfono con este despliegue, sin recompilar ni pasar por Play Console. Desbloquearlo es
+  la **Fase 2** (autorización nativa de Android), que sí obliga a recompilar y a una actualización
+  nueva en la consola.
+
+### Verificación
+- **[F12]** simula el envoltorio (`window.Capacitor`) y exige que las dos entradas pasen a `none`;
+  **[F13]** que la pantalla lo explique y no ofrezca el botón; **[F14]** que al quitar el envoltorio
+  vuelvan —**el candado es del envoltorio, no del build**—; **[F15]** que la copia que se despliega
+  lleve el identificador puesto, que es lo que evita volver a publicar con el cartel de «falta un
+  paso de instalación».
+- ⚠️ **[F12] mide el `style.display` que pone la función, NO el computado**: la suite corre a 384 px
+  y en teléfono el panel lateral ya está oculto por una media query, así que el computado diría
+  «none» con candado y sin él. La causalidad queda dentro del propio check: entre la lectura de
+  antes y la de después lo único que corre es simular Capacitor y llamar a `syPintarNav()`.
+- **Los 68 checks anteriores siguen en verde sin tocar una expectativa**, porque la suite ya asignaba
+  `SY_CLIENT_ID` en caliente en cada comprobación que depende de él. También en verde compartir 57.
+  ⚠️ `verify_jerarquia` 65/66 y `verify_ds` 9/10 son los **fallos preexistentes** ya documentados
+  (el aviso de Ajustes con los marcadores del oficio, y «favorito con estrella SVG»).
+- **Comprobado sobre lo que de verdad sirve GitHub Pages**, no solo en local: `_BUILD 119`, el
+  identificador presente, las dos funciones, los dos ids y el cartel.
+
+### ⚠️ Lección de método de esta sesión
+El heredoc de esta máquina **colapsa un nivel de barras invertidas** antes de llegar a Node
+(`\d` llega como `\d`, y una plantilla de cadena se come la que queda). Un parche escrito así dejó
+en la suite `/^d+-...$/` en vez de `/^\d+-...$/`: sintaxis válida, `node --check` en verde y el
+check **fallando por el motivo equivocado**. Al escribir parches por heredoc, o se duplican las
+barras o se usan clases (`[0-9]`, `[.]`) que no necesitan ninguna.
+
+- Anti-caché `?v=119` / `cache-v119`, `_BUILD=119`.
