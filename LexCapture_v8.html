@@ -1830,7 +1830,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
        escogidos a OTRA persona; esto mantiene al día los equipos del MISMO
        funcionario. Confundirlos lleva a entregarle a un compañero la llave de
        todo en vez de los dos casos que necesitaba. -->
-  <div class="sb-item" data-screen="sync" onclick="syAbrir()">
+  <div class="sb-item" id="nav-sync" data-screen="sync" onclick="syAbrir()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg>
     Sincronización
   </div>
@@ -2448,7 +2448,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
     <div class="body"><div class="ti">Modo compartir</div><div class="de">Pasarle personas y capturas al compañero</div></div>
   </button>
-  <button class="sheet-item" onclick="closeSheet();syAbrir()">
+  <button class="sheet-item" id="mas-sync" onclick="closeSheet();syAbrir()">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg></div>
     <div class="body"><div class="ti">Sincronización</div><div class="de">Tus capturas en todos tus equipos</div></div>
   </button>
@@ -2710,7 +2710,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 118;
+var _BUILD = 119;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3299,6 +3299,7 @@ async function doUnlockPin() {
        anterior. Va DIFERIDA y sin esperarla — si no hay red, o Google pide
        volver a autorizar, no pasa nada: la aplicación es offline-first y esto
        es una mejora encima, nunca un requisito para trabajar. */
+    syPintarNav();
     if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
@@ -20103,6 +20104,7 @@ document.addEventListener('DOMContentLoaded', function() {
   applyTheme(getTheme());
   lcGradoPintarDatalist();
   _lcPurgarPlantillas();
+  syPintarNav();
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);
   else go('capturas');
@@ -23123,7 +23125,7 @@ var SY_SCOPE   = 'https://www.googleapis.com/auth/drive.appdata';
    Client ID de tipo «Web» se publica en el código del cliente por diseño), pero
    sin él la sincronización no puede arrancar: se crea una vez en Google Cloud
    Console, con la cuenta del proyecto, y se pega aquí. */
-var SY_CLIENT_ID = '';
+var SY_CLIENT_ID = '837685454525-5ogfk3k294kme3bn8vt8th0mc14e79uh.apps.googleusercontent.com';
 
 /* Claves de configuración que NO se sincronizan. ⚠️ Son marcas de migración: si
    viajaran, un equipo que todavía no ha corrido su migración recibiría la marca
@@ -23506,6 +23508,30 @@ async function syRotarClave() {
    funcionario ve sus equipos, su código y cuándo fue la última vez. */
 var _syOcupado = false, _syUltimo = '';
 
+/* ⚠️ Google BLOQUEA su pantalla de consentimiento dentro de un WebView embebido
+   (`disallowed_useragent`), y el envoltorio de Capacitor es justo eso. O sea que
+   dentro de la app de la tienda esta función NO PUEDE arrancar: ofrecerla sería
+   un callejón sin salida, y un botón que no funciona es motivo de rechazo.
+   Desbloquearlo es la Fase 2 (autorización nativa de Android), que obliga a
+   recompilar el paquete — hasta entonces, la sincronización es de la versión web.
+   Punto ÚNICO: lo consultan el menú y la propia pantalla, que no pueden discrepar. */
+function syDisponible() { return !_capNative(); }
+
+/* ⚠️ Se oculta con `display`, NO con el atributo `hidden`: una regla de autor
+   (`.sb-item{display:flex}`) gana sobre el `display:none` del navegador y el
+   ítem seguiría ocupando su renglón. Es la misma trampa de los `<details>`
+   plegables de la Ola 3 y del control de orden de las listas.
+   ⚠️ Se llama DOS veces —al arrancar y al desbloquear— porque con carga remota
+   el puente de Capacitor puede inyectarse después de que la página se pinte:
+   al desbloquear han pasado ya varios segundos y `_capNative()` dice la verdad. */
+function syPintarNav() {
+  var ver = syDisponible();
+  ['nav-sync', 'mas-sync'].forEach(function (id) {
+    var e = document.getElementById(id);
+    if (e) e.style.display = ver ? '' : 'none';
+  });
+}
+
 function syAbrir() { go('sync'); }
 
 function syFecha(ts) {
@@ -23522,6 +23548,14 @@ function renderSync() {
   var el = document.getElementById('sy-pane');
   if (!el) return;
   var st = syEstado(), h = '';
+
+  /* Guarda por si se llega aquí por el hash: el menú ya no la ofrece en el
+     envoltorio nativo, pero decirlo es mejor que enseñar un botón que fallaría. */
+  if (!syDisponible()) {
+    el.innerHTML = '<div class="card"><div class="st">Disponible en la versión web</div>' +
+      '<p class="oj-hint">Abre Flagrante en el navegador para sincronizar tus capturas en tu propio Google Drive.</p></div>';
+    return;
+  }
 
   if (!SY_CLIENT_ID) {
     el.innerHTML = '<div class="card"><div class="st">Falta un paso de instalación</div>' +

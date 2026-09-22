@@ -383,6 +383,42 @@ const f11 = await A.evaluate(async () => {
 });
 log(/no lo recupera nadie/i.test(f11), '[F11] al mostrar el código se advierte que perderlo no tiene vuelta atrás');
 
+/* ⚠️ Dentro del envoltorio de Capacitor, Google BLOQUEA su pantalla de
+   consentimiento (`disallowed_useragent`), así que la sincronización NO PUEDE
+   arrancar ahí y el menú no la ofrece: un botón que no funciona es motivo de
+   rechazo en la tienda. Se simula el envoltorio, que es lo único que una
+   regresión puede hacer desde un navegador.
+   ⚠️ Se mide el `style.display` que pone la función, NO el computado: la suite
+   corre a 384 px y en teléfono el panel lateral ya está oculto por una media
+   query, así que el computado diría «none» con candado y sin él. */
+const f12 = await A.evaluate(() => {
+  const ids = ['nav-sync', 'mas-sync'];
+  const inline = () => ids.map(id => { const e = document.getElementById(id); return e ? e.style.display : null; });
+  const out = { existen: ids.every(id => !!document.getElementById(id)), antes: inline() };
+  window.Capacitor = { isNativePlatform: () => true, Plugins: { Share: {}, Filesystem: {} } };
+  syPintarNav(); go('sync');
+  out.nativo = inline();
+  out.texto = (document.getElementById('sy-pane') || {}).innerText || '';
+  delete window.Capacitor;
+  syPintarNav(); go('sync');
+  out.despues = inline();
+  return out;
+});
+log(f12.existen && f12.antes.every(v => v === '') && f12.nativo.every(v => v === 'none'),
+    '[F12] en el envoltorio nativo el menú NO ofrece la sincronización',
+    JSON.stringify(f12.nativo));
+log(/versi[oó]n web/i.test(f12.texto) && !/Activar en este equipo/.test(f12.texto),
+    '[F13] y si se llega por el hash, la pantalla lo explica en vez de ofrecer un botón que fallaría',
+    f12.texto.slice(0, 48).trim());
+log(f12.despues.every(v => v === ''),
+    '[F14] fuera del envoltorio las dos entradas vuelven: el candado es del envoltorio, no del build');
+
+/* El identificador de Google tiene que estar puesto de verdad, o la versión web
+   sale con el cartel de «falta un paso de instalación». */
+log(/^[0-9]+-[a-z0-9]+[.]apps[.]googleusercontent[.]com$/.test(
+      (src.match(/var SY_CLIENT_ID = '([^']*)'/) || [])[1] || ''),
+    '[F15] la copia que se despliega lleva el identificador de Google configurado');
+
 /* ══════════════════════════════════════════════════════════════════════════
    G · EL SERVICE WORKER
    ⚠️ Este era un bug real y silencioso: con cache-first sobre CUALQUIER GET, el
