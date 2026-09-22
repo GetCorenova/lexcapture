@@ -6723,3 +6723,74 @@ transparencia.
   ⚠️ `verify_fase_g` era la **única** suite que esperaba el nombre viejo (`includes('LexCapture')`),
   y ya estaba obsoleta desde antes por otro motivo.
   Anti-caché `?v=114` / `cache-v114`, `_BUILD=114`.
+
+### El ícono estrena marco y graduaciones (2026-09-21, 2.º pase)
+El usuario aportó una propuesta generada con IA y pidió implementarla. ⚠️ **Al medirla contra el
+ícono que ya había, la COMPOSICIÓN era la misma**: F serif sobre su regla de firma dentro del
+encuadre de la captura, ámbar sobre azul. Comparadas las dos en 512 px, la letra y la regla caen
+prácticamente en las mismas coordenadas (letra x 165→347 · y 131→330; regla 212 px de ancho). Lo
+que la propuesta aportaba de verdad eran **tres cosas**, y esas son las que se implementaron.
+
+| Lo que añade | Implementado |
+|---|---|
+| Marco dorado exterior | `MARCO`, concéntrico con la baldosa (`rx = 116 − 46 = 70`) |
+| **Graduaciones de regla** en los cuatro lados | `regla()`: 9 marcas por lado + 2 puntos, centradas en la MISMA recta del encuadre |
+| Acabado de latón | Un degradado de tres paradas, `#F3C983 → #E8A54F → #C0843A` |
+
+- ⚠️ **El degradado va en `userSpaceOnUse`, y es lo único que hace que la F se lea como una pieza.**
+  Con el modo por defecto (`objectBoundingBox`) cada uno de los seis rectángulos de la letra
+  tendría **su propio** degradado y la F saldría partida en seis trozos con seis luces distintas.
+  Una sola definición sobre el lienzo entero (`y1=78 → y2=434`) le da a todo el dibujo la misma
+  dirección de luz — la letra, el encuadre, las graduaciones y el marco.
+- ⚠️ **Esto revisa la regla «plano: sin gradientes ni relieve»** que fijó el primer pase. El
+  degradado se adopta porque es lo que da el aspecto de latón de la propuesta y **sobrevive al
+  reescalado** (a 48 px se lee como un oro ligeramente variado). Lo que **no** se copió es el
+  **relieve**: biseles, sombra proyectada y brillo interior. Un bisel a 48 px no es un bisel, es un
+  halo sucio alrededor de cada trazo. Tampoco se copió la retícula de fondo ni la textura: a tamaño
+  de lanzador son ruido invisible.
+
+#### Las graduaciones: el lado del encuadre ES una regla
+Van **centradas en la misma recta** que los brazos del encuadre (`m = 78`), no en una línea
+paralela: así el borde se lee como **una sola línea graduada** y no como dos elementos
+superpuestos. Marca corta 11 px, la del centro 20, paso 22, trazo 4,5; y dos puntos por lado a 148
+px, entre el brazo del encuadre (que acaba en 132) y la primera marca (168).
+- ⚠️ **Nueve por lado y no las once de la propuesta.** Se decidió **mirando el render a tamaño real**
+  (48 · 72 · 96 px, ampliado con vecino más cercano): a 48 px las marcas se funden en una textura
+  y, con once, el marco dorado, las graduaciones y el encuadre se apelmazaban en una banda
+  indistinta. Con nueve la F sigue mandando. ⚠️ A 48 px las graduaciones **no se leen como
+  graduaciones** y eso es aceptable: leen como un canto trabajado, y el mdpi es una densidad
+  heredada — un teléfono actual usa el ícono adaptativo.
+- **La comprobación de zona segura ahora las mide a ellas también.** El punto más lejano del centro
+  sigue siendo la esquina del encuadre (249,5 px), pero el generador calcula además la marca más
+  exterior (204,5) y los puntos (212,7) y **toma el máximo**: si mañana alguien alarga las marcas o
+  separa los puntos, el guard lo ve. Escala máxima que cabe 0,8210 · usada **0,81** → 202,1 de
+  204,8. **Aborta** si se sale.
+
+#### ⚠️ El marco dorado NO viaja al maskable ni al ícono adaptativo
+Es el **canto de la baldosa**, no parte del dibujo. Donde no hay baldosa —un lanzador de Android
+decide él la silueta— **el marco lo pone la máscara**, y dibujar un rectángulo redondeado dorado
+dentro de un recorte circular es un marco dentro de un marco. Medido: a escala 1 su esquina está a
+**270,5 px** del centro, así que para meterlo en el maskable habría que bajar todo el dibujo a
+0,776 y sus esquinas quedarían **tangentes** al círculo garantizado — se vería accidental, como si
+lo estuvieran cortando. Es el mismo criterio con el que el hilo blanco del canto nunca viajó.
+- **Sigue el mismo reparto de siempre**, ahora con una variante más: `icon.svg`/`-192`/`-512` llevan
+  baldosa + hilo + marco; `icon-maskable-512` y la capa frontal de Android llevan solo el dibujo
+  escalado; y **`icon-store-512` estrena su propio SVG** (`SVG_STORE`) a sangre, **con marco y a
+  escala 1** — la máscara de la ficha de Play es un cuadrado redondeado generoso, no un círculo, así
+  que ahí sí cabe entero y es la versión que más se parece a la propuesta del usuario. Antes ese
+  archivo reutilizaba el maskable y salía con el dibujo al 81 % y sin marco.
+
+#### Comprobado
+- **Mirando, no leyendo**: el ícono a 512; el maskable; el adaptativo **recortado al 72/108 y
+  enmascarado**, que es lo que de verdad ve el usuario (⚠️ Android recorta PRIMERO y enmascara
+  DESPUÉS: en el teléfono el dibujo sale 1,5× más grande que la capa); la tira a 48/72/96 px
+  ampliada; y el **logo del sidebar compuesto con los valores reales** de `.sb-logo-wrap` y sus dos
+  tokens, en los dos temas. En claro, el anillo ámbar de `--logo-ring` **acompaña** al marco dorado
+  en vez de competir con él. Consola limpia.
+- **El ícono nuevo está DENTRO del `.aab`**, extraído del paquete y mirado — no se dio por hecho
+  porque Gradle dijera `BUILD SUCCESSFUL`. Paquete de 6 056 963 B, `versionCode 1`, sin subir aún.
+- El **gráfico de funciones de la ficha** se regeneró solo: `store-feature.mjs` lee `icon.svg`, que
+  es la única fuente del dibujo.
+- Validación `build:web --check` en verde: los tres tokens en **115**, los dos bloques de script con
+  sintaxis válida y **cero recursos externos**.
+  Anti-caché `?v=115` / `cache-v115`, `_BUILD=115`.

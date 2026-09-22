@@ -1,15 +1,71 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <!-- Flagrante · la F del procedimiento, sobre su regla de firma,
-       dentro del encuadre de la captura. Sin gradientes ni relieve. -->
+       dentro del encuadre graduado de la captura. -->
+  <defs>
+    <linearGradient id="oro" gradientUnits="userSpaceOnUse" x1="256" y1="78" x2="256" y2="434">
+      <stop offset="0" stop-color="#F3C983"/>
+      <stop offset=".46" stop-color="#E8A54F"/>
+      <stop offset="1" stop-color="#C0843A"/>
+    </linearGradient>
+  </defs>
   <rect width="512" height="512" rx="116" fill="#111E31"/>
   <rect x="11" y="11" width="490" height="490" rx="105" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
-  <g fill="none" stroke="#A9763A" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M78 124 V104 A26 26 0 0 1 104 78 H124"/>
-    <path d="M434 124 V104 A26 26 0 0 0 408 78 H388"/>
-    <path d="M78 388 V408 A26 26 0 0 0 104 434 H124"/>
-    <path d="M434 388 V408 A26 26 0 0 1 408 434 H388"/>
+  <rect x="46" y="46" width="420" height="420" rx="70" fill="none" stroke="url(#oro)" stroke-width="5" stroke-opacity=".82"/>
+  <g fill="none" stroke="url(#oro)" stroke-width="17" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 130 V104 A26 26 0 0 1 104 78 H130"/>
+    <path d="M434 130 V104 A26 26 0 0 0 408 78 H382"/>
+    <path d="M78 382 V408 A26 26 0 0 0 104 434 H130"/>
+    <path d="M434 382 V408 A26 26 0 0 1 408 434 H382"/>
   </g>
-  <g fill="#E8A54F">
+  <g stroke="url(#oro)" stroke-width="4.5">
+    <line x1="168" y1="72.5" x2="168" y2="83.5"/>
+    <line x1="168" y1="428.5" x2="168" y2="439.5"/>
+    <line x1="72.5" y1="168" x2="83.5" y2="168"/>
+    <line x1="428.5" y1="168" x2="439.5" y2="168"/>
+    <line x1="190" y1="72.5" x2="190" y2="83.5"/>
+    <line x1="190" y1="428.5" x2="190" y2="439.5"/>
+    <line x1="72.5" y1="190" x2="83.5" y2="190"/>
+    <line x1="428.5" y1="190" x2="439.5" y2="190"/>
+    <line x1="212" y1="72.5" x2="212" y2="83.5"/>
+    <line x1="212" y1="428.5" x2="212" y2="439.5"/>
+    <line x1="72.5" y1="212" x2="83.5" y2="212"/>
+    <line x1="428.5" y1="212" x2="439.5" y2="212"/>
+    <line x1="234" y1="72.5" x2="234" y2="83.5"/>
+    <line x1="234" y1="428.5" x2="234" y2="439.5"/>
+    <line x1="72.5" y1="234" x2="83.5" y2="234"/>
+    <line x1="428.5" y1="234" x2="439.5" y2="234"/>
+    <line x1="256" y1="68" x2="256" y2="88"/>
+    <line x1="256" y1="424" x2="256" y2="444"/>
+    <line x1="68" y1="256" x2="88" y2="256"/>
+    <line x1="424" y1="256" x2="444" y2="256"/>
+    <line x1="278" y1="72.5" x2="278" y2="83.5"/>
+    <line x1="278" y1="428.5" x2="278" y2="439.5"/>
+    <line x1="72.5" y1="278" x2="83.5" y2="278"/>
+    <line x1="428.5" y1="278" x2="439.5" y2="278"/>
+    <line x1="300" y1="72.5" x2="300" y2="83.5"/>
+    <line x1="300" y1="428.5" x2="300" y2="439.5"/>
+    <line x1="72.5" y1="300" x2="83.5" y2="300"/>
+    <line x1="428.5" y1="300" x2="439.5" y2="300"/>
+    <line x1="322" y1="72.5" x2="322" y2="83.5"/>
+    <line x1="322" y1="428.5" x2="322" y2="439.5"/>
+    <line x1="72.5" y1="322" x2="83.5" y2="322"/>
+    <line x1="428.5" y1="322" x2="439.5" y2="322"/>
+    <line x1="344" y1="72.5" x2="344" y2="83.5"/>
+    <line x1="344" y1="428.5" x2="344" y2="439.5"/>
+    <line x1="72.5" y1="344" x2="83.5" y2="344"/>
+    <line x1="428.5" y1="344" x2="439.5" y2="344"/>
+  </g>
+  <g fill="url(#oro)">
+    <circle cx="148" cy="78" r="4.5"/>
+    <circle cx="148" cy="434" r="4.5"/>
+    <circle cx="78" cy="148" r="4.5"/>
+    <circle cx="434" cy="148" r="4.5"/>
+    <circle cx="364" cy="78" r="4.5"/>
+    <circle cx="364" cy="434" r="4.5"/>
+    <circle cx="78" cy="364" r="4.5"/>
+    <circle cx="434" cy="364" r="4.5"/>
+  </g>
+  <g fill="url(#oro)">
     <rect x="200.56" y="131.04" width="38.72" height="198.88"/>
     <rect x="170.64" y="131.04" width="176" height="35.2"/>
     <rect x="325.52" y="131.04" width="21.12" height="54.56"/>

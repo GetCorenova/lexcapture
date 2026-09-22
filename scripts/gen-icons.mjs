@@ -1,5 +1,6 @@
 // Genera los archivos definitivos del icono de Flagrante.
 //   icon.svg · icon-192.png · icon-512.png · icon-maskable-512.png
+//   icon-store-512.png · los 15 PNG del lanzador de Android
 //   y el base64 del logo del sidebar.
 //
 // La F va dibujada como TRAZADOS: no depende de que ninguna fuente este
@@ -12,9 +13,23 @@ import { fileURLToPath } from 'url';
 // Raiz del repositorio, no una ruta de una maquina concreta.
 const DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-const NAVY    = '#111E31';   // el azul de la Propuesta 2 del usuario
-const AMBAR   = '#E8A54F';
-const AMBAR_T = '#A9763A';
+const NAVY   = '#111E31';   // el azul de la propuesta del usuario
+const ORO_HI = '#F3C983';   // brillo del laton, arriba
+const ORO    = '#E8A54F';   // el --flag-2 del Design System, al medio
+const ORO_LO = '#C0843A';   // sombra del laton, abajo
+
+// Un SOLO degradado para todo el dibujo, en coordenadas del lienzo
+// (userSpaceOnUse). Con el modo por defecto cada pieza de la F tendria su
+// propio degradado y la letra se leeria partida en seis trozos.
+const ORO_G = 'url(#oro)';
+const DEFS =
+  '  <defs>\n' +
+  '    <linearGradient id="oro" gradientUnits="userSpaceOnUse" x1="256" y1="78" x2="256" y2="434">\n' +
+  '      <stop offset="0" stop-color="' + ORO_HI + '"/>\n' +
+  '      <stop offset=".46" stop-color="' + ORO + '"/>\n' +
+  '      <stop offset="1" stop-color="' + ORO_LO + '"/>\n' +
+  '    </linearGradient>\n' +
+  '  </defs>\n';
 
 // --- Letra: caja 206 x 226, seis piezas del mismo relleno ---
 const PIEZAS = [
@@ -26,7 +41,7 @@ const PIEZAS = [
   [  0, 204, 124,  22],  // serifa del pie
 ];
 const F_W = 206, F_H = 226;
-const RULE_W = 238, RULE_H = 24, AIRE = 34;
+const RULE_W = 238, RULE_H = 24, AIRE = 34;   // la regla, MAS ANCHA que la letra
 const OFF = (RULE_W - F_W) / 2;
 const ESC = 0.88;
 
@@ -46,6 +61,9 @@ function marca(tinta, esc) {
     '  </g>';
 }
 
+// Encuadre: margen, grosor, largo del brazo y radio de la esquina.
+const ENC = { m: 78, b: 17, l: 52, rr: 26 };
+
 function encuadre(tinta, m, b, l, rr) {
   const M = 512 - m;
   const p = (d) => '    <path d="' + d + '"/>';
@@ -58,67 +76,110 @@ function encuadre(tinta, m, b, l, rr) {
     '  </g>';
 }
 
-// Encuadre: margen, grosor, largo del brazo y radio de la esquina.
-const ENC = { m: 78, b: 18, l: 46, rr: 26 };
+// --- Graduaciones: el lado del encuadre ES una regla ---
+// Van centradas en la MISMA recta que los brazos del encuadre, asi el borde
+// se lee como una sola linea graduada y no como dos elementos superpuestos.
+const REG = { paso: 22, n: 4, corto: 11, largo: 20, grosor: 4.5, punto: 4.5, dist: 148 };
+
+function regla(tinta) {
+  const m = ENC.m, M = 512 - m, R = REG;
+  const seg = [], pt = [];
+  for (let k = -R.n; k <= R.n; k++) {
+    const p = 256 + k * R.paso;
+    const h = (k === 0 ? R.largo : R.corto) / 2;
+    seg.push([p, m - h, p, m + h], [p, M - h, p, M + h],
+             [m - h, p, m + h, p], [M - h, p, M + h, p]);
+  }
+  for (const d of [R.dist, 512 - R.dist]) pt.push([d, m], [d, M], [m, d], [M, d]);
+  return '  <g stroke="' + tinta + '" stroke-width="' + R.grosor + '">\n' +
+    seg.map(s => '    <line x1="' + n(s[0]) + '" y1="' + n(s[1]) +
+                 '" x2="' + n(s[2]) + '" y2="' + n(s[3]) + '"/>').join('\n') + '\n' +
+    '  </g>\n' +
+    '  <g fill="' + tinta + '">\n' +
+    pt.map(p => '    <circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + R.punto + '"/>').join('\n') + '\n' +
+    '  </g>';
+}
+
+// Marco exterior: concentrico con la baldosa (rx = 116 - 46). Es el CANTO de
+// la baldosa, no parte del dibujo: por eso no viaja al maskable ni al icono
+// adaptativo, donde la baldosa no existe y el marco lo pone la mascara.
+const MARCO = '  <rect x="46" y="46" width="420" height="420" rx="70" fill="none" stroke="' +
+  ORO_G + '" stroke-width="5" stroke-opacity=".82"/>';
+
+const CAB = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">\n';
+const CUERPO = encuadre(ORO_G, ENC.m, ENC.b, ENC.l, ENC.rr) + '\n' +
+               regla(ORO_G) + '\n' + marca(ORO_G, ESC);
+
 // Escala del maskable. NO es un numero redondo elegido a ojo: es el mayor que
 // deja la esquina del encuadre dentro de la zona segura. Ver la comprobacion.
 const ESC_MASK = 0.81;
 
-const CAB = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">\n';
-const CUERPO = encuadre(AMBAR_T, ENC.m, ENC.b, ENC.l, ENC.rr) + '\n' + marca(AMBAR, ESC);
-
-// Icono normal: baldosa redondeada + aro interior que define el canto sobre
-// cualquier fondo de pantalla, incluido el negro puro.
+// Icono normal: baldosa redondeada + hilo blanco que define el canto sobre
+// cualquier fondo de pantalla + marco dorado.
 const SVG_ICONO = CAB +
   '  <!-- Flagrante · la F del procedimiento, sobre su regla de firma,\n' +
-  '       dentro del encuadre de la captura. Sin gradientes ni relieve. -->\n' +
+  '       dentro del encuadre graduado de la captura. -->\n' + DEFS +
   '  <rect width="512" height="512" rx="116" fill="' + NAVY + '"/>\n' +
   '  <rect x="11" y="11" width="490" height="490" rx="105" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>\n' +
-  CUERPO + '\n</svg>\n';
+  MARCO + '\n' + CUERPO + '\n</svg>\n';
 
-// Maskable: fondo a sangre y TODO el dibujo al 82%, encuadre incluido, para
+// Maskable: fondo a sangre y TODO el dibujo al 81%, encuadre incluido, para
 // que la esquina del encuadre caiga dentro de la zona segura (r = 204.8).
-const SVG_MASK = CAB +
+const SVG_MASK = CAB + DEFS +
   '  <rect width="512" height="512" fill="' + NAVY + '"/>\n' +
   '  <g transform="translate(256,256) scale(' + ESC_MASK + ') translate(-256,-256)">\n' +
   CUERPO + '\n  </g>\n</svg>\n';
 
+// Ficha de Play: Google aplica SU PROPIO redondeo, asi que va a sangre y sin
+// transparencia. Pero su mascara es un cuadrado redondeado generoso, no un
+// circulo: cabe el dibujo entero a escala 1, marco dorado incluido.
+const SVG_STORE = CAB + DEFS +
+  '  <rect width="512" height="512" fill="' + NAVY + '"/>\n' +
+  MARCO + '\n' + CUERPO + '\n</svg>\n';
+
 writeFileSync(path.join(DIR, 'icon.svg'), SVG_ICONO);
 console.log('  icon.svg          ' + SVG_ICONO.length + ' bytes');
 
-// --- Comprobacion: el encuadre contra la zona segura del lanzador ---
+// --- Comprobacion: el dibujo contra la zona segura del lanzador ---
 // El punto mas lejano del centro NO es la coordenada (m,m) del trazado: la
 // esquina es un arco de radio rr con un trazo de grosor b, asi que sobresale
 // por la diagonal. Medirlo sin el trazo da 1.6 px de menos y el encuadre se
 // sale sin que nada avise.
 const centroArco = Math.SQRT2 * (256 - ENC.m - ENC.rr);
 const extremo    = centroArco + ENC.rr + ENC.b / 2;
-const escMax     = 204.8 / extremo;
-console.log('  encuadre sin escalar: ' + extremo.toFixed(1) + ' px del centro');
-console.log('  escala maxima que cabe: ' + escMax.toFixed(4) + '  ·  usada: ' + ESC_MASK);
-console.log('  -> en el maskable queda a ' + (extremo * ESC_MASK).toFixed(1) +
-            ' px (zona segura 204.8) -> ' + (extremo * ESC_MASK <= 204.8 ? 'CABE' : 'SE SALE'));
-if (extremo * ESC_MASK > 204.8) { console.error('ABORTA: el encuadre se sale de la zona segura.'); process.exit(1); }
+// Las graduaciones tambien se miden: la de mas afuera esta cerca de la esquina
+// del recorrido, no en el centro del lado.
+const tick = Math.hypot(REG.n * REG.paso + REG.grosor / 2, 256 - ENC.m + REG.corto / 2);
+const dot  = Math.hypot(512 - REG.dist - 256, 256 - ENC.m) + REG.punto;
+const lejos = Math.max(extremo, tick, dot);
+console.log('  encuadre ' + extremo.toFixed(1) + ' · graduaciones ' + tick.toFixed(1) +
+            ' · puntos ' + dot.toFixed(1) + ' px del centro');
+console.log('  escala maxima que cabe: ' + (204.8 / lejos).toFixed(4) + '  ·  usada: ' + ESC_MASK);
+console.log('  -> en el maskable queda a ' + (lejos * ESC_MASK).toFixed(1) +
+            ' px (zona segura 204.8) -> ' + (lejos * ESC_MASK <= 204.8 ? 'CABE' : 'SE SALE'));
+if (lejos * ESC_MASK > 204.8) { console.error('ABORTA: el dibujo se sale de la zona segura.'); process.exit(1); }
 
 // --- PNG ---
 const browser = await chromium.launch();
+const pinta = async (src, size, file, dir) => {
+  const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
+  await page.setContent('<body style="margin:0;padding:0;background:transparent">' +
+    src.replace('<svg ', '<svg width="' + size + '" height="' + size + '" style="display:block" ') +
+    '</body>', { waitUntil: 'load' });
+  const buf = await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: size, height: size } });
+  writeFileSync(path.join(dir || DIR, file), buf);
+  await page.close();
+  return buf.length;
+};
+
 for (const s of [
   { file: 'icon-192.png',          size: 192, src: SVG_ICONO },
   { file: 'icon-512.png',          size: 512, src: SVG_ICONO },
   { file: 'icon-maskable-512.png', size: 512, src: SVG_MASK  },
-  // Ficha de Play: Google aplica SU PROPIO redondeo, asi que el icono de la
-  // tienda va a sangre y sin transparencia. Subir el redondeado lo redondea
-  // dos veces. Mismo dibujo que el maskable, con nombre que no se confunda.
-  { file: 'icon-store-512.png',    size: 512, src: SVG_MASK  },
+  { file: 'icon-store-512.png',    size: 512, src: SVG_STORE },
 ]) {
-  const page = await browser.newPage({ viewport: { width: s.size, height: s.size }, deviceScaleFactor: 1 });
-  await page.setContent('<body style="margin:0;padding:0;background:transparent">' +
-    s.src.replace('<svg ', '<svg width="' + s.size + '" height="' + s.size + '" style="display:block" ') +
-    '</body>', { waitUntil: 'load' });
-  const buf = await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: s.size, height: s.size } });
-  writeFileSync(path.join(DIR, s.file), buf);
-  console.log('  ' + s.file.padEnd(24) + s.size + 'x' + s.size + '  ' + buf.length + ' bytes');
-  await page.close();
+  const b = await pinta(s.src, s.size, s.file);
+  console.log('  ' + s.file.padEnd(24) + s.size + 'x' + s.size + '  ' + b + ' bytes');
 }
 
 // --- Iconos del lanzador de Android -------------------------------------
@@ -131,16 +192,15 @@ for (const s of [
 // de 72/108 del lienzo — bastante mas estrecho que la zona segura de la PWA.
 const AND = path.join(DIR, '..', 'lexcapture-android', 'android', 'app', 'src', 'main', 'res');
 if (existsSync(AND)) {
-  const extremo = Math.SQRT2 * (256 - ENC.m - ENC.rr) + ENC.rr + ENC.b / 2;  // 250
   const radioSeguro = (72 / 108) * 256;                                       // 170.7
-  const ESC_ADAPT = Math.floor((radioSeguro / extremo) * 1000) / 1000;
+  const ESC_ADAPT = Math.floor((radioSeguro / lejos) * 1000) / 1000;
   console.log('\n  Android · escala de la capa frontal: ' + ESC_ADAPT +
-              '  (' + (extremo * ESC_ADAPT).toFixed(1) + ' de ' + radioSeguro.toFixed(1) + ' px seguros)');
+              '  (' + (lejos * ESC_ADAPT).toFixed(1) + ' de ' + radioSeguro.toFixed(1) + ' px seguros)');
 
-  const FRENTE = CAB + '  <g transform="translate(256,256) scale(' + ESC_ADAPT +
+  const FRENTE = CAB + DEFS + '  <g transform="translate(256,256) scale(' + ESC_ADAPT +
     ') translate(-256,-256)">\n' + CUERPO + '\n  </g>\n</svg>\n';
-  const REDONDO = CAB +
-    '  <defs><clipPath id="c"><circle cx="256" cy="256" r="256"/></clipPath></defs>\n' +
+  const REDONDO = CAB + DEFS +
+    '  <clipPath id="c"><circle cx="256" cy="256" r="256"/></clipPath>\n' +
     '  <g clip-path="url(#c)"><rect width="512" height="512" fill="' + NAVY + '"/>\n' +
     '  <g transform="translate(256,256) scale(' + ESC_MASK + ') translate(-256,-256)">\n' +
     CUERPO + '\n  </g></g>\n</svg>\n';
@@ -148,19 +208,9 @@ if (existsSync(AND)) {
   const DENS = [['mdpi', 48, 108], ['hdpi', 72, 162], ['xhdpi', 96, 216],
                 ['xxhdpi', 144, 324], ['xxxhdpi', 192, 432]];
   for (const [d, legado, frente] of DENS) {
-    for (const [nombre, size, src] of [
-      ['ic_launcher',            legado, SVG_ICONO],
-      ['ic_launcher_round',      legado, REDONDO],
-      ['ic_launcher_foreground', frente, FRENTE],
-    ]) {
-      const page = await browser.newPage({ viewport: { width: size, height: size }, deviceScaleFactor: 1 });
-      await page.setContent('<body style="margin:0;padding:0;background:transparent">' +
-        src.replace('<svg ', '<svg width="' + size + '" height="' + size + '" style="display:block" ') +
-        '</body>', { waitUntil: 'load' });
-      const buf = await page.screenshot({ omitBackground: true, clip: { x: 0, y: 0, width: size, height: size } });
-      writeFileSync(path.join(AND, 'mipmap-' + d, nombre + '.png'), buf);
-      await page.close();
-    }
+    await pinta(SVG_ICONO, legado, 'ic_launcher.png',            path.join(AND, 'mipmap-' + d));
+    await pinta(REDONDO,   legado, 'ic_launcher_round.png',      path.join(AND, 'mipmap-' + d));
+    await pinta(FRENTE,    frente, 'ic_launcher_foreground.png', path.join(AND, 'mipmap-' + d));
     console.log('  mipmap-' + d.padEnd(8) + ' ic_launcher ' + legado + '  ·  foreground ' + frente);
   }
 
