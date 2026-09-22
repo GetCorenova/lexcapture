@@ -6653,6 +6653,9 @@ la URL de la ficha. Se comprobó en `PUBLICAR.md` que la app **todavía no estab
 Console** antes de proponerlo: esa era la única ventana que quedaba.
 
 ## El ícono: de «LC» a la F de Flagrante (2026-09-21)
+⚠️ **REVERTIDO el 2026-09-22 — ver «El ícono vuelve al original» al final del archivo.**
+Este dibujo y el de su 2.º pase ya no existen en el código; se conservan por lo que enseñan sobre
+zonas seguras y sobre el ícono del lanzador, no como descripción de la app.
 Tres propuestas del usuario generadas con IA y una construida a mano. Se eligió la vectorial, con el
 azul de la propuesta 2 del usuario. Todo lo regenera `npm run gen:icons`
 (`scripts/gen-icons.mjs`), que lleva la comprobación de zona segura dentro y **aborta** si no cabe.
@@ -6794,3 +6797,64 @@ lo estuvieran cortando. Es el mismo criterio con el que el hilo blanco del canto
 - Validación `build:web --check` en verde: los tres tokens en **115**, los dos bloques de script con
   sintaxis válida y **cero recursos externos**.
   Anti-caché `?v=115` / `cache-v115`, `_BUILD=115`.
+
+## El ícono vuelve al original: solo cambia la letra (2026-09-22)
+⚠️ **ESTA SECCIÓN SUSTITUYE A LAS DOS ANTERIORES SOBRE EL ÍCONO** («El ícono: de «LC» a la F de
+Flagrante» y su 2.º pase). Aquello se revirtió por completo: no está desactivado ni detrás de una
+bandera — el dibujo no existe. Se conservan aquellas páginas por lo que enseñan sobre zonas seguras
+y sobre el ícono del lanzador, no como descripción de la app.
+
+El usuario zanjó tres iteraciones de golpe: *«ya le hemos dado muchas vueltas a ese logo y no me
+cuadra ninguno. Mejor déjalo tal y como estaba antes cuando se llamaba LexCapture, solo cambia la
+letra L por la F […] los tonos de color, el rectángulo con ese azul y el punto en la parte superior,
+mejor dicho todo igual, lo único que cambia es la letra»*. Y tenía razón: el ícono que la app llevaba
+desde el de-branding de julio ya funcionaba, y lo que se estuvo haciendo era rediseñarlo en vez de
+renombrarlo.
+
+- ⚠️ **El original se recuperó del historial, no se reconstruyó de memoria**: `git show
+  6519f08:icon.svg` es el commit anterior al cambio de nombre. Colores, degradados, geometría del
+  visor, el punto de captura, la baldosa y el hilo del canto viajan **byte a byte** desde ahí.
+- **Lo único que cambia es el monograma.** La L eran dos barras redondeadas (asta 58 × 178, pie
+  118 × 58, `rx` 16). La F son tres: asta, brazo alto y brazo medio, más corto.
+- ⚠️ **Los brazos van a 50 y el asta se queda en 58**, y NO es una incoherencia. Una F mete **tres**
+  barras donde la L metía dos: con las tres a 58, los huecos bajan a 34 y 44 y la letra se lee
+  pellizcada. Adelgazar los trazos horizontales respecto del vertical es además la compensación
+  óptica de cualquier tipografía. La caja sube a 160-354 para abrir los contrapunzones a **42 y 52**.
+- ⚠️ **Se decidió MIRANDO, y el tamaño de la prueba importó**: tres variantes renderizadas juntas a
+  230 px daban las tres por buenas; a **512 px** se vio que con barras de 58 la F queda apretada. Una
+  comparación hecha a tamaño de miniatura no sirve para juzgar el interior de una letra.
+
+### Lo que el dibujo original resuelve gratis, y el nuevo no resolvía
+⚠️ **El visor está mucho más adentro** (margen 126 contra los 78 del dibujo retirado), así que su
+esquina queda a **187,4 px del centro** — dentro del círculo de 204,8 que garantiza el maskable.
+**El ícono cabe entero sin encoger**: `ESC_MASK = 1`, y se ve idéntico en la web, en el maskable y en
+la ficha de Play. El dibujo retirado había que bajarlo al 81 % y aun así el marco dorado no cabía.
+En el ícono adaptativo de Android, que solo garantiza el cuadrado central de 72 dp, basta con **0,91**
+(antes 0,684).
+- ⚠️ **La esquina del visor es una curva de Bézier cuadrática, no un arco de circunferencia**, así que
+  el generador la **muestrea** en vez de aplicarle la fórmula del arco: esa fórmula da 185,9 y el
+  valor real es 187,4. Sobresale un pelo más de lo que el arco predice.
+- El guard sigue vivo y **aborta** si el dibujo se sale; ahora mide las tres piezas (visor, punto y
+  letra) y toma el máximo.
+
+### Lo demás que se revirtió con él
+- **`icon-store-512.png`** vuelve a ser el dibujo a sangre a escala 1 — que aquí es además idéntico al
+  maskable, porque no hay nada que encoger.
+- **El gráfico de funciones de la ficha** recupera su paleta: cian y ámbar sobre el azul original, con
+  la retícula tenue en cian. Sigue **leyendo `icon.svg`** en vez de redibujar el ícono, que es lo
+  único que se conservó del intento anterior: dibujarlo dos veces es como acaban divergiendo.
+- ⚠️ **El fondo del ícono adaptativo es un COLOR sólido** (`#101D30`), no el degradado:
+  `mipmap-anydpi-v26/ic_launcher.xml` lo referencia como `@color`, no como drawable. Se usa el tono
+  que el degradado tiene en el centro del lienzo, que es donde cae el dibujo.
+- ⚠️ **Lo que NO se revirtió**, porque no es del ícono sino de una petición anterior del usuario:
+  `--logo-ring` y `--logo-halo`, el canto del logotipo dentro de la app. Comprobado en los dos temas
+  con los valores reales de `.sb-logo-wrap`: en claro el anillo ámbar acompaña a la F ámbar.
+
+### Comprobado
+- **Mirando**: el ícono a 512, el logotipo del sidebar compuesto con los valores reales en los dos
+  temas y a 24/32/64 px, y el gráfico de la ficha. Consola limpia.
+- **El ícono está DENTRO del `.aab`**, extraído del paquete y mirado — no se dio por hecho porque
+  Gradle dijera `BUILD SUCCESSFUL`. Paquete de 5,81 MB, `versionCode 1`, sin subir aún.
+- Validación `build:web --check`: los tres tokens en **116**, los dos bloques de script con sintaxis
+  válida y cero recursos externos. Regresiones: tema 40 · expediente 13.
+  Anti-caché `?v=116` / `cache-v116`, `_BUILD=116`.
