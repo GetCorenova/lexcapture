@@ -7043,3 +7043,56 @@ check **fallando por el motivo equivocado**. Al escribir parches por heredoc, o 
 barras o se usan clases (`[0-9]`, `[.]`) que no necesitan ninguna.
 
 - Anti-caché `?v=119` / `cache-v119`, `_BUILD=119`.
+
+### La facturación sale del primer paquete, y la política se alinea (2026-09-22)
+Al preparar la primera subida se inspeccionó el `.aab` —no las notas— y apareció un desajuste que
+Google revisa: el paquete declaraba **`com.android.vending.BILLING`** y llevaba dentro el SDK de
+RevenueCat (**1 475 referencias en `classes2.dex`**, más el cliente de facturación) **sin una sola
+línea que lo llamara**: no hay clave pública, no hay muro de pago y no hay productos creados en Play
+Console. Play detecta ese permiso y marca la ficha como «Compras dentro de la aplicación», contra
+unas respuestas ya enviadas que dicen **No** a productos digitales y no declaran historial de
+compras. **Decisión del usuario, consultada con las dos salidas sobre la mesa: quitarla y
+recompilar.**
+
+- ⚠️ **Es el mismo criterio que ya se aplicó a la descripción de la ficha**, donde se retiró el
+  párrafo de SUSCRIPCIÓN: *no anunciar lo que la app no tiene*. Un manifiesto que declara compras es
+  un anuncio igual que un párrafo.
+- **Medido antes y después**: `npm uninstall @revenuecat/purchases-capacitor` + `npx cap sync
+  android` (de 3 plugins a 2) + recompilar → el paquete pasa de **6 089 660 a 3 137 757 B**, el
+  manifiesto fusionado queda en `INTERNET` · `ACCESS_NETWORK_STATE` · `CAMERA` · `DUMP`, el `.dex`
+  baja de dos a uno y da **0** referencias a facturación, y `jar verified.`
+- ⚠️ **`ACCESS_NETWORK_STATE` desapareció con el plugin, y hubo que reponerlo.** Llegaba **solo por
+  el manifiesto fusionado** de la dependencia de compras. Sin él, dentro del envoltorio el WebView no
+  sabe el estado de la red: `navigator.onLine` informa «en línea» siempre y el indicador «Sin señal»
+  **no volvería a aparecer nunca** — en una aplicación que se usa sin cobertura. Ahora se declara en
+  el manifiesto propio. **Regla: un permiso que la app necesita no puede depender de una dependencia
+  que se quita.** Se vio comparando los permisos del paquete nuevo con los del viejo, no leyendo el
+  manifiesto fuente, que nunca lo tuvo.
+- El comentario del permiso de cámara seguía justificándose con **la foto de la cédula**, retirada el
+  2026-09-21. Corregido: el único uso que queda es el lector de códigos de Modo compartir.
+
+#### ⚠️ La política, la ficha y el formulario tienen que decir lo mismo
+Es de los motivos de rechazo más comunes, y con los dos cambios de hoy `privacy.html` se quedó
+describiendo **dos funciones que el paquete no tiene**:
+- **§4, la copia en Drive**: ahora dice, en un cuadro destacado, que **existe únicamente en la
+  versión web** y que la app de Play no la ofrece —Google no admite su pantalla de permiso dentro de
+  una aplicación envuelta—, así que por esa vía **no sale ningún dato del teléfono**.
+- **§8, suscripciones**: el detalle de Google Play y RevenueCat se sustituye por la declaración de
+  que **la versión publicada no ofrece suscripciones ni compras**, y de que la política se
+  actualizará **antes** de que existan. ⚠️ No se renumeraron las secciones a propósito: conservar el
+  índice vale más que ahorrar un apartado, y el hueco documenta que la función está prevista.
+- **§9**: fuera la fila «Compras en la aplicación» de la tabla de permisos, y el permiso de red deja
+  de mencionar la comprobación de la suscripción.
+- `store-listing.md` gana un aviso **encima** de su sección de Seguridad de los datos: para este
+  paquete la respuesta es **no se recopila ni se transfiere nada**, y es cierta. Lo que había escrito
+  describe el escenario con facturación y con Drive, y se aplica cuando se repongan.
+
+⚠️ **Lo que hay que reponer JUNTO, el día que exista el muro de pago** (está en `PUBLICAR.md` fase 2):
+el plugin y una versión nueva del paquete · «Sí» a productos digitales en la clasificación de
+contenido · «historial de compras» en Seguridad de los datos · la sección 8 de `privacy.html` · y el
+párrafo de SUSCRIPCIÓN de `store-listing.md`. Reponer una sola de las cinco vuelve a crear el
+desajuste, por el otro lado.
+
+- Anti-caché `?v=120` / `cache-v120`, `_BUILD=120` — `privacy.html` no está en el precache del
+  Service Worker, pero sí se cachea al vuelo por ser del mismo origen, así que un cambio suyo también
+  obliga a subir el token.

@@ -75,6 +75,18 @@ un menor (Ley 1581 de 2012).
 existe es motivo de rechazo, y las de julio mostraban hasta un error en rojo.
 
 ## Formulario «Seguridad de los datos» — cómo responderlo
+
+> ⚠️ **PARA EL PRIMER PAQUETE (build de 2026-09-22) NO SE DECLARA NADA DE ESTO.**
+> Ese `.aab` **no lleva facturación** —se retiró el plugin, el manifiesto no tiene
+> `com.android.vending.BILLING` y el `.dex` tiene 0 referencias— así que **no hay
+> historial de compras que declarar**; y **la copia en Drive está oculta en la app
+> de Play** (Google bloquea su consentimiento dentro de un WebView), así que **no
+> transfiere nada**. La respuesta correcta hoy es **no se recopila ni se transfiere
+> ningún dato**, y es cierta. Lo de abajo es el escenario **con** facturación y
+> **con** Drive: se aplica cuando se repongan, junto con la sección 8 de
+> `privacy.html` y el párrafo de SUSCRIPCIÓN de la descripción.
+> ⚠️ **La política, la ficha y este formulario tienen que decir lo mismo.**
+
 ⚠️ Esta sección REEMPLAZA la nota de julio, que decía «la app NO envía datos a
 servidores» y «no hay SDKs de terceros». **Las dos afirmaciones dejaron de ser
 ciertas** con la copia en Drive (2026-09-18) y con RevenueCat (facturación).

@@ -18,22 +18,24 @@ usuario — ver «El nombre viejo que queda a propósito», más abajo.
 | Pieza | Estado |
 |---|---|
 | Cuenta de Play Console | ✅ **verificada**. Ya aparece «Crear app» |
-| App creada en Play Console | ❌ **no** — es la fase 1 |
-| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **6 089 660 B** · `jar verified` · versionCode 1 · paquete **`com.getcorenova.flagrante`** · minSdk 24 · targetSdk 36 · compilado 22-09 10:03 |
+| App creada en Play Console | ✅ **sí** (22-09). Checklist de «Configura tu app» diligenciado; falta guardar la ficha y subir el `.aab` |
+| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 137 757 B** · `jar verified` · versionCode 1 · paquete **`com.getcorenova.flagrante`** · minSdk 24 · targetSdk 36 · compilado 22-09 19:34 · **sin facturación** |
 | Ícono dentro del `.aab` | ✅ **comprobado extrayéndolo del paquete**: la F ámbar en el visor cian, capa frontal transparente |
 | Nombre en Android | ✅ `Flagrante` (`strings.xml`: `app_name` y `title_activity_main`) |
-| Permisos del manifiesto fusionado | `INTERNET`, `ACCESS_NETWORK_STATE`, `CAMERA` (opcional), `com.android.vending.BILLING` |
-| Código web publicado | ✅ **build 118 en vivo** en https://getcorenova.github.io/lexcapture/ |
+| Permisos del manifiesto fusionado | `INTERNET`, `ACCESS_NETWORK_STATE`, `CAMERA` (opcional), `DUMP` — **ya NO `com.android.vending.BILLING`** |
+| Código web publicado | ✅ **build 119 en vivo** en https://getcorenova.github.io/lexcapture/ |
+| Sincronización con Drive | ✅ **funcionando en la versión web** (probada de punta a punta). Oculta en la app de Play: Google bloquea su consentimiento en un WebView |
+| Google Cloud | ✅ proyecto `Flagrante`, Drive API, consentimiento **En producción**, `drive.appdata` (no sensible), marca y cliente OAuth |
 | `manifest.json` de la PWA | ✅ «Flagrante — Gestión de Capturas» |
 | Ficha de tienda | ✅ `Crear App/store-listing.md` — nombre **Flagrante**, 9 caracteres |
 | Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html · HTTP 200 · dice **Flagrante** |
 | Ícono 512×512 para la ficha | ✅ `Crear App/icon-store-512.png` (a sangre, sin transparencia) |
 | Gráfico de funciones 1024×500 | ✅ `lexcapture-android/store/feature-graphic-1024x500.png` — **mirado**: dice «Flagrante» con el ícono definitivo |
-| Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` (1080×2400) — **miradas**: ninguna muestra el nombre (en teléfono no hay barra lateral) y los datos son del simulador |
+| Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` (**1080×1920, 9:16 exacto**) — **miradas**: ninguna muestra el nombre (en teléfono no hay barra lateral) y los datos son del simulador. ⚠️ A 1080×2400 la consola las marcaba «Necesita recorte»: 9:16 es el tope |
 | Repositorio | ✅ todo pusheado, `main` al día con `origin/main` |
-| Proyecto en RevenueCat | ❌ **no** — falta, y con él la clave pública |
+| Proyecto en RevenueCat | ⏸️ **aplazado a propósito**, fuera del primer paquete (ver fase 2) |
 | Suscripciones en Play Console | ❌ no (no se pueden crear hasta que haya un `.aab` subido) |
-| Muro de suscripción en la app | ❌ **no escrito** — el SDK está en el envoltorio, la app web aún no lo llama |
+| Muro de suscripción en la app | ❌ **no escrito**, y el SDK **ya no viaja** en el envoltorio |
 | Clave de la cuenta de servicio | ❌ falta → `npm run deploy:playstore` todavía no sirve |
 
 Comprobar el estado en cualquier momento:
@@ -91,23 +93,50 @@ Pulsar «Crear app» y llenar:
 
 ⚠️ Esa pantalla **no pide** el nombre del paquete: se fija al subir el `.aab`.
 
-### Fase 2 · RevenueCat
-1. Crear el proyecto y la app de Android (`com.getcorenova.flagrante`).
-2. Copiar la **clave pública** (empieza por `goog_`).
-3. Sin esa clave no hay nada que cablear en el código — mismo caso que
-   `SY_CLIENT_ID`. **Pedírsela al usuario antes de escribir una línea.**
+### Fase 2 · RevenueCat — APLAZADA (decisión del usuario, 2026-09-22)
+⚠️ **El primer paquete va SIN facturación.** El `.aab` declaraba
+`com.android.vending.BILLING` y llevaba dentro el SDK de RevenueCat (1 475
+referencias en el `.dex`) **sin una sola línea que lo llamara**: no hay clave, no
+hay muro de pago y no hay productos creados. Play detecta ese permiso y marca la
+ficha como «Compras dentro de la aplicación», contra unas respuestas ya enviadas
+que dicen **No** a productos digitales y no declaran historial de compras. Es el
+mismo criterio con el que se quitó el párrafo de SUSCRIPCIÓN de la descripción:
+**no anunciar lo que la app no tiene**.
+
+Qué se hizo: `npm uninstall @revenuecat/purchases-capacitor` + `npx cap sync
+android` + recompilar. El paquete pasó de **6 089 660 a 3 137 757 B**, el
+manifiesto perdió `BILLING` y el `.dex` quedó en **0** referencias a facturación.
+⚠️ De paso desapareció `ACCESS_NETWORK_STATE`, que **llegaba solo por el
+manifiesto fusionado del plugin**: se declara ahora en el manifiesto propio, o el
+indicador «Sin señal» no volvería a aparecer nunca. **Un permiso que la app
+necesita no puede depender de una dependencia que se quita.**
+
+**Para reponerla** (cuando el muro de pago exista de verdad, ver fase 4):
+1. `npm install @revenuecat/purchases-capacitor` + `npx cap sync android`.
+2. Crear el proyecto y la app de Android en RevenueCat (`com.getcorenova.flagrante`)
+   y copiar la **clave pública** (`goog_…`). Sin ella no hay nada que cablear —
+   mismo caso que `SY_CLIENT_ID`. **Pedírsela al usuario antes de escribir una línea.**
+3. Subir el `versionCode`, recompilar y subir una **versión nueva**.
+4. Y **volver a declararlo todo**: «Sí» a productos digitales en la clasificación de
+   contenido, «historial de compras» en Seguridad de los datos, la sección 8 de
+   `privacy.html` y el párrafo de SUSCRIPCIÓN de `store-listing.md`.
 
 ### Fase 3 · Ficha + primera subida (MANUAL)
 1. Pegar de `store-listing.md`: nombre, descripción breve, descripción completa,
    categoría, contacto y el enlace de la política.
 2. Subir `Crear App/icon-store-512.png`, el gráfico de funciones y las 5 capturas
    de `lexcapture-android/store/`.
-3. Responder **Seguridad de los datos** con la sección del `store-listing.md`.
-   ⚠️ **Declarar el historial de compras es obligatorio** por el permiso BILLING,
-   y la copia en Drive hay que declararla como transferencia.
+3. Responder **Seguridad de los datos**. ⚠️ Con el paquete de hoy la respuesta es
+   **no se recopila ni se transfiere nada**, y es cierta: no hay `BILLING` (así que
+   no hay historial de compras que declarar) y **la copia en Drive está oculta en la
+   app de Play** — solo existe en la versión web. La sección de `store-listing.md`
+   describe el escenario CON facturación y CON Drive: aplicará cuando se repongan.
+   ⚠️ **La política y este formulario tienen que decir lo mismo.** Por eso
+   `privacy.html` §4 dice que la copia en Drive es de la versión web y §8 que esta
+   versión no ofrece suscripciones. Si se toca una, revisar las tres.
 4. Subir `app-release.aab` a **pruebas internas** desde el navegador.
 
-### Fase 4 · Suscripciones (solo después de subir el `.aab`)
+### Fase 4 · Suscripciones (solo después de subir el `.aab`, y de reponer la fase 2)
 Monetizar → Productos → Suscripciones → **una** suscripción `lexcapture_premium`
 con **dos planes base**: `mensual` (P1M) y `anual` (P1Y), con sus ofertas de
 prueba gratuita y sus precios por país.
