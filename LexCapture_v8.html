@@ -2717,45 +2717,71 @@ function lcBarraSistema(quedan) {
    ⚠️ Si lo ignora (Android obliga al borde a borde desde su versión 15) se cae
    al suelo del CSS, que al menos evita que el contenido quede debajo del reloj.
    ⚠️ Una sola vez por sesión: es una medición, no un ajuste continuo. */
-var _lcHuecoHecho = false, _lcBarraReserva = null;
+var _lcHuecoHecho = false;
+/* El alto de la barra del sistema, MEDIDO en el propio equipo.
+
+   ⚠️ Por qué no se lee y hay que medirlo: el WebView de Android NO informa la
+   zona segura. Comprobado en el equipo de prueba con este mismo paquete —
+   env(safe-area-inset-top) y window.screenY devuelven 0— mientras la ventana sí
+   dibuja de borde a borde y el título acaba encima del reloj. Un valor fijo
+   tampoco sirve: ahí esa barra mide 52 px y en otros teléfonos no.
+
+   Cómo se mide: se le pide a Android que reserve él la franja, se mira cuánto
+   encogió la ventana —esa resta ES el alto de la barra de estado, y solo la de
+   estado: la de navegación ya estaba descontada en las dos medidas— y se vuelve
+   al borde a borde con el valor puesto.
+
+   ⚠️ Y se VUELVE al borde a borde a propósito, aunque dejarlo reservado también
+   evitaría el solapamiento: la franja que reserva Android es negra y no se puede
+   pintar —Android deja de admitirlo con este SDK de destino, comprobado— así que
+   con la app en claro los iconos oscuros desaparecían sobre ella. En borde a
+   borde el fondo lo pone la propia barra superior de la app, que ya sigue el
+   tema, y el problema no existe en ninguno de los dos.
+
+   ⚠️ Una sola vez por sesión: es una medición, no un ajuste continuo. Y si sale
+   un número imposible, se deja el suelo del CSS en vez de escribir un disparate
+   en la disposición. */
 function lcHuecoBarra(S) {
   if (_lcHuecoHecho || !S || !S.setOverlaysWebView) return;
   _lcHuecoHecho = true;
-  var antes = window.innerHeight;
-  try {
-    Promise.resolve(S.setOverlaysWebView({ overlay: false })).then(function () {
-      /* Dos cuadros de margen: el cambio de disposición no es inmediato y
-         medir en el mismo instante devolvería siempre el valor viejo. */
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          var reservado = window.innerHeight < antes - 4;
-          _lcBarraReserva = reservado;
-          try { document.body.classList.toggle('nat', !reservado); } catch (e) {}
-          /* Ya se sabe cómo quedó el reparto: se repinta con ese dato. */
-          lcBarraColor();
-        });
-      });
-    }).catch(function () {
-      _lcBarraReserva = false;
-      try { document.body.classList.add('nat'); } catch (e) {}
+  /* Dos cuadros de margen: el cambio de disposición no es inmediato y medir en
+     el mismo instante devolvería siempre el valor de antes. */
+  var tras2 = function () {
+    return new Promise(function (r) {
+      requestAnimationFrame(function () { requestAnimationFrame(r); });
     });
-  } catch (e) {
-    _lcBarraReserva = false;
-    try { document.body.classList.add('nat'); } catch (e2) {}
-  }
+  };
+  var suelo = function () { try { document.body.classList.add('nat'); } catch (e) {} };
+  var conBorde = window.innerHeight;
+  try {
+    Promise.resolve(S.setOverlaysWebView({ overlay: false }))
+      .then(tras2)
+      .then(function () {
+        var alto = conBorde - window.innerHeight;
+        return Promise.resolve(S.setOverlaysWebView({ overlay: true }))
+          .then(tras2)
+          .then(function () {
+            if (alto > 0 && alto < 200) {
+              document.documentElement.style.setProperty('--sat', alto + 'px');
+            } else {
+              /* Android obliga al borde a borde desde su versión 15 y puede
+                 ignorar la petición: entonces no hay nada que medir. */
+              suelo();
+            }
+          });
+      })
+      .catch(suelo);
+  } catch (e) { suelo(); }
 }
 
-/* Color de la franja del sistema, según CÓMO haya quedado repartido el espacio.
-   ⚠️ Los iconos los pinta Android y su nomenclatura va por el FONDO, no por los
-   iconos: DARK significa «fondo oscuro» y por tanto iconos CLAROS.
-   ⚠️ El FONDO de la franja solo se pinta cuando Android la reserva. En borde a
-   borde no hay tal franja —la cubre la propia barra superior de la app, que ya
-   sigue el tema— y pedir un color ahí no haría nada.
-   ⚠️ Y esto es lo que evita el defecto simétrico, medido en el emulador: con la
-   app en claro, los iconos pasan a oscuros y sobre una franja negra vuelven a
-   desaparecer. La franja tiene que seguir al tema igual que los iconos.
-   ⚠️ Android deja de admitir este color en su versión 15, pero ahí tampoco
-   reserva la franja, así que el caso no se da: las dos ramas se excluyen. */
+/* Color de los iconos del sistema (hora, batería, señal).
+   ⚠️ Su nomenclatura va por el FONDO, no por los iconos: DARK significa «fondo
+   oscuro» y por tanto iconos CLAROS. LIGHT es al revés.
+   ⚠️ El FONDO de esa franja NO se toca, y no por olvido: con este SDK de destino
+   Android ignora la petición de color aunque el teléfono sea de una versión que
+   antes la admitía —comprobado, la franja se quedaba negra—. Por eso la app se
+   queda en borde a borde y el fondo lo pinta su propia barra superior, que ya
+   sigue el tema. Aquí solo se decide el color de los iconos. */
 function lcBarraColor(S) {
   try {
     if (!S) {
@@ -2763,11 +2789,7 @@ function lcBarraColor(S) {
       S = P && P.StatusBar;
     }
     if (!S || !S.setStyle) return;
-    var claro = lcThemeResuelto() === 'light';
-    S.setStyle({ style: claro ? 'LIGHT' : 'DARK' });
-    if (_lcBarraReserva === true && S.setBackgroundColor) {
-      S.setBackgroundColor({ color: claro ? '#F4F5F8' : '#0C0E13' });
-    }
+    S.setStyle({ style: lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK' });
   } catch (e) {}
 }
 function setTheme(pref) {
@@ -2814,7 +2836,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 124;
+var _BUILD = 125;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
