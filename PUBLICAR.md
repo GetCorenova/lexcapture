@@ -19,7 +19,16 @@ usuario — ver «El nombre viejo que queda a propósito», más abajo.
 |---|---|
 | Cuenta de Play Console | ✅ **verificada**. Ya aparece «Crear app» |
 | App creada en Play Console | ✅ **sí** (22-09). Checklist de «Configura tu app» diligenciado; falta guardar la ficha y subir el `.aab` |
-| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 137 757 B** · `jar verified` · versionCode 1 · paquete **`com.getcorenova.flagrante`** · minSdk 24 · targetSdk 36 · compilado 22-09 19:34 · **sin facturación** |
+| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 213 950 B** · `jar verified` · **versionCode 2** · paquete **`com.getcorenova.flagrante`** · minSdk 24 · targetSdk 36 · compilado 23-09 15:06 · **sin facturación** |
+| Primera subida | ✅ versionCode 1 lanzado en **prueba interna** el 23-09. El 2 la sustituye |
+| Permisos del paquete | INTERNET · ACCESS_NETWORK_STATE · CAMERA (hardware **opcional**) · el interno de receptores dinámicos. **Sin `BILLING`** |
+| Plugins nativos | filesystem · share · **status-bar** · **browser** · **app** |
+
+> ⚠️ **La consola de depuración del WebView NO puede viajar en la versión pública.**
+> Se activa en `capacitor.config.json` (`android.webContentsDebuggingEnabled`) para
+> medir dentro del envoltorio, y hay que **quitarla antes de compilar el release**:
+> con ella, cualquiera con un cable puede inspeccionar los datos de las capturas.
+> Comprobar siempre en el `.aab`: `unzip -p <aab> base/assets/capacitor.config.json`.
 | Ícono dentro del `.aab` | ✅ **comprobado extrayéndolo del paquete**: la F ámbar en el visor cian, capa frontal transparente |
 | Nombre en Android | ✅ `Flagrante` (`strings.xml`: `app_name` y `title_activity_main`) |
 | Permisos del manifiesto fusionado | `INTERNET`, `ACCESS_NETWORK_STATE`, `CAMERA` (opcional), `DUMP` — **ya NO `com.android.vending.BILLING`** |
@@ -225,3 +234,61 @@ pista de Play.
 3. El **`SY_CLIENT_ID`** de Google Cloud — bloquea la copia en Drive.
 4. Los **precios** de los planes mensual y anual.
 5. Decidir el **ID de la suscripción** antes de crearla (irreversible).
+
+
+## Versión 2 del paquete (2026-09-23) — la barra del sistema y el permiso de Google
+
+Reportado desde el teléfono con la app ya instalada de la prueba interna: el título
+quedaba **debajo del reloj** y la hora y los iconos **no se veían**. Las dos cosas
+salían del mismo sitio y ninguna se arregla desde la web sola.
+
+**Lo que había que entender, y solo se vio MIDIENDO dentro del envoltorio** (emulador
+Android 14, con la consola del WebView abierta):
+
+| Medición | Resultado |
+|---|---|
+| `env(safe-area-inset-top)` | **0** — el WebView no informa la zona segura |
+| `window.screenY` | **0** — tampoco sirve |
+| `innerHeight` en borde a borde / con Android reservando | 891 / 839 → la barra mide **52 px** |
+| Petición de color para esa franja | **ignorada** con este SDK de destino: la dejaba NEGRA |
+
+⚠️ **Un valor fijo no sirve**: 52 px es de ESE equipo. La solución es pedirle a
+**Android que reserve él la franja** (`setOverlaysWebView({overlay:false})`), que es
+exacto en cualquier teléfono; él la pinta con el fondo del contenido, así que sigue al
+tema de la app sin hacer nada más. El color de los **iconos** sí se fija, según el tema
+de la app y no el del teléfono (`StatusBar.setStyle`).
+
+⚠️ **Y NO se le pide color a la franja aunque el plugin lo ofrezca**: eso era lo que la
+ponía negra, y con la app en claro los iconos oscuros desaparecían sobre ella. El
+defecto simétrico del original.
+
+⚠️ **El reintento del arranque no es un adorno**: con carga remota el puente se inyecta
+después de pintar, y la primera pantalla —crear el PIN— no pasa por ningún otro sitio
+donde volver a intentarlo. Sin él, un equipo recién instalado arranca con la hora
+invisible; medido.
+
+Verificado en el emulador **en los dos temas**: iconos legibles, franja del color de la
+app y el título con su aire. El suelo del CSS (`body.nat`) se queda como respaldo por si
+Android ignora la petición (desde su versión 15 obliga al borde a borde).
+
+### El permiso de Google dentro de la app — el código está, falta el identificador
+⚠️ Google **bloquea su pantalla de consentimiento dentro de una vista web embebida**, así
+que la sincronización con Drive no podía ofrecerse en la app de Play. Ahora el permiso se
+pide en el **navegador del sistema** y vuelve por una dirección propia; el paquete ya trae
+esa puerta (`intent-filter` con el esquema del paquete, tomado de `${applicationId}`).
+
+**Falta un paso, y es en Google Cloud, no en el código:**
+1. Sacar de Play Console → **Integridad de la app** las huellas **SHA-1** de la clave de
+   firma y de la de carga.
+2. Crear en Google Cloud un identificador de OAuth de **tipo Android** con el nombre del
+   paquete y esas huellas.
+3. Pegarlo en `SY_CLIENT_ID_NAT` del HTML y desplegar.
+
+⚠️ **Ese último paso NO exige recompilar**: el identificador vive en la web. Mientras esté
+vacío, la sincronización sigue oculta dentro de la app —no se ofrece un botón que no puede
+funcionar— y la versión web no se entera.
+
+⚠️ **Sin secreto de cliente, y no es un descuido**: una aplicación que se distribuye no
+puede guardar uno. Lo que prueba quién pide el permiso son el reto criptográfico de un solo
+uso (PKCE) y la huella del certificado. A cambio, este flujo sí entrega permiso de larga
+duración, que el de la web no tiene.
