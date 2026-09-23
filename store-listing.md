@@ -61,7 +61,10 @@ Flagrante es una herramienta de productividad personal. No está afiliada, respa
 
 ## Recursos gráficos — TODOS LISTOS en `lexcapture-android/store/`
 > Se regeneran con `npm run store:assets` y `npm run store:feature`.
-- [x] Ícono 512×512 — `Crear App/icon-512.png`
+- [x] Ícono 512×512 — `Crear App/icon-store-512.png`
+      ⚠️ **Ese y no `icon-512.png`**: el otro trae las esquinas ya redondeadas y
+      transparentes, y Google aplica **su propio** redondeo encima. El de la ficha
+      va a sangre y sin transparencia.
 - [x] Gráfico de funciones 1024×500 — `store/feature-graphic-1024x500.png`
 - [x] Capturas de teléfono 1080×2400 (5, generadas del build 113 con datos ficticios):
       `store/01_capturas.png` · `02_expediente.png` · `03_personas.png` ·
@@ -160,5 +163,8 @@ judicial colombiano, no la marca de una entidad. Es el de-branding de 2026-07-14
 
 ## Categoría de la ficha y etiquetas
 - Categoría: **Productividad**
-- ⚠️ Play marcará la ficha como **«Compras dentro de la aplicación»** por el
-  permiso `BILLING`, aunque el muro todavía no esté escrito. Es correcto.
+- ⚠️ **El primer paquete NO lleva facturación**, así que la ficha **no** debe
+  salir marcada como «Compras dentro de la aplicación». Si apareciera esa
+  etiqueta, es que se subió un `.aab` con el permiso `BILLING` dentro: revisar
+  antes de lanzar. La etiqueta vuelve a ser correcta cuando se reponga la
+  facturación (fase 2 de `PUBLICAR.md`), junto con las otras cuatro piezas.

@@ -32,6 +32,11 @@
 
 :root{
   /* — Superficies (oscuro): neutro frío en 5 niveles, profundidad sin sombras — */
+  /* Franja del sistema (hora, batería). En el navegador vale 0; dentro del
+     envoltorio Android la ventana dibuja de borde a borde y hay que dejarle
+     sitio, o la barra superior queda DEBAJO del reloj. Punto único: todo lo
+     que se ancla arriba lo consume, así no hay números sueltos repartidos. */
+  --sat:env(safe-area-inset-top,0px);
   --bg:#0C0E13;
   --surface-1:#12151C;
   --surface-2:#171C26;
@@ -223,7 +228,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   backdrop-filter:blur(var(--blur));
   -webkit-backdrop-filter:blur(var(--blur));
   border-bottom:1px solid var(--border);
-  padding:12px 16px;
+  padding:calc(12px + var(--sat)) 16px 12px;
   display:flex;align-items:center;gap:12px;min-height:56px;
 }
 .topbar h1{font-size:17px;font-weight:650;letter-spacing:-.012em;line-height:24px}
@@ -293,7 +298,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
    alarma dejaría de leerse a los dos minutos. */
 #pt-barra{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
-  align-items:center;gap:12px;padding:7px 14px;
+  align-items:center;gap:12px;padding:calc(7px + var(--sat)) 14px 7px;
   font-size:12.5px;line-height:1.35;
   background:var(--ok-bg);color:var(--ok);
   border-bottom:1px solid color-mix(in srgb,var(--ok) 28%,transparent);
@@ -306,7 +311,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   border:1px solid color-mix(in srgb,currentColor 35%,transparent);
   background:transparent;color:currentColor;font-size:12px;font-weight:600;cursor:pointer;
 }
-body.pt{padding-top:36px}
+body.pt{padding-top:calc(36px + var(--sat))}
 
 /* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
    ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
@@ -1758,7 +1763,7 @@ body.pt{padding-top:36px}
 @media (min-width:900px){
   #app{grid-template-columns:264px 1fr;grid-template-rows:1fr}
   #sidebar{
-    display:flex;flex-direction:column;gap:2px;padding:20px 14px;
+    display:flex;flex-direction:column;gap:2px;padding:calc(20px + var(--sat)) 14px 20px;
     background:var(--surface-1);
     border-right:1px solid var(--border);
     position:sticky;top:0;height:100dvh;overflow-y:auto;
@@ -1771,7 +1776,7 @@ body.pt{padding-top:36px}
   .pane{padding-top:20px;padding-bottom:40px}
   #wz-panels{max-width:580px;margin:0 auto;width:100%}
   .pane-t{max-width:580px;margin:0 auto;width:100%}
-  .topbar{padding:20px 0 16px;min-height:76px;background:color-mix(in srgb,var(--bg) 88%,transparent)}
+  .topbar{padding:calc(20px + var(--sat)) 0 16px;min-height:76px;background:color-mix(in srgb,var(--bg) 88%,transparent)}
   .topbar h1{font-size:22px;line-height:28px;letter-spacing:-.015em}
   .topbar .sub{font-size:13px}
   /* Estadísticas: en pantalla ancha los dos rankings caben lado a lado — el
@@ -2710,7 +2715,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 120;
+var _BUILD = 121;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
