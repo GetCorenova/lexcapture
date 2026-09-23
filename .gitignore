@@ -84,3 +84,6 @@ verify_web_desktop.png
 # que no tiene por que cargar con ellas. Se quedan en disco.
 Propuesta Icono*.png
 Propuesta Icono*.jpg
+
+# Scripts de diagnóstico de una sesión: se escriben, se miden y se tiran.
+_tmp_*
