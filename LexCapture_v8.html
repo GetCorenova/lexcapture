@@ -2694,13 +2694,11 @@ function lcBarraSistema(quedan) {
   var C = window.Capacitor, nat = false;
   try { nat = !!(C && C.isNativePlatform && C.isNativePlatform()); } catch (e) {}
   if (nat) {
-    /* Marca el envoltorio para el CSS: es lo que activa el suelo de la zona
-       segura, porque el WebView no la informa. */
-    try { document.body.classList.add('nat'); } catch (e) {}
     try {
       var S = C.Plugins && C.Plugins.StatusBar;
       if (S && S.setStyle) {
         S.setStyle({ style: lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK' });
+        lcHuecoBarra(S);
         return;
       }
     } catch (e) {}
@@ -2711,6 +2709,35 @@ function lcBarraSistema(quedan) {
      instalado arranca con la hora invisible. Cinco segundos y se abandona; en el
      navegador no hay nada que esperar y el bucle muere solo. */
   if (quedan > 0) setTimeout(function () { lcBarraSistema(quedan - 1); }, 250);
+}
+
+/* El hueco de la barra de estado, MEDIDO en vez de supuesto.
+   ⚠️ El WebView de Android no informa la zona segura: medido con este mismo
+   paquete, env(safe-area-inset-top) devuelve 0 aunque la ventana dibuja de borde
+   a borde y el título acaba encima del reloj. Y un valor fijo tampoco sirve: en
+   el equipo de prueba esa barra mide 52 px y en otros no. Así que se le pide a
+   Android que reserve él el espacio —que es exacto en cualquier teléfono— y se
+   COMPRUEBA que lo hizo mirando si la ventana se encogió.
+   ⚠️ Si lo ignora (Android obliga al borde a borde desde su versión 15) se cae
+   al suelo del CSS, que al menos evita que el contenido quede debajo del reloj.
+   ⚠️ Una sola vez por sesión: es una medición, no un ajuste continuo. */
+var _lcHuecoHecho = false;
+function lcHuecoBarra(S) {
+  if (_lcHuecoHecho || !S || !S.setOverlaysWebView) return;
+  _lcHuecoHecho = true;
+  var antes = window.innerHeight;
+  try {
+    Promise.resolve(S.setOverlaysWebView({ overlay: false })).then(function () {
+      /* Dos cuadros de margen: el cambio de disposición no es inmediato y
+         medir en el mismo instante devolvería siempre el valor viejo. */
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          var reservado = window.innerHeight < antes - 4;
+          try { document.body.classList.toggle('nat', !reservado); } catch (e) {}
+        });
+      });
+    }).catch(function () { try { document.body.classList.add('nat'); } catch (e) {} });
+  } catch (e) { try { document.body.classList.add('nat'); } catch (e2) {} }
 }
 function setTheme(pref) {
   try { localStorage.setItem('lc_theme', pref); } catch (e) {}
@@ -2756,7 +2783,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 122;
+var _BUILD = 123;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
