@@ -312,6 +312,14 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   background:transparent;color:currentColor;font-size:12px;font-weight:600;cursor:pointer;
 }
 body.pt{padding-top:calc(36px + var(--sat))}
+/* ⚠️ El WebView de Android NO informa la zona segura: medido con este mismo
+   paquete en un emulador, env(safe-area-inset-top) devuelve 0 aunque la ventana
+   dibuja de borde a borde y el título acaba encima del reloj. Por eso, y SOLO
+   dentro del envoltorio, se le pone un suelo: la barra de estado de Android mide
+   24dp de base. Se toma el MAYOR de los dos, así que el día que el WebView sí lo
+   informe —o el equipo traiga una muesca más alta— manda el valor real y esto no
+   estorba. En el navegador la clase no existe y no cambia un píxel. */
+body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
 
 /* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
    ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
@@ -2670,6 +2678,39 @@ function applyTheme(pref) {
   if (nota) nota.textContent = p === 'system'
     ? 'Sigue al dispositivo — ahora mismo, ' + (real === 'light' ? 'claro' : 'oscuro') + '.'
     : 'Se aplica al instante.';
+  lcBarraSistema(0);
+}
+/* Color de los iconos del sistema (hora, batería, señal) dentro del envoltorio.
+   ⚠️ Ese color lo decide ANDROID, no la página. El envoltorio usa un tema
+   DayNight, que sigue al TELÉFONO y no a la app: con el teléfono en claro y
+   la app en oscuro, Android pinta iconos oscuros sobre nuestro fondo oscuro y
+   desaparecen — reportado en campo. Aquí se le dice que siga el tema de la APP.
+   ⚠️ La nomenclatura del plugin va por el FONDO, no por los iconos: DARK
+   significa «fondo oscuro» y por tanto iconos CLAROS. LIGHT es al revés.
+   ⚠️ Inerte en la web y mientras el puente no esté: con carga remota puede
+   inyectarse después de pintar, por eso se vuelve a llamar al desbloquear. */
+function lcBarraSistema(quedan) {
+  quedan = (quedan == null) ? 20 : quedan;
+  var C = window.Capacitor, nat = false;
+  try { nat = !!(C && C.isNativePlatform && C.isNativePlatform()); } catch (e) {}
+  if (nat) {
+    /* Marca el envoltorio para el CSS: es lo que activa el suelo de la zona
+       segura, porque el WebView no la informa. */
+    try { document.body.classList.add('nat'); } catch (e) {}
+    try {
+      var S = C.Plugins && C.Plugins.StatusBar;
+      if (S && S.setStyle) {
+        S.setStyle({ style: lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK' });
+        return;
+      }
+    } catch (e) {}
+  }
+  /* ⚠️ El reintento NO es un adorno: con carga remota el puente se inyecta
+     después de pintar, y la PRIMERA pantalla —crear el PIN— no pasa por ningún
+     otro sitio donde volver a intentarlo. Medido: sin esto, un equipo recién
+     instalado arranca con la hora invisible. Cinco segundos y se abandona; en el
+     navegador no hay nada que esperar y el bucle muere solo. */
+  if (quedan > 0) setTimeout(function () { lcBarraSistema(quedan - 1); }, 250);
 }
 function setTheme(pref) {
   try { localStorage.setItem('lc_theme', pref); } catch (e) {}
@@ -2715,7 +2756,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 121;
+var _BUILD = 122;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3305,6 +3346,7 @@ async function doUnlockPin() {
        volver a autorizar, no pasa nada: la aplicación es offline-first y esto
        es una mejora encima, nunca un requisito para trabajar. */
     syPintarNav();
+    lcBarraSistema();
     if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
 }
@@ -20110,6 +20152,7 @@ document.addEventListener('DOMContentLoaded', function() {
   lcGradoPintarDatalist();
   _lcPurgarPlantillas();
   syPintarNav();
+  lcBarraSistema();
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);
   else go('capturas');
@@ -23131,6 +23174,17 @@ var SY_SCOPE   = 'https://www.googleapis.com/auth/drive.appdata';
    sin él la sincronización no puede arrancar: se crea una vez en Google Cloud
    Console, con la cuenta del proyecto, y se pega aquí. */
 var SY_CLIENT_ID = '837685454525-5ogfk3k294kme3bn8vt8th0mc14e79uh.apps.googleusercontent.com';
+/* Cliente de tipo Android, para pedir el permiso DENTRO del envoltorio.
+   Es otro identificador distinto del de arriba y no se puede reutilizar: aquel
+   es de tipo «web» y Google no admite en un cliente web la dirección de retorno
+   propia de una aplicación instalada.
+   ⚠️ Mientras esté vacío, la sincronización sigue oculta dentro de la app —no se
+   ofrece un botón que no puede funcionar— y la versión web no se entera. */
+var SY_CLIENT_ID_NAT = '';
+/* La puerta por la que Google devuelve el control a la aplicación. El esquema es
+   el nombre del paquete, que es lo que Android sabe enrutar y lo que hay que
+   declarar en su manifiesto. */
+var SY_REDIR_NAT = 'com.getcorenova.flagrante:/oauth2redirect';
 
 /* Claves de configuración que NO se sincronizan. ⚠️ Son marcas de migración: si
    viajaran, un equipo que todavía no ha corrido su migración recibiría la marca
@@ -23302,6 +23356,7 @@ function syCargarGIS() {
    «Reconectar con Google», que sí es un gesto del usuario y siempre funciona. */
 function syToken(interactivo) {
   if (_syTok && _syTokExp > Date.now() + 60000) return Promise.resolve(_syTok);
+  if (_capNative()) return syTokenNat(interactivo);
   if (!SY_CLIENT_ID) return Promise.reject(new Error('Falta configurar el identificador de Google de la aplicación.'));
   return syCargarGIS().then(function () {
     return new Promise(function (res, rej) {
@@ -23318,6 +23373,131 @@ function syToken(interactivo) {
       tc.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
     });
   });
+}
+
+/* ── EL PERMISO DE GOOGLE DENTRO DEL ENVOLTORIO ───────────────────────────
+   ⚠️ Google BLOQUEA su pantalla de consentimiento dentro de una vista web
+   embebida (responde «disallowed_useragent»), así que el flujo de arriba —que
+   funciona en el navegador— ahí solo enseña un error. La salida que Google sí
+   admite es abrir esa pantalla en el NAVEGADOR DEL SISTEMA y que vuelva a la
+   aplicación por una dirección propia: es el patrón estándar de las
+   aplicaciones instaladas.
+   ⚠️ NO hay secreto de cliente, y no es un descuido: una aplicación que se
+   distribuye no puede guardar uno —cualquiera lo saca del paquete—. Lo que
+   prueba que quien pide el permiso es esta aplicación son dos cosas: el reto
+   criptográfico de un solo uso que se manda al empezar y que solo esta sesión
+   puede resolver, y la huella del certificado con que se firma la app,
+   registrada en el identificador.
+   ⚠️ A cambio, este flujo entrega algo que el de la web NO tiene: permiso de
+   larga duración. El token de una hora se renueva solo, sin volver a
+   preguntarle nada al usuario. Se guarda dentro del estado de sincronización,
+   que ya va cifrado bajo el PIN de este equipo. */
+
+/* Reto criptográfico de un solo uso (PKCE). El verificador se queda aquí y el
+   reto es su huella: quien intercepte la vuelta de Google no puede canjear el
+   código sin el verificador, que nunca sale del equipo. */
+function _syB64url(b) {
+  var s = '', a = new Uint8Array(b);
+  for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+async function _syReto() {
+  var v = _syB64url(_ptAzar(32));
+  var h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return { v: v, reto: _syB64url(h) };
+}
+
+/* La vuelta de Google llega como una apertura de la aplicación por enlace. El
+   oyente se registra UNA vez y deja la respuesta en la espera pendiente.
+   ⚠️ También se escucha el cierre de la pestaña: si el usuario la cierra sin dar
+   el permiso no va a volver nadie, y sin esto la espera se quedaría colgada para
+   siempre con la pantalla diciendo que está conectando. */
+var _syEsperaAuth = null, _syOyentes = false;
+function _syMontarOyentes() {
+  if (_syOyentes) return;
+  var P = window.Capacitor && window.Capacitor.Plugins;
+  if (!P || !P.App) return;
+  _syOyentes = true;
+  P.App.addListener('appUrlOpen', function (ev) {
+    var u = (ev && ev.url) || '';
+    if (u.indexOf(SY_REDIR_NAT) !== 0 || !_syEsperaAuth) return;
+    var q = {};
+    (u.split('?')[1] || '').split('&').forEach(function (p) {
+      var kv = p.split('=');
+      if (kv[0]) q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
+    });
+    try { if (P.Browser) P.Browser.close(); } catch (e) {}
+    var esp = _syEsperaAuth; _syEsperaAuth = null;
+    if (q.code) esp.ok(q.code);
+    else esp.mal(new Error(q.error === 'access_denied' ? 'Se canceló el permiso.' : 'Google no entregó el permiso.'));
+  });
+  if (P.Browser) P.Browser.addListener('browserFinished', function () {
+    if (!_syEsperaAuth) return;
+    /* Se da un respiro: al volver por el enlace, Android cierra la pestaña y este
+       aviso puede llegar ANTES que la apertura — cancelaría un permiso que sí se
+       concedió. */
+    setTimeout(function () {
+      if (!_syEsperaAuth) return;
+      var esp = _syEsperaAuth; _syEsperaAuth = null;
+      esp.mal(new Error('Se cerró la ventana de Google sin dar el permiso.'));
+    }, 700);
+  });
+}
+
+function _syPedirCodigo(reto) {
+  var P = window.Capacitor && window.Capacitor.Plugins;
+  if (!P || !P.Browser) return Promise.reject(new Error('No se pudo abrir el navegador del sistema.'));
+  _syMontarOyentes();
+  var url = 'https://accounts.google.com/o/oauth2/v2/auth' +
+    '?client_id=' + encodeURIComponent(SY_CLIENT_ID_NAT) +
+    '&redirect_uri=' + encodeURIComponent(SY_REDIR_NAT) +
+    '&response_type=code' +
+    '&scope=' + encodeURIComponent(SY_SCOPE) +
+    '&code_challenge=' + reto.reto + '&code_challenge_method=S256' +
+    '&access_type=offline&prompt=consent';
+  return new Promise(function (ok, mal) {
+    _syEsperaAuth = { ok: ok, mal: mal };
+    P.Browser.open({ url: url }).catch(function (e) { _syEsperaAuth = null; mal(e); });
+  });
+}
+
+/* Canje del código por el token. Sin secreto: el verificador ocupa su lugar. */
+function _syCanjear(campos) {
+  campos.client_id = SY_CLIENT_ID_NAT;
+  var cuerpo = Object.keys(campos).map(function (k) {
+    return encodeURIComponent(k) + '=' + encodeURIComponent(campos[k]);
+  }).join('&');
+  return fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: cuerpo
+  }).then(function (r) { return r.json(); });
+}
+
+async function syTokenNat(interactivo) {
+  if (!SY_CLIENT_ID_NAT) throw new Error('Falta configurar el identificador de Google de la aplicación.');
+  var est = syEstado();
+  /* Con permiso de larga duración guardado no se le pregunta nada al usuario: se
+     renueva y ya. Solo se vuelve a pedir si él lo pide o si Google lo revocó. */
+  if (est.rt && !interactivo) {
+    var r = await _syCanjear({ grant_type: 'refresh_token', refresh_token: est.rt });
+    if (r && r.access_token) {
+      _syTok = r.access_token; _syTokExp = Date.now() + ((r.expires_in || 3600) * 1000);
+      return _syTok;
+    }
+    /* Revocado o caducado: se olvida y se vuelve a pedir desde cero. */
+    est.rt = ''; await syGuardarEstado(est);
+  }
+  var reto = await _syReto();
+  var code = await _syPedirCodigo(reto);
+  var tk = await _syCanjear({
+    grant_type: 'authorization_code', code: code,
+    redirect_uri: SY_REDIR_NAT, code_verifier: reto.v
+  });
+  if (!tk || !tk.access_token) throw new Error('Google no entregó el permiso.');
+  _syTok = tk.access_token; _syTokExp = Date.now() + ((tk.expires_in || 3600) * 1000);
+  if (tk.refresh_token) { est.rt = tk.refresh_token; await syGuardarEstado(est); }
+  return _syTok;
 }
 
 /* ── DRIVE ────────────────────────────────────────────────────────────────
@@ -23520,7 +23700,7 @@ var _syOcupado = false, _syUltimo = '';
    Desbloquearlo es la Fase 2 (autorización nativa de Android), que obliga a
    recompilar el paquete — hasta entonces, la sincronización es de la versión web.
    Punto ÚNICO: lo consultan el menú y la propia pantalla, que no pueden discrepar. */
-function syDisponible() { return !_capNative(); }
+function syDisponible() { return _capNative() ? !!SY_CLIENT_ID_NAT : true; }
 
 /* ⚠️ Se oculta con `display`, NO con el atributo `hidden`: una regla de autor
    (`.sb-item{display:flex}`) gana sobre el `display:none` del navegador y el
