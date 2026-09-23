@@ -2696,11 +2696,7 @@ function lcBarraSistema(quedan) {
   if (nat) {
     try {
       var S = C.Plugins && C.Plugins.StatusBar;
-      if (S && S.setStyle) {
-        S.setStyle({ style: lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK' });
-        lcHuecoBarra(S);
-        return;
-      }
+      if (S && S.setStyle) { lcHuecoBarra(S); lcBarraColor(S); return; }
     } catch (e) {}
   }
   /* ⚠️ El reintento NO es un adorno: con carga remota el puente se inyecta
@@ -2721,7 +2717,7 @@ function lcBarraSistema(quedan) {
    ⚠️ Si lo ignora (Android obliga al borde a borde desde su versión 15) se cae
    al suelo del CSS, que al menos evita que el contenido quede debajo del reloj.
    ⚠️ Una sola vez por sesión: es una medición, no un ajuste continuo. */
-var _lcHuecoHecho = false;
+var _lcHuecoHecho = false, _lcBarraReserva = null;
 function lcHuecoBarra(S) {
   if (_lcHuecoHecho || !S || !S.setOverlaysWebView) return;
   _lcHuecoHecho = true;
@@ -2733,11 +2729,46 @@ function lcHuecoBarra(S) {
       requestAnimationFrame(function () {
         requestAnimationFrame(function () {
           var reservado = window.innerHeight < antes - 4;
+          _lcBarraReserva = reservado;
           try { document.body.classList.toggle('nat', !reservado); } catch (e) {}
+          /* Ya se sabe cómo quedó el reparto: se repinta con ese dato. */
+          lcBarraColor();
         });
       });
-    }).catch(function () { try { document.body.classList.add('nat'); } catch (e) {} });
-  } catch (e) { try { document.body.classList.add('nat'); } catch (e2) {} }
+    }).catch(function () {
+      _lcBarraReserva = false;
+      try { document.body.classList.add('nat'); } catch (e) {}
+    });
+  } catch (e) {
+    _lcBarraReserva = false;
+    try { document.body.classList.add('nat'); } catch (e2) {}
+  }
+}
+
+/* Color de la franja del sistema, según CÓMO haya quedado repartido el espacio.
+   ⚠️ Los iconos los pinta Android y su nomenclatura va por el FONDO, no por los
+   iconos: DARK significa «fondo oscuro» y por tanto iconos CLAROS.
+   ⚠️ El FONDO de la franja solo se pinta cuando Android la reserva. En borde a
+   borde no hay tal franja —la cubre la propia barra superior de la app, que ya
+   sigue el tema— y pedir un color ahí no haría nada.
+   ⚠️ Y esto es lo que evita el defecto simétrico, medido en el emulador: con la
+   app en claro, los iconos pasan a oscuros y sobre una franja negra vuelven a
+   desaparecer. La franja tiene que seguir al tema igual que los iconos.
+   ⚠️ Android deja de admitir este color en su versión 15, pero ahí tampoco
+   reserva la franja, así que el caso no se da: las dos ramas se excluyen. */
+function lcBarraColor(S) {
+  try {
+    if (!S) {
+      var P = window.Capacitor && window.Capacitor.Plugins;
+      S = P && P.StatusBar;
+    }
+    if (!S || !S.setStyle) return;
+    var claro = lcThemeResuelto() === 'light';
+    S.setStyle({ style: claro ? 'LIGHT' : 'DARK' });
+    if (_lcBarraReserva === true && S.setBackgroundColor) {
+      S.setBackgroundColor({ color: claro ? '#F4F5F8' : '#0C0E13' });
+    }
+  } catch (e) {}
 }
 function setTheme(pref) {
   try { localStorage.setItem('lc_theme', pref); } catch (e) {}
@@ -2783,7 +2814,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 123;
+var _BUILD = 124;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
