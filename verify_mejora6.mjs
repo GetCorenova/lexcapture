@@ -38,6 +38,13 @@ await page.waitForTimeout(400);
 await page.fill('#pin-a', '135790');
 await page.fill('#pin-b', '135790');
 await page.click('button[onclick="doSetPin()"]');
+/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
+   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
+   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
+   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
+   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
+await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
+  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
 await page.waitForTimeout(900);
 
 /* Un caso de flagrancia CON elementos en el numeral 7 (los tres formatos del
@@ -317,6 +324,13 @@ await pageD.reload({ waitUntil: 'load' });
 await pageD.waitForTimeout(400);
 await pageD.fill('#pin-a', '135790'); await pageD.fill('#pin-b', '135790');
 await pageD.click('button[onclick="doSetPin()"]');
+/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
+   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
+   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
+   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
+   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
+await pageD.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
+  .then(() => pageD.evaluate(() => syOnboardSalir())).catch(() => {});
 await pageD.waitForTimeout(800);
 const idD = await pageD.evaluate(async () => {
   const c = SIM.genFlagrancia('URI'); c.isTest = false; await DB.saveCase(c);

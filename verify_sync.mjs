@@ -43,6 +43,13 @@ async function abrirEquipo(pin, tag) {
   await pg.waitForTimeout(400);
   await pg.fill('#pin-a', pin); await pg.fill('#pin-b', pin);
   await pg.click('button[onclick="doSetPin()"]');
+  /* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
+     pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
+     la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
+     verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
+     cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
+  await pg.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
+    .then(() => pg.evaluate(() => syOnboardSalir())).catch(() => {});
   await pg.waitForTimeout(800);
   return pg;
 }
@@ -323,7 +330,7 @@ const f5 = await A.evaluate(() => {
   go('sync');
   return (document.getElementById('sy-pane') || {}).innerText || '';
 });
-log(/paso de instalación/i.test(f5) && !/Activar en este equipo/.test(f5),
+log(/paso de instalación/i.test(f5) && !/Activar por primera vez/.test(f5),
     '[F5] sin el identificador de Google lo dice, y no ofrece un botón que no puede funcionar',
     f5.slice(0, 50).replace(/\s+/g, ' '));
 
@@ -348,8 +355,8 @@ const estados = await A.evaluate(async () => {
   SY_CLIENT_ID = '';
   return out;
 });
-log(/Activar en este equipo/.test(estados.sinVincular) && /Ya lo activé en otro equipo/.test(estados.sinVincular),
-    '[F6] sin vincular ofrece las dos salidas: activar aquí, o unirse a lo que ya existe');
+log(/Ya lo uso en otro equipo/.test(estados.sinVincular) && /Activar por primera vez/.test(estados.sinVincular),
+    '[F6] sin vincular ofrece las dos salidas: traer lo que ya existe, o empezar aquí');
 /* ⚠️ Sin distinguir mayúsculas: el sistema visual pinta los títulos de sección
    en versalitas y `innerText` los devuelve en mayúsculas. Es el mismo tropiezo
    que ya dejó anotado la suite de Modo compartir. */
@@ -381,7 +388,7 @@ const f11 = await A.evaluate(async () => {
   await syDesvincular(); SY_CLIENT_ID = '';
   return t;
 });
-log(/no lo recupera nadie/i.test(f11), '[F11] al mostrar el código se advierte que perderlo no tiene vuelta atrás');
+log(/nadie recupera/i.test(f11), '[F11] al mostrar el código se advierte que perderlo no tiene vuelta atrás');
 
 /* ⚠️ Dentro del envoltorio de Capacitor, Google BLOQUEA su pantalla de
    consentimiento (`disallowed_useragent`), así que la sincronización NO PUEDE
@@ -451,17 +458,27 @@ log(g2.propio && !g2.drive && !g2.gis,
 
 await A.evaluate(() => {
   window.__drive = { n: 0, files: [], subidas: 0, fallaDesde: 0 };
+  window.__F = 'patrulla-32-candelaria';   // la contraseña de recuperación de la prueba
+  /* ⚠️ En la carpeta oculta viven DOS archivos —la copia y la caja de la llave— así
+     que el Drive de mentira tiene que distinguirlos por nombre: si los mezclara, una
+     prueba podría pasar leyendo el archivo equivocado. */
+  window.__datos = () => window.__drive.files.filter(f => f.name === SY_ARCHIVO);
+  window.__caja  = () => window.__drive.files.filter(f => f.name === SY_LLAVE);
   syToken = () => Promise.resolve('token-de-mentira');
-  syListar = async () => window.__drive.files.map(f => ({ id: f.id, createdTime: f.createdTime }));
-  syCrear = async () => {
+  syListar = async (nombre) => window.__drive.files
+    .filter(f => f.name === (nombre || SY_ARCHIVO))
+    .map(f => ({ id: f.id, createdTime: f.createdTime }));
+  syCrear = async (nombre) => {
     const id = 'f' + (++window.__drive.n);
-    window.__drive.files.push({ id, createdTime: new Date(Date.now() + window.__drive.n).toISOString(), bytes: null });
+    window.__drive.files.push({ id, name: nombre || SY_ARCHIVO,
+      createdTime: new Date(Date.now() + window.__drive.n).toISOString(), bytes: null });
     return id;
   };
-  syDescargar = async (id, key) => {
+  /* Se sustituye la bajada CRUDA y no `syDescargar`: así el descifrado y la guarda
+     del archivo vacío que corren de verdad son los del módulo, no los de la prueba. */
+  syBajarBytes = async (id) => {
     const f = window.__drive.files.find(x => x.id === id);
-    if (!f || !f.bytes || f.bytes.length < 18) return null;
-    return await syDescifrar(new Uint8Array(f.bytes).buffer, key);
+    return (f && f.bytes) ? new Uint8Array(f.bytes).buffer : null;
   };
   sySubirBytes = async (id, bytes) => {
     window.__drive.subidas++;
@@ -485,23 +502,23 @@ log(!i1.ok && /vinculado/i.test(i1.motivo), '[I1] sin vincular no se cambia la c
    dato que una rotación mal hecha dejaría ilegible para siempre. */
 const i2 = await A.evaluate(async () => {
   await DB.saveCases([{ id: 'cLocal', tipo: 'URI', created: Date.now() }]);
-  const r = await syActivarNuevo();
+  const r = await syActivarNuevo(window.__F);
   const k1 = syEstado().k;
   const paq = ptPaquete([{ id: 'pRemota', priNom: 'REMOTA', numDoc: '777', tipoDoc: 'CC' }],
                         [{ id: 'cRemoto', tipo: 'URI', created: Date.now() }]);
   const bytes = await syCifrar(paq, await syClaveAES(syB32Dec(k1)));
-  window.__drive.files[0].bytes = Array.from(bytes);
-  return { ok: r.ok, k1, archivos: window.__drive.files.length, tieneRemoto: !!DB.getCase('cRemoto') };
+  window.__datos()[0].bytes = Array.from(bytes);
+  return { ok: r.ok, k1, archivos: window.__datos().length, tieneRemoto: !!DB.getCase('cRemoto') };
 });
 log(i2.ok && i2.k1 && !i2.tieneRemoto,
     '[I2] equipo vinculado, y en Drive hay algo que este todavía no tiene', JSON.stringify({ archivos: i2.archivos }));
 
 const i3 = await A.evaluate(async () => {
-  const r = await syRotarClave();
+  const r = await syRotarClave(window.__F);
   return {
     ok: r.ok, motivo: r.motivo, nueva: r.clave, local: syEstado().k,
     remoto: !!DB.getCase('cRemoto'), propio: !!DB.getCase('cLocal'),
-    persona: !!DB.getPerson('pRemota'), archivos: window.__drive.files.length
+    persona: !!DB.getPerson('pRemota'), archivos: window.__datos().length
   };
 }, i2.k1);
 log(i3.ok, '[I3] la clave se cambia', i3.motivo);
@@ -510,12 +527,12 @@ log(i3.nueva && i3.nueva !== i2.k1 && i3.local === i3.nueva,
 log(i3.remoto && i3.persona,
     '[I5] lo que estaba en Drive y aquí no, se bajó ANTES de cambiar la clave — no se pierde nada');
 log(i3.propio, '[I6] lo que ya tenía este equipo sigue estando');
-log(i3.archivos === 1, '[I7] queda UN solo archivo: no sobra ninguno con la clave vieja', i3.archivos);
+log(i3.archivos === 1, '[I7] queda UNA sola copia: no sobra ninguna con la clave vieja', i3.archivos);
 
 /* Lo que quedó en Drive abre con la nueva y NO con la vieja. Es toda la
    función: si la vieja siguiera sirviendo, no se habría revocado nada. */
 const i8 = await A.evaluate(async (vieja) => {
-  const bytes = new Uint8Array(window.__drive.files[0].bytes).buffer;
+  const bytes = new Uint8Array(window.__datos()[0].bytes).buffer;
   const conNueva = await syDescifrar(bytes, await syClaveAES(syB32Dec(syEstado().k)));
   const conVieja = await syDescifrar(bytes, await syClaveAES(syB32Dec(vieja)));
   return { nueva: conNueva.ok, vieja: conVieja.ok, motivo: conVieja.motivo,
@@ -534,9 +551,9 @@ log(/vuelve a vincular/i.test(i8.motivo) && i8.motivo.length <= 110,
 const i12 = await A.evaluate(async () => {
   const antes = syEstado().k;
   window.__drive.subidas = 0; window.__drive.fallaDesde = 2;   // la 1.ª es la del sync previo
-  const r = await syRotarClave();
+  const r = await syRotarClave(window.__F);
   window.__drive.fallaDesde = 0;
-  const bytes = new Uint8Array(window.__drive.files[0].bytes).buffer;
+  const bytes = new Uint8Array(window.__datos()[0].bytes).buffer;
   const abre = await syDescifrar(bytes, await syClaveAES(syB32Dec(syEstado().k)));
   return { ok: r.ok, igual: syEstado().k === antes, abre: abre.ok };
 });
@@ -545,7 +562,7 @@ log(i12.igual && i12.abre,
     '[I13] y el equipo se queda con la clave vieja, que sigue abriendo lo de Drive');
 
 /* El módulo tiene que bajar antes de subir: es lo que hace que no borre nada. */
-const iSrc = (src.match(/async function syRotarClave\(\)[\s\S]*?\n\}/) || [''])[0];
+const iSrc = (src.match(/async function syRotarClave\(frase\)[\s\S]*?\n\}/) || [''])[0];
 log(iSrc.indexOf('sySincronizar') > 0 && iSrc.indexOf('sySincronizar') < iSrc.indexOf('sySubirBytes'),
     '[I14] la rotación sincroniza con la clave vieja ANTES de subir con la nueva');
 log(iSrc.indexOf('sySubirBytes') < iSrc.indexOf('syGuardarEstado'),
@@ -570,6 +587,218 @@ const i18 = await A.evaluate(() => {
 log(i18.length === 0, '[I18] ningún aviso de la pantalla pasa de 110 caracteres', i18.join(' | '));
 
 await A.evaluate(async () => { await syDesvincular(); });
+
+/* ══════════════════════════════════════════════════════════════════════════
+   J · LA CONTRASEÑA DE RECUPERACIÓN
+   ⚠️ Es lo que cierra el hueco de verdad. Con la llave viviendo SOLO en los
+   equipos, desinstalar la aplicación del único que la tenía dejaba la copia de
+   Drive cerrada para siempre: la copia sobrevivía y la llave no, que es justo
+   lo que había que evitar. Aquí se comprueba el caso entero —un equipo en
+   blanco que recupera con el correo y la contraseña, sin el código— y las dos
+   trampas que lo romperían en silencio: que cambiar la clave deje la caja
+   apuntando a la llave vieja, y que un archivo ilegible se borre por serlo. */
+
+const j1 = await A.evaluate(() => ({
+  corta:   syFraseFloja('abc1234'),
+  soloNum: syFraseFloja('12345678'),
+  pin:     syFraseFloja('1234'),
+  buena:   syFraseFloja('patrulla-32')
+}));
+log(!!j1.corta && !!j1.soloNum && !!j1.pin && j1.buena === '',
+    '[J1] se rechaza la contraseña corta, la de solo números y el PIN', JSON.stringify(j1));
+
+/* Activar deja DOS archivos en la carpeta oculta: la copia y la caja. */
+const j2 = await A.evaluate(async () => {
+  await syDesvincular();
+  await DB.saveCases([{ id: 'cUno', tipo: 'URI', created: Date.now() }]);
+  await DB.savePersons([{ id: 'pUno', priNom: 'ANA', numDoc: '111', tipoDoc: 'CC' }]);
+  window.__drive.files = [];
+  const r = await syActivarNuevo(window.__F);
+  return { ok: r.ok, motivo: r.motivo, caja: syEstado().caja,
+           datos: window.__datos().length, cajas: window.__caja().length };
+});
+log(j2.ok && j2.caja && j2.datos === 1 && j2.cajas === 1,
+    '[J2] al activar quedan la copia y la caja de la llave, cada una en su archivo', JSON.stringify(j2));
+
+/* ⚠️ La caja NO puede llevar la llave a la vista: si estuviera en claro, quien
+   entrara a la cuenta la tendría sin saber ninguna contraseña, y todo el diseño
+   se caería sin que nada lo delatara. */
+const j3 = await A.evaluate(() => {
+  const b = new Uint8Array(window.__caja()[0].bytes);
+  const txt = Array.from(b).map(n => String.fromCharCode(n)).join('');
+  return { marca: txt.slice(0, 5), llevaLaLlave: txt.indexOf(syEstado().k) >= 0, n: b.length };
+});
+log(j3.marca === 'LXKY1' && !j3.llevaLaLlave,
+    '[J3] la caja va cifrada: la llave no aparece dentro', JSON.stringify(j3));
+
+/* EL ESCENARIO DEL ENCARGO: un equipo en blanco —sin vínculo, sin capturas y
+   sin el código— que recupera con el correo y la contraseña. */
+const j4 = await A.evaluate(async () => {
+  await syDesvincular();
+  await DB.saveCases([]); await DB.savePersons([]);
+  const mal = await syRecuperar('una-contrasena-que-no-es');
+  const quedoVinculado = syVinculado();
+  const r = await syRecuperar(window.__F);
+  return { mal: mal.ok, malMotivo: mal.motivo, quedoVinculado, ok: r.ok, motivo: r.motivo,
+           caso: !!DB.getCase('cUno'), persona: !!DB.getPerson('pUno') };
+});
+log(!j4.mal && !j4.quedoVinculado,
+    '[J4] una contraseña equivocada no abre nada y no deja el equipo medio vinculado', j4.malMotivo);
+log(j4.ok && j4.caso && j4.persona,
+    '[J5] con el correo y la contraseña vuelve todo, sin el código de 26 caracteres', JSON.stringify(j4));
+
+/* ⚠️ La integración que se rompería en silencio: cambiar la clave tiene que
+   volver a sellar la caja. Si no, la recuperación seguiría entregando la llave
+   VIEJA — y eso no se descubre hasta el día que de verdad hace falta recuperar. */
+const j6 = await A.evaluate(async () => {
+  const antes = syEstado().k;
+  const r = await syRotarClave(window.__F);
+  const nueva = syEstado().k;
+  await syDesvincular();
+  await DB.saveCases([]); await DB.savePersons([]);
+  const rec = await syRecuperar(window.__F);
+  return { rot: r.ok, motivo: r.motivo, cambio: nueva !== antes, rec: rec.ok,
+           recMotivo: rec.motivo, llave: syEstado().k === nueva, caso: !!DB.getCase('cUno') };
+});
+log(j6.rot && j6.cambio, '[J6] la clave se cambia', j6.motivo);
+log(j6.rec && j6.llave && j6.caso,
+    '[J7] y la caja se vuelve a sellar: la contraseña entrega la llave NUEVA', JSON.stringify(j6));
+
+/* Cambiar la contraseña no toca la llave: los otros equipos siguen igual. */
+const j8 = await A.evaluate(async () => {
+  const llave = syEstado().k;
+  const r = await syGuardarFrase('otra-contrasena-larga');
+  const vieja = await syLlaveLeer(window.__F);
+  const buena = await syLlaveLeer('otra-contrasena-larga');
+  return { ok: r.ok, motivo: r.motivo, vieja: vieja.ok, buena: buena.ok,
+           mismaLlave: buena.ok && buena.k === llave };
+});
+log(j8.ok && !j8.vieja && j8.buena,
+    '[J8] al cambiar la contraseña, la anterior deja de abrir', JSON.stringify(j8));
+log(j8.mismaLlave,
+    '[J9] y la llave de cifrado NO cambia: los otros equipos siguen sincronizando igual');
+
+/* Una cuenta vinculada antes de que existiera la caja. No es un error del
+   funcionario y hay que decirle por dónde salir, no solo que falló. */
+const j10 = await A.evaluate(async () => {
+  window.__drive.files = window.__drive.files.filter(f => f.name !== SY_LLAVE);
+  await syDesvincular();
+  const r = await syRecuperar(window.__F);
+  return { ok: r.ok, vacia: !!r.vacia, motivo: r.motivo };
+});
+log(!j10.ok && j10.vacia, '[J10] una cuenta sin caja lo dice, en vez de fallar sin más', j10.motivo);
+
+/* ⚠️ La otra pérdida callada: un archivo que este equipo no puede abrir puede
+   ser el de OTRO equipo con otra clave —dos teléfonos con la misma cuenta que
+   nunca se pasaron el código—. Ni se borra ni se le escribe encima. */
+const j11 = await A.evaluate(async () => {
+  await syDesvincular();
+  window.__drive.files = [];
+  await DB.saveCases([{ id: 'cMio', tipo: 'URI', created: Date.now() }]);
+  await syActivarNuevo(window.__F);
+  const ajena = syClaveNueva();
+  const paq = ptPaquete([], [{ id: 'cAjeno', tipo: 'URI', created: Date.now() }]);
+  const bytes = await syCifrar(paq, await syClaveAES(syB32Dec(ajena)));
+  const id2 = await syCrear(SY_ARCHIVO);
+  await sySubirBytes(id2, bytes);
+  const r = await sySincronizar(true);
+  const sigue = window.__drive.files.find(f => f.id === id2);
+  let intacto = false;
+  if (sigue && sigue.bytes) {
+    const d = await syDescifrar(new Uint8Array(sigue.bytes).buffer, await syClaveAES(syB32Dec(ajena)));
+    intacto = d.ok && (d.o.casos || []).some(c => c.id === 'cAjeno');
+  }
+  return { ok: r.ok, motivo: r.motivo, ilegibles: r.ilegibles, sigue: !!sigue, intacto,
+           mio: !!DB.getCase('cMio') };
+});
+log(j11.ok && j11.sigue && j11.intacto,
+    '[J11] un archivo que no se puede abrir NO se borra ni se pisa', JSON.stringify(j11));
+log(j11.ilegibles === 1, '[J12] y se cuenta, para poder decirlo', j11.ilegibles);
+
+/* EL ARRANQUE GUIADO. Un tercer equipo, recién instalado: es lo que hace que
+   alguien llegue a activar esto, que es lo que llevaba tiempo sin pasar. */
+/* ⚠️ Este equipo NO pasa por `abrirEquipo`, que cierra el arranque guiado a
+   propósito para dejar la aplicación como la ve quien ya la tenía. Aquí hace falta
+   lo contrario: ver lo que sale SOLO al crear el PIN, que es el disparo que de
+   verdad importa —llamar a la función a mano probaría la función, no el camino—. */
+const Cctx = await browser.newContext({ viewport: { width: 384, height: 800 } });
+const C = await Cctx.newPage();
+C.on('pageerror', e => errs.push('C: ' + String(e.message).slice(0, 90)));
+C.on('console', m => { if (m.type() === 'error') errs.push('C: ' + m.text().slice(0, 90)); });
+await C.goto('http://localhost:8137/LexCapture_v8.html', { waitUntil: 'load' });
+await C.evaluate(() => localStorage.clear());
+await C.reload({ waitUntil: 'load' });
+await C.waitForTimeout(400);
+await C.fill('#pin-a', '4321'); await C.fill('#pin-b', '4321');
+await C.click('button[onclick="doSetPin()"]');
+/* ⚠️ Este equipo NO cierra el arranque guiado: es justo lo que se va a medir. */
+await C.waitForTimeout(700);
+
+const j13 = await C.evaluate(() => {
+  const ov = document.getElementById('pin-ov');
+  const box = document.getElementById('pin-box');
+  const r = box ? box.getBoundingClientRect() : { width: 0, height: 0 };
+  return { visible: !!ov && ov.classList.contains('on'), alto: Math.round(r.height),
+           ancho: Math.round(r.width), texto: (box || {}).innerText || '',
+           saltar: !!document.querySelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]') };
+});
+log(j13.visible && j13.alto > 80 && j13.ancho > 200,
+    '[J13] al crear el PIN por primera vez se ofrece, y SE VE', JSON.stringify({ alto: j13.alto, ancho: j13.ancho }));
+log(j13.saltar,
+    '[J14] y se puede saltar: sin señal, exigir cuenta dejaría al funcionario sin poder trabajar');
+log(j13.texto.length > 0 && !/token|OAuth|appData|AES|blob|Drive API/i.test(j13.texto),
+    '[J15] ni una palabra técnica en pantalla', j13.texto.replace(/\n/g, ' · ').slice(0, 90));
+
+const j16 = await C.evaluate(() => {
+  syOnboardSalir();
+  return { cerrado: !document.getElementById('pin-ov').classList.contains('on'),
+           gis: !!document.querySelector('script[src*="accounts.google.com"]') };
+});
+log(j16.cerrado, '[J16] «Ahora no» devuelve la aplicación sin activar nada');
+log(!j16.gis,
+    '[J17] y por el camino no se contactó a Google: el primer arranque no depende de la red');
+
+/* La línea de la última copia, en el subtítulo de Capturas. */
+const j18 = await A.evaluate(async () => {
+  await syDesvincular();
+  go('capturas'); renderCases();
+  const sin = (document.getElementById('cap-sub') || {}).textContent || '';
+  await syGuardarEstado({ k: syClaveNueva(), fileId: 'x', ts: Date.now() - 3 * 86400000, caja: true });
+  renderCases();
+  const con = (document.getElementById('cap-sub') || {}).textContent || '';
+  return { sin, con };
+});
+log(!/copia/.test(j18.sin), '[J18] a quien no sincroniza no se le habla de copias', j18.sin);
+log(/copia/.test(j18.con), '[J19] y quien sí, ve siempre cuándo fue la última', j18.con);
+
+/* La pantalla: con caja se ofrece cambiarla; sin caja se dice que falta. */
+const j20 = await A.evaluate(() => {
+  go('sync'); renderSync();
+  return { cambiar: !!document.querySelector('#sy-pane button[onclick="syUiFrasePedir(1)"]'),
+           texto: (document.getElementById('sy-pane') || {}).innerText || '' };
+});
+log(j20.cambiar && /contrase/i.test(j20.texto),
+    '[J20] con caja, la pantalla ofrece cambiar la contraseña');
+
+const j21 = await A.evaluate(async () => {
+  const st = syEstado(); st.caja = false; await syGuardarEstado(st);
+  renderSync();
+  return { crear: !!document.querySelector('#sy-pane button[onclick="syUiFrasePedir(0)"]'),
+           texto: (document.getElementById('sy-pane') || {}).innerText || '' };
+});
+log(j21.crear && /falta la contrase/i.test(j21.texto),
+    '[J21] y a un equipo vinculado sin caja se le dice que le falta', j21.texto.replace(/\n/g, ' · ').slice(0, 70));
+
+/* La vía principal de un equipo nuevo pasa a ser la contraseña; el código de
+   26 caracteres se queda como respaldo, no como puerta de entrada. */
+const j22 = await A.evaluate(async () => {
+  await syDesvincular();
+  renderSync();
+  const b = Array.from(document.querySelectorAll('#sy-pane button')).map(x => x.textContent.trim());
+  return b;
+});
+log(j22.length === 3 && /otro equipo/i.test(j22[0]) && /26 caracteres/i.test(j22[2]),
+    '[J22] el equipo nuevo entra por la contraseña; el código queda de respaldo', JSON.stringify(j22));
 
 /* ══════════════════════════════════════════════════════════════════════════
    H · EL MODO SIN SINCRONIZAR NO PAGA NADA

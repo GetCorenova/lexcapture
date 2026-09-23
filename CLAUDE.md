@@ -7096,3 +7096,148 @@ desajuste, por el otro lado.
 - Anti-caché `?v=120` / `cache-v120`, `_BUILD=120` — `privacy.html` no está en el precache del
   Service Worker, pero sí se cachea al vuelo por ser del mismo origen, así que un cambio suyo también
   obliga a subir el token.
+
+
+## La contraseña de recuperación (2026-09-23) — que la copia sobreviva a perder todos los equipos
+Pedido en campo, en dos frases que hay que leer juntas: *«que la información que se crea en un
+equipo no se pierda al cambiar de teléfono o al eliminar la aplicación […] pero a la vez que esta
+información quede encriptada […] para que nadie pueda ver la información a excepción del usuario y
+a quien este le comparta»*. Verificado con `verify_sync.mjs` (**94 checks**, antes 68) y mirando las
+pantallas en los dos temas.
+
+### ⚠️ La mitad del encargo YA ESTABA HECHA, y decirlo cambió el trabajo
+La sincronización automática al iniciar sesión, el vínculo que se pide una sola vez y que solo se
+vuelve a pedir al reinstalar: las tres existían desde la Fase 1 (2026-09-18). Lo que faltaba no era
+el motor sino **la puerta** —nadie llegaba a activarlo— y **una pieza de diseño que faltaba de
+verdad**, la de abajo. Construir lo que ya existe habría sido el error más caro posible.
+
+### ⚠️ EL HUECO: la copia sobrevivía y la llave no
+Con la llave viviendo **solo en los equipos** —transportada a mano con el código de 26 caracteres—,
+quien desinstalaba la aplicación del único equipo que la tenía, o perdía el teléfono sin haber
+anotado el código, dejaba lo que estaba en Drive **cerrado para siempre**. Es exactamente lo que el
+usuario pedía evitar, y no se veía porque los dos requisitos parecen uno solo: *que no se pierda* y
+*que nadie lo vea* tiran en direcciones contrarias, y el punto donde chocan es la llave.
+
+**La salida, decidida con el usuario tras presentarle las tres:** la llave se guarda **junto a la
+copia**, en la misma carpeta oculta de su cuenta, pero **dentro de una caja que solo abre una
+contraseña que él elige**. Es el patrón de las copias cifradas de las aplicaciones de mensajería, y
+cumple los dos requisitos a la vez: en un equipo nuevo bastan el correo y esa contraseña, y para
+cualquier otro —Google incluido— los dos archivos siguen siendo ruido.
+
+| Situación | Antes | Ahora |
+|---|---|---|
+| Cambio de teléfono con el viejo a mano | código de 26 caracteres | correo + contraseña |
+| Pierdo el teléfono y no me queda ninguno | **se perdía todo** | correo + contraseña |
+| Google, o alguien que entre al correo | no lo puede leer | no lo puede leer |
+| Olvido la contraseña | — | queda el código de 26 caracteres, si se anotó |
+
+- ⚠️ **LA CONTRASEÑA NO SE GUARDA EN NINGUNA PARTE**: ni en el equipo, ni en la cuenta, ni cifrada.
+  Se usa en el momento para abrir la caja y se suelta. Es lo que hace que la promesa sea cierta, y
+  también lo que hace que olvidarla no tenga vuelta atrás.
+- ⚠️ **SON DOS BARRERAS, NO UNA**: hay que entrar a la cuenta de Google **y** saber la contraseña.
+  Por eso **no puede ser el PIN de cuatro dígitos** —diez mil combinaciones se prueban en un momento
+  contra un archivo que ya se tiene en la mano, y ahí el estirado no alcanza a salvarla—. `syFraseFloja`
+  exige 8 caracteres y al menos una letra: descarta las dos contraseñas que la gente pone cuando
+  nadie se lo impide (una corta, y una que son solo números).
+- ⚠️ **SE ESTIRA CON PBKDF2 (250 000 vueltas), al contrario que la llave**, que se expande con HKDF:
+  la entrada de la caja la escribe una persona y no tiene entropía completa, así que cada intento
+  tiene que costar. Mismas vueltas que el archivo cifrado de Modo compartir.
+- ⚠️ **La caja va en un archivo APARTE de la copia** (`lexcapture-key.bin`), no dentro de ella: si
+  viajara dentro, para leer la llave habría que abrir antes el archivo que esa llave cifra. Separada,
+  además, se puede volver a sellar con otra contraseña **sin tocar los datos** — por eso cambiar la
+  contraseña no cambia la llave y los demás equipos no se enteran.
+- ⚠️ **No se distingue «contraseña mal tecleada» de «archivo alterado»**, igual que en el `.lexc`:
+  decirle a quien prueba contraseñas cuál de las dos cosas pasa le está diciendo cuándo va bien.
+- ⚠️ **Esto NO sirve para compartirle casos a un compañero**, y la distinción se mantiene intacta:
+  una clave simétrica da acceso total y perpetuo. Compartir sigue siendo **Modo compartir** o el
+  archivo `.lexc`, que sí dejan elegir qué mandar.
+- ⚠️ **La firma manuscrita sigue sin viajar** (rasgo biométrico, se suscriben documentos judiciales).
+  Ni hay que filtrarla: vive en `lc_firmas`, fuera de lo que arma el paquete. Hay un check.
+
+### Dos órdenes de operaciones que no son intercambiables
+- **Al activar**: primero se suben los datos y **solo después** se sella la caja. Al revés, una caja
+  en Drive apuntando a una llave con la que todavía no hay nada cifrado promete una recuperación que
+  no existe. Y si la caja falla, `syActivarNuevo` **NO devuelve error**: los datos sí quedaron a
+  salvo, que es lo principal; lo que falta es la vía de recuperación, y se dice con todas sus letras
+  (`sinCaja`) para que el funcionario anote el código mientras tanto.
+- **Al cambiar la clave**: la caja se vuelve a sellar **al final**, cuando los datos ya están
+  cifrados con la llave nueva. ⚠️ **Y la contraseña pasa a ser obligatoria en `syRotarClave(frase)`**:
+  la caja guarda la llave VIEJA, así que sin volver a sellarla la recuperación seguiría entregando
+  una llave que ya no abre nada — **y eso no se descubre hasta el día que de verdad hace falta
+  recuperar**. Es la integración que se rompería en el silencio más caro de todos; la regresión la
+  mide saboteándola (con el resello desactivado fallan 4 de los 94 checks).
+
+### ⚠️ El otro arreglo: un archivo ilegible ya no se borra ni se pisa
+`sySincronizar` conservaba `archivos[0]` y **borraba el resto sin mirar**. Si el sobrante venía de
+otro equipo con OTRA clave —dos teléfonos con la misma cuenta que nunca se pasaron el código—, se
+borraban sus datos **por no poderlos leer, que es la peor razón posible**; y si el ilegible era el
+primero, encima se le escribía encima. Ahora el superviviente sale **de entre los legibles**, lo
+ilegible ni se borra ni se pisa y se cuenta (`ilegibles`). Un archivo **vacío** cuenta como legible:
+es uno recién creado, no uno que no se puede abrir.
+
+### El arranque guiado — la puerta que faltaba
+El motor llevaba días funcionando y casi nadie lo activaba porque **no había una sola pantalla que
+lo ofreciera**. Ahora se ofrece **una vez**, justo después de crear el PIN: «¿ya la uso en otro
+equipo?» → correo y contraseña, o elegir una contraseña nueva.
+- ⚠️ **SE PUEDE SALTAR, y no es negociable**: esta aplicación se usa en la calle y sin señal. Un
+  arranque que EXIJA una cuenta deja a un funcionario sin poder registrar una captura en el sitio.
+  «Ahora no» está a la vista, no escondido.
+- ⚠️ **NO se adelanta la carga del script de Google**, aunque ahorraría la espera al tocar el botón:
+  esa pantalla sale en el PRIMER arranque y la aplicación tiene que abrirse **sin contactar a nadie**.
+  Lo vigila `verify_sync` [J17], y era la guarda que `[H4]` ya protegía.
+- ⚠️ **El PIN va primero aunque la contraseña se pida después**: el vínculo se guarda cifrado bajo el
+  PIN, así que antes de que exista no hay dónde escribirlo.
+- ⚠️ Y **solo aparece donde puede funcionar**: dentro del envoltorio de la tienda Google no deja
+  pedir el permiso, así que `syDisponible()` lo apaga entero. Un paso de instalación que termina en
+  un error de Google es peor que no tener el paso.
+
+### «Copia hace X», en el subtítulo de Capturas
+`lcColaCopia()` añade la cola al subtítulo (`2 capturas · copia hace 3 días`). ⚠️ Solo cuando el
+equipo sincroniza: a quien no lo tiene activado no se le habla de copias que no existen. Va ahí y no
+en una tarjeta porque el dato importa todos los días pero no pasa nada con él todos los días — lo
+que hay que ver de un vistazo es si lleva días sin subir.
+
+### La pantalla
+La vía principal de un equipo nuevo pasa a ser **«Ya lo uso en otro equipo»** (correo + contraseña);
+«Activar por primera vez» y «Tengo el código de 26 caracteres» quedan detrás. Un equipo vinculado
+**sin caja** —los de antes de este cambio— ve su propia tarjeta diciendo que le falta, con el botón
+para crearla: es la diferencia entre poder recuperar y no poder, y no cabe en una línea de ayuda.
+
+### Regresiones
+⚠️ **Las 43 suites crean el PIN y siguen clicando, así que el paso nuevo les tapaba la pantalla y
+las dejaba en `TimeoutError`.** No es un artefacto de las pruebas: el primer arranque cambió de
+verdad y todas lo modelan. Se les insertó el cierre de forma mecánica y uniforme, con un
+`waitForSelector` que **espera a que aparezca** en vez de adivinar lo que tarda el cifrado del PIN —
+con un tiempo fijo, el paso saldría después de haberlo cerrado y el fallo volvería, intermitente.
+⚠️ El equipo C de `verify_sync` es el único que **no** lo cierra: ahí es justo lo que se mide.
+- **`verify_sync` sube a 94** (antes 68) con la sección J: la validación de la contraseña · los dos
+  archivos en la carpeta · que la caja **no lleva la llave a la vista** · el escenario completo —un
+  equipo en blanco, sin vínculo y sin el código, que recupera con el correo y la contraseña— · la
+  contraseña equivocada que no deja el equipo medio vinculado · el resello al cambiar la clave · el
+  cambio de contraseña sin cambiar la llave · la cuenta legada sin caja · el archivo ajeno que no se
+  borra · el arranque guiado que **se ve** (377 × 336 px), se puede saltar y no contacta a Google ·
+  la cola del subtítulo · y las dos tarjetas de la pantalla.
+- En verde (**45 suites**): sync 94 · compartir 57 · sincro 32 · almacén 13 · OJ 187 · fpj6 140 ·
+  custodia 111 · incautación 141 · entrega 111 · mejora1 157 · mejora2 38 · mejora3 51 · mejora5 78 ·
+  mejora6 32 · mejora7 67 · mejora8 72 · export 66 · firma 62 · editable 28 · tipografía OJ 42 ·
+  fpj5 tipografía 48 · envío 39 · personas 25 · expediente 13 · menú+expediente 16 · orden 33 ·
+  tema 40 · grados 31 · despachos 53 · jurisdicción 67 · vía CR 41 · NUNC año 39 · estadísticas 58 ·
+  simulador 41 · multipersona · ola1 38 · ola2 34 · ola3 33 · ola4 22.
+- ⚠️ **Seis checks PREEXISTENTES en rojo, comprobados ejecutando las suites contra HEAD con
+  `git stash`: fallan idénticos.** `verify_mejora6b` [47] y [53], `verify_dossier_historico` [20] y
+  [21] y `verify_jerarquia` —los cinco miden textos de la pantalla de Ajustes que cambiaron en el
+  commit `21ae35b`— y `verify_ds` («favorito con estrella SVG», mecanismo retirado el 2026-08-08).
+
+### La política de privacidad, alineada
+⚠️ Decía que la clave **«nunca se envía a ninguna parte»**, y con la caja eso deja de ser cierto tal
+cual: la clave sí sube, dentro de una caja que solo abre una contraseña que **no** sube. La
+conclusión no cambia —nadie más puede leerlo— pero el mecanismo descrito tiene que ser el real: Play
+exige que la política y el formulario de seguridad de los datos coincidan, y esta es la pieza del
+proyecto que más fácil se queda atrás porque nada la ejecuta y ninguna suite la mide.
+
+### Lo que falta
+⚠️ **Dentro de la app de Play esto sigue oculto**, como toda la sincronización: hace falta el
+identificador de OAuth de tipo Android (`SY_CLIENT_ID_NAT`), que depende de las **huellas SHA-1** de
+Play Console → Integridad de la app. El código nativo ya está escrito y el paquete versión 2 ya trae
+la puerta de retorno; pegar el identificador **no exige recompilar**.
+Anti-caché `?v=127` / `cache-v127`, `_BUILD=127`.

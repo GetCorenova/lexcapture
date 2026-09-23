@@ -122,6 +122,13 @@ await page.waitForTimeout(300);
 await page.fill('#pin-a', '7788');
 await page.fill('#pin-b', '7788');
 await page.click('button[onclick="doSetPin()"]');
+/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
+   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
+   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
+   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
+   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
+await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
+  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
 await page.waitForTimeout(400);
 
 /* Una descripción larga a propósito: es la que obliga a que el elemento ocupe

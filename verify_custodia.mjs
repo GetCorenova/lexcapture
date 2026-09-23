@@ -91,6 +91,13 @@ await page.waitForTimeout(300);
 await page.fill('#pin-a', '445566');
 await page.fill('#pin-b', '445566');
 await page.click('button[onclick="doSetPin()"]');
+/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
+   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
+   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
+   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
+   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
+await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
+  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
 await page.waitForTimeout(400);
 
 const EMP1 = "cheques de Bancolombia, uno identificado con el número KL614882 por valor de 16'000.000 y otro identificado con el número KL614883 por valor de 14'100.000, ambos girados el 20/08/2026, diligenciados a mano en tinta negra, con firmas ilegibles y talonario impreso en 2014";

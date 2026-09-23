@@ -1087,6 +1087,10 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease);
 }
 .pin-in::placeholder{letter-spacing:normal;font-size:15px}
+/* La casilla del PIN está pensada para cuatro dígitos —grande, centrada y muy
+   espaciada—. Una contraseña de recuperación se escribe como texto corriente o no
+   se lee lo que se teclea. */
+.pin-in.txt{font-size:16px;letter-spacing:normal;text-align:left;font-variant-numeric:normal}
 .pin-in:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--focus-ring)}
 .pin-err{color:var(--danger);font-size:13px;text-align:center;min-height:20px;margin-bottom:10px}
 .pin-btn{
@@ -2821,7 +2825,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 126;
+var _BUILD = 127;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3374,6 +3378,11 @@ async function doSetPin() {
     _pinHide();
     toast('PIN configurado — datos protegidos con AES-256 ✓', 4000);
     renderCases();
+    /* Primer arranque, y el ÚNICO momento en que se puede ofrecer esto sin
+       interrumpir a nadie: quien acaba de crear el PIN todavía no tiene nada que
+       perder de vista. ⚠️ Se puede saltar —la aplicación se usa sin señal y un
+       arranque que EXIJA cuenta dejaría a un funcionario sin poder trabajar. */
+    if (typeof syOnboardTrasPin === 'function') syOnboardTrasPin();
   } catch(e) { errEl.textContent='Error interno. Recarga la app.'; console.error(e); }
 }
 
@@ -4057,7 +4066,7 @@ function renderCases() {
   renderDraftSlot();          // captura sin terminar, si la hay
   var all = DB.getCases();
   var sub = document.getElementById('cap-sub');
-  if (sub) sub.textContent = all.length + ' captura' + (all.length===1?'':'s');
+  if (sub) sub.textContent = all.length + ' captura' + (all.length===1?'':'s') + lcColaCopia();
   // Antes del early-return de «sin capturas»: si el filtro es el que vacía la
   // lista, el control tiene que seguir a la vista.
   renderOrdenBtn('capturas', all.length);
@@ -23302,6 +23311,88 @@ async function syClaveAES(bytes) {
     ikm, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
 }
 
+/* ── LA CAJA DE LA LLAVE ──────────────────────────────────────────────────
+   El problema que resuelve, y es el que de verdad importa: con la llave viviendo
+   SOLO en los equipos, quien desinstala la aplicación del único equipo que la
+   tenía —o pierde el teléfono— deja lo que está en Drive cerrado para siempre.
+   O sea que la copia sobrevivía y la llave no, que es justo lo que había que
+   evitar.
+
+   Cómo se cierra ese hueco sin entregarle nada a nadie: la llave se guarda JUNTO
+   a la copia, en la misma carpeta oculta de la cuenta del usuario, pero dentro de
+   una caja que solo abre una contraseña que él elige. Es el patrón de las copias
+   cifradas de las aplicaciones de mensajería, y cumple los dos requisitos a la
+   vez: en un equipo nuevo bastan el correo y esa contraseña, y para cualquier otro
+   —Google incluido— el archivo sigue siendo ruido.
+
+   ⚠️ LA CONTRASEÑA NO SE GUARDA EN NINGUNA PARTE: ni en el equipo, ni en la
+   cuenta, ni cifrada. Se usa en el momento para abrir la caja y se suelta. Es lo
+   que hace que la promesa sea cierta, y también lo que hace que olvidarla no tenga
+   vuelta atrás: para eso se conserva el código de 26 caracteres como respaldo.
+
+   ⚠️ SON DOS BARRERAS, NO UNA. Para llegar a los datos hay que entrar a la cuenta
+   de Google Y saber la contraseña. Por eso esta contraseña NO puede ser el PIN de
+   cuatro dígitos: diez mil combinaciones se prueban en un momento contra un
+   archivo que ya se tiene en la mano, y ahí el estirado no alcanza a salvarla.
+
+   ⚠️ SE ESTIRA CON PBKDF2, al contrario que la llave: aquí la entrada la escribe
+   una persona y no tiene entropía completa, así que cada intento tiene que costar.
+   Mismas vueltas que el archivo cifrado de Modo compartir.
+
+   ⚠️ NO SE DISTINGUE «contraseña mal tecleada» de «archivo alterado», igual que
+   en el archivo cifrado: decirle a quien prueba contraseñas cuál de las dos cosas
+   pasa le está diciendo cuándo va bien.
+═══════════════════════════════════════════════════════════════════════════ */
+
+var SY_LLAVE     = 'lexcapture-key.bin';   // la caja, junto a la copia
+var SY_MARCA_LL  = 'LXKY1';
+var SY_FRASE_MIN = 8;
+
+/* ⚠️ La regla es corta a propósito y se explica en una línea al usuario. Lo que
+   descarta son las dos contraseñas que la gente pone cuando nadie se lo impide:
+   una demasiado corta, y una que son solo números —el PIN repetido, una fecha—. */
+function syFraseFloja(f) {
+  f = String(f || '');
+  if (f.length < SY_FRASE_MIN) return 'La contraseña debe tener al menos ' + SY_FRASE_MIN + ' caracteres.';
+  if (!/\D/.test(f)) return 'No uses solo números: mezcla letras para que no se pueda adivinar.';
+  return '';
+}
+
+async function _syClaveFrase(frase, salt) {
+  var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(frase), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: 250000, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+
+/* Sobre de la caja: marca (5) + sal (16) + vector (12) + la llave cifrada. La
+   marca va en claro para poder decir «esto no lo generó la aplicación» sin pedirle
+   antes ninguna contraseña a nadie. */
+async function syCajaCifrar(bytes, frase) {
+  var salt = _ptAzar(16), iv = _ptAzar(12);
+  var k = await _syClaveFrase(frase, salt);
+  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, bytes));
+  var out = new Uint8Array(5 + 16 + 12 + ct.length), i;
+  for (i = 0; i < 5; i++) out[i] = SY_MARCA_LL.charCodeAt(i);
+  out.set(salt, 5); out.set(iv, 21); out.set(ct, 33);
+  return out;
+}
+async function syCajaAbrir(buf, frase) {
+  var u = new Uint8Array(buf), i;
+  if (u.length < 34) return { ok: false, motivo: 'La caja de tu contraseña está incompleta.' };
+  for (i = 0; i < 5; i++) if (u[i] !== SY_MARCA_LL.charCodeAt(i))
+    return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
+  try {
+    var k = await _syClaveFrase(frase, u.slice(5, 21));
+    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(21, 33) }, k, u.slice(33));
+    var b = new Uint8Array(claro);
+    if (b.length !== 16) return { ok: false, motivo: 'La caja de tu contraseña no tiene la forma esperada.' };
+    return { ok: true, k: syB32Enc(b) };
+  } catch (e) {
+    return { ok: false, motivo: 'Esa contraseña no abre tu copia. Revísala y vuelve a intentarlo.' };
+  }
+}
+
 /* ── ESTADO LOCAL ─────────────────────────────────────────────────────────
    `{k, fileId, ts}` en `lc_sync`, CIFRADO bajo el PIN de este equipo (mismo
    patrón que `lc_firmas`): quien tenga el teléfono sigue necesitando el PIN
@@ -23583,29 +23674,60 @@ function syDrive(url, opts) {
    la vista. Por eso se listan siempre todos y, si hay más de uno, se funden
    todos y se conserva el más antiguo —criterio determinista, para que los dos
    equipos elijan el MISMO superviviente. */
-async function syListar() {
-  var q = encodeURIComponent("name='" + SY_ARCHIVO + "' and trashed=false");
+/* ⚠️ El nombre es un parámetro y no una constante metida dentro porque en la
+   carpeta oculta viven DOS archivos: la copia y la caja de la llave. Un solo
+   camino para los dos, para que no acaben divergiendo. */
+async function syListar(nombre) {
+  nombre = nombre || SY_ARCHIVO;
+  var q = encodeURIComponent("name='" + nombre + "' and trashed=false");
   var r = await syDrive('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + q +
                         '&fields=files(id,createdTime)&orderBy=createdTime');
   if (!r.ok) throw new Error('No se pudo consultar Drive.');
   var j = await r.json();
   return (j.files || []);
 }
-async function syCrear() {
+async function syCrear(nombre) {
+  nombre = nombre || SY_ARCHIVO;
   var r = await syDrive('https://www.googleapis.com/drive/v3/files', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: SY_ARCHIVO, parents: ['appDataFolder'] })
+    body: JSON.stringify({ name: nombre, parents: ['appDataFolder'] })
   });
   if (!r.ok) throw new Error('No se pudo crear el archivo en Drive.');
   return (await r.json()).id;
 }
-async function syDescargar(id, key) {
+async function syBajarBytes(id) {
   var r = await syDrive('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media');
   if (r.status === 404) return null;
   if (!r.ok) throw new Error('No se pudo descargar de Drive.');
-  var buf = await r.arrayBuffer();
+  return await r.arrayBuffer();
+}
+async function syDescargar(id, key) {
+  var buf = await syBajarBytes(id);
   if (!buf || buf.byteLength < 18) return null;   // recién creado, todavía vacío
   return await syDescifrar(buf, key);
+}
+
+/* ── LA CAJA, EN DRIVE ────────────────────────────────────────────────────
+   ⚠️ La caja vive en un archivo APARTE de la copia, y no dentro de ella: si
+   viajara dentro, para leer la llave habría que abrir antes el archivo que esa
+   llave cifra. Y separada se puede volver a sellar con otra contraseña sin tocar
+   los datos. */
+async function syLlaveGuardar(claveB32, frase) {
+  var ll = await syListar(SY_LLAVE);
+  var id = ll.length ? ll[0].id : await syCrear(SY_LLAVE);
+  await sySubirBytes(id, await syCajaCifrar(syB32Dec(claveB32), frase));
+  /* Si hubo bifurcación, la caja sobrante se retira: con dos cajas, un equipo
+     nuevo podría abrir la que ya no corresponde y quedarse con una llave vieja. */
+  for (var i = 1; i < ll.length; i++) await syBorrar(ll[i].id);
+  return id;
+}
+async function syLlaveHay() { return (await syListar(SY_LLAVE)).length > 0; }
+async function syLlaveLeer(frase) {
+  var ll = await syListar(SY_LLAVE);
+  var buf = ll.length ? await syBajarBytes(ll[0].id) : null;
+  if (!buf || buf.byteLength < 34) return { ok: false, vacia: true,
+    motivo: 'Esta cuenta todavía no tiene contraseña de recuperación.' };
+  return await syCajaAbrir(buf, frase);
 }
 async function sySubirBytes(id, bytes) {
   var r = await syDrive('https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(id) + '?uploadType=media', {
@@ -23647,30 +23769,48 @@ async function sySincronizar(interactivo) {
     var key = await syClaveAES(syB32Dec(st.k));
 
     var archivos = await syListar();
-    var res = null, i, bajado;
+    var res = null, i, bajado, legibles = [], ilegibles = 0;
     if (!archivos.length) {
       st.fileId = await syCrear();
     } else {
-      st.fileId = archivos[0].id;
       /* Se funde lo de TODOS los archivos que aparezcan, no solo el elegido:
-         si hubo bifurcación, lo del sobrante no se pierde antes de borrarlo. */
+         si hubo bifurcación, lo del sobrante no se pierde antes de borrarlo.
+
+         ⚠️ SOLO SE TOCA LO QUE SE PUDO ABRIR, y esto es lo que evita una pérdida
+         callada. Antes se conservaba `archivos[0]` y se borraba el resto sin mirar:
+         si el sobrante venía de un equipo con OTRA clave —dos equipos con la misma
+         cuenta que nunca se pasaron el código—, se borraban sus datos por no
+         poderlos leer, que es la peor razón posible. Y si el que no se podía abrir
+         era el primero, encima se le escribía encima. Ahora: el superviviente sale
+         de entre los legibles, lo ilegible ni se borra ni se pisa, y se dice.
+
+         ⚠️ Un archivo VACÍO cuenta como legible: es uno que acabamos de crear y
+         todavía no tiene nada, no uno que no se puede leer. */
       for (i = 0; i < archivos.length; i++) {
         bajado = await syDescargar(archivos[i].id, key);
-        if (bajado && bajado.ok) {
+        if (bajado === null) { legibles.push(archivos[i]); continue; }
+        if (bajado.ok) {
+          legibles.push(archivos[i]);
           var r = await syAplicar(bajado.o);
           if (r.ok && !res) res = r; else if (r.ok) { res.c.nuevos += r.c.nuevos; res.p.nuevos += r.p.nuevos; }
-        } else if (bajado && !bajado.ok && archivos.length === 1) {
-          return { ok: false, motivo: bajado.motivo };
-        }
+        } else ilegibles++;
       }
+      if (!legibles.length) return { ok: false, motivo: bajado ? bajado.motivo :
+        'La clave de este equipo no abre lo que hay en Drive.' };
+      st.fileId = legibles[0].id;
     }
 
     await sySubirBytes(st.fileId, await syCifrar(sySnapshot(), key));
-    for (i = 1; i < archivos.length; i++) await syBorrar(archivos[i].id);
+    for (i = 1; i < legibles.length; i++) await syBorrar(legibles[i].id);
+
+    /* Una sola vez, y solo mientras falte: saber si la cuenta ya tiene caja de
+       recuperación cuesta una consulta, y preguntarlo en cada vuelta sería pagarla
+       para siempre por un dato que no vuelve a cambiar. */
+    if (!st.caja) { try { st.caja = await syLlaveHay(); } catch (e) {} }
 
     st.ts = Date.now();
     await syGuardarEstado(st);
-    return { ok: true, r: res, duplicados: Math.max(0, archivos.length - 1) };
+    return { ok: true, r: res, duplicados: Math.max(0, legibles.length - 1), ilegibles: ilegibles };
   } catch (e) {
     var m = (e && e.message) || 'error';
     if (m === 'reconectar') return { ok: false, motivo: 'Google pidió volver a autorizar. Toca «Sincronizar ahora».', reconectar: true };
@@ -23692,9 +23832,68 @@ async function syVincular(codigo) {
   if (!r.ok) { await syDesvincular(); return r; }
   return r;
 }
-async function syActivarNuevo() {
-  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0 });
-  return await sySincronizar(true);
+/* ⚠️ El ORDEN importa: primero se suben los datos y solo después se sella la caja.
+   Al revés, una caja en Drive apuntando a una llave con la que todavía no hay nada
+   cifrado deja una recuperación que promete algo que no existe.
+   ⚠️ Y si la caja falla, esto NO devuelve error: los datos SÍ quedaron a salvo, que
+   es lo principal. Lo que falta es la vía de recuperación, y se dice con todas sus
+   letras para que el funcionario anote el código mientras tanto. */
+async function syActivarNuevo(frase) {
+  var mal = syFraseFloja(frase);
+  if (mal) return { ok: false, motivo: mal };
+  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0, caja: false });
+  var r = await sySincronizar(true);
+  if (!r.ok) return r;
+  try {
+    await syLlaveGuardar(syEstado().k, frase);
+    var st = syEstado(); st.caja = true; await syGuardarEstado(st);
+  } catch (e) {
+    return { ok: true, sinCaja: true, r: r.r,
+             motivo: 'Tus datos ya están en tu cuenta, pero no se pudo guardar la contraseña de recuperación. Anota el código y vuelve a intentarlo desde Sincronización.' };
+  }
+  return r;
+}
+
+/* ── RECUPERAR EN UN EQUIPO NUEVO ─────────────────────────────────────────
+   El camino corriente: correo y contraseña, y vuelve todo. No hace falta tener a
+   mano el equipo anterior, que es justamente el caso que el código de 26 caracteres
+   no cubre.
+   ⚠️ Si la contraseña no abre, se DESVINCULA: quedarse con una llave que no sirve
+   haría que la siguiente vuelta automática fallara en silencio para siempre. */
+async function syRecuperar(frase) {
+  if (!frase) return { ok: false, motivo: 'Escribe tu contraseña de recuperación.' };
+  var caja;
+  try {
+    await syToken(true);
+    caja = await syLlaveLeer(frase);
+  } catch (e) {
+    var m = (e && e.message) || 'error';
+    return { ok: false, motivo: m === 'reconectar' ? 'Google no entregó el permiso. Vuelve a intentarlo.' : m };
+  }
+  if (!caja.ok) return caja;
+  await syGuardarEstado({ k: caja.k, fileId: '', ts: 0, caja: true });
+  var r = await sySincronizar(true);
+  if (!r.ok) { await syDesvincular(); return r; }
+  return r;
+}
+
+/* Crear la contraseña por primera vez, o cambiarla. Es la MISMA operación: se
+   vuelve a sellar la caja con la llave que este equipo ya tiene. La llave no cambia,
+   así que los demás equipos siguen sincronizando sin enterarse —lo que cambia es con
+   qué se recupera, no con qué se cifra—. */
+async function syGuardarFrase(frase) {
+  var mal = syFraseFloja(frase);
+  if (mal) return { ok: false, motivo: mal };
+  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
+  try {
+    await syToken(true);
+    await syLlaveGuardar(syEstado().k, frase);
+    var st = syEstado(); st.caja = true; await syGuardarEstado(st);
+    return { ok: true };
+  } catch (e) {
+    var m = (e && e.message) || 'error';
+    return { ok: false, motivo: m === 'reconectar' ? 'Google pidió volver a autorizar. Vuelve a intentarlo.' : m };
+  }
 }
 
 /* ── CAMBIAR LA CLAVE ─────────────────────────────────────────────────────
@@ -23720,8 +23919,14 @@ async function syActivarNuevo() {
    ⚠️ LOS DEMÁS EQUIPOS QUEDAN FUERA, y eso NO es un efecto colateral: es
    justamente lo que se pidió. Hay que volver a vincularlos con el código nuevo,
    y la pantalla lo dice antes de empezar, no después. */
-async function syRotarClave() {
+async function syRotarClave(frase) {
   if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
+  /* ⚠️ Con caja, la contraseña es OBLIGATORIA y se comprueba ANTES de tocar nada:
+     la caja guarda la llave VIEJA, así que si la clave se cambiara sin volver a
+     sellarla, la recuperación seguiría entregando una llave que ya no abre nada —y
+     eso no se descubre hasta el día que de verdad hace falta recuperar. */
+  if (syEstado().caja && !frase)
+    return { ok: false, motivo: 'Escribe tu contraseña de recuperación para volver a sellar la caja.' };
 
   var previo = await sySincronizar(true);
   if (!previo.ok) return previo;
@@ -23744,6 +23949,16 @@ async function syRotarClave() {
          es perderse sin que el funcionario la vea. */
       return { ok: false, clave: nueva,
                motivo: 'La clave nueva quedó en Drive pero no se pudo guardar aquí. Anótala ya: ' + syCodigoBonito(nueva) };
+    }
+    /* La caja se vuelve a sellar con la llave nueva. Va al FINAL, cuando los datos
+       ya están cifrados con ella: si se hiciera antes y la subida fallara, la caja
+       entregaría una llave que no abre lo que hay. */
+    if (st.caja) {
+      try { await syLlaveGuardar(nueva, frase); }
+      catch (e2) {
+        return { ok: true, clave: nueva, cajaMal: true,
+                 motivo: 'La clave se cambió, pero no se pudo actualizar tu contraseña de recuperación. Anota el código nuevo y vuelve a guardar la contraseña desde Sincronización.' };
+      }
     }
     return { ok: true, clave: nueva };
   } catch (e) {
@@ -23817,8 +24032,9 @@ function renderSync() {
     h += '<div class="card"><div class="st">Tus capturas en todos tus equipos</div>' +
          '<p class="oj-hint">Lo que registres en un equipo aparece en el otro, cifrado en tu propio ' +
          'Google Drive: ni Google puede leerlo.</p>' +
-         '<button class="btn bp" onclick="syUiActivar()">Activar en este equipo</button>' +
-         '<button class="btn bs" onclick="syUiVincularPedir()">Ya lo activé en otro equipo</button>' +
+         '<button class="btn bp" onclick="syUiRecuperarPedir()">Ya lo uso en otro equipo</button>' +
+         '<button class="btn bs" onclick="syUiActivar()">Activar por primera vez</button>' +
+         '<button class="btn bs" onclick="syUiVincularPedir()">Tengo el código de 26 caracteres</button>' +
          '</div>';
   } else {
     h += '<div class="card"><div class="st">Sincronización activa</div>' +
@@ -23827,8 +24043,21 @@ function renderSync() {
          '<button class="btn bp" onclick="syUiSincronizar()"' + (_syOcupado ? ' disabled' : '') + '>' +
          (_syOcupado ? 'Sincronizando…' : 'Sincronizar ahora') + '</button>' +
          '</div>';
+    /* ⚠️ Un equipo vinculado antes de que existiera la caja no tiene contraseña, y
+       eso no es un detalle: es la diferencia entre poder recuperar y no poder. Se
+       dice en su propia tarjeta, no en una línea de ayuda. */
+    h += (st.caja
+      ? '<div class="card"><div class="st">Contraseña de recuperación</div>' +
+        '<p class="oj-hint">Con tu correo y esta contraseña recuperas todo en un equipo nuevo, ' +
+        'aunque no te quede ninguno.</p>' +
+        '<button class="btn bs" onclick="syUiFrasePedir(1)">Cambiar la contraseña</button></div>'
+      : '<div class="card"><div class="st">Te falta la contraseña de recuperación</div>' +
+        '<p class="oj-hint">Sin ella, si pierdes todos tus equipos solo el código de 26 ' +
+        'caracteres abre tu copia.</p>' +
+        '<button class="btn bp" onclick="syUiFrasePedir(0)">Crear la contraseña</button></div>');
     h += '<div class="card"><div class="st">Agregar otro equipo</div>' +
-         '<p class="oj-hint">En el otro equipo, entra aquí y toca «Ya lo activé en otro equipo».</p>' +
+         '<p class="oj-hint">En el otro equipo, entra con el mismo correo y tu contraseña de ' +
+         'recuperación.</p>' +
          '<button class="btn bs" onclick="syUiVerCodigo()">Ver el código de este equipo</button>' +
          '<div id="sy-codigo"></div></div>';
     h += '<div class="card"><div class="st">Cambiar la clave</div>' +
@@ -23855,21 +24084,89 @@ function syUiVerCodigo() {
   c.innerHTML = '<p class="oj-hint">Escanéalo desde el otro equipo, o tecléalo tal cual.</p>' +
     '<div class="pt-qr">' + ptQrSvg(bytes, 300) + '</div>' +
     '<div class="sy-code">' + escHtml(syCodigoBonito(st.k)) + '</div>' +
-    '<p class="oj-hint">⚠️ Guarda este código. Si lo pierdes junto con todos tus equipos, lo que esté ' +
-    'en Drive no lo recupera nadie.</p>';
+    '<p class="oj-hint">⚠️ Es el respaldo por si olvidas tu contraseña. Si pierdes los dos, ' +
+    'nadie recupera tu copia.</p>';
 }
 
-async function syUiActivar() {
-  if (!confirm('Se va a crear tu clave de sincronización y a conectar con tu Google Drive.\n\n' +
-               'Después tendrás que guardar el código que aparezca: es lo único que te deja ' +
-               'agregar otro equipo, y no se puede recuperar si se pierde.')) return;
+/* ── LA CONTRASEÑA, EN UN SOLO SITIO ──────────────────────────────────────
+   Los tres flujos que la piden —activar, recuperar y cambiarla— comparten modal,
+   validación y manejo del resultado. Tres copias de esto acabarían pidiendo cosas
+   distintas en cada pantalla.
+   ⚠️ El valor se lee ANTES de cerrar el modal: `closeModal` vacía el contenedor. */
+var _syFraseCfg = null;
+function syUiFraseModal(o) {
+  _syFraseCfg = o;
+  var h = '<div class="st">' + escHtml(o.titulo) + '</div>' +
+          '<p class="oj-hint">' + escHtml(o.hint) + '</p>' +
+          '<div class="fg"><label class="fl" for="sy-f1">Contraseña de recuperación</label>' +
+          '<input class="fi" id="sy-f1" type="password" autocomplete="' +
+          (o.repetir ? 'new-password' : 'current-password') + '"></div>' +
+          (o.repetir ? '<div class="fg"><label class="fl" for="sy-f2">Repítela</label>' +
+            '<input class="fi" id="sy-f2" type="password" autocomplete="new-password"></div>' +
+            '<p class="oj-hint">Mínimo ' + SY_FRASE_MIN + ' caracteres, con letras. No uses el PIN.</p>' : '') +
+          '<button class="btn bp" onclick="syUiFraseIr()">' + escHtml(o.boton) + '</button>';
+  openModal(h);
+  setTimeout(function () { var e = document.getElementById('sy-f1'); if (e) e.focus(); }, 120);
+}
+async function syUiFraseIr() {
+  var o = _syFraseCfg; if (!o) return;
+  var f = (document.getElementById('sy-f1') || {}).value || '';
+  var g = (document.getElementById('sy-f2') || {}).value || '';
+  if (o.repetir) {
+    var mal = syFraseFloja(f);
+    if (mal) { toast(mal); return; }
+    if (f !== g) { toast('Las contraseñas no coinciden.'); return; }
+  } else if (!f) { toast('Escribe tu contraseña de recuperación.'); return; }
+  closeModal();
   _syOcupado = true; renderSync();
-  var r = await syActivarNuevo();
+  var r = await o.accion(f);
   _syOcupado = false;
-  if (!r.ok) { await syDesvincular(); toast(r.motivo); renderSync(); return; }
-  _syUltimo = 'Se subieron tus datos por primera vez.';
-  renderSync(); syUiVerCodigo();
-  toast('Sincronización activada ✓');
+  if (!r.ok) {
+    if (o.desvincularSiFalla) await syDesvincular();
+    toast(r.motivo, 6000); renderSync(); return;
+  }
+  if (o.resumen) _syUltimo = syResumen(r);
+  renderSync();
+  if (_on('capturas')) renderCases();
+  if (o.verCodigo) syUiVerCodigo();
+  /* Un aviso que va con todas sus letras cuando algo quedó a medias: los datos
+     están, pero la vía de recuperación no. */
+  toast((r.sinCaja || r.cajaMal) ? r.motivo : o.ok, (r.sinCaja || r.cajaMal) ? 9000 : 3000);
+}
+
+function syUiActivar() {
+  syUiFraseModal({
+    titulo: 'Activar en este equipo',
+    hint: 'Con tu correo y esta contraseña recuperas tus capturas en cualquier equipo. No se guarda en ninguna parte: si la olvidas, nadie puede recuperarla.',
+    repetir: true,
+    boton: 'Activar y conectar con Google',
+    accion: function (f) { return syActivarNuevo(f); },
+    ok: 'Sincronización activada ✓',
+    resumen: false, verCodigo: true, desvincularSiFalla: true
+  });
+}
+
+function syUiRecuperarPedir() {
+  syUiFraseModal({
+    titulo: 'Traer mis datos',
+    hint: 'Entra con el mismo correo que usaste en el otro equipo y escribe tu contraseña de recuperación.',
+    repetir: false,
+    boton: 'Continuar con Google',
+    accion: function (f) { return syRecuperar(f); },
+    ok: 'Este equipo quedó sincronizado ✓',
+    resumen: true
+  });
+}
+
+function syUiFrasePedir(cambiar) {
+  syUiFraseModal({
+    titulo: cambiar ? 'Cambiar la contraseña de recuperación' : 'Crear tu contraseña de recuperación',
+    hint: cambiar ? 'La anterior deja de servir. La llave de cifrado no cambia, así que tus otros equipos siguen sincronizando igual.' : 'Con tu correo y esta contraseña recuperas todo en un equipo nuevo, sin necesitar el código de 26 caracteres.',
+    repetir: true,
+    boton: 'Guardar la contraseña',
+    accion: function (f) { return syGuardarFrase(f); },
+    ok: 'Contraseña de recuperación guardada ✓'
+  });
 }
 
 function syUiVincularPedir() {
@@ -23930,12 +24227,25 @@ async function syUiSincronizar() {
    deja fuera a los demás equipos del funcionario, y enterarse de eso cuando ya
    no se puede deshacer es la peor forma de descubrirlo. */
 async function syUiRotar() {
+  var st = syEstado();
   if (!confirm('Se va a crear una clave de sincronización nueva.\n\n' +
                'El código actual dejará de servir, y cada uno de tus otros equipos tendrá que ' +
-               'volver a vincularse con el código nuevo.\n\n' +
+               'volver a vincularse.\n\n' +
                'Antes se bajará todo lo que haya en Drive, así que no se pierde nada.')) return;
+  if (st.caja) {
+    syUiFraseModal({
+      titulo: 'Cambiar la clave de sincronización',
+      hint: 'Escribe tu contraseña de recuperación: hace falta para volver a sellar tu copia con la clave nueva.',
+      repetir: false,
+      boton: 'Cambiar la clave',
+      accion: function (f) { return syRotarClave(f); },
+      ok: 'Clave cambiada ✓',
+      verCodigo: true
+    });
+    return;
+  }
   _syOcupado = true; renderSync();
-  var r = await syRotarClave();
+  var r = await syRotarClave('');
   _syOcupado = false;
   if (!r.ok) { toast(r.motivo); renderSync(); return; }
   _syUltimo = 'La clave se cambió. Vuelve a vincular tus otros equipos.';
@@ -23950,6 +24260,120 @@ async function syUiDesvincular() {
   _syUltimo = '';
   renderSync();
   toast('Este equipo ya no se sincroniza');
+}
+
+/* ── EL ARRANQUE GUIADO ───────────────────────────────────────────────────
+   El motor de sincronización llevaba tiempo funcionando y casi nadie lo activaba,
+   porque no había una sola pantalla que lo ofreciera: había que saber que existía y
+   entrar a buscarlo. Aquí se ofrece UNA vez, justo después de crear el PIN, que es
+   el único momento del primer arranque en que el funcionario no está a mitad de un
+   procedimiento.
+
+   ⚠️ SE PUEDE SALTAR, y no es negociable: esta aplicación se usa en la calle y sin
+   señal. Un arranque que EXIJA una cuenta deja a un funcionario sin poder registrar
+   una captura en el sitio, que es justo para lo que existe. Por eso «Ahora no» está
+   a la vista y no escondido.
+
+   ⚠️ Y solo aparece donde puede funcionar: dentro del envoltorio de la tienda,
+   Google no deja pedir el permiso, así que `syDisponible()` lo apaga entero. Un paso
+   de instalación que termina en un error de Google es peor que no tener el paso.
+
+   ⚠️ El PIN va PRIMERO aunque la contraseña se pida después: el vínculo se guarda
+   cifrado bajo el PIN, así que antes de que exista no hay dónde escribirlo. */
+function syOnboardTrasPin() {
+  if (typeof syDisponible !== 'function' || !syDisponible() || !SY_CLIENT_ID) return false;
+  if (syVinculado()) return false;
+  /* ⚠️ NO se adelanta aquí la carga del script de Google, aunque ahorraría una espera
+     al tocar el botón: esta pantalla sale en el PRIMER arranque, que puede ser en la
+     calle y sin señal, y la aplicación tiene que abrirse sin contactar a nadie. El
+     script se carga cuando se pide el permiso, que es cuando hace falta de verdad. */
+  syOnboard1();
+  return true;
+}
+
+function syOnboard1() {
+  _pinOv(
+    '<div class="pin-logo">' + "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17.5 19H7a4.5 4.5 0 0 1-.9-8.9A6 6 0 0 1 17.8 9.6 4.2 4.2 0 0 1 17.5 19z\"/><path d=\"M12 11v6m0 0 2.2-2.2M12 17l-2.2-2.2\"/></svg>" + '</div>' +
+    '<div class="pin-title">Que no se pierda nada</div>' +
+    '<div class="pin-sub">Tus capturas quedan guardadas en tu propio Google Drive, cifradas. ' +
+    'Si cambias de teléfono o reinstalas la app, las recuperas.</div>' +
+    '<button class="pin-btn" onclick="syOnboard2(1)">Ya la uso en otro equipo</button>' +
+    '<button class="pin-btn sec" onclick="syOnboard2(0)">Es la primera vez</button>' +
+    '<div class="pin-forget" onclick="syOnboardSalir()">Ahora no</div>'
+  );
+}
+
+function syOnboard2(traer) {
+  var h = traer
+    ? '<div class="pin-title">Traer mis datos</div>' +
+      '<div class="pin-sub">Entra con el mismo correo del otro equipo y escribe tu contraseña ' +
+      'de recuperación.</div>' +
+      '<input class="pin-in txt" type="password" id="sy-ob-f" placeholder="Contraseña de recuperación" ' +
+      'autocomplete="current-password">'
+    : '<div class="pin-title">Elige tu contraseña</div>' +
+      '<div class="pin-sub">Es lo que te devuelve tus capturas si pierdes el teléfono. ' +
+      'No se guarda en ninguna parte: si la olvidas, nadie puede recuperarla.</div>' +
+      '<input class="pin-in txt" type="password" id="sy-ob-f" placeholder="Contraseña de recuperación" ' +
+      'autocomplete="new-password">' +
+      '<input class="pin-in txt" type="password" id="sy-ob-g" placeholder="Repite la contraseña" ' +
+      'autocomplete="new-password">';
+  _pinOv(h +
+    '<div class="pin-err" id="sy-ob-err"></div>' +
+    '<button class="pin-btn" id="sy-ob-btn" onclick="syOnboardIr(' + (traer ? 1 : 0) + ')">' +
+    'Continuar con Google</button>' +
+    '<div class="pin-forget" onclick="syOnboard1()">Volver</div>'
+  );
+  setTimeout(function () { var e = document.getElementById('sy-ob-f'); if (e) e.focus(); }, 120);
+}
+
+async function syOnboardIr(traer) {
+  var f = (document.getElementById('sy-ob-f') || {}).value || '';
+  var err = document.getElementById('sy-ob-err');
+  var btn = document.getElementById('sy-ob-btn');
+  var di = function (m) { if (err) err.textContent = m; };
+  if (traer) {
+    if (!f) { di('Escribe tu contraseña de recuperación.'); return; }
+  } else {
+    var g = (document.getElementById('sy-ob-g') || {}).value || '';
+    var mal = syFraseFloja(f);
+    if (mal) { di(mal); return; }
+    if (f !== g) { di('Las contraseñas no coinciden.'); return; }
+  }
+  di('Conectando con Google…');
+  if (btn) btn.disabled = true;
+  var r = traer ? await syRecuperar(f) : await syActivarNuevo(f);
+  if (btn) btn.disabled = false;
+  if (!r.ok) {
+    /* La cuenta existe pero se vinculó antes de que hubiera contraseña. No es un
+       error del funcionario y se le dice por dónde salir, no solo que falló. */
+    di(r.vacia ? 'Esta cuenta no tiene contraseña de recuperación todavía. Entra a Sincronización y usa el código de 26 caracteres del otro equipo.' : r.motivo);
+    return;
+  }
+  _pinHide();
+  _syUltimo = traer ? syResumen(r) : 'Se subieron tus datos por primera vez.';
+  renderCases();
+  if (r.sinCaja) { toast(r.motivo, 9000); return; }
+  toast(traer ? 'Listo — ' + syResumen(r) : 'Tus capturas quedan a salvo en tu cuenta ✓', 6000);
+}
+
+function syOnboardSalir() {
+  _pinHide();
+  renderCases();
+  toast('Puedes activarlo cuando quieras en Sincronización', 5000);
+}
+
+/* La cola del subtítulo de Capturas. ⚠️ Solo cuando este equipo sincroniza: a quien
+   no lo tiene activado no se le habla de copias que no existen. Y va en el subtítulo
+   —no en una tarjeta— porque el dato importa todos los días pero no todos los días
+   pasa algo con él: lo que hay que poder ver de un vistazo es si lleva días sin subir.
+   ⚠️ Con guarda de tipo: esta función la llama `renderCases`, que existe con o sin el
+   módulo de sincronización delante. */
+function lcColaCopia() {
+  try {
+    if (typeof syVinculado !== 'function' || !syVinculado()) return '';
+    var ts = syEstado().ts;
+    return ts ? ' · copia ' + syFecha(ts) : ' · sin copia todavía';
+  } catch (e) { return ''; }
 }
 
 /* Al desbloquear. ⚠️ Diferido y en silencio: si falla no se le dice nada al
