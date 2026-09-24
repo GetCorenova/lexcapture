@@ -1,15 +1,39 @@
 # Subir Flagrante a Play Store — punto de partida
 
-> Medido el **2026-09-22** contra el **build 118**. Empezar el chat nuevo leyendo
-> **este archivo**, no el `CLAUDE.md` entero (son 4 000 líneas de historia del
-> producto; aquí está solo lo que hace falta para publicar).
+> Medido el **2026-09-23** contra el **build 128** y el **`.aab` versionCode 2**.
+> Empezar el chat nuevo leyendo **este archivo**, no el `CLAUDE.md` entero (son
+> 4 000 líneas de historia del producto; aquí está solo lo que hace falta para
+> publicar).
 >
 > **Primer mensaje sugerido en el chat nuevo:**
-> «Lee PUBLICAR.md y ayúdame a subir la app a Play Store. Voy por la fase N.»
+> «Lee PUBLICAR.md y sigamos con la subida a Play Store. Voy por el paso N de la
+> sección 0.»
 
-⚠️ **La app se llama FLAGRANTE.** El nombre anterior (LexCapture) sobrevive **solo**
-en cuatro sitios técnicos que **no se pueden tocar**, y ninguno se le muestra al
-usuario — ver «El nombre viejo que queda a propósito», más abajo.
+---
+
+## 0. LO SIGUIENTE QUE HAY QUE HACER
+
+En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
+
+| # | Acción | Quién |
+|---|---|---|
+| 1 | Subir `app-release.aab` (**versionCode 2**) a **prueba interna** desde el navegador | **[USUARIO]** |
+| 2 | Probarlo en un teléfono real — empezar por las barras del sistema (§5) | **[USUARIO]** |
+| 3 | Pegar la ficha de `store-listing.md` y subir los gráficos | **[USUARIO]** |
+| 4 | **Promover a prueba cerrada e inscribir a los 12 probadores el mismo día** | **[USUARIO]** |
+| 5 | Pasar al chat la **huella SHA-1 de Google** (Play Console → Prueba y lanza → Integridad de la app) | **[USUARIO]** |
+| 6 | **Añadirla** al cliente OAuth de Android que ya existe · 2 min, sin recompilar ni tocar el código | usuario + asistente |
+| 7 | Corregir lo que salga en las pruebas · **casi todo por `npm run deploy:web`, sin paquete nuevo** | asistente |
+| 8 | Cerrados los 14 días con los 12 dentro, **pedir el acceso a producción** | **[USUARIO]** |
+
+⚠️ **El paso 4 es el que manda el calendario.** El reloj de 14 días **solo corre en
+prueba cerrada** y arranca cuando los 12 están inscritos a la vez. No esperar a
+tener la app «terminada»: se corrige mientras el reloj corre (§5).
+
+⚠️ **La primera subida de una ficha NO se puede hacer por API.** Google responde
+403 sin decir que la causa es esa. El paso 1 es **manual, por el navegador**;
+`npm run deploy:playstore` sirve a partir de la segunda subida, y además necesita
+la clave de servicio, que todavía no existe.
 
 ---
 
@@ -17,34 +41,26 @@ usuario — ver «El nombre viejo que queda a propósito», más abajo.
 
 | Pieza | Estado |
 |---|---|
-| Cuenta de Play Console | ✅ **verificada**. Ya aparece «Crear app» |
-| App creada en Play Console | ✅ **sí** (22-09). Checklist de «Configura tu app» diligenciado; falta guardar la ficha y subir el `.aab` |
-| `.aab` firmado | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 213 950 B** · `jar verified` · **versionCode 2** · paquete **`com.getcorenova.flagrante`** · minSdk 24 · targetSdk 36 · compilado 23-09 15:06 · **sin facturación** |
-| Primera subida | ✅ versionCode 1 lanzado en **prueba interna** el 23-09. El 2 la sustituye |
-| Permisos del paquete | INTERNET · ACCESS_NETWORK_STATE · CAMERA (hardware **opcional**) · el interno de receptores dinámicos. **Sin `BILLING`** |
-| Plugins nativos | filesystem · share · **status-bar** · **browser** · **app** |
-
-> ⚠️ **La consola de depuración del WebView NO puede viajar en la versión pública.**
-> Se activa en `capacitor.config.json` (`android.webContentsDebuggingEnabled`) para
-> medir dentro del envoltorio, y hay que **quitarla antes de compilar el release**:
-> con ella, cualquiera con un cable puede inspeccionar los datos de las capturas.
-> Comprobar siempre en el `.aab`: `unzip -p <aab> base/assets/capacitor.config.json`.
-| Ícono dentro del `.aab` | ✅ **comprobado extrayéndolo del paquete**: la F ámbar en el visor cian, capa frontal transparente |
-| Nombre en Android | ✅ `Flagrante` (`strings.xml`: `app_name` y `title_activity_main`) |
-| Permisos del manifiesto fusionado | `INTERNET`, `ACCESS_NETWORK_STATE`, `CAMERA` (opcional), `DUMP` — **ya NO `com.android.vending.BILLING`** |
-| Código web publicado | ✅ **build 119 en vivo** en https://getcorenova.github.io/lexcapture/ |
-| Sincronización con Drive | ✅ **funcionando en la versión web** (probada de punta a punta). Oculta en la app de Play: Google bloquea su consentimiento en un WebView |
-| Google Cloud | ✅ proyecto `Flagrante`, Drive API, consentimiento **En producción**, `drive.appdata` (no sensible), marca y cliente OAuth |
-| `manifest.json` de la PWA | ✅ «Flagrante — Gestión de Capturas» |
-| Ficha de tienda | ✅ `Crear App/store-listing.md` — nombre **Flagrante**, 9 caracteres |
-| Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html · HTTP 200 · dice **Flagrante** |
-| Ícono 512×512 para la ficha | ✅ `Crear App/icon-store-512.png` (a sangre, sin transparencia) |
-| Gráfico de funciones 1024×500 | ✅ `lexcapture-android/store/feature-graphic-1024x500.png` — **mirado**: dice «Flagrante» con el ícono definitivo |
-| Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` (**1080×1920, 9:16 exacto**) — **miradas**: ninguna muestra el nombre (en teléfono no hay barra lateral) y los datos son del simulador. ⚠️ A 1080×2400 la consola las marcaba «Necesita recorte»: 9:16 es el tope |
-| Repositorio | ✅ todo pusheado, `main` al día con `origin/main` |
-| Proyecto en RevenueCat | ⏸️ **aplazado a propósito**, fuera del primer paquete (ver fase 2) |
-| Suscripciones en Play Console | ❌ no (no se pueden crear hasta que haya un `.aab` subido) |
-| Muro de suscripción en la app | ❌ **no escrito**, y el SDK **ya no viaja** en el envoltorio |
+| Cuenta de Play Console | ✅ verificada |
+| App creada en Play Console | ✅ sí (22-09). Checklist de «Configura tu app» diligenciado |
+| Primera subida | ✅ versionCode **1** lanzado en prueba interna el 23-09. El **2** lo sustituye |
+| `.aab` listo | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 213 950 B** · `jar verified` · **versionCode 2** · `com.getcorenova.flagrante` · minSdk 24 · targetSdk 36 · compilado 23-09 15:06 |
+| Consola de depuración en el `.aab` | ✅ **NO viaja** — comprobado extrayendo `base/assets/capacitor.config.json` del paquete |
+| Permisos del manifiesto fusionado | `INTERNET` · `ACCESS_NETWORK_STATE` · `CAMERA` (hardware **opcional**) · `DUMP`. **Sin `BILLING`** |
+| Plugins nativos | filesystem · share · status-bar · browser · app |
+| Ícono dentro del `.aab` | ✅ comprobado extrayéndolo: la F ámbar en el visor cian |
+| Nombre en Android | ✅ `Flagrante` (`strings.xml`) |
+| Código web publicado | ✅ **build 128** en vivo en https://getcorenova.github.io/lexcapture/ |
+| Sincronización con Drive | ✅ funciona en la **versión web** (`SY_CLIENT_ID` puesto). **Oculta en la app de Play** hasta el paso 6 |
+| Recuperación de la copia | ✅ correo + contraseña de recuperación (build 128) |
+| Google Cloud | ✅ proyecto `Flagrante`, Drive API, consentimiento **En producción**, `drive.appdata` (no sensible) |
+| Ficha de tienda | ✅ `store-listing.md` — nombre **Flagrante** |
+| Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html · HTTP 200 |
+| Ícono 512×512 de la ficha | ✅ `icon-store-512.png` (a sangre, sin transparencia) |
+| Gráfico de funciones 1024×500 | ✅ `lexcapture-android/store/feature-graphic-1024x500.png` |
+| Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` a **1080×1920 (9:16 exacto)**. ⚠️ A 1080×2400 la consola las marcaba «Necesita recorte» |
+| Repositorio | ✅ `main` al día con `origin/main` |
+| Facturación / suscripciones | ⏸️ **fuera del primer paquete a propósito** (§6) |
 | Clave de la cuenta de servicio | ❌ falta → `npm run deploy:playstore` todavía no sirve |
 
 Comprobar el estado en cualquier momento:
@@ -56,239 +72,200 @@ npm run deploy:playstore -- --check  # Ruby, Fastlane, clave de servicio, firma
 
 ---
 
-## 2. El nombre viejo que queda a propósito
+## 2. Lo que hace falta del usuario
 
-⚠️ **No «corregir» ninguno de estos.** Cada uno rompe algo real:
+Es el cuello de botella. Por orden de urgencia:
 
-| Dónde | Por qué NO se toca |
+1. **La huella SHA-1 de Google** (Play Console → Prueba y lanza → Integridad de la app).
+   El cliente OAuth de Android **ya está creado** (23-09) con la huella del
+   certificado de carga, así que la sincronización ya funciona en un paquete
+   instalado a mano. Falta la huella con la que Google re-firma lo que baja de
+   la tienda: se **añade** al mismo cliente, **no exige recompilar** ni tocar el
+   código. ⚠️ El día que se añada hay que actualizar `privacy.html`, que hoy dice
+   que la copia en Drive existe solo en la versión web.
+2. **Los 12 probadores.** El recurso de plazo más largo: todo lo demás depende de
+   ti, esto depende de otras doce personas.
+3. **El JSON de la cuenta de servicio** — desbloquea las subidas automáticas.
+4. Solo cuando se reponga la facturación (§6): clave de RevenueCat, precios y el
+   ID de la suscripción, que es **irreversible**.
+
+---
+
+## 3. Lo que NO se puede tocar
+
+### Nombres viejos que se quedan a propósito
+La app se llama **Flagrante**. El nombre anterior sobrevive en cuatro sitios
+técnicos, ninguno visible para el usuario. **No «corregirlos»:**
+
+| Dónde | Qué rompe si se cambia |
 |---|---|
-| `getcorenova.github.io/**lexcapture**/` (URL) | El `.aab` ya firmado carga desde ahí (`capacitor.config.json`). Renombrar el repositorio **deja tiesas las apps ya instaladas** |
-| `LexCapture_v8.html` (nombre del archivo) | Lo referencian ~40 suites de regresión y el `sw.js` |
-| `lexcapture-sync-v1` (HKDF) · `lexcapture-sync.bin` · `PT_MARCA` · canal WebRTC | Cambiarlos **deja ilegible lo sincronizado en el Drive del usuario** y rompe el vínculo entre dos teléfonos con builds distintos |
+| `getcorenova.github.io/lexcapture/` (URL) | El `.aab` firmado carga de ahí: **deja tiesas las apps ya instaladas** |
+| `LexCapture_v8.html` | Lo referencian ~40 suites de regresión y el `sw.js` |
+| `lexcapture-sync-v1` (HKDF) · `lexcapture-sync.bin` · `PT_MARCA` · canal WebRTC | **Deja ilegible lo sincronizado en el Drive del usuario** y rompe el vínculo entre dos teléfonos |
 | alias del keystore | El keystore es **irremplazable** |
 
-⚠️ **Uno cosmético y sin resolver, invisible en la práctica**: el placeholder
-`lexcapture-android/www/index.html` conserva `<title>LexCapture</title>`. Con
-`server.url` configurado el WebView va directo a la URL remota y **ese archivo no
-se carga**; el rótulo que ve el usuario sale de `strings.xml`, que ya dice
-Flagrante. Corregirlo obliga a recompilar y volver a verificar el `.aab` que ya
-está listo, así que se deja para la próxima vez que haya que recompilar.
+### Decisiones irreversibles
+- **Gratuita** → de gratuita a de pago no se puede cambiar nunca. La suscripción
+  es una compra *dentro* de la app, así que la app es gratuita. Ya está marcado.
+- **Nombre del paquete** `com.getcorenova.flagrante` → lo fijó el primer `.aab`.
+- **El ID de una suscripción** → decidirlo antes de crearla (§6).
+
+### Credenciales
+⚠️ **Nunca cometer** `google-play-key.json`, `*.jks` ni `keystore.properties`.
+Este repositorio **es público** (sirve GitHub Pages). Si se comete una credencial
+no basta con borrarla en otro commit: **hay que rotarla** — y **el keystore no se
+puede rotar**. Si se pierde, la app no se puede volver a actualizar nunca: guardar
+una copia fuera de este PC.
 
 ---
 
-## 3. El orden. No se puede alterar
+## 4. Qué obliga a un paquete nuevo y qué no
 
-**La primera versión de una ficha NO se puede subir por API.** Google responde 403
-sin decir que la causa es esa. La fase 3 es **manual, por el navegador**. El
-comando `npm run deploy:playstore` sirve **a partir de la segunda** subida.
+⚠️ **El `.aab` NO lleva el código web dentro.** Capacitor carga la app desde
+`https://getcorenova.github.io/lexcapture/`. Es lo que permite corregir a diario
+durante las pruebas sin tocar Play Console.
 
-### Fase 1 · Crear la app en Play Console
-Pulsar «Crear app» y llenar:
+| Cambio | ¿Nuevo `.aab`? | Cómo se publica |
+|---|---|---|
+| Formularios, validaciones, textos, los siete documentos, dossier, estadísticas, navegación, CSS, botones, zonas seguras, pegar `SY_CLIENT_ID_NAT` | **No** | `npm run deploy:web` |
+| Permisos del manifiesto | Sí | Recompilar, `versionCode` +1 |
+| Plugin de Capacitor nuevo o retirado | Sí | Ídem |
+| Ícono del lanzador, nombre de la app, package | Sí | Ídem |
+| `minSdk` / `targetSdk`, tema nativo, splash, `MainActivity.java` | Sí | Ídem |
 
-| Campo | Valor |
-|---|---|
-| Nombre de la app | `Flagrante` |
-| Idioma predeterminado | Español (Latinoamérica) – es-419 |
-| App o juego | **App** |
-| Gratis o de pago | **Gratis** |
-| Declaraciones | marcar las dos (directrices del programa + leyes de exportación de EE. UU.) |
+⚠️ **La contracara:** una web rota se rompe al instante en **todos** los teléfonos.
+Por eso `npm run build:web` valida la sintaxis de los bloques de script y los tres
+tokens anticaché antes de dejar desplegar. **Ese paso no se salta.**
 
-⚠️ **Dos decisiones IRREVERSIBLES:**
-- **Gratuita** → de gratuita a de pago no se puede cambiar nunca una vez
-  publicada; al revés sí. La suscripción es una compra *dentro* de la app, así que
-  la app es gratuita.
-- **Nombre del paquete** → lo fija el primer `.aab`: `com.getcorenova.flagrante`.
-  No se puede cambiar después, y aparece en la URL de la ficha.
+---
 
-⚠️ Esa pantalla **no pide** el nombre del paquete: se fija al subir el `.aab`.
+## 5. De la prueba cerrada a producción
 
-### Fase 2 · RevenueCat — APLAZADA (decisión del usuario, 2026-09-22)
-⚠️ **El primer paquete va SIN facturación.** El `.aab` declaraba
-`com.android.vending.BILLING` y llevaba dentro el SDK de RevenueCat (1 475
-referencias en el `.dex`) **sin una sola línea que lo llamara**: no hay clave, no
-hay muro de pago y no hay productos creados. Play detecta ese permiso y marca la
-ficha como «Compras dentro de la aplicación», contra unas respuestas ya enviadas
-que dicen **No** a productos digitales y no declaran historial de compras. Es el
-mismo criterio con el que se quitó el párrafo de SUSCRIPCIÓN de la descripción:
-**no anunciar lo que la app no tiene**.
+### Los 12 probadores — lo que Google cuenta de verdad
+- Tienen que **aceptar la invitación** abriendo el enlace de participación.
+  ⚠️ **Estar en la lista de correos NO basta**, y es el motivo más común de que el
+  contador no suba.
+- **14 días seguidos inscritos.** Si alguien se sale, el contador baja.
+- ⚠️ **La prueba INTERNA no cuenta. Solo la cerrada corre el reloj.**
+- Subir versiones nuevas **no reinicia nada**: el reloj cuenta probadores, no
+  versiones. Los probadores siguen contando y no tienen que volver a aceptar nada.
+- Si no se juntan los 12, no se pierde la app ni la prueba: el reloj **arranca
+  cuando los 12 están dentro a la vez**.
+- El contador de Play Console es la fuente autorizada.
+- La solicitud de producción **pregunta qué retroalimentación hubo y qué se hizo
+  con ella**: anotarlo desde el primer día.
+- ⚠️ **Google revisa esa solicitud y puede tardar días**: el calendario mínimo real
+  son ~3 semanas, no 14 días.
 
-Qué se hizo: `npm uninstall @revenuecat/purchases-capacitor` + `npx cap sync
-android` + recompilar. El paquete pasó de **6 089 660 a 3 137 757 B**, el
-manifiesto perdió `BILLING` y el `.dex` quedó en **0** referencias a facturación.
-⚠️ De paso desapareció `ACCESS_NETWORK_STATE`, que **llegaba solo por el
-manifiesto fusionado del plugin**: se declara ahora en el manifiesto propio, o el
-indicador «Sin señal» no volvería a aparecer nunca. **Un permiso que la app
+### ⚠️ Hueco detectado y NO corregido: la barra de abajo no tiene suelo
+La barra inferior, las hojas de acciones y los avisos usan
+`env(safe-area-inset-bottom)`, y en Android se le pide al sistema que reserve él la
+franja (`lcHuecoBarra` → `setOverlaysWebView({overlay:false})`). **Pero cuando
+Android ignora esa petición** —desde su versión 15 fuerza el borde a borde— el
+respaldo del CSS existe **solo para arriba** (`body.nat{--sat:max(...,24px)}`).
+No hay equivalente para abajo: los cinco botones de la barra inferior podrían
+quedar bajo la barra de navegación del teléfono. **Es lo primero que hay que mirar
+en un equipo con barra de tres botones.** El arreglo sería CSS, sin paquete nuevo.
+
+### Qué probar en el teléfono
+Con dos equipos: uno con barra de tres botones y otro con gestos.
+
+- **Pantalla** — los 5 botones de la barra inferior completos · el título sin
+  solaparse con el reloj · el último botón de cada hoja de acciones alcanzable ·
+  con el teclado abierto, que se vea el campo en el que se escribe.
+- **Recorrido** — una captura de flagrancia entera (9 pasos) · una por orden
+  judicial (4 pantallas) · cerrar a media captura y recuperar el borrador · botón
+  atrás de Android: que pregunte, no que salga.
+- **Documentos** — FPJ-5 URI y CESPA · acta de derechos · acta de incautación ·
+  cadena de custodia · rótulo · acta de entrega · oficio de disposición · abrir dos
+  **en Word en el teléfono** y que no pida reparar · compartir por Gmail y WhatsApp.
+- **Datos** — cerrar del todo, reabrir y desbloquear con el PIN · 10-15 capturas
+  seguidas · **modo avión**: diligenciar y generar un documento entero.
+- **Permisos** — cámara para el lector de códigos de Modo compartir.
+- **Versiones** — uno reciente (14/15) y uno viejo si se consigue, por el WebView.
+
+### Lo que solo aparece instalado desde Play
+1. Las zonas seguras. El navegador no lo reproduce.
+2. ⚠️ **El primer arranque necesita señal.** Con carga remota, quien instala y abre
+   sin datos no ve nada; del segundo arranque en adelante el Service Worker ya la
+   tiene. **Decírselo a los probadores.**
+3. La sincronización con Drive, oculta hasta el paso 6.
+4. Compartir el documento de Word por el camino nativo.
+5. El diálogo del permiso de cámara.
+6. El botón atrás de Android · el teclado tapando campos · un System WebView viejo
+   en Android 7 (`minSdk` 24).
+
+---
+
+## 6. Reponer la facturación — los cinco pasos van JUNTOS
+
+⚠️ **El primer paquete va SIN facturación, a propósito.** Declaraba
+`com.android.vending.BILLING` y llevaba el SDK de RevenueCat **sin una sola línea
+que lo llamara**. Play detecta ese permiso y marca la ficha como «Compras dentro de
+la aplicación», contra unas respuestas ya enviadas que dicen **No** a productos
+digitales. Mismo criterio con el que se quitó el párrafo de SUSCRIPCIÓN de la
+descripción: **no anunciar lo que la app no tiene.**
+
+Cuando el muro de pago exista de verdad, **reponer las cinco cosas a la vez**
+(reponer una sola vuelve a crear el desajuste, por el otro lado):
+
+1. `npm install @revenuecat/purchases-capacitor` + `npx cap sync android`, subir el
+   `versionCode` y **una versión nueva**.
+2. **«Sí» a productos digitales** en la clasificación de contenido.
+3. **«Historial de compras»** en Seguridad de los datos.
+4. La **sección 8 de `privacy.html`**.
+5. El **párrafo de SUSCRIPCIÓN de `store-listing.md`**.
+
+⚠️ Al quitar el plugin desapareció `ACCESS_NETWORK_STATE`, que **llegaba solo por su
+manifiesto fusionado**: ahora se declara en el propio. **Un permiso que la app
 necesita no puede depender de una dependencia que se quita.**
 
-**Para reponerla** (cuando el muro de pago exista de verdad, ver fase 4):
-1. `npm install @revenuecat/purchases-capacitor` + `npx cap sync android`.
-2. Crear el proyecto y la app de Android en RevenueCat (`com.getcorenova.flagrante`)
-   y copiar la **clave pública** (`goog_…`). Sin ella no hay nada que cablear —
-   mismo caso que `SY_CLIENT_ID`. **Pedírsela al usuario antes de escribir una línea.**
-3. Subir el `versionCode`, recompilar y subir una **versión nueva**.
-4. Y **volver a declararlo todo**: «Sí» a productos digitales en la clasificación de
-   contenido, «historial de compras» en Seguridad de los datos, la sección 8 de
-   `privacy.html` y el párrafo de SUSCRIPCIÓN de `store-listing.md`.
+**Dónde se crean** (solo después de que haya un `.aab` subido): Play Console →
+Monetizar → Productos → Suscripciones. **Una** suscripción con **dos planes base**,
+mensual (P1M) y anual (P1Y). Los «accesos gratuitos» y los «descuentos» son
+**códigos promocionales** y **probadores con licencia**, que ya existen ahí:
+⚠️ **no se programan dentro de la app** — eso ya se intentó una vez y se retiró
+entero (ver «Puntos 2 y 3 · RETIRADO» en `CLAUDE.md`).
 
-### Fase 3 · Ficha + primera subida (MANUAL)
-1. Pegar de `store-listing.md`: nombre, descripción breve, descripción completa,
-   categoría, contacto y el enlace de la política.
-2. Subir `Crear App/icon-store-512.png`, el gráfico de funciones y las 5 capturas
-   de `lexcapture-android/store/`.
-3. Responder **Seguridad de los datos**. ⚠️ Con el paquete de hoy la respuesta es
-   **no se recopila ni se transfiere nada**, y es cierta: no hay `BILLING` (así que
-   no hay historial de compras que declarar) y **la copia en Drive está oculta en la
-   app de Play** — solo existe en la versión web. La sección de `store-listing.md`
-   describe el escenario CON facturación y CON Drive: aplicará cuando se repongan.
-   ⚠️ **La política y este formulario tienen que decir lo mismo.** Por eso
-   `privacy.html` §4 dice que la copia en Drive es de la versión web y §8 que esta
-   versión no ofrece suscripciones. Si se toca una, revisar las tres.
-4. Subir `app-release.aab` a **pruebas internas** desde el navegador.
-
-### Fase 4 · Suscripciones (solo después de subir el `.aab`, y de reponer la fase 2)
-Monetizar → Productos → Suscripciones → **una** suscripción `lexcapture_premium`
-con **dos planes base**: `mensual` (P1M) y `anual` (P1Y), con sus ofertas de
-prueba gratuita y sus precios por país.
-⚠️ **El ID de una suscripción no se puede cambiar nunca.** Decidir antes de crearlo
-si se deja `lexcapture_premium` (el nombre nunca se le muestra al usuario) o se
-estrena `flagrante_premium`.
-Los «accesos gratuitos» y los «descuentos» son **códigos promocionales** y
-**probadores con licencia**, que ya existen ahí: no se programan dentro de la app.
-Eso ya se intentó una vez y se retiró entero — ver la sección «Puntos 2 y 3 ·
-RETIRADO» del `CLAUDE.md`.
-
-### Fase 5 · Vincular Play Console con RevenueCat
-Cuenta de servicio en Google Cloud → darle permisos en Play Console → pegarla en
-RevenueCat. El mismo JSON sirve como `google-play-key.json` y desbloquea
-`npm run deploy:playstore` para las subidas siguientes.
-
-### Fase 6 · Pruebas cerradas
-⚠️ Una cuenta personal necesita **14 días de pruebas cerradas con al menos 12
-probadores** antes de publicar en producción. **Son la única ventana para probar
-una compra real**: la facturación no se puede probar hasta que la app esté en una
-pista de Play.
+**El muro, cuando se escriba**: vive en `lcProducirDoc` (productor único de
+documentos), **falla ABIERTO** (si no se puede comprobar el derecho, deja pasar),
+**nunca** bloquea una captura empezada, ni leer, ni editar, ni exportar el
+respaldo. El plazo del artículo 28 son 36 horas: dejar a un policía sin su FPJ-5
+cuesta infinitamente más que una mensualidad sin cobrar. La app pregunta «¿tiene el
+derecho premium?», nunca por un producto concreto.
+⚠️ **En la web de escritorio no existe Play Billing**: cobrar ahí es otra decisión.
 
 ---
 
-## 4. Lo que falta escribir (código)
+## 7. Trampas que ya costaron tiempo
 
-**El muro de suscripción no existe todavía.** Cuando llegue la clave de RevenueCat:
-- Vive en **`lcProducirDoc`**, el productor único de documentos.
-- **Falla ABIERTO**: si no se puede comprobar el derecho, deja pasar.
-- **Nunca** bloquea una captura ya empezada, ni leer, ni editar, ni exportar el
-  respaldo. El plazo del artículo 28 son 36 horas: dejar a un policía sin su
-  FPJ-5 cuesta infinitamente más que una mensualidad sin cobrar.
-- La app pregunta **«¿tiene el derecho premium?»**, nunca por un producto
-  concreto: así añadir mañana un plan trimestral no toca una línea.
-- ⚠️ **En la web de escritorio no existe Play Billing.** Cobrar ahí es otra
-  decisión y otra tecnología; no darlo por resuelto con lo mismo.
-
-`SY_CLIENT_ID` sigue vacío: sin él no funciona la copia de seguridad en Drive.
-
----
-
-## 5. Cosas que ya costaron tiempo. No repetirlas
-
-- ⚠️ **El `.aab` NO lleva el código web dentro.** Capacitor carga la app desde
-  `https://getcorenova.github.io/lexcapture/` (ver `capacitor.config.json`). Un
-  cambio en la app se publica con `npm run deploy:web` y **llega a los teléfonos
-  ya instalados sin recompilar ni pasar por Play Console**. Solo hay que
-  recompilar si cambia el envoltorio: permisos, plugins, ícono o versión.
-- ⚠️ **Cada subida necesita un versionCode MAYOR.** Lo sube `bump_version` de
-  Fastlane, que ya escribe el `app/build.gradle` byte a byte (antes lo corrompía
-  y de paso le cambiaba los 71 finales de línea).
+- ⚠️ **Cada subida necesita un `versionCode` MAYOR.** Lo sube `bump_version` de
+  Fastlane, que escribe el `build.gradle` byte a byte (antes lo corrompía y le
+  cambiaba los 71 finales de línea).
 - ⚠️ **Gradle dice `BUILD SUCCESSFUL` sin compilar nada** si está todo al día:
   comprobar la **fecha del `.aab`**, no el mensaje. Solo `clean bundleRelease`
   prueba algo.
-- ⚠️ **El ícono del teléfono NO sale del `manifest.json`**, sale de los recursos
-  del envoltorio (`mipmap-*`). Al cambiarlo hay que correr `npm run gen:icons`
-  **y recompilar**, y después **extraerlo del `.aab` y mirarlo** — dar por hecho
-  que Gradle lo metió ya falló una vez (el `.aab` llevaba el logo por defecto de
-  Capacitor).
-- ⚠️ **El keystore es irremplazable.** Vive en `lexcapture-android/android/`
-  (`keystore-RESGUARDAR/` y `keystore.properties`), está en `.gitignore` y **no se
-  puede regenerar**: si se pierde, la app no se puede volver a actualizar nunca.
-  Guardar una copia fuera de este PC.
-- ⚠️ **Nunca cometer** la clave de la cuenta de servicio, `*.jks` ni
-  `keystore.properties`. Este repositorio **es público** (sirve GitHub Pages). Si
-  se comete una credencial no basta con borrarla en otro commit: **hay que
-  rotarla** — y el keystore no se puede rotar.
+- ⚠️ **La consola de depuración del WebView no puede viajar en la versión pública.**
+  Se activa en `capacitor.config.json` (`webContentsDebuggingEnabled`) para medir
+  dentro del envoltorio y hay que **quitarla antes de compilar el release**: con
+  ella, cualquiera con un cable inspecciona los datos de las capturas. Comprobarlo
+  siempre extrayendo `base/assets/capacitor.config.json` del `.aab`.
+- ⚠️ **El ícono del teléfono NO sale del `manifest.json`**, sale de los recursos del
+  envoltorio (`mipmap-*`). Al cambiarlo, `npm run gen:icons` **y recompilar**, y
+  después **extraerlo del `.aab` y mirarlo**: dar por hecho que Gradle lo metió ya
+  falló una vez (el paquete llevaba el logo por defecto de Capacitor).
 - ⚠️ **La ficha y la política se quedan atrás sin que nada avise**: ninguna suite
   las ejecuta ni las mide. Al añadir cualquier función que mueva datos fuera del
   equipo, tocar `privacy.html` y `store-listing.md` en el mismo trabajo. Ya pasó
   dos veces.
-- ⚠️ **Nada de escudos ni nombres de institución** en el ícono, el gráfico de
-  funciones, las capturas ni el texto de la ficha: Play lo rechaza por
-  impersonación de entidad gubernamental. El vocabulario legal (FPJ-5, NUNC, URI,
-  CESPA) sí puede ir — es del sistema judicial, no una marca.
+- ⚠️ **Nada de escudos ni nombres de institución** en el ícono, el gráfico, las
+  capturas ni el texto de la ficha: Play lo rechaza por impersonación de entidad
+  gubernamental. El vocabulario legal (FPJ-5, NUNC, URI, CESPA) sí puede ir — es
+  del sistema judicial, no una marca.
 - ⚠️ **Las capturas llevan datos inventados del simulador** (correos en el dominio
   reservado `.test`). **Nunca subir capturas de un procedimiento real**: son datos
   personales de un capturado, y en CESPA de un menor (Ley 1581 de 2012).
-
----
-
-## 6. Qué hace falta del usuario en el chat nuevo
-
-1. La **clave pública de RevenueCat** — bloquea el muro de suscripción.
-2. El **JSON de la cuenta de servicio** — desbloquea las subidas automáticas.
-3. El **`SY_CLIENT_ID`** de Google Cloud — bloquea la copia en Drive.
-4. Los **precios** de los planes mensual y anual.
-5. Decidir el **ID de la suscripción** antes de crearla (irreversible).
-
-
-## Versión 2 del paquete (2026-09-23) — la barra del sistema y el permiso de Google
-
-Reportado desde el teléfono con la app ya instalada de la prueba interna: el título
-quedaba **debajo del reloj** y la hora y los iconos **no se veían**. Las dos cosas
-salían del mismo sitio y ninguna se arregla desde la web sola.
-
-**Lo que había que entender, y solo se vio MIDIENDO dentro del envoltorio** (emulador
-Android 14, con la consola del WebView abierta):
-
-| Medición | Resultado |
-|---|---|
-| `env(safe-area-inset-top)` | **0** — el WebView no informa la zona segura |
-| `window.screenY` | **0** — tampoco sirve |
-| `innerHeight` en borde a borde / con Android reservando | 891 / 839 → la barra mide **52 px** |
-| Petición de color para esa franja | **ignorada** con este SDK de destino: la dejaba NEGRA |
-
-⚠️ **Un valor fijo no sirve**: 52 px es de ESE equipo. La solución es pedirle a
-**Android que reserve él la franja** (`setOverlaysWebView({overlay:false})`), que es
-exacto en cualquier teléfono; él la pinta con el fondo del contenido, así que sigue al
-tema de la app sin hacer nada más. El color de los **iconos** sí se fija, según el tema
-de la app y no el del teléfono (`StatusBar.setStyle`).
-
-⚠️ **Y NO se le pide color a la franja aunque el plugin lo ofrezca**: eso era lo que la
-ponía negra, y con la app en claro los iconos oscuros desaparecían sobre ella. El
-defecto simétrico del original.
-
-⚠️ **El reintento del arranque no es un adorno**: con carga remota el puente se inyecta
-después de pintar, y la primera pantalla —crear el PIN— no pasa por ningún otro sitio
-donde volver a intentarlo. Sin él, un equipo recién instalado arranca con la hora
-invisible; medido.
-
-Verificado en el emulador **en los dos temas**: iconos legibles, franja del color de la
-app y el título con su aire. El suelo del CSS (`body.nat`) se queda como respaldo por si
-Android ignora la petición (desde su versión 15 obliga al borde a borde).
-
-### El permiso de Google dentro de la app — el código está, falta el identificador
-⚠️ Google **bloquea su pantalla de consentimiento dentro de una vista web embebida**, así
-que la sincronización con Drive no podía ofrecerse en la app de Play. Ahora el permiso se
-pide en el **navegador del sistema** y vuelve por una dirección propia; el paquete ya trae
-esa puerta (`intent-filter` con el esquema del paquete, tomado de `${applicationId}`).
-
-**Falta un paso, y es en Google Cloud, no en el código:**
-1. Sacar de Play Console → **Integridad de la app** las huellas **SHA-1** de la clave de
-   firma y de la de carga.
-2. Crear en Google Cloud un identificador de OAuth de **tipo Android** con el nombre del
-   paquete y esas huellas.
-3. Pegarlo en `SY_CLIENT_ID_NAT` del HTML y desplegar.
-
-⚠️ **Ese último paso NO exige recompilar**: el identificador vive en la web. Mientras esté
-vacío, la sincronización sigue oculta dentro de la app —no se ofrece un botón que no puede
-funcionar— y la versión web no se entera.
-
-⚠️ **Sin secreto de cliente, y no es un descuido**: una aplicación que se distribuye no
-puede guardar uno. Lo que prueba quién pide el permiso son el reto criptográfico de un solo
-uso (PKCE) y la huella del certificado. A cambio, este flujo sí entrega permiso de larga
-duración, que el de la web no tiene.
+- ⚠️ Cosmético y sin resolver: `lexcapture-android/www/index.html` conserva el
+  título `LexCapture`. Con `server.url` el WebView va directo a la URL remota y
+  **ese archivo no se carga**; el rótulo que ve el usuario sale de `strings.xml`,
+  que dice Flagrante. Se corrige la próxima vez que haya que recompilar.

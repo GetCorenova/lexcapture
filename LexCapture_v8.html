@@ -2825,7 +2825,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 128;
+var _BUILD = 130;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -23252,9 +23252,20 @@ var SY_CLIENT_ID = '837685454525-5ogfk3k294kme3bn8vt8th0mc14e79uh.apps.googleuse
    Es otro identificador distinto del de arriba y no se puede reutilizar: aquel
    es de tipo «web» y Google no admite en un cliente web la dirección de retorno
    propia de una aplicación instalada.
-   ⚠️ Mientras esté vacío, la sincronización sigue oculta dentro de la app —no se
+   ⚠️ Un cliente de Android se ata a la HUELLA del certificado que firma la app,
+   y con Play App Signing hay DOS: la del certificado de carga (el keystore
+   propio, con la que se prueba lo que se compila aquí) y la que Google genera al
+   recibir el primer paquete, con la que re-firma lo que baja de la tienda.
+   Ahora mismo solo está registrada la primera, así que la sincronización
+   funciona en un paquete instalado a mano y TODAVÍA NO en el que se descarga de
+   Play Store. La segunda se AÑADE al mismo cliente en Google Cloud —no exige
+   recompilar ni tocar este archivo— y el día que se añada hay que actualizar la
+   política de privacidad, que hoy dice que la copia en Drive existe solo en la
+   versión web (Play exige que la política y el formulario de seguridad de los
+   datos coincidan).
+   ⚠️ Mientras esté vacío, la sincronización se oculta dentro de la app —no se
    ofrece un botón que no puede funcionar— y la versión web no se entera. */
-var SY_CLIENT_ID_NAT = '';
+var SY_CLIENT_ID_NAT = '837685454525-4ksg3ujigo9cd8jukghn993f93dcbpj7.apps.googleusercontent.com';
 /* La puerta por la que Google devuelve el control a la aplicación. El esquema es
    el nombre del paquete, que es lo que Android sabe enrutar y lo que hay que
    declarar en su manifiesto. */

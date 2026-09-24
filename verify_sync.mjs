@@ -391,40 +391,60 @@ const f11 = await A.evaluate(async () => {
 log(/nadie recupera/i.test(f11), '[F11] al mostrar el código se advierte que perderlo no tiene vuelta atrás');
 
 /* ⚠️ Dentro del envoltorio de Capacitor, Google BLOQUEA su pantalla de
-   consentimiento (`disallowed_useragent`), así que la sincronización NO PUEDE
-   arrancar ahí y el menú no la ofrece: un botón que no funciona es motivo de
-   rechazo en la tienda. Se simula el envoltorio, que es lo único que una
-   regresión puede hacer desde un navegador.
+   consentimiento en un WebView (`disallowed_useragent`), así que el permiso no
+   se puede pedir por ahí. Se resuelve abriendo el navegador del SISTEMA con
+   PKCE, y eso exige un cliente OAuth propio, de tipo Android, atado a la huella
+   del certificado que firma la aplicación.
+   ⚠️ Mientras ese identificador faltó, la entrada se ocultaba: un botón que
+   termina en un error de Google es motivo de rechazo en la tienda. Ya está
+   puesto, así que ahora se miden LAS DOS MITADES — que se ofrezca, y que el
+   candado siga vivo si el identificador llegara a faltar.
    ⚠️ Se mide el `style.display` que pone la función, NO el computado: la suite
    corre a 384 px y en teléfono el panel lateral ya está oculto por una media
    query, así que el computado diría «none» con candado y sin él. */
 const f12 = await A.evaluate(() => {
   const ids = ['nav-sync', 'mas-sync'];
   const inline = () => ids.map(id => { const e = document.getElementById(id); return e ? e.style.display : null; });
+  /* El check anterior lo dejó vacío; aquí hace falta el escenario real. */
+  SY_CLIENT_ID = 'prueba.apps.googleusercontent.com';
   const out = { existen: ids.every(id => !!document.getElementById(id)), antes: inline() };
   window.Capacitor = { isNativePlatform: () => true, Plugins: { Share: {}, Filesystem: {} } };
   syPintarNav(); go('sync');
   out.nativo = inline();
   out.texto = (document.getElementById('sy-pane') || {}).innerText || '';
+  /* Sin cliente de Android el candado tiene que volver a bajar solo. */
+  const guardado = SY_CLIENT_ID_NAT;
+  SY_CLIENT_ID_NAT = '';
+  syPintarNav(); go('sync');
+  out.sinId = inline();
+  out.textoSinId = (document.getElementById('sy-pane') || {}).innerText || '';
+  SY_CLIENT_ID_NAT = guardado;
   delete window.Capacitor;
   syPintarNav(); go('sync');
   out.despues = inline();
+  SY_CLIENT_ID = '';
   return out;
 });
-log(f12.existen && f12.antes.every(v => v === '') && f12.nativo.every(v => v === 'none'),
-    '[F12] en el envoltorio nativo el menú NO ofrece la sincronización',
+log(f12.existen && f12.antes.every(v => v === '') && f12.nativo.every(v => v === ''),
+    '[F12] en el envoltorio nativo la sincronización SÍ se ofrece: hay cliente de Android',
     JSON.stringify(f12.nativo));
-log(/versi[oó]n web/i.test(f12.texto) && !/Activar en este equipo/.test(f12.texto),
-    '[F13] y si se llega por el hash, la pantalla lo explica en vez de ofrecer un botón que fallaría',
+log(f12.sinId.every(v => v === 'none') && /versi[oó]n web/i.test(f12.textoSinId),
+    '[F12b] y el candado sigue vivo: sin cliente de Android se vuelve a ocultar',
+    JSON.stringify(f12.sinId));
+log(/Activar por primera vez|Ya lo uso en otro equipo/.test(f12.texto) && !/versi[oó]n web/i.test(f12.texto),
+    '[F13] y la pantalla ofrece activarla, en vez del cartel de la versión web',
     f12.texto.slice(0, 48).trim());
 log(f12.despues.every(v => v === ''),
-    '[F14] fuera del envoltorio las dos entradas vuelven: el candado es del envoltorio, no del build');
+    '[F14] fuera del envoltorio las dos entradas siguen: el candado era del envoltorio, no del build');
 
-/* El identificador de Google tiene que estar puesto de verdad, o la versión web
-   sale con el cartel de «falta un paso de instalación». */
-log(/^[0-9]+-[a-z0-9]+[.]apps[.]googleusercontent[.]com$/.test(
-      (src.match(/var SY_CLIENT_ID = '([^']*)'/) || [])[1] || ''),
+/* Los dos identificadores tienen que estar puestos de verdad en la copia que se
+   despliega: el de web para el navegador, el de Android para la app de la
+   tienda. Sin ellos, la pantalla sale con el cartel de «falta un paso». */
+const RE_CLIENTE = /^[0-9]+-[a-z0-9]+[.]apps[.]googleusercontent[.]com$/;
+log(RE_CLIENTE.test((src.match(/var SY_CLIENT_ID = '([^']*)'/) || [])[1] || ''),
     '[F15] la copia que se despliega lleva el identificador de Google configurado');
+log(RE_CLIENTE.test((src.match(/var SY_CLIENT_ID_NAT = '([^']*)'/) || [])[1] || ''),
+    '[F15b] y el de Android, sin el cual la app de la tienda no podría sincronizar');
 
 /* ══════════════════════════════════════════════════════════════════════════
    G · EL SERVICE WORKER
