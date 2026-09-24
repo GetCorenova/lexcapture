@@ -214,7 +214,8 @@ log(cifrado.donde.length === 0 && cifrado.cifrada === true,
 // Una sola firma por usuario: volver a firmar reemplaza.
 await page.evaluate(() => { go('perfil'); renderPerfilScreen(); });
 await page.waitForTimeout(200);
-await page.evaluate(() => openFirmaModal('p1'));
+// MEJORA A: con firma guardada se entra por «Editar»; no hay segundo lienzo a la vista.
+await page.evaluate(() => { openFirmaModal('p1'); fwEditar(); });
 await page.waitForTimeout(400);
 const b = await page.locator('#fw-cv').boundingBox();
 await page.mouse.move(b.x + b.width * 0.25, b.y + b.height * 0.3);
@@ -235,7 +236,7 @@ log(trasActualizar.campos === 3 && trasActualizar.total === 1,
   trasActualizar.total + ' firma almacenada · ' + trasActualizar.campos + ' campos (b64+ancho+alto)');
 
 // Se restaura la firma «buena» para las secciones del documento.
-await page.evaluate(() => openFirmaModal('p1'));
+await page.evaluate(() => { openFirmaModal('p1'); fwEditar(); });
 await page.waitForTimeout(400);
 await firmar(page);
 await page.evaluate(async () => { await fwGuardar('p1'); });

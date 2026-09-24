@@ -3344,6 +3344,55 @@ Verificado con `verify_custodia.mjs` (**111 checks**, antes 99).
   mejora6 32 · mejora6b 67 · personas 25 · invitado 34 · export 66 · envío 39.
   Anti-caché `?v=87` / `cache-v87`, `_BUILD=87`.
 
+## Mejora A (2026-09-24) — barras del sistema, firma, ejemplos, panel, pie del wizard y expediente
+Siete observaciones de campo (`Mejoras/Mejora A.docx`, texto + 7 pantallazos con recuadro rojo).
+Verificado con `verify_mejoraA.mjs` (**30 checks**, nuevo), las 40 suites previas y en el
+**emulador Android** (build de depuración contra el servidor local, navegación de tres botones,
+teléfono en claro y app en oscuro y viceversa). ⚠️ **Exige el `.aab` versionCode 3**: los puntos 1
+y 4 viven en el envoltorio nativo.
+
+- **1 y 4 · Las barras del sistema ya no tapan la app.** Causa medida: la web le pedía a Android
+  `setOverlaysWebView({overlay:false})`, que con este SDK de destino reserva la franja de arriba en
+  **NEGRO** (en oscuro tapaba hora y señal), y abajo nadie reservaba nada (la barra de navegación
+  quedaba encima de «Guardar perfil»). Ahora `MainActivity` pone la ventana de borde a borde en
+  todas las versiones, **mide las dos franjas en el equipo** y las inyecta como
+  `--safe-area-inset-top/-bottom`; el CSS las consume en `--sat` y el nuevo **`--sab`** (barra
+  inferior, sheets, modales, toast, banner, PIN, lector de códigos). El fondo de las franjas lo pone
+  la app, así que sigue al tema. `capacitor.config.json`: `SystemBars.insetsHandling:"disable"`
+  para que el SystemBars del núcleo no compita con la medición. Los iconos se pintan con
+  `SystemBars.setStyle` (las **dos** barras). ⚠️ No depender de `env(safe-area-inset-*)`: en muchos
+  WebView vale 0. Con el teclado abierto el WebView se encoge lo que ocupa el teclado.
+- **2 · Firma.** Con firma guardada ya **no hay segundo lienzo**: se ve la firma con **Editar** y
+  **Eliminar**. Editar abre el lienzo; **Cancelar o cerrar sin guardar conserva la anterior** (nada
+  se escribe hasta «Guardar»). **Pantalla completa (horizontal)**: se intenta bloquear la orientación
+  y, si el equipo no lo permite, se **gira toda la pantalla 90°** (texto, lienzo y botones) y
+  `fwInit(id, girado)` traduce el trazo, así que la firma se guarda derecha. ⚠️ `fwInit` mide con
+  `clientWidth/Height`, no con `getBoundingClientRect` (que da la caja ya girada).
+- **3 · Ajustes sin datos de muestra.** Los ejemplos de comandante, dirección, barrio, municipio,
+  teléfono, estación, distrito, indicativos y rango eran datos reales de la unidad del usuario; ahora
+  dicen **qué** escribir. **Excepción del usuario:** sector, institución y sitio web conservan su
+  referencia. También el «Medellín» del lugar de expedición del acta.
+- **5 · «¿A quién vas a registrar?» es un panel de pantalla completa** (`openPanel`, clase
+  `.mo.full` sobre el mismo `#modal`, así `closeModal` y sus autoguardados sirven igual). Tarjetas
+  grandes con el color semántico de cada rol. ⚠️ `openModal` quita `full`: el formulario que sigue
+  se abre como siempre.
+- **6 · Anterior / Siguiente / Guardar dejaron de ser una cinta fija**: van en el flujo, al final del
+  paso. Paso largo → aparecen al llegar al último dato; paso corto → se ven desde el principio.
+- **7 · «Compartir expediente»** junto a «Documentos». `lcExpedienteTrabajos` arma la lista con el
+  **mismo `build` del catálogo** de cada tarjeta (oficial, un acta por persona, incautación, una
+  cadena por grupo, un rótulo por elemento, entrega y resumen) y los **mismos validadores** que
+  bloquean cada documento. La advertencia (qué documento y qué le falta) **solo sale al pulsar el
+  botón**; ofrece enviar los listos o completar la captura. Se generan todos y luego un toque
+  «Compartir» (dentro de la activación del tap) o «Descargar todos»; en el envoltorio va por el
+  share nativo con varios archivos. Nombres de archivo únicos. Mirar qué falta trabaja sobre una
+  **copia**: no modifica el caso.
+- `verify_firma` adaptado (entra por «Editar» antes de volver a firmar), sigue en 62.
+- ⚠️ **Fallos PREEXISTENTES, idénticos antes y después**: `verify_jerarquia` 65/66 y
+  `verify_mejora6b` [47]/[53], `verify_dossier_historico` [20]/[21] (textos de Ajustes del commit
+  `21ae35b`) y `verify_ds` 9/10 («favorito con estrella SVG»).
+- `.aab` **versionCode 3 / versionName 1.1**, `jar verified`. Anti-caché `?v=131` / `cache-v131`,
+  `_BUILD=131`.
+
 ## Issues pendientes para v8.1
 | Issue | Descripción | Prioridad |
 |-------|-------------|-----------|

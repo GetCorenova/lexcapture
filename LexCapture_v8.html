@@ -36,7 +36,13 @@
      envoltorio Android la ventana dibuja de borde a borde y hay que dejarle
      sitio, o la barra superior queda DEBAJO del reloj. Punto único: todo lo
      que se ancla arriba lo consume, así no hay números sueltos repartidos. */
-  --sat:env(safe-area-inset-top,0px);
+  /* ⚠️ MEJORA A (obs. 1 y 4): dentro del envoltorio los valores los inyecta el
+     propio Android (MainActivity → --safe-area-inset-*), medidos en el equipo;
+     el env() del WebView queda solo de respaldo porque en muchos teléfonos
+     devuelve 0. --sab es la franja de la barra de navegación (los tres botones
+     o la línea de gestos): todo lo que se ancla ABAJO la consume. */
+  --sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));
+  --sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
   --bg:#0C0E13;
   --surface-1:#12151C;
   --surface-2:#171C26;
@@ -220,7 +226,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 /* ═══ LAYOUT ═══ */
 #app{display:grid;min-height:100dvh;grid-template-rows:1fr}
 #sidebar{display:none}
-#main{display:flex;flex-direction:column;min-height:100dvh;padding-bottom:96px}
+#main{display:flex;flex-direction:column;min-height:100dvh;padding-bottom:calc(96px + var(--sab))}
 
 .topbar{
   position:sticky;top:0;z-index:20;
@@ -261,7 +267,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
    topbar (p.ej. "+ Nueva" en Personas) y lo tapaba. */
 #net-badge{
   position:fixed;left:12px;right:auto;top:auto;
-  bottom:calc(76px + env(safe-area-inset-bottom));z-index:19;
+  bottom:calc(76px + var(--sab));z-index:19;
   display:flex;align-items:center;gap:6px;
   font-size:11px;line-height:15px;font-weight:600;letter-spacing:.01em;
   padding:4px 10px;border-radius:999px;
@@ -319,7 +325,7 @@ body.pt{padding-top:calc(36px + var(--sat))}
    24dp de base. Se toma el MAYOR de los dos, así que el día que el WebView sí lo
    informe —o el equipo traiga una muesca más alta— manda el valor real y esto no
    estorba. En el navegador la clase no existe y no cambia un píxel. */
-body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
+body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)}
 
 /* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
    ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
@@ -499,7 +505,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   text-align:center;color:#fff;font-size:13px;line-height:1.4;
 }
 #pt-scan .ps-bar{
-  position:absolute;left:0;right:0;bottom:0;padding:16px;
+  position:absolute;left:0;right:0;bottom:0;padding:16px 16px calc(16px + var(--sab));
   display:flex;justify-content:center;
 }
 #pt-scan .ps-bar button{
@@ -508,7 +514,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
 }
 /* ═══ BANNER PWA ═══ */
 #install-banner{
-  display:none;position:fixed;bottom:84px;left:12px;right:12px;z-index:998;
+  display:none;position:fixed;bottom:calc(84px + var(--sab));left:12px;right:12px;z-index:998;
   align-items:center;gap:12px;
   background:var(--elev);border:1px solid var(--border);
   border-radius:14px;padding:14px 16px;
@@ -657,7 +663,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   -webkit-backdrop-filter:blur(var(--blur));
   border-top:1px solid var(--border);
   display:flex;
-  padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  padding:8px 6px calc(8px + var(--sab));
 }
 .bn-item{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -734,7 +740,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   background:var(--elev);
   border-top:1px solid var(--border-strong);
   border-radius:20px 20px 0 0;
-  padding:12px 12px calc(20px + env(safe-area-inset-bottom));
+  padding:12px 12px calc(20px + var(--sab));
   transform:translateY(100%);
   transition:transform var(--d3) var(--ease);
   max-height:80vh;overflow-y:auto;
@@ -778,7 +784,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
 
 /* ═══ TOAST ═══ */
 .toast{
-  position:fixed;left:50%;bottom:112px;transform:translateX(-50%) translateY(12px);
+  position:fixed;left:50%;bottom:calc(112px + var(--sab));transform:translateX(-50%) translateY(12px);
   background:var(--elev);
   border:1px solid var(--border-strong);
   color:var(--text);font-size:14px;font-weight:500;
@@ -1024,15 +1030,17 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   .draft-card .dc-a{width:100%;margin-top:2px}
   .draft-card .dc-a .btn{flex:1}
 }
-.wpn{display:none;animation:fadeIn var(--d2) var(--ease);padding-bottom:130px}
+.wpn{display:none;animation:fadeIn var(--d2) var(--ease);padding-bottom:4px}
 .wpn.on{display:block}
+/* ⚠️ MEJORA A (obs. 6): «Anterior / Siguiente / Guardar» eran una cinta FIJA
+   sobre la barra inferior y tapaban el último campo del paso. Ahora van en el
+   FLUJO, al final del formulario: con un paso largo aparecen cuando se llega al
+   último dato (que es donde se buscan), y con uno corto se ven desde el
+   principio porque el formulario cabe entero. Es lo que pidió el usuario sin
+   ninguna medición de scroll que pueda fallar. */
 .wnav{
-  display:flex;gap:10px;padding:12px 16px;
+  display:flex;gap:10px;padding:18px 0 8px;margin-top:6px;
   border-top:1px solid var(--border);
-  position:fixed;bottom:calc(82px + env(safe-area-inset-bottom,0px));left:0;right:0;z-index:90;
-  background:color-mix(in srgb,var(--elev) 96%,transparent);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
-  box-shadow:0 -8px 24px rgba(0,0,0,.18);
 }
 .wnav .btn{flex:1;min-height:50px;font-size:15px}
 
@@ -1045,14 +1053,52 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
 }
 .mo.open{display:flex}
 .mc{
-  width:100%;max-height:92dvh;overflow-y:auto;
+  width:100%;max-height:calc(92dvh - var(--sat));overflow-y:auto;
   background:var(--elev);
   border:1px solid var(--border);
-  border-radius:20px 20px 0 0;padding:20px;
+  border-radius:20px 20px 0 0;padding:20px 20px calc(20px + var(--sab));
   animation:slideUp var(--d3) var(--ease);
   box-shadow:var(--sh-3);
 }
 @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+/* ⚠️ MEJORA A (obs. 5): un PANEL, no un menú que asoma abajo. Mismo contenedor
+   que el modal (así closeModal y sus autoguardados siguen valiendo), pero ocupa
+   la pantalla entera y entra de lado, como una pantalla nueva. */
+.mo.full{align-items:stretch;background:var(--bg);backdrop-filter:none;-webkit-backdrop-filter:none}
+.mo.full .mc{
+  max-height:none;height:100dvh;border:0;border-radius:0;box-shadow:none;background:var(--bg);
+  padding:0 0 calc(24px + var(--sab));animation:lcPanelIn var(--d3) var(--ease);
+  display:flex;flex-direction:column;
+}
+.mo.full .mc::before{display:none}
+@keyframes lcPanelIn{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+.lp-top{
+  display:flex;align-items:center;gap:10px;padding:calc(12px + var(--sat)) 12px 12px;
+  border-bottom:1px solid var(--border);background:var(--surface-1);
+}
+.lp-top h2{font-size:17px;font-weight:650;letter-spacing:-.01em;flex:1;min-width:0}
+.lp-body{padding:24px 16px;flex:1;overflow-y:auto;width:100%;max-width:560px;margin:0 auto}
+.lp-lead{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin:4px 0 6px}
+.lp-sub{font-size:14px;color:var(--text-2);line-height:1.45;margin-bottom:22px}
+.rol-card{
+  display:flex;align-items:center;gap:16px;width:100%;text-align:left;cursor:pointer;
+  padding:18px 16px;margin-bottom:12px;border-radius:16px;
+  background:var(--surface-1);border:1px solid var(--border);color:var(--text);
+  box-shadow:var(--sh-1);
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease),transform var(--d1) var(--ease);
+}
+.rol-card:active{transform:scale(.985);background:var(--surface-2)}
+.rol-card .rc-ic{
+  width:52px;height:52px;border-radius:14px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;border:1px solid transparent;
+}
+.rol-card .rc-ic svg{width:24px;height:24px;stroke-width:1.9}
+.rol-card .rc-t{font-size:16px;font-weight:650}
+.rol-card .rc-d{font-size:13px;color:var(--text-2);margin-top:3px;line-height:1.4}
+.rol-card .rc-arr{margin-left:auto;color:var(--text-3);font-size:22px;line-height:1}
+.rol-card.r-cap .rc-ic{background:var(--uriB);border-color:var(--uriBd);color:var(--uriT)}
+.rol-card.r-vic .rc-ic{background:var(--cspB);border-color:var(--cspBd);color:var(--cspT)}
+.rol-card.r-tes .rc-ic{background:var(--oj-bg);border-color:var(--ojBd);color:var(--oj-2)}
 .mc::before{content:'';display:block;width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
 .mh h2{font-size:17px;font-weight:650;letter-spacing:-.01em}
@@ -1066,7 +1112,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
 .mx:active{background:var(--pressed)}
 
 /* ═══ PIN ═══ */
-#pin-ov{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;padding:24px}
+#pin-ov{display:none;position:fixed;inset:0;z-index:500;background:var(--bg);justify-content:center;align-items:center;flex-direction:column;padding:calc(24px + var(--sat)) 24px calc(24px + var(--sab))}
 #pin-ov.on{display:flex}
 .pin-box{
   width:100%;max-width:360px;
@@ -1333,6 +1379,38 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
   padding:8px 10px;display:flex;align-items:center;justify-content:center;min-height:56px;
 }
 .fw-prev img{display:block;max-height:64px;max-width:100%;width:auto;object-fit:contain}
+/* ⚠️ MEJORA A (obs. 2): con firma guardada ya no hay un segundo lienzo debajo;
+   se edita o se elimina desde la propia firma. */
+.fw-prev.big{min-height:110px;padding:12px}
+.fw-prev.big img{max-height:96px}
+/* Firma a pantalla completa: se firma en horizontal. Si el teléfono está en
+   vertical (y no deja girar la pantalla), el lienzo se gira 90° y el trazo se
+   traduce de vuelta en fwInit, así que la firma sale derecha. */
+#fw-full{display:none;position:fixed;inset:0;z-index:1600;background:var(--bg);flex-direction:column}
+#fw-full.on{display:flex}
+/* Toda la pantalla (texto, lienzo y botones) se gira junta: con el teléfono de
+   lado se lee y se toca derecha, no solo el lienzo. */
+#fw-full .ff-wrap{position:absolute;left:50%;top:50%;display:flex;flex-direction:column;transform:translate(-50%,-50%)}
+#fw-full .ff-wrap.rot{transform:translate(-50%,-50%) rotate(90deg)}
+#fw-full .ff-stage{flex:1;position:relative;overflow:hidden;padding:4px 16px}
+#fw-full .fw-pad{aspect-ratio:auto;width:100%;height:100%;margin:0;border-radius:14px}
+#fw-full .ff-bar{
+  display:flex;gap:8px;padding:10px 16px calc(10px + var(--sab));
+  border-top:1px solid var(--border);background:var(--surface-1);
+}
+#fw-full .ff-wrap.rot .ff-bar{padding-bottom:10px}
+#fw-full .ff-bar .btn{flex:1}
+#fw-full .ff-top{padding:calc(8px + var(--sat)) 14px 8px;font-size:13px;color:var(--text-2);text-align:center}
+#fw-full .ff-wrap.rot .ff-top{padding-top:8px}
+.exp-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.exp-hd .st{margin:0}
+.exp-hd .btn{flex-shrink:0;display:inline-flex;align-items:center;gap:6px}
+.exp-hd .btn svg{width:15px;height:15px;stroke-width:2.1}
+.exp-lst{margin:6px 0 14px;display:flex;flex-direction:column;gap:8px}
+.exp-lst .el{padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)}
+.exp-lst .el b{display:block;font-size:13.5px;margin-bottom:3px}
+.exp-lst .el span{display:block;font-size:12.5px;color:var(--text-2);line-height:1.4}
+.exp-lst .el.ok b{color:var(--ok)}
 
 /* ═══ DESPACHOS ═══ */
 .desp-card{
@@ -1795,7 +1873,7 @@ body.nat{--sat:max(env(safe-area-inset-top,0px),24px)}
      móvil (foco real de la app) los apila, que es lo que ya hace `.stack`. */
   .stat-rank-2col{display:grid;grid-template-columns:1fr 1fr;align-items:start}
   .toast{bottom:32px}
-  .wnav{position:static;box-shadow:none;background:transparent;border-top:none;padding:16px 0;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .wnav{border-top:none;padding:16px 0}
   .wpn{padding-bottom:24px}
 }
 </style>
@@ -2253,7 +2331,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
                ⚠️ Lo ya guardado NO se toca: el campo se abre con el valor que el
                equipo tenga, y el oficio sigue imprimiendo exactamente eso hasta
                que el usuario lo corrija. Nada se inventa por él. -->
-          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Distrito de policía, seccional, dirección, grupo, etc.</label><input class="fi" id="aj-oj-dep" placeholder="Distrito tres de policía"></div>
+          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Distrito de policía, seccional, dirección, grupo, etc.</label><input class="fi" id="aj-oj-dep" placeholder="Nombre del distrito, seccional o grupo"></div>
           <div class="lc-hijos">
             <div class="fr">
               <!-- El indicativo es la ETIQUETA con la que la sección sale en el
@@ -2261,32 +2339,32 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
                    completo, que es como lo pidió la maqueta («T.C - Teniente
                    Coronel»). ⚠️ El nº del distrito ya NO se pide: se lee del
                    nombre del padre (lcNumDistrito). -->
-              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-dis" placeholder="DIAMANTE 3"></div>
-              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-diamante3" placeholder="T.C William Quintero"></div>
+              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-dis" placeholder="Indicativo del comandante del distrito"></div>
+              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-diamante3" placeholder="Grado y nombre del comandante"></div>
             </div>
             <!-- Rango con el que el dossier abre su saludo. Es un dato distinto
                  del comandante de arriba —el dossier se dirige a quien lo
                  recibe— y por eso la etiqueta lo dice. -->
-            <div class="fg"><label class="fl">Rango del saludo del dossier</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="Coronel" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
+            <div class="fg"><label class="fl">Rango del saludo del dossier</label><input class="fi" id="aj-rango" list="dl-grado" placeholder="Grado del comandante" oninput="lcGradoPista(this)"><div class="lc-ab" id="aj-rango-ab"></div></div>
           </div>
 
           <!-- ── ESTACIÓN ────────────────────────────────────────────────────
                Misma dinámica, y aquí cuelgan la dirección y el contacto: es la
                unidad donde el capturado queda a disposición. -->
-          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Estación de policía</label><input class="fi" id="aj-estacion" placeholder="CANDELARIA"></div>
+          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Estación de policía</label><input class="fi" id="aj-estacion" placeholder="Nombre de la estación"></div>
           <p class="aj-nota">Escribe solo el nombre y la app completa «Estación de Policía …».</p>
           <div class="lc-hijos">
             <div class="fr">
-              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="VERDE 3"></div>
-              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="T.C Jin Eduardo Moreno"></div>
+              <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="Indicativo del comandante de la estación"></div>
+              <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="Grado y nombre del comandante"></div>
             </div>
-            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="CL 48 # 55 - 50"></div>
+            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="Dirección de la estación"></div>
             <div class="fr">
-              <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="La Candelaria"></div>
-              <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Medellín"></div>
+              <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="Barrio de la estación"></div>
+              <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Municipio de la estación"></div>
             </div>
             <div class="fr">
-              <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="3126543210"></div>
+              <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="Teléfono de la estación"></div>
               <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
             </div>
           </div>
@@ -2699,8 +2777,8 @@ function lcBarraSistema(quedan) {
   try { nat = !!(C && C.isNativePlatform && C.isNativePlatform()); } catch (e) {}
   if (nat) {
     try {
-      var S = C.Plugins && C.Plugins.StatusBar;
-      if (S && S.setStyle) { lcHuecoBarra(S); lcBarraColor(S); return; }
+      var S = C.Plugins && (C.Plugins.SystemBars || C.Plugins.StatusBar);
+      if (S && S.setStyle) { lcHuecoBarra(); lcBarraColor(S); return; }
     } catch (e) {}
   }
   /* ⚠️ El reintento NO es un adorno: con carga remota el puente se inyecta
@@ -2711,57 +2789,25 @@ function lcBarraSistema(quedan) {
   if (quedan > 0) setTimeout(function () { lcBarraSistema(quedan - 1); }, 250);
 }
 
-/* El hueco de la barra de estado, MEDIDO en vez de supuesto.
-   ⚠️ El WebView de Android no informa la zona segura: medido con este mismo
-   paquete, env(safe-area-inset-top) devuelve 0 aunque la ventana dibuja de borde
-   a borde y el título acaba encima del reloj. Y un valor fijo tampoco sirve: en
-   el equipo de prueba esa barra mide 52 px y en otros no. Así que se le pide a
-   Android que reserve él el espacio —que es exacto en cualquier teléfono— y se
-   COMPRUEBA que lo hizo mirando si la ventana se encogió.
-   ⚠️ Si lo ignora (Android obliga al borde a borde desde su versión 15) se cae
-   al suelo del CSS, que al menos evita que el contenido quede debajo del reloj.
-   ⚠️ Una sola vez por sesión: es una medición, no un ajuste continuo. */
+/* Quién deja sitio a las barras del sistema — MEJORA A (obs. 1 y 4).
+   ⚠️ Antes se le pedía a Android que RESERVARA la franja de arriba
+   (setOverlaysWebView false). Android la reservaba NEGRA —no admite pintarla con
+   este SDK de destino— y en modo oscuro la hora y la señal quedaban tapadas por
+   esa capa; abajo, en cambio, nadie reservaba nada y la barra de navegación del
+   teléfono (tres botones o gestos) quedaba ENCIMA de la app, tapando botones
+   como «Guardar perfil».
+   Ahora la app dibuja de borde a borde en los dos extremos y el ENVOLTORIO
+   (MainActivity) mide las dos franjas en el propio equipo y las inyecta como
+   --safe-area-inset-top / --safe-area-inset-bottom. El CSS las consume en --sat
+   y --sab: el fondo de esas franjas lo pone la propia app, así que sigue al tema
+   en claro y en oscuro sin pedirle ningún color a Android.
+   Aquí solo se marca el cuerpo para que el suelo de 24 px del CSS rija si el
+   envoltorio es anterior a este cambio y no inyecta nada. */
 var _lcHuecoHecho = false;
-/* Quién deja sitio a la barra del sistema.
-
-   ⚠️ Por defecto la ventana dibuja de borde a borde y el WebView de Android NO
-   informa la zona segura —medido con este mismo paquete: env(safe-area-inset-top)
-   y window.screenY devuelven 0—, así que el título acababa encima del reloj y no
-   había forma de saber cuánto bajarlo. Un valor fijo tampoco sirve: en el equipo
-   de prueba esa barra mide 52 px y en otros no.
-
-   Se resuelve pidiéndole a ANDROID que reserve él la franja, que es exacto en
-   cualquier teléfono. La pinta con el fondo del propio contenido, así que sigue
-   al tema de la app sin hacer nada más.
-
-   ⚠️ Y NO se le pide un color para esa franja, aunque el plugin lo ofrezca: con
-   este SDK de destino Android ignora la petición y la deja NEGRA —comprobado, y
-   con la app en claro los iconos oscuros desaparecían sobre ella—. Sin pedir
-   nada, sale del color correcto en los dos temas.
-
-   ⚠️ Si Android lo ignora (desde su versión 15 obliga al borde a borde), se cae
-   al suelo del CSS: no es exacto, pero evita que el contenido quede bajo el
-   reloj. Se comprueba mirando si la ventana encogió, no dando por hecho que la
-   petición surtió efecto.
-
-   ⚠️ Una sola vez por sesión: es el reparto de la pantalla, no un ajuste que haya
-   que repetir. */
-function lcHuecoBarra(S) {
-  if (_lcHuecoHecho || !S || !S.setOverlaysWebView) return;
+function lcHuecoBarra() {
+  if (_lcHuecoHecho) return;
   _lcHuecoHecho = true;
-  var suelo = function () { try { document.body.classList.add('nat'); } catch (e) {} };
-  var conBorde = window.innerHeight;
-  try {
-    Promise.resolve(S.setOverlaysWebView({ overlay: false })).then(function () {
-      /* Dos cuadros de margen: el cambio de disposición no es inmediato y medir
-         en el mismo instante devolvería siempre el valor de antes. */
-      requestAnimationFrame(function () {
-        requestAnimationFrame(function () {
-          if (window.innerHeight >= conBorde - 4) suelo();
-        });
-      });
-    }).catch(suelo);
-  } catch (e) { suelo(); }
+  try { document.body.classList.add('nat'); } catch (e) {}
 }
 /* Color de los iconos del sistema (hora, batería, señal).
    ⚠️ Su nomenclatura va por el FONDO, no por los iconos: DARK significa «fondo
@@ -2773,12 +2819,14 @@ function lcHuecoBarra(S) {
    sigue el tema. Aquí solo se decide el color de los iconos. */
 function lcBarraColor(S) {
   try {
-    if (!S) {
-      var P = window.Capacitor && window.Capacitor.Plugins;
-      S = P && P.StatusBar;
-    }
+    var P = window.Capacitor && window.Capacitor.Plugins;
+    if (!S) S = P && (P.SystemBars || P.StatusBar);
     if (!S || !S.setStyle) return;
-    S.setStyle({ style: lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK' });
+    var st = lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK';
+    /* SystemBars (del núcleo de Capacitor) pinta los iconos de las DOS barras:
+       la de estado y la de navegación. StatusBar solo sabe de la de arriba. */
+    S.setStyle({ style: st });
+    if (P && P.StatusBar && P.StatusBar !== S && P.StatusBar.setStyle) P.StatusBar.setStyle({ style: st });
   } catch (e) {}
 }
 function setTheme(pref) {
@@ -2825,7 +2873,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 130;
+var _BUILD = 131;
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3097,7 +3145,17 @@ function _compartirDoc(out) {
   _dlDone(out.label);
 }
 
-function openModal(html) { document.getElementById('modal-c').innerHTML = html; document.getElementById('modal').classList.add('open'); }
+function openModal(html) { var m = document.getElementById('modal'); m.classList.remove('full'); document.getElementById('modal-c').innerHTML = html; m.classList.add('open'); }
+/* Panel a pantalla completa (MEJORA A, obs. 5). Mismo contenedor que el modal,
+   así closeModal —con sus autoguardados— sirve igual para cerrarlo. */
+function openPanel(titulo, html) {
+  var m = document.getElementById('modal');
+  document.getElementById('modal-c').innerHTML =
+    '<div class="lp-top"><button class="topbar-btn" onclick="closeModal()" aria-label="Volver">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>' +
+    '</button><h2>' + titulo + '</h2></div><div class="lp-body">' + html + '</div>';
+  m.classList.add('full'); m.classList.add('open');
+}
 /* ⚠️ MEJORA 3 — cerrar un modal VACÍA su contenido. Antes solo se le quitaba la
    clase `open` y el HTML seguía en el DOM, invisible. Eso era inofensivo mientras
    los modales solo mostraban listas, pero desde la obs. 1 el formulario del
@@ -3122,6 +3180,7 @@ function closeModal() {
     if (mc && mc.querySelector('#fe-obs')) feAutoguardar();
   } catch (e) {}
   document.getElementById('modal').classList.remove('open');
+  document.getElementById('modal').classList.remove('full');
   if (mc) mc.innerHTML = '';
 }
 
@@ -6167,14 +6226,17 @@ function openPersonRolePicker() {
     {rol:'Víctima',   badge:'b-csp', icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>', desc:'Persona afectada por el hecho'},
     {rol:'Testigo',   badge:'b-oj',  icon:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>', desc:'Persona que presenció los hechos'}
   ];
-  openModal('<div class="mh"><h2>¿A quién vas a registrar?</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
-    '<p style="margin:0 0 14px;font-size:.82rem;color:var(--txM)">Elige el tipo de persona antes de tomar los datos.</p>'+
+  var cls = { 'Capturado':'r-cap', 'Víctima':'r-vic', 'Testigo':'r-tes' };
+  openPanel('Nueva persona',
+    '<div class="lp-lead">¿A quién vas a registrar?</div>'+
+    '<div class="lp-sub">Elige el tipo de persona antes de tomar los datos.</div>'+
     roles.map(function(r) {
-      return '<div class="pcard" style="display:flex;align-items:center;gap:12px;cursor:pointer;margin-bottom:10px" onclick="openPersonForm({rol:\''+r.rol+'\'})">'+
-        '<div style="width:40px;height:40px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);flex-shrink:0">'+r.icon+'</div>'+
-        '<div style="flex:1;min-width:0"><div class="pinfo">'+r.rol+'</div><div class="pdoc" style="font-family:inherit">'+r.desc+'</div></div>'+
-        '<span class="badge '+r.badge+'">'+r.rol+'</span>'+
-      '</div>';
+      return '<button type="button" class="rol-card '+cls[r.rol]+'" onclick="openPersonForm({rol:\''+r.rol+'\'})">'+
+        '<span class="rc-ic">'+r.icon+'</span>'+
+        '<span style="min-width:0"><span class="rc-t" style="display:block">'+r.rol+'</span>'+
+        '<span class="rc-d" style="display:block">'+r.desc+'</span></span>'+
+        '<span class="rc-arr">›</span>'+
+      '</button>';
     }).join(''));
 }
 
@@ -8028,7 +8090,8 @@ function renderExpediente(caso) {
      documentos los que viajan solos, así que el aviso pertenece a este bloque.
      Dice también quién fue el último en actualizarlos, porque un expediente que
      cambia solo sin decir quién lo cambió no se puede defender ante nadie. */
-  box.innerHTML='<div class="st" style="margin-top:0">Documentos</div>'+
+  box.innerHTML='<div class="exp-hd"><div class="st">Documentos</div>'+
+      '<button class="btn bs bsm" onclick="lcCompartirExpediente(\''+caso.id+'\')">'+ACT_IC.send+'Compartir expediente</button></div>'+
     lcExpSyncHtml(caso)+
     docs.map(function(d){
       var ok=!d.falta.length;
@@ -8051,6 +8114,162 @@ function renderExpediente(caso) {
     '<button class="btn bs bbl" style="margin-top:14px" onclick="editCase(\''+caso.id+'\')">'+
     'Editar la captura</button>';
   cont.style.display='block';
+}
+
+/* ═══ COMPARTIR TODO EL EXPEDIENTE — MEJORA A (obs. 7) ═════════════════════
+   Reúne en un solo envío TODOS los documentos del expediente: el documento
+   oficial, un acta de derechos por persona, y —si hay EMP y EF— el acta de
+   incautación, una cadena de custodia por cadena, un rótulo por elemento y el
+   acta de entrega, más el resumen. Cada documento sale por el MISMO `build`
+   del catálogo que usa su tarjeta, así que no hay una segunda forma de
+   generarlo que pueda discrepar.
+   Los faltantes se miran con los MISMOS validadores que bloquean cada documento
+   por separado, y la advertencia solo aparece al pulsar este botón (instrucción
+   del usuario). Lo que falta no se inventa: ese documento no se envía y se dice
+   cuál es y qué le falta. */
+function lcExpedienteTrabajos(c) {
+  var esOJ = (c.tipo === 'OJ' || c.ojv === 2);
+  var jobs = [], faltas = [];
+  function falta(lbl, lista) { faltas.push({ lbl: lbl, falta: lista }); }
+  // 1 · Documento oficial
+  var lblOf = lcNombreDoc(c);
+  if (esOJ) {
+    var caso = ojCasoParaDocumento(c), f = [];
+    try { f = ojBloqueoDoc(caso, ojEsLegado(c)).map(function (v) { return v && v.msg ? v.msg : String(v); }); } catch (e) {}
+    if (f.length) falta(lblOf, f);
+    else jobs.push({ lbl: lblOf, kind: 'OJ', ctx: { caso: caso }, venc: ojVigenciaVencida(caso) });
+  } else {
+    var fo = [];
+    if ((c.nunc || '').replace(/\D/g, '').length !== 16) fo.push('NUNC de 16 dígitos');
+    if (!(c.capturados || []).length) fo.push('Al menos un capturado registrado');
+    if (fo.length) falta(lblOf, fo); else jobs.push({ lbl: lblOf, kind: 'FPJ', ctx: { caso: c } });
+  }
+  // 2 · Acta de derechos, una por persona
+  var caps = c.capturados || [];
+  if (!caps.length) falta('Acta de derechos', ['Ninguna persona registrada']);
+  caps.forEach(function (cap) {
+    var lbl = 'Acta de derechos — ' + (fullName(cap) || 'sin nombre');
+    var fa = f6Faltantes(c, cap);
+    if (fa.length) falta(lbl, fa);
+    else jobs.push({ lbl: lbl, kind: 'FPJ6', ctx: { caso: c, capturado: cap, acta: f6Acta(c, cap.id) || f6Estructura(cap.id) } });
+  });
+  if (esOJ) return { jobs: jobs, faltas: faltas };
+  var emps = ccElementos(c);
+  if (emps.length) {
+    var fai = caps.length ? aiFaltantes(c) : ['Ninguna persona registrada'];
+    if (fai.length) falta('Acta de incautación', fai);
+    else jobs.push({ lbl: 'Acta de incautación', kind: 'INCAU', ctx: { caso: c } });
+    ccGrupos(c).forEach(function (g) {
+      jobs.push({ lbl: 'Registro de cadena de custodia — cadena ' + g.n, kind: 'FPJ8', ctx: { caso: c, grupo: g } });
+    });
+    emps.forEach(function (it, i) {
+      jobs.push({ lbl: 'Rótulo de EMP y EF ' + (i + 1), kind: 'FPJ7', ctx: { caso: c, item: it } });
+    });
+    var ffe = feFaltantes(c);
+    if (ffe.length) falta('Acta de entrega', ffe);
+    else jobs.push({ lbl: 'Acta de entrega', kind: 'F30', ctx: { caso: c } });
+  }
+  jobs.push({ lbl: 'Resumen de la captura', kind: 'RESUMEN', ctx: { caso: c } });
+  return { jobs: jobs, faltas: faltas };
+}
+var _expOut = null;   // documentos ya generados, esperando el toque de «Compartir»
+function lcCompartirExpediente(id) {
+  var c0 = DB.getCase(id);
+  if (!c0) { toast('Caso no encontrado'); return; }
+  // Copia: los validadores de cadena de custodia crean ramas vacías al leer, y
+  // mirar qué falta no puede dejar el caso modificado.
+  var c = JSON.parse(JSON.stringify(c0));
+  var t = lcExpedienteTrabajos(c);
+  if (!t.faltas.length && !t.jobs.some(function (j) { return j.venc; })) { lcGenerarExpediente(id); return; }
+  var html = '<div class="mh"><h2>Compartir expediente</h2><button class="mx" onclick="closeModal()">✕</button></div>';
+  if (t.faltas.length) {
+    html += '<div class="oj-alert dura"><b>Faltan datos en ' + t.faltas.length +
+      (t.faltas.length === 1 ? ' documento' : ' documentos') + '</b>' +
+      'Estos documentos no se pueden generar todavía y no irán en el envío.</div>' +
+      '<div class="exp-lst">' + t.faltas.map(function (f) {
+        return '<div class="el"><b>' + escHtml(f.lbl) + '</b>' +
+          f.falta.map(function (x) { return '<span>Falta: ' + escHtml(x) + '</span>'; }).join('') + '</div>';
+      }).join('') + '</div>';
+  }
+  if (t.jobs.some(function (j) { return j.venc; })) {
+    html += '<div class="oj-alert dura"><b>La orden figura vencida</b>' +
+      'Art. 298 C.P.P. — revisa la fecha de expedición antes de enviar el oficio.</div>';
+  }
+  html += t.jobs.length
+    ? '<button class="btn bp bbl" style="margin-top:6px" onclick="closeModal();lcGenerarExpediente(\'' + id + '\')">Enviar los ' +
+      t.jobs.length + ' documentos listos</button>'
+    : '';
+  html += '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal();editCase(\'' + id + '\')">Completar la captura</button>';
+  openModal(html);
+}
+async function lcGenerarExpediente(id) {
+  var c0 = DB.getCase(id); if (!c0) return;
+  var c = JSON.parse(JSON.stringify(c0));
+  var t = lcExpedienteTrabajos(c);
+  if (!t.jobs.length) { toast('No hay documentos listos para enviar'); return; }
+  openModal('<div class="mh"><h2>Compartir expediente</h2></div>' +
+    '<p class="oj-hint" id="exp-prog" style="margin:4px 0 8px">Preparando los documentos…</p>');
+  var outs = [], fallos = [], usados = {};
+  for (var i = 0; i < t.jobs.length; i++) {
+    var j = t.jobs[i], pr = document.getElementById('exp-prog');
+    if (pr) pr.textContent = 'Preparando ' + (i + 1) + ' de ' + t.jobs.length + ': ' + j.lbl;
+    var out = null;
+    try { out = await lcDoc(j.kind).build(j.ctx, lcPapelEfectivo(j.kind)); } catch (e) { console.error(e); }
+    if (!out || !out.blob) { fallos.push(j.lbl); continue; }
+    // Nombres únicos: dos rótulos o dos actas no pueden pisarse en la carpeta.
+    var nm = out.fname, k = 2;
+    while (usados[nm.toLowerCase()]) nm = out.fname.replace(/(\.[a-z0-9]+)$/i, ' (' + (k++) + ')$1');
+    usados[nm.toLowerCase()] = 1; out.fname = nm;
+    out.file = _mkShareFile(out);
+    outs.push(out);
+    (out.avisos || []).forEach(function (a) { fallos.push(j.lbl + ': ' + a); });
+  }
+  _expOut = outs;
+  var puede = _capNative() || (_docShareOk() && (function () {
+    try { return navigator.canShare({ files: outs.map(function (o) { return o.file; }) }); } catch (e) { return false; }
+  })());
+  openModal('<div class="mh"><h2>Expediente listo</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<p class="oj-hint" style="margin:0 0 10px">' + outs.length + (outs.length === 1 ? ' documento preparado.' : ' documentos preparados.') + '</p>' +
+    '<div class="exp-lst">' + outs.map(function (o) { return '<div class="el ok"><b>' + escHtml(o.fname) + '</b></div>'; }).join('') + '</div>' +
+    (fallos.length ? '<div class="oj-alert info"><b>Avisos</b>' + fallos.map(escHtml).join('<br>') + '</div>' : '') +
+    (puede ? '<button class="btn bp bbl" style="margin-top:10px" onclick="lcExpedienteEnviar(\'share\')">Compartir</button>' : '') +
+    '<button class="btn ' + (puede ? 'bs' : 'bp') + ' bbl" style="margin-top:8px" onclick="lcExpedienteEnviar(\'dl\')">Descargar todos</button>');
+}
+async function lcExpedienteEnviar(via) {
+  var outs = _expOut || [];
+  if (!outs.length) { closeModal(); return; }
+  if (via === 'dl') {
+    closeModal();
+    outs.forEach(function (o, i) { setTimeout(function () { _dlDocBlob(o.blob, o.fname); }, 400 * i); });
+    setTimeout(function () { toast('Expediente en Descargas ✓ — envíalo desde WhatsApp o Correo con el clip 📎', 6000); }, 400 * outs.length);
+    return;
+  }
+  if (_capNative()) {
+    closeModal();
+    try {
+      var P = window.Capacitor.Plugins, uris = [];
+      for (var i = 0; i < outs.length; i++) {
+        var b64 = await _blobToB64(outs[i].blob);
+        await P.Filesystem.writeFile({ path: outs[i].fname, data: b64, directory: 'CACHE' });
+        uris.push((await P.Filesystem.getUri({ path: outs[i].fname, directory: 'CACHE' })).uri);
+      }
+      await P.Share.share({ title: 'Expediente', files: uris });
+      toast('Expediente compartido ✓');
+    } catch (e) {
+      if (e && (e.name === 'AbortError' || /cancel/i.test(String(e.message || e)))) return;
+      console.error('Share nativo del expediente falló:', e);
+      lcExpedienteEnviar('dl');
+    }
+    return;
+  }
+  // Sin await antes de share(): cae dentro de la activación del toque.
+  navigator.share({ files: outs.map(function (o) { return o.file; }) }).then(function () {
+    closeModal(); toast('Expediente compartido ✓');
+  }).catch(function (e) {
+    if (e && e.name === 'AbortError') return;
+    console.error('Web Share del expediente falló:', e);
+    lcExpedienteEnviar('dl');
+  });
 }
 
 /* El renglón de «esto se sincroniza» del expediente. Vacío si la captura no se
@@ -10088,7 +10307,7 @@ function f6Abrir(id, idx) {
     '<div class="fg"><label class="fl">Número</label>' +
     '<input class="fi mono" id="f6-com-doc" inputmode="numeric" value="' + escAttr(acta.comunica.numDoc) + '"></div>' +
     '<div class="fg"><label class="fl">Expedido en</label>' +
-    '<input class="fi" id="f6-com-expEn" list="dl-muni" value="' + escAttr(acta.comunica.expEn) + '" placeholder="Medellín"></div></div>' +
+    '<input class="fi" id="f6-com-expEn" list="dl-muni" value="' + escAttr(acta.comunica.expEn) + '" placeholder="Municipio de expedición"></div></div>' +
     '<div class="fr"><div class="fg"><label class="fl">Teléfono</label>' +
     '<input class="fi" id="f6-com-tel" inputmode="tel" value="' + escAttr(acta.comunica.tel) + '"></div>' +
     '<div class="fg"><label class="fl">Hora de la comunicación</label>' +
@@ -13915,22 +14134,27 @@ var _fw=null;             // estado del lienzo abierto (trazos + contexto)
    camino: Android, Windows y escritorio entran por aquí sin ramas por
    dispositivo. El backing store se escala por devicePixelRatio o el trazo sale
    pixelado en pantallas densas (que son todas las de un teléfono). */
-function fwInit(){
-  var cv=document.getElementById('fw-cv'); if(!cv) return;
+function fwInit(idCv, girado){
+  var cv=document.getElementById(idCv||'fw-cv'); if(!cv) return;
   var pad=cv.parentNode;
   var dpr=Math.max(1,Math.min(3,window.devicePixelRatio||1));
-  var r=cv.getBoundingClientRect();
-  var w=Math.round((r.width||320)*dpr), h=Math.round((r.height||128)*dpr);
+  // clientWidth/Height y no getBoundingClientRect: con el lienzo girado 90° el
+  // rectángulo en pantalla es el de la caja ya girada, no el del lienzo.
+  var cw=cv.clientWidth||320, ch=cv.clientHeight||128;
+  var w=Math.round(cw*dpr), h=Math.round(ch*dpr);
   cv.width=w; cv.height=h;
   var ctx=cv.getContext('2d');
   ctx.scale(dpr,dpr);
   ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#000';
-  _fw={cv:cv,ctx:ctx,dpr:dpr,pad:pad,trazos:[],act:null,dib:false};
+  _fw={cv:cv,ctx:ctx,dpr:dpr,pad:pad,trazos:[],act:null,dib:false,w:cw,h:ch,rot:!!girado};
 
   function pos(e){
     var b=cv.getBoundingClientRect();
-    return {x:e.clientX-b.left, y:e.clientY-b.top,
-            p:(e.pressure!=null&&e.pressure>0&&e.pointerType!=='mouse')?e.pressure:0.5};
+    var pr=(e.pressure!=null&&e.pressure>0&&e.pointerType!=='mouse')?e.pressure:0.5;
+    // Girado 90° a la derecha: el eje X del lienzo va hacia abajo en pantalla y
+    // el Y hacia la izquierda. Se deshace ese giro para dibujar en su sitio.
+    if(_fw.rot) return {x:e.clientY-b.top, y:b.right-e.clientX, p:pr};
+    return {x:e.clientX-b.left, y:e.clientY-b.top, p:pr};
   }
   cv.addEventListener('pointerdown',function(e){
     e.preventDefault();
@@ -14023,34 +14247,117 @@ function fwExportar(){
   var url=out.toDataURL('image/png');              // PNG: conserva el alfa
   return {b64:url.split(',')[1]||'', w:ow, h:oh};
 }
-/* Modal de firma del perfil. «Actualizar» es el mismo camino que «Guardar»:
-   siempre hay una sola firma y volver a guardar reemplaza la anterior. */
+/* Modal de firma del perfil — MEJORA A (obs. 2).
+   Con firma guardada ya NO hay un segundo lienzo debajo: se ve la firma y dos
+   acciones, «Editar» y «Eliminar». Editar abre el lienzo; si el funcionario
+   cancela o cierra sin guardar, sigue valiendo la firma que tenía (no se toca
+   nada hasta pulsar Guardar). Sin firma guardada se abre directo el lienzo.
+   En los dos casos hay «Pantalla completa» para firmar en horizontal. */
+var _fwPerfil = null;
 function openFirmaModal(id){
   var cfg=DB.getConfig(), p=null;
   (cfg.perfiles||[]).forEach(function(x){ if(x.id===id) p=x; });
   if(!p){ toast('Perfil no encontrado'); return; }
-  var fg=DB.getFirma(id), tiene=!!fg;
+  _fwPerfil=id;
+  var fg=DB.getFirma(id);
   openModal(
     '<div class="mh"><h2>Firma digital</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
     '<p class="oj-hint" style="margin:0 0 12px">'+escHtml(p.grado||'')+' '+escHtml(p.nombre||'')+
       ' — firma con el dedo, un lápiz táctil o el mouse. Se guarda en este perfil y se '+
       'imprime sola sobre tu nombre en el oficio de orden judicial.</p>'+
-    '<div id="fw-prev-wrap">'+(tiene
-      ? '<div class="st" style="margin-top:0">Firma guardada</div>'+
-        '<div class="fw-prev" style="margin-bottom:14px"><img src="data:image/png;base64,'+escAttr(fg.b64)+'" alt="Firma guardada"></div>'
-      : '')+'</div>'+
+    '<div id="fw-zona"></div>'
+  );
+  if(fg) fwVista(); else fwEditar();
+}
+function fwVista(){
+  var id=_fwPerfil, fg=id?DB.getFirma(id):null, z=document.getElementById('fw-zona');
+  if(!z) return;
+  if(!fg){ fwEditar(); return; }
+  _fw=null;
+  z.innerHTML=
+    '<div class="st" style="margin-top:0">Firma guardada</div>'+
+    '<div class="fw-prev big"><img src="data:image/png;base64,'+escAttr(fg.b64)+'" alt="Firma guardada"></div>'+
+    '<div class="fw-acts">'+
+      '<button class="btn bs" onclick="fwEditar()">Editar</button>'+
+      '<button class="btn bs" style="color:var(--err)" onclick="fwEliminar(\''+id+'\')">Eliminar</button>'+
+    '</div>';
+}
+function fwEditar(){
+  var id=_fwPerfil, tiene=!!(id&&DB.getFirma(id)), z=document.getElementById('fw-zona');
+  if(!z) return;
+  z.innerHTML=
     '<div class="st" style="margin-top:0">'+(tiene?'Nueva firma':'Dibuja tu firma')+'</div>'+
     '<div class="fw-pad"><canvas id="fw-cv"></canvas><div class="fw-base"></div>'+
       '<div class="fw-ph">Firma aquí</div></div>'+
+    '<button class="btn bs bbl" style="margin-top:10px" onclick="fwPantallaCompleta()">Pantalla completa (horizontal)</button>'+
     '<div class="fw-acts">'+
+      (tiene?'<button class="btn bs" onclick="fwVista()">Cancelar</button>':'')+
       '<button class="btn bs" onclick="fwBorrar()">Borrar</button>'+
-      '<button class="btn bp" onclick="fwGuardar(\''+id+'\')">'+(tiene?'Actualizar firma':'Guardar firma')+'</button>'+
-    '</div>'+
-    (tiene?'<button class="btn bs bbl" style="color:var(--err);margin-top:8px" onclick="fwEliminar(\''+id+'\')">Eliminar firma guardada</button>':'')
-  );
+      '<button class="btn bp" onclick="fwGuardar(\''+id+'\')">Guardar firma</button>'+
+    '</div>';
   // El lienzo se mide con getBoundingClientRect: hay que esperar a que el modal
   // esté pintado, si no mide 0 y el trazo se dibuja fuera de la vista.
-  requestAnimationFrame(function(){ requestAnimationFrame(fwInit); });
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ fwInit(); }); });
+}
+/* Firma a pantalla completa, en horizontal. Se intenta girar la pantalla de
+   verdad (orientación horizontal); si el equipo no lo permite —lo corriente
+   dentro de la app, o con el giro automático bloqueado— se gira el LIENZO 90° y
+   fwInit traduce el trazo, así que la firma se guarda derecha igual. */
+function fwPantallaCompleta(){
+  var ov=document.getElementById('fw-full');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='fw-full';
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML='<div class="ff-wrap" id="ff-rot">'+
+    '<div class="ff-top">Firma en horizontal, con el teléfono de lado</div>'+
+    '<div class="ff-stage">'+
+      '<div class="fw-pad"><canvas id="fw-cv-full"></canvas><div class="fw-base"></div><div class="fw-ph">Firma aquí</div></div>'+
+    '</div>'+
+    '<div class="ff-bar">'+
+      '<button class="btn bs" onclick="fwCerrarCompleta()">Cancelar</button>'+
+      '<button class="btn bs" onclick="fwBorrar()">Borrar</button>'+
+      '<button class="btn bp" onclick="fwGuardarCompleta()">Guardar</button>'+
+    '</div></div>';
+  ov.classList.add('on');
+  var intentar=Promise.resolve();
+  try{
+    var de=document.documentElement;
+    if(de.requestFullscreen) intentar=de.requestFullscreen().then(function(){
+      if(screen.orientation&&screen.orientation.lock) return screen.orientation.lock('landscape');
+    }).catch(function(){});
+  }catch(e){}
+  intentar.then(function(){ setTimeout(fwMontarCompleta, 250); });
+  window.addEventListener('resize', fwMontarCompleta);
+}
+function fwMontarCompleta(){
+  var ov=document.getElementById('fw-full'); if(!ov||!ov.classList.contains('on')) return;
+  var rot=document.getElementById('ff-rot');
+  var W=ov.clientWidth, H=ov.clientHeight, girar=H>W;
+  rot.classList.toggle('rot', girar);
+  rot.style.width=(girar?H:W)+'px';
+  rot.style.height=(girar?W:H)+'px';
+  var prev=(_fw&&_fw.cv&&_fw.cv.id==='fw-cv-full')?{tr:_fw.trazos,w:_fw.w,h:_fw.h}:null;
+  fwInit('fw-cv-full', girar);
+  // Si la pantalla giró a mitad de firma, el trazo se reescala en vez de perderse.
+  if(prev&&prev.tr.length&&_fw){
+    var fx=_fw.w/prev.w, fy=_fw.h/prev.h;
+    _fw.trazos=prev.tr.map(function(t){ return t.map(function(q){ return {x:q.x*fx,y:q.y*fy,p:q.p}; }); });
+    _fw.pad.classList.add('inked'); fwPintar();
+  }
+}
+function fwCerrarCompleta(volver){
+  window.removeEventListener('resize', fwMontarCompleta);
+  var ov=document.getElementById('fw-full'); if(ov){ ov.classList.remove('on'); ov.innerHTML=''; }
+  try{ if(screen.orientation&&screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+  try{ if(document.fullscreenElement&&document.exitFullscreen) document.exitFullscreen().catch(function(){}); }catch(e){}
+  if(volver!==false && document.getElementById('fw-zona')) fwEditar();
+}
+async function fwGuardarCompleta(){
+  var id=_fwPerfil;
+  if(!fwHayTrazo()){ toast('Dibuja la firma antes de guardar'); return; }
+  var ok=await fwGuardar(id);
+  if(ok) fwCerrarCompleta(false);
 }
 /* ⚠️ Se espera al guardado real antes de avisar «Firma guardada ✓»: el cifrado
    es asíncrono y serializa las escrituras por clave. Es la lección de la Fase H
@@ -14062,12 +14369,13 @@ async function fwGuardar(id){
   (cfg.perfiles||[]).forEach(function(p){ if(p.id===id) existe=true; });
   if(!existe){ toast('Perfil no encontrado'); return; }
   try{ await DB.saveFirma(id,f); }
-  catch(e){ toast('No se pudo guardar la firma — inténtalo de nuevo'); return; }
+  catch(e){ toast('No se pudo guardar la firma — inténtalo de nuevo'); return false; }
   closeModal(); renderPerfilScreen();
   // Se puede firmar SIN salir del procedimiento: si el wizard está abierto, su
   // bloque de firma refleja el trazo nuevo al instante.
   try{ ojRefrescarFirmaWiz(); }catch(_){}
   toast('Firma guardada ✓');
+  return true;
 }
 async function fwEliminar(id){
   if(!confirm('¿Eliminar la firma guardada de este perfil?')) return;

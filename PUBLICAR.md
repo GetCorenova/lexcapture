@@ -1,6 +1,6 @@
 # Subir Flagrante a Play Store — punto de partida
 
-> Medido el **2026-09-23** contra el **build 128** y el **`.aab` versionCode 2**.
+> Medido el **2026-09-24** contra el **build 131** y el **`.aab` versionCode 3** (Mejora A).
 > Empezar el chat nuevo leyendo **este archivo**, no el `CLAUDE.md` entero (son
 > 4 000 líneas de historia del producto; aquí está solo lo que hace falta para
 > publicar).
@@ -17,7 +17,7 @@ En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 
 | # | Acción | Quién |
 |---|---|---|
-| 1 | Subir `app-release.aab` (**versionCode 2**) a **prueba interna** desde el navegador | **[USUARIO]** |
+| 1 | Subir `app-release.aab` (**versionCode 3**, versión 1.1) a **prueba interna** desde el navegador | **[USUARIO]** |
 | 2 | Probarlo en un teléfono real — empezar por las barras del sistema (§5) | **[USUARIO]** |
 | 3 | Pegar la ficha de `store-listing.md` y subir los gráficos | **[USUARIO]** |
 | 4 | **Promover a prueba cerrada e inscribir a los 12 probadores el mismo día** | **[USUARIO]** |
@@ -43,8 +43,8 @@ la clave de servicio, que todavía no existe.
 |---|---|
 | Cuenta de Play Console | ✅ verificada |
 | App creada en Play Console | ✅ sí (22-09). Checklist de «Configura tu app» diligenciado |
-| Primera subida | ✅ versionCode **1** lanzado en prueba interna el 23-09. El **2** lo sustituye |
-| `.aab` listo | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 213 950 B** · `jar verified` · **versionCode 2** · `com.getcorenova.flagrante` · minSdk 24 · targetSdk 36 · compilado 23-09 15:06 |
+| Primera subida | ✅ versionCode **1** lanzado en prueba interna el 23-09. El **2** lo sustituyó; el **3** (Mejora A: barras del sistema) lo sustituye |
+| `.aab` listo | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 214 272 B** · `jar verified` · **versionCode 3** (1.1) · `com.getcorenova.flagrante` · minSdk 24 · targetSdk 36 · compilado 24-09 13:13 |
 | Consola de depuración en el `.aab` | ✅ **NO viaja** — comprobado extrayendo `base/assets/capacitor.config.json` del paquete |
 | Permisos del manifiesto fusionado | `INTERNET` · `ACCESS_NETWORK_STATE` · `CAMERA` (hardware **opcional**) · `DUMP`. **Sin `BILLING`** |
 | Plugins nativos | filesystem · share · status-bar · browser · app |
