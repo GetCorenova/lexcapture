@@ -4,6 +4,22 @@
 > Ahí está el estado medido, el orden de las seis fases, las dos decisiones
 > irreversibles y lo que hace falta pedirle al usuario. Este archivo es la
 > historia del producto.
+
+> ⏸️ **PROYECTO EN PAUSA desde el 2026-09-25, por 15 días (decisión del usuario, para estudiar sus
+> dudas).** Estado: el plan de seguridad por fases (0 contención · 1 IndexedDB · 2 Firebase Auth ·
+> 3 sync Firestore · 4 fuera la pantalla de Sync · 5 compartir cuenta · 6 membresías · 7
+> cumplimiento · 8 opcional) tiene **solo la Fase 0 hecha**: aprobada, fusionada en `main` y la web
+> publicada (build 133 = el mismo código que el `.aab` v4, build 132; solo sube el anti-caché).
+> Detalle en «Fase 0 de seguridad», al final. **Al retomar, NO empezar la Fase 1 sin aprobación
+> explícita**, y no tocar la configuración de GitHub ni la visibilidad del repositorio.
+> Pendiente del usuario: (1) subir `lexcapture-android/android/app/build/outputs/bundle/release/
+> app-release.aab` (versionCode 4) a prueba interna; (2) anotar SHA-1/SHA-256 de Play Console →
+> Integridad de la app (Fase 2); (3) llave física de 2FA en GitHub; (4) decidir dónde vive la web y
+> `privacy.html` antes de poner el repo privado (Pages lo sirve y las apps v1–v3 cargan de ahí);
+> (5) protección de rama vs. el push directo de `deploy:web`; (6) Firebase: proyecto, región
+> (irreversible), Blaze con alerta de presupuesto, App Check. Riesgos abiertos: `'unsafe-inline'`
+> en la CSP, PIN de 4 dígitos atacable fuera de línea, la web carga el script de Google al abrir
+> Sincronización, Android no restaura datos al cambiar de teléfono, y `lexcapture-android/` sin git.
 <!-- Versión: v8.0 RC | Release Candidate: 2026-07-14 | Fase H re-ejecutada (ver sección Fase H más abajo) -->
 
 ## Qué es este proyecto
