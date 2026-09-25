@@ -23861,7 +23861,10 @@ function syCargarGIS() {
    «Reconectar con Google», que sí es un gesto del usuario y siempre funciona. */
 function syToken(interactivo) {
   if (_syTok && _syTokExp > Date.now() + 60000) return Promise.resolve(_syTok);
-  if (_capNative()) return syTokenNat(interactivo);
+  if (_capNative()) {
+    if (!syDisponible()) return Promise.reject(new Error('La copia en tu cuenta está disponible en la versión web.'));
+    return syTokenNat(interactivo);
+  }
   if (!SY_CLIENT_ID) return Promise.reject(new Error('Falta configurar el identificador de Google de la aplicación.'));
   return syCargarGIS().then(function () {
     return new Promise(function (res, rej) {
@@ -24106,6 +24109,9 @@ function syBorrar(id) {
    COPIA del caso y al guardar reemplaza el original: si una fusión entrara por
    debajo mientras está abierto, `wizSave` la borraría al terminar. */
 async function sySincronizar(interactivo) {
+  /* ⚠️ Segunda guarda, detrás del menú oculto: en la app de Play NINGÚN dato sale
+     del teléfono por esta vía, llegue quien llegue a llamarla. */
+  if (!syDisponible()) return { ok: false, motivo: 'La copia en tu cuenta está disponible en la versión web.' };
   if (!_sessionKey) return { ok: false, motivo: 'Desbloquea con tu PIN antes de sincronizar.' };
   if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
   if (typeof wc !== 'undefined' && wc) return { ok: false, motivo: 'Hay una captura abierta. Ciérrala y vuelve a sincronizar.' };
@@ -24329,7 +24335,12 @@ var _syOcupado = false, _syUltimo = '';
    Desbloquearlo es la Fase 2 (autorización nativa de Android), que obliga a
    recompilar el paquete — hasta entonces, la sincronización es de la versión web.
    Punto ÚNICO: lo consultan el menú y la propia pantalla, que no pueden discrepar. */
-function syDisponible() { return _capNative() ? !!SY_CLIENT_ID_NAT : true; }
+/* ⚠️ FASE 0 (2026-09-25): dentro de la app de Play la copia vuelve a quedar
+   OCULTA aunque `SY_CLIENT_ID_NAT` esté puesto. Sin la huella de firma de Play
+   registrada el permiso de Google falla, y `privacy.html` dice que la copia en
+   Drive existe solo en la versión web: Play exige que la política y la app
+   coincidan. La bandera `syncNativo` la devuelve en la Fase 2. */
+function syDisponible() { return _capNative() ? (lcFlag('syncNativo') && !!SY_CLIENT_ID_NAT) : true; }
 
 /* ⚠️ Se oculta con `display`, NO con el atributo `hidden`: una regla de autor
    (`.sb-item{display:flex}`) gana sobre el `display:none` del navegador y el
