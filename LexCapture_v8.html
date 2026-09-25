@@ -2874,6 +2874,36 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
 var _BUILD = 131;
+
+/* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
+   Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
+   en UN solo sitio, para que ninguna pantalla decida por su cuenta.
+   ⚠️ LÍMITE HONESTO: sin servidor, una bandera solo cambia con un despliegue
+   (en la web, `npm run deploy:web`; en la app de Play, una versión nueva,
+   porque el código viaja dentro del paquete). Apagar algo «sin publicar una
+   versión» exige configuración remota, y eso llega con la cuenta (Fase 2).
+   La anulación local (`lc_flags`) existe para las pruebas: no protege nada, y
+   por eso ninguna bandera de esta lista abre un agujero si alguien la enciende. */
+var LC_FLAGS = {
+  /* 0.1 — La copia sincronizada corría SOLA 2,5 s después de cada desbloqueo y
+     revertía correcciones. Con la fusión a tres vías ya no las revierte, pero
+     una sincronización que nadie pidió sigue siendo la peor forma de descubrir
+     un fallo: queda en el botón manual. */
+  syncAutoDesbloqueo: false,
+  /* 0.1 — El ofrecimiento de la copia justo después de crear el PIN. */
+  syncOnboarding: false,
+  /* 0.2 — La copia dentro de la app de Play. Apagada hasta la Fase 2: sin la
+     huella de firma de Play el permiso de Google falla, y la política de
+     privacidad dice que la copia en Drive es solo de la versión web. */
+  syncNativo: false
+};
+function lcFlag(n) {
+  try {
+    var o = JSON.parse(localStorage.getItem('lc_flags') || 'null');
+    if (o && typeof o[n] === 'boolean') return o[n];
+  } catch (e) {}
+  return !!LC_FLAGS[n];
+}
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -24600,6 +24630,9 @@ async function syUiDesvincular() {
    ⚠️ El PIN va PRIMERO aunque la contraseña se pida después: el vínculo se guarda
    cifrado bajo el PIN, así que antes de que exista no hay dónde escribirlo. */
 function syOnboardTrasPin() {
+  /* ⚠️ FASE 0: apagado. Invitaba a activar una copia cuya regla de fusión
+     revertía correcciones; la cuenta de la Fase 2 lo sustituye entero. */
+  if (!lcFlag('syncOnboarding')) return false;
   if (typeof syDisponible !== 'function' || !syDisponible() || !SY_CLIENT_ID) return false;
   if (syVinculado()) return false;
   /* ⚠️ NO se adelanta aquí la carga del script de Google, aunque ahorraría una espera
@@ -24699,6 +24732,12 @@ function lcColaCopia() {
    funcionario —no pidió sincronizar, está entrando a trabajar— y el estado real
    queda a la vista cuando abra la pantalla de Sincronización. */
 function syAlDesbloquear() {
+  /* ⚠️ FASE 0 (2026-09-25): APAGADA. Corría sola en cada desbloqueo y era la vía
+     por la que la regla vieja de la fusión («lo que llega con dato gana»)
+     devolvía las correcciones al valor de la copia de Drive en TODOS los
+     equipos. La fusión ya es a tres vías, pero una sincronización que nadie
+     pidió no vuelve hasta la Fase 3: queda el botón «Sincronizar ahora». */
+  if (!lcFlag('syncAutoDesbloqueo')) return;
   if (!syVinculado() || !SY_CLIENT_ID) return;
   setTimeout(async function () {
     var r = await sySincronizar(false);
