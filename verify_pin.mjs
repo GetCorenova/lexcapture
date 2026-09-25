@@ -141,6 +141,45 @@ await page.waitForTimeout(600);
 const leg3 = await page.evaluate(() => !!_sessionKey && !!DB.getCase('legado'));
 log(leg3, '[P15] y las siguientes veces entra por el verificador');
 
+/* ── 3b · La configuración va CIFRADA (S3) ───────────────────────────── */
+/* Lleva nombre, cédula, teléfono y correo del titular y del compañero de
+   patrulla: antes quedaba en claro en `lc_cfg`. */
+const cf1 = await page.evaluate(async () => {
+  const cfg = DB.getConfig();
+  cfg.perfiles = [{ id: 'pf1', nombre: 'MARIA TORRES', cedula: '43111222', tel: '3001234567', correo: 'maria@correo.test',
+                    companero: { nombre: 'PEDRO RUIZ', cedula: '98765432', tel: '3109876543' } }];
+  cfg.nombreEstacion = 'LAURELES';
+  await DB.saveConfig(cfg);
+  const disco = localStorage.getItem('lc_cfg') || '';
+  return { claro: /MARIA|43111222|3001234567|maria@|PEDRO|98765432|LAURELES/.test(disco),
+           llave: disco.charAt(0) !== '{' && disco.length > 50, lee: DB.getConfig().perfiles[0].nombre };
+});
+log(!cf1.claro && cf1.llave && cf1.lee === 'MARIA TORRES',
+    '[P18] la configuración se guarda cifrada: ni el titular ni el compañero quedan en claro', JSON.stringify(cf1));
+
+await page.reload({ waitUntil: 'load' });
+await page.waitForTimeout(300);
+const cf2 = await page.evaluate(() => ({ est: DB.getConfig().nombreEstacion, perf: (DB.getConfig().perfiles || []).length }));
+log(cf2.est !== 'LAURELES' && cf2.perf === 0, '[P19] antes del PIN no hay configuración que leer (salen los valores por defecto)', JSON.stringify(cf2));
+await intentar('9090');
+await page.waitForTimeout(700);
+const cf3 = await page.evaluate(() => ({ est: DB.getConfig().nombreEstacion, perf: DB.getConfig().perfiles[0].cedula }));
+log(cf3.est === 'LAURELES' && cf3.perf === '43111222', '[P20] y con el PIN vuelve entera', JSON.stringify(cf3));
+
+/* Un equipo de antes, con la configuración EN CLARO: al desbloquear se cifra. */
+await page.evaluate(() => { localStorage.setItem('lc_cfg', JSON.stringify({ nombreEstacion: 'BELEN', perfiles: [{ id: 'v', nombre: 'VIEJO PERFIL', cedula: '111' }] })); });
+await page.reload({ waitUntil: 'load' });
+await page.waitForTimeout(300);
+await intentar('9090');
+await page.waitForTimeout(800);
+const cf4 = await page.evaluate(async () => {
+  await (_lcWriteChain.cfg || Promise.resolve());
+  const disco = localStorage.getItem('lc_cfg') || '';
+  return { est: DB.getConfig().nombreEstacion, claro: /BELEN|VIEJO/.test(disco), cifrada: disco.charAt(0) !== '{' };
+});
+log(cf4.est === 'BELEN' && !cf4.claro && cf4.cifrada,
+    '[P21] una configuración en claro de antes se lee igual y queda cifrada al primer desbloqueo', JSON.stringify(cf4));
+
 /* ── 4 · «Olvidé mi PIN» también borra IndexedDB ──────────────────────── */
 await page.evaluate(async () => { await lcIdbSet('sync_base', 'algo-cifrado'); });
 const antes = await page.evaluate(async () => await lcIdbGet('sync_base'));

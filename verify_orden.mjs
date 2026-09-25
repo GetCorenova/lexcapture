@@ -254,6 +254,12 @@ log(await page.$eval('#ord-capturas', b => b.hidden), 'Con las capturas bajo PIN
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(600);
+/* ⚠️ FASE 0: la configuración va cifrada con la llave del PIN, así que un equipo
+   recién instalado la guarda DESPUÉS de crear el PIN — que es además lo único que
+   puede pasar en la app de verdad: la pantalla del PIN tapa todo lo demás. */
+await page.fill('#pin-a', '1470'); await page.fill('#pin-b', '1470');
+await page.click('button[onclick="doSetPin()"]');
+await page.waitForTimeout(1200);
 const nuevo = await page.evaluate(() => {
   const cap = lcOrden('capturas'), per = lcOrden('personas');
   lcAplicarOrden('personas:az'); lcAplicarOrden('capturas:za');
@@ -261,8 +267,9 @@ const nuevo = await page.evaluate(() => {
 });
 log(nuevo.cap === 'rec' && nuevo.per === 'ant' && nuevo.per2 === 'az' && nuevo.cap2 === 'za',
   'Sin nada guardado, cada lista arranca en su defecto documentado y se puede cambiar', JSON.stringify(nuevo));
-const persistido = await page.evaluate(() => {
-  try { const c = JSON.parse(localStorage.getItem('lc_cfg')) || {}; return c.ordenPersonas + '/' + c.ordenCapturas; }
+const persistido = await page.evaluate(async () => {
+  /* FASE 0: lc_cfg va cifrada: se lee el disco descifrándolo, cuando termine la escritura. */
+  try { await (_lcWriteChain.cfg || Promise.resolve()); const c = JSON.parse(await _lcDecrypt(localStorage.getItem('lc_cfg'))) || {}; return c.ordenPersonas + '/' + c.ordenCapturas; }
   catch (e) { return 'ERROR'; }
 });
 log(persistido === 'az/za', 'La elección queda escrita en la configuración del equipo', persistido);

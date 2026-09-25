@@ -3465,6 +3465,8 @@ async function doSetPin() {
     _personsCache=(rawP&&(rawP[0]==='['||rawP[0]==='{'))?(JSON.parse(rawP)||[]):[];
     _syncPersonsFromCases();
     _firmasCache = {};
+    /* Una configuración anterior al PIN estaba en claro: se cifra ya. */
+    await _lcCargarCfg();
     _lcEncSave('cases', _casesCache);
     _lcEncSave('persons', _personsCache);
     _pinHide();
@@ -3580,7 +3582,7 @@ async function _lcPinVerificar(pin, salt) {
   if (viejo) return (await _lcHashPin(pin, salt)) === viejo ? key : null;
   /* Sin verificador ni hash: vale lo que abra cualquiera de los datos cifrados.
      Si no hay ninguno, no hay nada que proteger con este PIN todavía. */
-  var claves = ['lc_cases', 'lc_persons', 'lc_firmas', 'lc_sync', 'lc_draft'], hay = false;
+  var claves = ['lc_cases', 'lc_persons', 'lc_firmas', 'lc_sync', 'lc_draft', 'lc_cfg'], hay = false;
   for (var i = 0; i < claves.length; i++) {
     var enc = localStorage.getItem(claves[i]);
     if (!enc || enc[0] === '[' || enc[0] === '{') continue;
@@ -3717,6 +3719,8 @@ function _lcGuardarCache(key, val, leer, escribir) {
 
 async function _lcLoadCaches() {
   var enc;
+  /* La configuración primero: lo que sigue (migraciones, sincronización) la lee. */
+  await _lcCargarCfg();
   enc = localStorage.getItem('lc_cases');
   if (enc) { try { _casesCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _casesCache = []; } }
   else { _casesCache = []; }
@@ -3728,9 +3732,11 @@ async function _lcLoadCaches() {
   enc = localStorage.getItem('lc_draft');
   if (enc) { try { _draftCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _draftCache = null; } }
   else { _draftCache = null; }
-  /* Las firmas manuscritas van CIFRADAS y en su propia clave, no en `lc_cfg`
-     (que se guarda en claro): una firma es un rasgo biométrico y con ella se
-     suscriben documentos judiciales. Es el mismo trato que las capturas. */
+  /* Las firmas manuscritas van CIFRADAS y en su propia clave, no en `lc_cfg`:
+     una firma es un rasgo biométrico y con ella se suscriben documentos
+     judiciales. (Hasta la Fase 0, `lc_cfg` iba en claro; ahora también va
+     cifrada, pero la firma sigue aparte: la configuración se exporta y se
+     sincroniza, y la firma no viaja nunca.) */
   enc = localStorage.getItem('lc_firmas');
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
@@ -3780,6 +3786,9 @@ var _draftCache = null;
    `_casesCache`/`_personsCache`, así `DB.getFirma` puede ser síncrona y la
    tarjeta del perfil y el motor del documento la leen sin esperar. */
 var _firmasCache = null;
+/* La configuración tal como se guardó (sin valores por defecto), descifrada en
+   memoria mientras la sesión está abierta. null = todavía bajo PIN. */
+var _cfgCache = null;
 var DB = {
   getDraft: function() { return _draftCache; },
   saveDraft: function(d) { return _lcGuardarCache('draft', d, _lcLeerDraft, _lcEscribirDraft); },
@@ -3826,10 +3835,25 @@ var DB = {
   savePerson: function(p) { var a=this.getPersons().slice(); var i=a.findIndex(function(x){return x.id===p.id;}); if(i>=0) a[i]=p; else a.push(p); return this.savePersons(a); },
   delPerson: function(id) { return this.savePersons(this.getPersons().filter(function(p){return p.id!==id;})); },
   getConfig: function() {
-    var stored; try { stored=JSON.parse(localStorage.getItem('lc_cfg'))||{}; } catch(e) { stored={}; }
-    return _cfgConDefaults(stored);
+    return _cfgConDefaults(lcCfgCrudo());
   },
-  saveConfig: function(c) { localStorage.setItem('lc_cfg', JSON.stringify(c)); }
+  /* ⚠️ FASE 0 (S3): la configuración se guarda CIFRADA, como las capturas. Lleva
+     nombre, cédula, teléfono y correo del titular y del compañero de patrulla,
+     que antes quedaban en claro en `lc_cfg`. La caché en memoria se actualiza al
+     instante (quien guarda y lee en la línea siguiente ve lo nuevo, como antes)
+     y si la escritura falla se revierte y se avisa: un ajuste que se ve y no
+     está en el disco es peor que un error a la cara. */
+  saveConfig: function(c) {
+    var copia = JSON.parse(JSON.stringify(c || {})), prev = _cfgCache;
+    _cfgCache = copia;
+    var p = _lcEncSave('cfg', copia).catch(function (e) {
+      if (_cfgCache === copia) _cfgCache = prev;
+      try { toast(_lcMsgGuardado(e, 'los ajustes'), 5000); } catch (e2) {}
+      throw e;
+    });
+    p.catch(function () {});   // quien no espere la promesa no deja un rechazo suelto
+    return p;
+  }
   /* La API de plantillas subidas (getTemplates/saveTemplate/getActiveTemplate…)
      se retiró junto con la pantalla: ningún documento de la app sale ya de un
      .docx que cargue el usuario. Ver _lcPurgarPlantillas(). */
@@ -3840,7 +3864,29 @@ var DB = {
    escribió cada equipo y no lo que la app rellena al leer. Devuelve una copia:
    modificarla no toca nada. */
 function lcCfgCrudo() {
-  try { return JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { return {}; }
+  if (_cfgCache) { try { return JSON.parse(JSON.stringify(_cfgCache)); } catch (e) { return {}; } }
+  /* Antes del PIN no hay llave: si lo guardado está cifrado, no hay nada que
+     leer todavía (salen los valores por defecto). Solo un equipo que aún no se
+     ha migrado tiene la configuración en claro, y esa se puede leer. */
+  var raw = null;
+  try { raw = localStorage.getItem('lc_cfg'); } catch (e) {}
+  if (!raw || raw.charAt(0) !== '{') return {};
+  try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
+}
+/* Carga la configuración al desbloquear. Un equipo anterior a la Fase 0 la
+   tiene EN CLARO: se lee y se reescribe cifrada en este mismo desbloqueo. Si
+   esa escritura falla (memoria llena), lo en claro sigue ahí y se reintenta en
+   el siguiente: la migración es idempotente y no pierde nada. */
+async function _lcCargarCfg() {
+  var raw = null;
+  try { raw = localStorage.getItem('lc_cfg'); } catch (e) {}
+  if (!raw) { _cfgCache = {}; return; }
+  if (raw.charAt(0) === '{') {
+    try { _cfgCache = JSON.parse(raw) || {}; } catch (e) { _cfgCache = {}; }
+    try { await _lcEncSave('cfg', _cfgCache); } catch (e) { console.warn('[Flagrante] la configuración sigue en claro; se reintenta al próximo desbloqueo', e); }
+    return;
+  }
+  try { _cfgCache = JSON.parse(await _lcDecrypt(raw)) || {}; } catch (e) { _cfgCache = {}; }
 }
 
 /* ── IndexedDB (Fase 0, 2026-09-25) ─────────────────────────────────────────
@@ -14309,10 +14355,10 @@ function savePerfilForm(id) {
    Va indexada POR PERFIL (DB.getFirma/saveFirma con el id del perfil): hay un
    perfil por funcionario, así que «una sola firma por usuario» sale solo —
    volver a firmar reemplaza, sin acumular versiones.
-   ⚠️ NO vive en `cfg.perfiles[]`: `lc_cfg` se guarda en localStorage EN CLARO.
-   Una firma manuscrita es un rasgo biométrico y con ella se suscriben documentos
-   judiciales, así que va en `lc_firmas`, cifrada con AES-GCM igual que las
-   capturas.
+   ⚠️ NO vive en `cfg.perfiles[]`: la configuración se exporta en claro («Exportar
+   config») y viaja en la sincronización. Una firma manuscrita es un rasgo
+   biométrico y con ella se suscriben documentos judiciales, así que va en
+   `lc_firmas`, cifrada con AES-GCM igual que las capturas, y no sale del equipo.
    ⚠️ PNG con fondo TRANSPARENTE: el lienzo nunca se rellena, solo se dibuja el
    trazo. Un fondo blanco taparía el papel al imprimirse sobre el bloque de firma.
 ═══════════════════════════════════════════════════════════════════════════ */

@@ -218,7 +218,7 @@ log(d1.unidadB === 'UNIDAD DE B', '[D5] lo que B había configurado y A no, se c
 /* La marca de migración de A no puede haberle llegado a B: B todavía no ha
    corrido la suya. */
 const d6 = await B.evaluate(() => {
-  let raw; try { raw = JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { raw = {}; }
+  const raw = lcCfgCrudo();   // FASE 0: lc_cfg va cifrada
   return raw.nuncAno;
 });
 log(d6 !== 2026, '[D6] la marca de migración de A no se le pegó a B', d6);

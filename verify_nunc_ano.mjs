@@ -127,7 +127,7 @@ log(S.dos === 0, 'Y es idempotente: la segunda pasada no cambia nada', S.dos + '
 /* ═══ Parte B · Al LEER la configuración, en un solo sitio ═════════════════ */
 log(/_lcNuncCambios=lcNuncSyncCfg\(out\);/.test(fuente),
   '⚠️ La actualización vive en `_cfgConDefaults`: ninguna pantalla puede discrepar sobre cuál es el número vigente');
-const B = await page.evaluate(() => {
+const B = await page.evaluate(async () => {
   const crudo = {
     despachosPropios: [
       { id: 'd1', clase: 'FISCALIA', tipo: 'FISCALIA', nombre: 'URI Centro', municipio: 'Medellín', nunc: '0500160008722025' },
@@ -135,9 +135,10 @@ const B = await page.evaluate(() => {
     ],
     despachoDefecto: { URI: 'd1', CESPA: 'd3' }, despachosMigrados: true
   };
-  localStorage.setItem('lc_cfg', JSON.stringify(crudo));
+  /* FASE 0: lc_cfg va cifrada: se siembra por DB.saveConfig y el disco se lee descifrando. */
+  await DB.saveConfig(crudo);
   const leido = DB.getConfig().despachosPropios.map(d => d.nunc);
-  const enDisco = JSON.parse(localStorage.getItem('lc_cfg')).despachosPropios.map(d => d.nunc);
+  const enDisco = JSON.parse(await _lcDecrypt(localStorage.getItem('lc_cfg'))).despachosPropios.map(d => d.nunc);
   return { leido, enDisco, uri: lcDespNunc('URI'), cespa: lcDespNunc('CESPA') };
 });
 log(B.leido.every(x => x.slice(12) === String(ANO)),
@@ -157,9 +158,9 @@ await page.fill('#pin-e', '2468');
 await page.click('button[onclick="doUnlockPin()"]');
 await page.waitForTimeout(900);
 
-const C = await page.evaluate(() => ({
+const C = await page.evaluate(async () => ({
   cfg: DB.getConfig().despachosPropios.map(d => d.nunc),
-  disco: JSON.parse(localStorage.getItem('lc_cfg')).despachosPropios.map(d => d.nunc),
+  disco: (await (_lcWriteChain.cfg || Promise.resolve()), JSON.parse(await _lcDecrypt(localStorage.getItem('lc_cfg'))).despachosPropios.map(d => d.nunc)),
   marca: DB.getConfig().nuncAno,
   toast: (document.getElementById('toast') || {}).textContent || ''
 }));

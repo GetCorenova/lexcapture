@@ -1238,7 +1238,7 @@ const uni = await page.evaluate(async () => {
     return c; };
 
   // (a) Equipo NUEVO: ninguna estación inventada, en ninguna de las tres claves.
-  localStorage.removeItem('lc_cfg');
+  guardar({});   // FASE 0: lc_cfg va cifrada y en caché; «sin nada guardado» es guardar vacío
   const virgen = DB.getConfig();
   const nuevo = { nombreEstacion: virgen.nombreEstacion, dossier: genDossier({ tipo: 'URI', capturados: [], conductas: [] }) };
 

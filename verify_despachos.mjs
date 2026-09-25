@@ -357,8 +357,10 @@ await page.screenshot({ path: join(SHOTS, 'desp_04_ajustes.png'), fullPage: fals
 /* ═══ Parte I · La migración de un equipo YA configurado ══════════════════ */
 const migrado = await page.evaluate(async () => {
   // Un equipo de la versión anterior: destino y NUNC sueltos, sin registro.
-  const previo = JSON.parse(localStorage.getItem('lc_cfg') || '{}');
-  localStorage.setItem('lc_cfg', JSON.stringify(Object.assign({}, previo, {
+  /* FASE 0: lc_cfg va cifrada; se siembra por DB.saveConfig, que es lo que de
+     verdad escribe. La migración sigue ocurriendo al LEER, como antes. */
+  const previo = lcCfgCrudo();
+  await DB.saveConfig((Object.assign({}, previo, {
     despachosPropios: [], despachoDefecto: {}, despachosMigrados: false,
     destUri: 'URI La Candelaria', nuncUri: '0500160077202677',
     destCespa: 'CESPA', nuncCespa: ''
