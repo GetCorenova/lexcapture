@@ -187,7 +187,7 @@ async function vincular() {
   });
   if (!inv) return { ok: false, motivo: 'no se preparó el código' };
   const paso1 = await pageB.evaluate(async ([arr, leerSrc]) => {
-    const leer = eval(leerSrc);
+    const leer = window.__leerQR || (function () { const s = document.createElement('script'); s.textContent = 'window.__leerQR = ' + leerSrc + ';'; document.head.appendChild(s); return window.__leerQR; })();   // FASE 0: CSP sin unsafe-eval — ver verify_csp
     const leido = await leer(Uint8Array.from(arr));
     if (!leido) return { ok: false, motivo: 'no se leyó el código' };
     const r = await ptResponderInvitacion(leido);
@@ -196,7 +196,7 @@ async function vincular() {
   }, [inv, LEER()]);
   if (!paso1.ok) return paso1;
   return await page.evaluate(async ([arr, leerSrc]) => {
-    const leer = eval(leerSrc);
+    const leer = window.__leerQR || (function () { const s = document.createElement('script'); s.textContent = 'window.__leerQR = ' + leerSrc + ';'; document.head.appendChild(s); return window.__leerQR; })();   // FASE 0: CSP sin unsafe-eval — ver verify_csp
     const leido = await leer(Uint8Array.from(arr));
     if (!leido) return { ok: false, motivo: 'no se leyó la respuesta' };
     const r = await ptAceptarRespuesta(leido);
@@ -538,7 +538,7 @@ const d4 = await page.evaluate(async ([leerSrc]) => {
   await ptUiMostrar();
   const svg = document.querySelector('#cp-pane .pt-qr svg');
   if (!svg) return { ok: false, e: 'no se pintó' };
-  const leer = eval(leerSrc);
+  const leer = window.__leerQR || (function () { const s = document.createElement('script'); s.textContent = 'window.__leerQR = ' + leerSrc + ';'; document.head.appendChild(s); return window.__leerQR; })();   // FASE 0: CSP sin unsafe-eval — ver verify_csp
   const leido = await leer(_ptUiBytes);
   const cuenta = (document.getElementById('pt-cuenta') || {}).textContent || '';
   const cab = leido ? ptQrLeeCabecera(leido) : null;
