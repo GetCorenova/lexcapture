@@ -2,6 +2,18 @@
 <html lang="es-CO">
 <head>
 <meta charset="UTF-8">
+<!-- ⚠️ POLÍTICA DE SEGURIDAD DE CONTENIDO (Fase 0, 2026-09-25).
+     Qué CIERRA: que la página cargue código de cualquier otro sitio, que se
+     conecte a cualquier servidor que no sea Google (la copia en Drive), que
+     acepte <object>/<embed> o que un <base> desvíe las rutas relativas.
+     Qué NO cierra, y por qué: 'unsafe-inline' en script-src. La app es UN solo
+     HTML con su JavaScript en línea y ~375 manejadores onclick="…" generados
+     con innerHTML; sin 'unsafe-inline' no arrancaría. Quitarlo exige servir la
+     app con un nonce por petición, o sea un servidor propio (Fase 6.5).
+     frame-ancestors y el resto de cabeceras (HSTS, nosniff…) NO se pueden poner
+     en una <meta>: el navegador las ignora ahí. Van en las cabeceras HTTP del
+     hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0C0E13">
 <meta name="apple-mobile-web-app-capable" content="yes">
