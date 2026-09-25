@@ -3218,8 +3218,8 @@ function closeModal() {
 var _sessionKey = null;
 var _casesCache = null;
 var _personsCache = null;
-var _pinAttempts = 0;
-var _pinLockUntil = 0;
+/* Los intentos fallidos del PIN ya no viven aquí, en memoria (se reiniciaban al
+   recargar): ver «VERIFICACIÓN DEL PIN», `lc_pin_intentos`. */
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EXPORTACIÓN: FORMATO DE SALIDA Y TAMAÑO DE PAPEL
@@ -3454,9 +3454,12 @@ async function doSetPin() {
   try {
     var salt=crypto.getRandomValues(new Uint8Array(16));
     _sessionKey=await _lcDeriveKey(a, salt);
-    var hash=await _lcHashPin(a, salt);
     localStorage.setItem('lc_key_salt', _b64FromBytes(salt));
-    localStorage.setItem('lc_key_hash', hash);
+    /* ⚠️ FASE 0: ya NO se guarda un hash del PIN. Se guarda un VERIFICADOR: una
+       constante cifrada con la llave que sale del PIN. Ver _lcPinVerificador. */
+    await _lcPinVerificadorCrear();
+    try { localStorage.removeItem('lc_key_hash'); } catch(e) {}
+    _lcPinIntentosLimpiar();
     var rawC=localStorage.getItem('lc_cases'), rawP=localStorage.getItem('lc_persons');
     _casesCache=(rawC&&(rawC[0]==='['||rawC[0]==='{'))?(JSON.parse(rawC)||[]):[];
     _personsCache=(rawP&&(rawP[0]==='['||rawP[0]==='{'))?(JSON.parse(rawP)||[]):[];
@@ -3479,23 +3482,33 @@ async function doUnlockPin() {
   var pin=(document.getElementById('pin-e')||{}).value||'';
   var errEl=document.getElementById('pin-err');
   if (!pin) { errEl.textContent='Ingresa tu PIN'; return; }
-  var now=Date.now();
-  if (_pinLockUntil>now) { errEl.textContent='Demasiados intentos. Espera '+(Math.ceil((_pinLockUntil-now)/1000))+' segundos.'; return; }
+  var espera=_lcPinEspera();
+  if (espera>0) { errEl.textContent='Demasiados intentos. Espera '+_lcPinTexto(espera)+'.'; return; }
+  if (_pinVerificando) return;
+  _pinVerificando=true;
   errEl.textContent='Verificando...';
   try {
     var saltB64=localStorage.getItem('lc_key_salt');
-    var storedHash=localStorage.getItem('lc_key_hash');
     var salt=Uint8Array.from(atob(saltB64), function(c){return c.charCodeAt(0);});
-    var hash=await _lcHashPin(pin, salt);
-    if (hash!==storedHash) {
-      _pinAttempts++;
-      if (_pinAttempts>=5) { _pinLockUntil=Date.now()+30000; _pinAttempts=0; errEl.textContent='Demasiados intentos. Espera 30 segundos.'; }
-      else { errEl.textContent='PIN incorrecto ('+( 5-_pinAttempts)+' intento'+(5-_pinAttempts===1?'':'s')+' restante'+(5-_pinAttempts===1?'':'s')+')'; }
+    /* ⚠️ El intento se CUENTA ANTES de verificar y se guarda en disco: si se
+       cierra la app a mitad de la verificación, el intento ya quedó contado.
+       Antes el contador vivía en memoria y se reiniciaba al recargar, o sea que
+       probar PINES era ilimitado recargando la página. */
+    var n=_lcPinIntentoContar();
+    var key=await _lcPinVerificar(pin, salt);
+    if (!key) {
+      var e2=_lcPinFallo(n);
+      if (e2>0) errEl.textContent='PIN incorrecto. Demasiados intentos: espera '+_lcPinTexto(e2)+'.';
+      else { var q=LC_PIN_LIBRES-n; errEl.textContent='PIN incorrecto ('+q+' intento'+(q===1?'':'s')+' antes de tener que esperar)'; }
       return;
     }
-    _pinAttempts=0; _pinLockUntil=0;
+    _lcPinIntentosLimpiar();
     errEl.textContent='';
-    _sessionKey=await _lcDeriveKey(pin, salt);
+    _sessionKey=key;
+    /* Migración transparente: un equipo con el hash rápido de antes gana su
+       verificador y pierde el hash en el primer desbloqueo que sale bien. */
+    if (!localStorage.getItem('lc_key_check')) await _lcPinVerificadorCrear();
+    try { localStorage.removeItem('lc_key_hash'); } catch(e) {}
     await _lcLoadCaches();
     _pinHide();
     renderCases();
@@ -3512,13 +3525,96 @@ async function doUnlockPin() {
     lcBarraSistema();
     if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
   } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
+  finally { _pinVerificando=false; }
 }
 
 function forgotPin() {
   if (!confirm('¿Olvidaste tu PIN?\n\nSe BORRARÁN TODOS los datos: capturas, personas y configuración.\n\nEsta acción NO se puede deshacer.')) return;
   if (!confirm('Confirmación final: se eliminarán TODOS los datos de Flagrante. ¿Continuar?')) return;
   localStorage.clear();
-  location.reload();
+  /* La base de la sincronización vive en IndexedDB: «borrar TODO» es también eso. */
+  lcIdbBorrarTodo().then(function(){ location.reload(); });
+}
+
+/* ═══ VERIFICACIÓN DEL PIN (Fase 0, 2026-09-25) ═══════════════════════════
+   ⚠️ LO QUE HABÍA: `lc_key_hash` = SHA-256(sal‖PIN) de UNA pasada. Con una copia
+   del almacenamiento se probaban los 10 000 PIN posibles en menos de un segundo
+   y, con el PIN, se derivaba la llave de todas las capturas.
+
+   LO QUE HAY: el PIN se verifica INTENTANDO DESCIFRAR. Se guarda una constante
+   cifrada (AES-GCM) con la llave que sale del PIN por PBKDF2 (100 000 vueltas);
+   si el PIN es otro, la etiqueta de autenticación no cuadra y el descifrado
+   falla. No queda ningún atajo más barato que derivar la llave.
+
+   ⚠️ LÍMITE HONESTO, para que nadie lo lea como más de lo que es: un PIN de
+   4 dígitos sigue siendo débil contra quien tenga una COPIA del almacenamiento y
+   una tarjeta gráfica (10 000 derivaciones son segundos). Lo que esto sí cierra
+   es el atajo instantáneo y los intentos ilimitados desde la propia app. La
+   protección de fondo es la Fase 2: llave envuelta por el Android Keystore y PIN
+   de 6 dígitos como mínimo. */
+var LC_PIN_CHECK = 'flagrante-pin-v1';
+var LC_PIN_LIBRES = 5;              // intentos sin espera
+var LC_PIN_ESPERA_BASE = 30000;     // al quinto fallo, 30 s…
+var LC_PIN_ESPERA_MAX = 3600000;    // …doblando en cada fallo, hasta 1 hora
+var _pinVerificando = false;
+
+async function _lcPinVerificadorCrear() {
+  localStorage.setItem('lc_key_check', await _lcEncrypt(LC_PIN_CHECK));
+}
+async function _lcDescifrarCon(key, b64) {
+  var buf = Uint8Array.from(atob(b64), function(c){return c.charCodeAt(0);});
+  var dec = await crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, key, buf.slice(12));
+  return new TextDecoder().decode(dec);
+}
+/* Devuelve la llave si el PIN es el correcto, o null. */
+async function _lcPinVerificar(pin, salt) {
+  var key = await _lcDeriveKey(pin, salt);
+  var chk = localStorage.getItem('lc_key_check');
+  if (chk) {
+    try { return (await _lcDescifrarCon(key, chk)) === LC_PIN_CHECK ? key : null; }
+    catch (e) { return null; }
+  }
+  /* Equipo anterior a la Fase 0: todavía tiene el hash de una pasada. Se usa UNA
+     vez para no dejar a nadie fuera, y quien llama lo retira al entrar. */
+  var viejo = localStorage.getItem('lc_key_hash');
+  if (viejo) return (await _lcHashPin(pin, salt)) === viejo ? key : null;
+  /* Sin verificador ni hash: vale lo que abra cualquiera de los datos cifrados.
+     Si no hay ninguno, no hay nada que proteger con este PIN todavía. */
+  var claves = ['lc_cases', 'lc_persons', 'lc_firmas', 'lc_sync', 'lc_draft'], hay = false;
+  for (var i = 0; i < claves.length; i++) {
+    var enc = localStorage.getItem(claves[i]);
+    if (!enc || enc[0] === '[' || enc[0] === '{') continue;
+    hay = true;
+    try { await _lcDescifrarCon(key, enc); return key; } catch (e) {}
+  }
+  return hay ? null : key;
+}
+/* El contador vive en disco (en claro: hay que leerlo ANTES del PIN) y no en
+   memoria, así que recargar la app ya no lo pone a cero. */
+function _lcPinIntentos() {
+  try { var o = JSON.parse(localStorage.getItem('lc_pin_intentos') || 'null'); if (o && typeof o.n === 'number') return o; } catch (e) {}
+  return { n: 0, hasta: 0 };
+}
+function _lcPinIntentoContar() {
+  var o = _lcPinIntentos(); o.n++;
+  try { localStorage.setItem('lc_pin_intentos', JSON.stringify(o)); } catch (e) {}
+  return o.n;
+}
+function _lcPinFallo(n) {
+  var o = _lcPinIntentos();
+  if (n < LC_PIN_LIBRES) return 0;
+  var ms = Math.min(LC_PIN_ESPERA_MAX, LC_PIN_ESPERA_BASE * Math.pow(2, n - LC_PIN_LIBRES));
+  o.hasta = Date.now() + ms;
+  try { localStorage.setItem('lc_pin_intentos', JSON.stringify(o)); } catch (e) {}
+  return ms;
+}
+function _lcPinEspera() { return Math.max(0, _lcPinIntentos().hasta - Date.now()); }
+function _lcPinIntentosLimpiar() { try { localStorage.removeItem('lc_pin_intentos'); } catch (e) {} }
+function _lcPinTexto(ms) {
+  var s = Math.ceil(ms / 1000);
+  if (s < 90) return s + ' segundos';
+  var m = Math.ceil(s / 60);
+  return m + ' minuto' + (m === 1 ? '' : 's');
 }
 
 /* Base64 de un arreglo de bytes, POR TROZOS.
