@@ -2,22 +2,28 @@
 /**
  * build:android — genera el App Bundle (.aab) firmado del envoltorio nativo.
  *
- * ⚠️ LO PRIMERO QUE HAY QUE SABER: EL .aab NO LLEVA EL CÓDIGO WEB DENTRO.
- * El envoltorio Capacitor usa CARGA REMOTA (`server.url` →
- * getcorenova.github.io/lexcapture), decisión explícita del usuario. O sea:
+ * ⚠️ LO PRIMERO QUE HAY QUE SABER (cambió en la FASE 0, 2026-09-25):
+ * EL .aab LLEVA EL CÓDIGO WEB DENTRO. Antes el envoltorio usaba CARGA REMOTA
+ * (`server.url` → getcorenova.github.io/lexcapture) y cualquiera con acceso al
+ * repositorio de GitHub podía cambiar el código que corre en los teléfonos sin
+ * pasar por Play. Ahora este script copia la app a `www/` y el paquete la sirve
+ * desde el propio teléfono:
  *
- *   · Un cambio en LexCapture_v8.html se publica con `npm run deploy:web`
- *     y llega a los teléfonos ya instalados SIN recompilar ni resubir nada.
- *   · Este build SOLO hace falta cuando cambia el envoltorio: un plugin
- *     nativo nuevo, permisos, el icono, la versión, el SDK objetivo.
+ *   · Un cambio en LexCapture_v8.html llega a la app de Play SOLO con un
+ *     paquete nuevo (este script) y la revisión de Play. `deploy:web` ya solo
+ *     actualiza la versión web.
+ *   · La app arranca sin red desde el primer uso: no descarga nada.
  *
- * Confundir las dos cosas cuesta un ciclo de revisión de Play Store para nada.
+ * ⚠️ `server.hostname` = getcorenova.github.io A PROPÓSITO: el almacenamiento
+ * del WebView va por ORIGEN, y ese es el origen de la versión de carga remota.
+ * Con el `localhost` por defecto, un teléfono que actualice desde la versión
+ * anterior abriría un almacenamiento vacío — perdería sus capturas.
  *
  * El proyecto Android vive FUERA de este repositorio (es una carpeta hermana,
  * sin git propio) para que el keystore y las contraseñas no puedan acabar
  * versionados por descuido. Se puede mover con LEXCAPTURE_ANDROID.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, copyFileSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +32,9 @@ const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const WRAP = resolve(process.env.LEXCAPTURE_ANDROID || join(RAIZ, '..', 'lexcapture-android'));
 const ANDROID = join(WRAP, 'android');
 const soloCheck = process.argv.includes('--check');
+// --debug: APK de depuración para probar en el emulador (no se sube a Play).
+const debug = process.argv.includes('--debug');
+const TAREA = debug ? 'assembleDebug' : 'bundleRelease';
 
 let fallos = 0;
 const err = m => { console.error('  ✗ ' + m); fallos++; };
@@ -84,8 +93,40 @@ if (existsSync(gradle)) {
   }
 }
 
+// ── El código web que viaja en el paquete ─────────────────────────────────
+// ⚠️ Se comprueba que el envoltorio YA NO apunte a GitHub: con `server.url`
+// puesto, Capacitor ignoraría lo copiado y seguiría descargando el código.
+const capCfg = join(WRAP, 'capacitor.config.json');
+if (existsSync(capCfg)) {
+  const cc = JSON.parse(readFileSync(capCfg, 'utf8'));
+  const srv = cc.server || {};
+  if (srv.url) err(`capacitor.config.json todavía tiene server.url (${srv.url}): el paquete descargaría el código de la red`);
+  else ok('capacitor.config.json sin server.url: el código viaja en el paquete');
+  if (srv.hostname !== 'getcorenova.github.io')
+    err('server.hostname tiene que ser getcorenova.github.io — si no, el teléfono que actualice abre un almacenamiento vacío');
+  else ok('server.hostname conserva el origen de la versión anterior (no se pierden datos al actualizar)');
+} else err('no se encontró capacitor.config.json');
+const buildWeb = (readFileSync(join(RAIZ, 'LexCapture_v8.html'), 'utf8').match(/var\s+_BUILD\s*=\s*(\d+)/) || [])[1];
+if (buildWeb) ok(`código web a empaquetar: build ${buildWeb}`); else err('no se encontró _BUILD en LexCapture_v8.html');
+
 if (fallos) { console.error(`\nBUILD FALLIDO — ${fallos} problema(s)\n`); process.exit(1); }
 if (soloCheck) { console.log('\n✓ Requisitos OK. No se compiló nada (--check).\n'); process.exit(0); }
+
+// ── Copiar la app a www/ y pasarla al proyecto Android ─────────────────────
+// Solo lo que la página usa: el HTML (como index.html), el manifiesto y los
+// íconos. NO el sw.js (en el envoltorio no se registra) ni el index.html de
+// redirección (aquí la app ES el index).
+console.log('\nCopiando la app web al paquete…');
+const WWW = join(WRAP, 'www');
+if (existsSync(WWW)) for (const f of readdirSync(WWW)) rmSync(join(WWW, f), { recursive: true, force: true });
+mkdirSync(WWW, { recursive: true });
+copyFileSync(join(RAIZ, 'LexCapture_v8.html'), join(WWW, 'index.html'));
+for (const f of ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon.svg'])
+  copyFileSync(join(RAIZ, f), join(WWW, f));
+ok(`www/ listo (build ${buildWeb})`);
+const cap = spawnSync('npx cap copy android', [], { cwd: WRAP, stdio: 'inherit', shell: true });
+if (cap.status !== 0) { console.error('\nBUILD FALLIDO — «npx cap copy android» devolvió ' + cap.status + '\n'); process.exit(1); }
+ok('copiado al proyecto Android (npx cap copy android)');
 
 // ── Compilar ───────────────────────────────────────────────────────────────
 console.log('\nCompilando App Bundle release (puede tardar varios minutos)…\n');
@@ -100,11 +141,17 @@ console.log('\nCompilando App Bundle release (puede tardar varios minutos)…\n'
    concatena sin escapar y avisa de obsolescencia por ello.
    ⚠️ Lo destapó COMPILAR DE VERDAD: el modo --check no llega hasta esta línea. */
 const gradlew = process.platform === 'win32'
-  ? '"' + join(ANDROID, 'gradlew.bat') + '" bundleRelease'
-  : './gradlew bundleRelease';
+  ? '"' + join(ANDROID, 'gradlew.bat') + '" ' + TAREA
+  : './gradlew ' + TAREA;
 const r = spawnSync(gradlew, [], { cwd: ANDROID, stdio: 'inherit', shell: true });
 if (r.status !== 0) { console.error('\nBUILD FALLIDO — Gradle devolvió ' + r.status + '\n'); process.exit(r.status || 1); }
 
+if (debug) {
+  const apk = join(ANDROID, 'app', 'build', 'outputs', 'apk', 'debug', 'app-debug.apk');
+  if (!existsSync(apk)) { console.error('\nNo apareció el APK de depuración en ' + apk + '\n'); process.exit(1); }
+  console.log('\n✓ APK de depuración: ' + apk + '\n  (solo para el emulador — no se sube a Play)\n');
+  process.exit(0);
+}
 const aab = join(ANDROID, 'app', 'build', 'outputs', 'bundle', 'release', 'app-release.aab');
 if (!existsSync(aab)) { console.error('\nGradle terminó bien pero no apareció el .aab en ' + aab + '\n'); process.exit(1); }
 console.log(`\n✓ .aab listo: ${aab}`);

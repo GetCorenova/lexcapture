@@ -2885,7 +2885,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 131;
+var _BUILD = 132;
 
 /* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
    Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
@@ -25256,7 +25256,22 @@ function syAlDesbloquear() {
 // ====== SERVICE WORKER (Fase G) ======
 // NOTA: el SW solo funciona en HTTPS o localhost.
 // Para deploy: subir todos los archivos a GitHub Pages u otro hosting HTTPS.
-if ('serviceWorker' in navigator) {
+/* ⚠️ FASE 0 (2026-09-25): dentro de la app de Play el código ya viaja EN EL
+   PAQUETE y no se descarga de GitHub. Ahí el Service Worker no aporta nada (todo
+   está en el teléfono) y sí puede estorbar: el que registró la versión de carga
+   remota sigue vivo en el WebView y podría servir un HTML viejo desde su caché.
+   Así que en el envoltorio no se registra y se retiran el viejo y sus cachés. */
+function _lcEnEnvoltorio() {
+  try { return !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) { return false; }
+}
+if ('serviceWorker' in navigator && _lcEnEnvoltorio()) {
+  navigator.serviceWorker.getRegistrations().then(function (rs) {
+    rs.forEach(function (r) { r.unregister(); });
+  }).catch(function () {});
+  if (window.caches && caches.keys) caches.keys().then(function (ks) {
+    ks.forEach(function (k) { caches.delete(k); });
+  }).catch(function () {});
+} else if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
       .then(function(reg) { console.log('[Flagrante] SW registrado:', reg.scope); })

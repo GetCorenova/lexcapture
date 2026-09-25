@@ -6,6 +6,11 @@
  * app en vivo), así que `git push` publica. Por eso el build se valida ANTES
  * de commitear: publicar un <script> roto deja la app en blanco en el
  * teléfono de quien la tenga instalada, en campo, sin un error visible.
+ *
+ * ⚠️ FASE 0 (2026-09-25): esto publica SOLO la versión web. La app de Play ya
+ * no descarga el código de aquí — lo lleva dentro del paquete —, así que un
+ * cambio llega a los teléfonos con `npm run build:android` y una versión nueva
+ * en Play Console.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
