@@ -409,6 +409,13 @@ const f12 = await A.evaluate(() => {
   SY_CLIENT_ID = 'prueba.apps.googleusercontent.com';
   const out = { existen: ids.every(id => !!document.getElementById(id)), antes: inline() };
   window.Capacitor = { isNativePlatform: () => true, Plugins: { Share: {}, Filesystem: {} } };
+  /* ⚠️ FASE 0: por defecto la app de Play NO la ofrece aunque haya cliente de
+     Android (bandera `syncNativo` apagada). */
+  syPintarNav(); go('sync');
+  out.porDefecto = inline();
+  out.textoPorDefecto = (document.getElementById('sy-pane') || {}).innerText || '';
+  /* Con la bandera encendida vuelve el comportamiento de la Fase 2. */
+  localStorage.setItem('lc_flags', JSON.stringify({ syncNativo: true }));
   syPintarNav(); go('sync');
   out.nativo = inline();
   out.texto = (document.getElementById('sy-pane') || {}).innerText || '';
@@ -419,14 +426,18 @@ const f12 = await A.evaluate(() => {
   out.sinId = inline();
   out.textoSinId = (document.getElementById('sy-pane') || {}).innerText || '';
   SY_CLIENT_ID_NAT = guardado;
+  localStorage.removeItem('lc_flags');
   delete window.Capacitor;
   syPintarNav(); go('sync');
   out.despues = inline();
   SY_CLIENT_ID = '';
   return out;
 });
+log(f12.existen && f12.porDefecto.every(v => v === 'none') && /versi[oó]n web/i.test(f12.textoPorDefecto),
+    '[F12a] FASE 0 · en la app de Play la copia NO se ofrece por defecto, aunque haya cliente de Android',
+    JSON.stringify(f12.porDefecto));
 log(f12.existen && f12.antes.every(v => v === '') && f12.nativo.every(v => v === ''),
-    '[F12] en el envoltorio nativo la sincronización SÍ se ofrece: hay cliente de Android',
+    '[F12] con la bandera encendida (Fase 2) sí se ofrece: hay cliente de Android',
     JSON.stringify(f12.nativo));
 log(f12.sinId.every(v => v === 'none') && /versi[oó]n web/i.test(f12.textoSinId),
     '[F12b] y el candado sigue vivo: sin cliente de Android se vuelve a ocultar',
@@ -524,8 +535,13 @@ const i2 = await A.evaluate(async () => {
   await DB.saveCases([{ id: 'cLocal', tipo: 'URI', created: Date.now() }]);
   const r = await syActivarNuevo(window.__F);
   const k1 = syEstado().k;
-  const paq = ptPaquete([{ id: 'pRemota', priNom: 'REMOTA', numDoc: '777', tipoDoc: 'CC' }],
-                        [{ id: 'cRemoto', tipo: 'URI', created: Date.now() }]);
+  /* ⚠️ FASE 0: el otro equipo sube lo que había en Drive MÁS lo suyo, que es lo
+     que hace un equipo real (baja, funde y sube). Un paquete que omitiera lo de
+     este equipo significaría, con la fusión a tres vías, que el otro lo BORRÓ. */
+  const ya = sySnapshot();
+  const paq = ptPaquete(ya.personas.concat([{ id: 'pRemota', priNom: 'REMOTA', numDoc: '777', tipoDoc: 'CC' }]),
+                        ya.casos.concat([{ id: 'cRemoto', tipo: 'URI', created: Date.now() }]));
+  paq.cfg = ya.cfg;
   const bytes = await syCifrar(paq, await syClaveAES(syB32Dec(k1)));
   window.__datos()[0].bytes = Array.from(bytes);
   return { ok: r.ok, k1, archivos: window.__datos().length, tieneRemoto: !!DB.getCase('cRemoto') };
@@ -746,7 +762,10 @@ const C = await Cctx.newPage();
 C.on('pageerror', e => errs.push('C: ' + String(e.message).slice(0, 90)));
 C.on('console', m => { if (m.type() === 'error') errs.push('C: ' + m.text().slice(0, 90)); });
 await C.goto('http://localhost:8137/LexCapture_v8.html', { waitUntil: 'load' });
-await C.evaluate(() => localStorage.clear());
+/* ⚠️ FASE 0: el arranque guiado quedó apagado (bandera `syncOnboarding`). Lo que
+   se mide aquí es que, el día que se encienda, siga funcionando igual; que por
+   defecto NO salga lo mide [K0]. */
+await C.evaluate(() => { localStorage.clear(); localStorage.setItem('lc_flags', JSON.stringify({ syncOnboarding: true })); });
 await C.reload({ waitUntil: 'load' });
 await C.waitForTimeout(400);
 await C.fill('#pin-a', '4321'); await C.fill('#pin-b', '4321');
@@ -819,6 +838,222 @@ const j22 = await A.evaluate(async () => {
 });
 log(j22.length === 3 && /otro equipo/i.test(j22[0]) && /26 caracteres/i.test(j22[2]),
     '[J22] el equipo nuevo entra por la contraseña; el código queda de respaldo', JSON.stringify(j22));
+
+/* ══════════════════════════════════════════════════════════════════════════
+   K · FASE 0 — LA COPIA PROPIA YA NO REVIERTE CORRECCIONES
+
+   ⚠️ Estos escenarios NO existían y por eso el fallo pasó: la copia con Drive se
+   fundía con «lo que llega con dato gana», así que toda corrección de un dato ya
+   sincronizado volvía al valor viejo de Drive en todos los equipos, los borrados
+   resucitaban, vaciar un campo no se propagaba y los Ajustes se revertían.
+
+   Dos equipos NUEVOS que comparten UN Drive de mentira del lado de Node
+   (`exposeFunction`): cada uno con su almacenamiento, su PIN y —lo que importa
+   aquí— su propia BASE, que es lo que el Drive de mentira dentro de una sola
+   página (sección I) no podría medir. Se sustituyen solo las funciones que
+   hablan con la red; la fusión, el cifrado y la base corren de verdad. */
+
+const KD = { n: 0, files: [] };
+async function kConDrive(pg) {
+  await pg.exposeFunction('__kdrv', (op, a, b) => {
+    if (op === 'listar') return JSON.stringify(KD.files.filter(f => f.name === a)
+      .map(f => ({ id: f.id, createdTime: f.createdTime })));
+    if (op === 'crear') {
+      const id = 'k' + (++KD.n);
+      KD.files.push({ id, name: a, createdTime: new Date(Date.UTC(2026, 0, 1) + KD.n).toISOString(), bytes: null });
+      return id;
+    }
+    if (op === 'bajar') { const f = KD.files.find(x => x.id === a); return JSON.stringify(f && f.bytes ? f.bytes : null); }
+    if (op === 'subir') { const f = KD.files.find(x => x.id === a); if (f) f.bytes = JSON.parse(b); return 'ok'; }
+    if (op === 'borrar') { KD.files = KD.files.filter(x => x.id !== a); return 'ok'; }
+    return null;
+  });
+  await pg.evaluate(() => {
+    if (!SY_CLIENT_ID) SY_CLIENT_ID = 'prueba.apps.googleusercontent.com';
+    syToken = () => Promise.resolve('token-de-mentira');
+    syListar = async (nombre) => JSON.parse(await window.__kdrv('listar', nombre || SY_ARCHIVO));
+    syCrear = async (nombre) => window.__kdrv('crear', nombre || SY_ARCHIVO);
+    syBajarBytes = async (id) => { const a = JSON.parse(await window.__kdrv('bajar', id)); return a ? new Uint8Array(a).buffer : null; };
+    sySubirBytes = async (id, bytes) => { await window.__kdrv('subir', id, JSON.stringify(Array.from(bytes))); };
+    syBorrar = async (id) => window.__kdrv('borrar', id);
+  });
+}
+const K1 = await abrirEquipo('2468', 'K1');
+const K2 = await abrirEquipo('1357', 'K2');
+await kConDrive(K1); await kConDrive(K2);
+
+/* El ofrecimiento tras el PIN quedó apagado: estos dos equipos se abrieron sin
+   cerrarlo a mano (abrirEquipo lo intenta y no lo encuentra). */
+const k0 = await K1.evaluate(() => ({ ov: document.getElementById('pin-ov').classList.contains('on'),
+                                      flag: lcFlag('syncOnboarding') }));
+log(!k0.ov && k0.flag === false, '[K0] al crear el PIN ya no se ofrece la copia (bandera apagada)', JSON.stringify(k0));
+
+/* K1 tiene su trabajo y activa la copia; K2 se vincula con el código. */
+const kc = await K1.evaluate(async () => {
+  await DB.saveCases([
+    { id: 'kc1', tipo: 'URI', created: Date.now(), lugar: { barrio: 'PRADO' },
+      capturados: [{ id: 'kp1', priNom: 'JUAN', priApe: 'PEREZ', numDoc: '123', tipoDoc: 'CC' }] },
+    { id: 'kc2', tipo: 'URI', created: Date.now(), capturados: [{ id: 'kp2', priNom: 'ANA' }] }
+  ]);
+  await DB.savePersons([{ id: 'kpp', priNom: 'LUIS', priApe: 'GOMEZ', numDoc: '555', tipoDoc: 'CC' }]);
+  const cfg = DB.getConfig(); cfg.nombreEstacion = 'CANDELARIA'; DB.saveConfig(cfg);
+  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0, gen: syGenNueva() });
+  const r = await sySincronizar(true);
+  return { ok: r.ok, motivo: r.motivo, k: syEstado().k };
+});
+const kv = await K2.evaluate(async (k) => {
+  const r = await syVincular(k);
+  return { ok: r.ok, motivo: r.motivo, casos: DB.getCases().map(c => c.id).sort().join(',') };
+}, kc.k);
+log(kc.ok && kv.ok && kv.casos === 'kc1,kc2', '[K1] dos equipos vinculados con la misma copia',
+    JSON.stringify({ a: kc.motivo, b: kv.motivo, casos: kv.casos }));
+
+/* ESCENARIO 1 — Corregir un dato ya sincronizado y sincronizar: la corrección
+   se QUEDA. Con la regla vieja volvía al valor de Drive. */
+const k2 = await K1.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1')));
+  c.capturados[0].priNom = 'JUAN CARLOS';
+  await DB.saveCase(c);
+  const r = await sySincronizar(true);
+  return { ok: r.ok, nombre: DB.getCase('kc1').capturados[0].priNom };
+});
+log(k2.ok && k2.nombre === 'JUAN CARLOS', '[K2] ESCENARIO 1 · la corrección sobrevive a sincronizar', k2.nombre);
+
+/* ESCENARIO 2 — B corrige y sincroniza; luego sincroniza A: los dos con lo nuevo. */
+const k3a = await K2.evaluate(async () => {
+  await sySincronizar(true);   // K2 recibe la corrección de K1
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1')));
+  c.lugar.barrio = 'BOSTON';
+  await DB.saveCase(c);
+  const r = await sySincronizar(true);
+  return { ok: r.ok, nombre: DB.getCase('kc1').capturados[0].priNom, barrio: DB.getCase('kc1').lugar.barrio };
+});
+const k3b = await K1.evaluate(async () => {
+  const r = await sySincronizar(true);
+  return { ok: r.ok, nombre: DB.getCase('kc1').capturados[0].priNom, barrio: DB.getCase('kc1').lugar.barrio,
+           resumen: syResumen(r) };
+});
+log(k3a.ok && k3a.nombre === 'JUAN CARLOS' && k3a.barrio === 'BOSTON',
+    '[K3] ESCENARIO 2 · el equipo B recibe la corrección de A y conserva la suya', JSON.stringify(k3a));
+log(k3b.ok && k3b.nombre === 'JUAN CARLOS' && k3b.barrio === 'BOSTON',
+    '[K4] y al sincronizar A quedan los dos con los dos valores nuevos', JSON.stringify(k3b));
+const k4 = await K2.evaluate(async () => { await sySincronizar(true);
+  return { nombre: DB.getCase('kc1').capturados[0].priNom, barrio: DB.getCase('kc1').lugar.barrio }; });
+log(k4.nombre === 'JUAN CARLOS' && k4.barrio === 'BOSTON',
+    '[K5] una vuelta más en B no revierte nada', JSON.stringify(k4));
+
+/* ESCENARIO 3 — Borrar una captura sincronizada: no reaparece. */
+const k5 = await K1.evaluate(async () => {
+  await DB.delCase('kc2');
+  const r = await sySincronizar(true);
+  return { ok: r.ok, esta: !!DB.getCase('kc2') };
+});
+const k6 = await K2.evaluate(async () => {
+  const r = await sySincronizar(true);
+  return { ok: r.ok, esta: !!DB.getCase('kc2'), resumen: syResumen(r) };
+});
+const k7 = await K1.evaluate(async () => { await sySincronizar(true); return !!DB.getCase('kc2'); });
+log(k5.ok && !k5.esta, '[K6] ESCENARIO 3 · la captura borrada no vuelve al sincronizar el equipo que la borró');
+log(k6.ok && !k6.esta, '[K7] se retira también en el otro equipo', k6.resumen);
+log(!k7, '[K8] y una vuelta más no la resucita');
+
+/* ESCENARIO 4 — Vaciar un número de documento: no vuelve. */
+const k8 = await K2.evaluate(async () => {
+  const p = JSON.parse(JSON.stringify(DB.getPerson('kpp')));
+  p.numDoc = '';
+  await DB.savePerson(p);
+  const r = await sySincronizar(true);
+  return { ok: r.ok, doc: DB.getPerson('kpp').numDoc };
+});
+const k9 = await K1.evaluate(async () => { const r = await sySincronizar(true);
+  return { ok: r.ok, doc: (DB.getPerson('kpp') || {}).numDoc }; });
+const k10 = await K2.evaluate(async () => { await sySincronizar(true); return DB.getPerson('kpp').numDoc; });
+log(k8.ok && k8.doc === '', '[K9] ESCENARIO 4 · vaciar un documento sobrevive a sincronizar', JSON.stringify(k8));
+log(k9.ok && k9.doc === '', '[K10] el otro equipo también lo vacía', JSON.stringify(k9));
+log(k10 === '', '[K11] y no vuelve en la siguiente vuelta', k10);
+
+/* ESCENARIO 5 — Cambiar la estación en Ajustes: no se revierte. */
+const k11 = await K1.evaluate(async () => {
+  const cfg = DB.getConfig(); cfg.nombreEstacion = 'LAURELES'; DB.saveConfig(cfg);
+  const r = await sySincronizar(true);
+  return { ok: r.ok, est: DB.getConfig().nombreEstacion };
+});
+const k12 = await K2.evaluate(async () => { const r = await sySincronizar(true);
+  return { ok: r.ok, est: DB.getConfig().nombreEstacion }; });
+const k13 = await K1.evaluate(async () => { await sySincronizar(true); return DB.getConfig().nombreEstacion; });
+log(k11.ok && k11.est === 'LAURELES', '[K12] ESCENARIO 5 · la estación cambiada sobrevive a sincronizar', k11.est);
+log(k12.ok && k12.est === 'LAURELES', '[K13] llega al otro equipo', k12.est);
+log(k13 === 'LAURELES', '[K14] y no se revierte en la vuelta siguiente', k13);
+
+/* EL MISMO DATO CAMBIADO EN LOS DOS: el segundo en sincronizar conserva el suyo
+   y el otro valor queda ANOTADO. Nada desaparece sin rastro. */
+await K1.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1'))); c.lugar.barrio = 'ROBLEDO'; await DB.saveCase(c);
+  await sySincronizar(true);
+});
+const k14 = await K2.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1'))); c.lugar.barrio = 'MANRIQUE'; await DB.saveCase(c);
+  const r = await sySincronizar(true);
+  const anot = (syEstado().conflictos || [])[0] || {};
+  return { barrio: DB.getCase('kc1').lugar.barrio, resumen: syResumen(r), ruta: anot.ruta, remoto: anot.remoto };
+});
+log(k14.barrio === 'MANRIQUE' && k14.remoto === 'ROBLEDO' && /casos\/#kc1\/lugar\/barrio/.test(k14.ruta || ''),
+    '[K15] el mismo dato en los dos: se conserva el de este equipo y el otro queda anotado', JSON.stringify(k14));
+log(/cambiado en los dos/.test(k14.resumen), '[K16] y se dice, no es silencioso', k14.resumen);
+
+/* LA MARCA LOCAL DE MODO COMPARTIR sobrevive a traer la captura del otro equipo:
+   son claves «_», no viajan, y la fusión no puede llevárselas. */
+const k15 = await K1.evaluate(async () => {
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1'))); c._sync = { devs: { x: 1 } }; await DB.saveCase(c);
+  await sySincronizar(true);
+  return !!(DB.getCase('kc1')._sync && DB.getCase('kc1')._sync.devs.x);
+});
+log(k15, '[K17] la marca local de Modo compartir no se pierde al sincronizar');
+
+/* LA BASE: existe, va cifrada y es del vínculo. */
+const k16 = await K1.evaluate(async () => {
+  const enc = await lcIdbGet(SY_BASE_KEY);
+  const base = await syBaseLeer(syEstado());
+  const otro = await syBaseLeer(Object.assign({}, syEstado(), { gen: 'otra' }));
+  return { hay: typeof enc === 'string' && enc.length > 100, clara: /JUAN|LAURELES|kc1/.test(enc || ''),
+           casos: base ? base.casos.length : -1, otro };
+});
+log(k16.hay && !k16.clara && k16.casos === 1,
+    '[K18] la base está en IndexedDB, CIFRADA, y es lo que quedó en Drive', JSON.stringify(k16));
+log(k16.otro === null, '[K19] una base de otro vínculo no se usa (haría borrar lo que no está en ella)');
+
+/* SIN BASE (un equipo vinculado antes de esta versión): la primera vuelta no
+   revierte NADA de este equipo aunque Drive traiga otro valor. */
+const k17 = await K2.evaluate(async () => {
+  await syBaseBorrar();
+  const st = syEstado(); delete st.gen; await syGuardarEstado(st);
+  const c = JSON.parse(JSON.stringify(DB.getCase('kc1'))); c.capturados[0].priApe = 'PEREZ LOPEZ'; await DB.saveCase(c);
+  const r = await sySincronizar(true);
+  return { ok: r.ok, ape: DB.getCase('kc1').capturados[0].priApe, gen: !!syEstado().gen };
+});
+log(k17.ok && k17.ape === 'PEREZ LOPEZ' && k17.gen,
+    '[K20] sin base, la primera vuelta no revierte nada de este equipo', JSON.stringify(k17));
+
+/* LAS DOS BANDERAS DE LA CONTENCIÓN */
+const k18 = await K1.evaluate(async () => {
+  let llamadas = 0; const orig = sySincronizar;
+  sySincronizar = async () => { llamadas++; return { ok: true }; };
+  syAlDesbloquear();
+  await new Promise(r => setTimeout(r, 3000));
+  sySincronizar = orig;
+  return { llamadas, flag: lcFlag('syncAutoDesbloqueo') };
+});
+log(k18.llamadas === 0 && k18.flag === false,
+    '[K21] desbloquear ya no sincroniza solo (bandera apagada)', JSON.stringify(k18));
+const k19 = await K1.evaluate(async () => {
+  window.Capacitor = { isNativePlatform: () => true, Plugins: { Share: {}, Filesystem: {} } };
+  const disp = syDisponible();
+  const r = await sySincronizar(true);
+  delete window.Capacitor;
+  return { disp, ok: r.ok, motivo: r.motivo, nat: !!SY_CLIENT_ID_NAT };
+});
+log(!k19.disp && !k19.ok && /versi[oó]n web/.test(k19.motivo),
+    '[K22] en la app de Play no se ofrece ni se deja sincronizar, aunque haya cliente de Android', JSON.stringify(k19));
 
 /* ══════════════════════════════════════════════════════════════════════════
    H · EL MODO SIN SINCRONIZAR NO PAGA NADA

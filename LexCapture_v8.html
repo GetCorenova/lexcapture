@@ -3739,6 +3739,70 @@ var DB = {
      .docx que cargue el usuario. Ver _lcPurgarPlantillas(). */
 };
 
+/* La configuración TAL COMO SE GUARDÓ, sin los valores por defecto. La usa la
+   copia con los equipos del usuario, que tiene que comparar lo que de verdad
+   escribió cada equipo y no lo que la app rellena al leer. Devuelve una copia:
+   modificarla no toca nada. */
+function lcCfgCrudo() {
+  try { return JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { return {}; }
+}
+
+/* ── IndexedDB (Fase 0, 2026-09-25) ─────────────────────────────────────────
+   Almacén para lo que no cabe en localStorage (≈5 MB por origen, compartidos
+   con las capturas). Hoy solo guarda la base de la sincronización; la Fase 1
+   lleva aquí los registros. Lo que se guarda va SIEMPRE cifrado por quien lo
+   guarda: este almacén no cifra nada por su cuenta. */
+var LC_IDB_NOMBRE = 'flagrante', LC_IDB_VER = 1, _lcIdbP = null;
+function lcIdb() {
+  if (_lcIdbP) return _lcIdbP;
+  _lcIdbP = new Promise(function (res, rej) {
+    if (!window.indexedDB) { rej(new Error('Este navegador no tiene IndexedDB.')); return; }
+    var q = indexedDB.open(LC_IDB_NOMBRE, LC_IDB_VER);
+    q.onupgradeneeded = function () {
+      var db = q.result;
+      if (!db.objectStoreNames.contains('kv')) db.createObjectStore('kv');
+    };
+    q.onsuccess = function () {
+      var db = q.result;
+      /* Si otra pestaña pide una versión nueva (Fase 1), esta cede la conexión. */
+      db.onversionchange = function () { try { db.close(); } catch (e) {} _lcIdbP = null; };
+      res(db);
+    };
+    q.onerror = function () { _lcIdbP = null; rej(q.error || new Error('IndexedDB no abrió.')); };
+    q.onblocked = function () { _lcIdbP = null; rej(new Error('IndexedDB está bloqueada por otra pestaña.')); };
+  });
+  return _lcIdbP;
+}
+function _lcIdbTx(modo, fn) {
+  return lcIdb().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction('kv', modo), st = tx.objectStore('kv'), out;
+      var q = fn(st);
+      if (q) q.onsuccess = function () { out = q.result; };
+      tx.oncomplete = function () { res(out); };
+      tx.onerror = function () { rej(tx.error); };
+      tx.onabort = function () { rej(tx.error || new Error('Transacción abortada.')); };
+    });
+  });
+}
+function lcIdbGet(k)    { return _lcIdbTx('readonly',  function (s) { return s.get(k); }); }
+function lcIdbSet(k, v) { return _lcIdbTx('readwrite', function (s) { return s.put(v, k); }); }
+function lcIdbDel(k)    { return _lcIdbTx('readwrite', function (s) { return s.delete(k); }); }
+/* Borra la base entera. Lo usa «Olvidé mi PIN», que promete borrarlo TODO. */
+function lcIdbBorrarTodo() {
+  return new Promise(function (res) {
+    var fin = function () { res(); };
+    var cerrar = _lcIdbP ? _lcIdbP.then(function (db) { try { db.close(); } catch (e) {} }).catch(function () {}) : Promise.resolve();
+    cerrar.then(function () {
+      _lcIdbP = null;
+      if (!window.indexedDB) { fin(); return; }
+      var q = indexedDB.deleteDatabase(LC_IDB_NOMBRE);
+      q.onsuccess = fin; q.onerror = fin; q.onblocked = fin;
+      setTimeout(fin, 3000);   // una pestaña que no cede no puede dejar el borrado colgado
+    });
+  });
+}
+
 /* ── AVISO DE «SE GUARDÓ UN DOCUMENTO POSTERIOR» ───────────────────────────
    Lo disparan los cinco guardados que diligencian algo DESPUÉS de la captura
    —acta de derechos, cadena de custodia, rótulo, acta de incautación y acta de
@@ -23757,6 +23821,9 @@ async function syCargarEstado() {
 async function syDesvincular() {
   _syEstado = null; _syTok = ''; _syTokExp = 0;
   try { localStorage.removeItem('lc_sync'); } catch (e) {}
+  /* La base es de ESTE vínculo: con otro, haría creer que se borró lo que no
+     está en ella. */
+  await syBaseBorrar();
 }
 
 /* ── EL SOBRE QUE VIVE EN DRIVE ───────────────────────────────────────────
@@ -23798,7 +23865,7 @@ async function syDescifrar(buf, key) {
    compartir. Un lector viejo que reciba este sobre simplemente ignora la clave
    que no conoce: por eso no hay que subir `schemaVersion`. */
 function syCfgParaEnviar() {
-  var raw; try { raw = JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { raw = {}; }
+  var raw = lcCfgCrudo();
   SY_CFG_LOCAL.forEach(function (k) { delete raw[k]; });
   return raw;
 }
@@ -23807,32 +23874,270 @@ function sySnapshot() {
   p.cfg = syCfgParaEnviar();
   return p;
 }
-/* La configuración se funde con el MISMO motor que todo lo demás (`ptFundir`:
-   lo que viene con dato gana, lo vacío no pisa nada, nada se borra). Con «gana
-   la última versión entera» se perdería en silencio un cambio: cambiar la
-   unidad en el teléfono y agregar un despacho en el computador dejaría fuera
-   uno de los dos. */
-function syAplicarCfg(cfgRemota) {
-  if (!cfgRemota || typeof cfgRemota !== 'object' || Array.isArray(cfgRemota)) return 0;
-  var copia = JSON.parse(JSON.stringify(cfgRemota));
-  SY_CFG_LOCAL.forEach(function (k) { delete copia[k]; });
-  var local; try { local = JSON.parse(localStorage.getItem('lc_cfg')) || {}; } catch (e) { local = {}; }
-  var n = ptFundir(local, copia);
-  if (n) DB.saveConfig(local);
-  return n;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FUSIÓN A TRES VÍAS PARA LA COPIA PROPIA (Fase 0, 2026-09-25)
+
+   ⚠️ EL FALLO QUE ESTO CORRIGE ESTABA VIVO EN PRODUCCIÓN. La copia con Drive se
+   fundía con `ptFundir` —«lo que llega con dato gana, lo vacío no pisa nada,
+   nada se borra»—, que es la regla correcta para RECIBIR de un compañero y la
+   equivocada para sincronizarse con una copia PROPIA: la copia de Drive trae el
+   valor viejo de todo lo que se corrigió aquí, y ese valor viejo «llega con
+   dato». Resultado medido: toda corrección de un dato ya sincronizado volvía al
+   valor anterior en todos los equipos, los borrados resucitaban, vaciar un
+   campo no se propagaba y los Ajustes se revertían.
+
+   Con dos copias no se puede saber QUIÉN cambió un dato; con tres, sí. La
+   tercera es la BASE: lo que quedó en Drive la última vez que ESTE equipo
+   sincronizó. Para cada dato:
+     · local = remoto            → no hay nada que decidir
+     · local = base              → aquí no se tocó: manda el otro equipo
+     · remoto = base             → allá no se tocó: manda este equipo
+     · los dos distintos de base → CONFLICTO: se conserva el de este equipo y el
+                                   del otro queda anotado (nada se pierde en
+                                   silencio; la Fase 3 lo enseñará para elegir).
+   Lo mismo con registros enteros: borrado aquí y sin tocar allá → sigue
+   borrado; borrado allá y sin tocar aquí → se borra aquí.
+
+   ⚠️ `ptFundir` queda EXCLUSIVAMENTE para Modo compartir. Esta fusión no la usa.
+
+   ⚠️ SIN BASE —la primera vez que un equipo sincroniza, o la primera después de
+   esta versión— no hay forma de saber quién cambió qué, y se hace lo único que
+   no revierte nada de este equipo: lo de aquí manda, lo que falta aquí se trae,
+   ningún registro se borra, y cada diferencia se anota como conflicto. La
+   próxima vuelta ya tiene base.
+
+   La base vive en IndexedDB y no en localStorage: es tan grande como los datos,
+   y duplicarlos en localStorage (≈5 MB) sería llenarlo a la mitad del camino.
+   Va CIFRADA con la llave del PIN, igual que las capturas.
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Dos valores «vacíos» (undefined, null, '', [], {}) son el mismo dato: si no,
+   que un equipo guarde el campo vacío y otro no lo tenga sería un conflicto. */
+function syEq(a, b) {
+  if (ptVacio(a) && ptVacio(b)) return true;
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  try { return JSON.stringify(ptCanon(a)) === JSON.stringify(ptCanon(b)); } catch (e) { return false; }
 }
-async function syAplicar(o) {
-  var abierto = ptAbrirPaquete(o);
-  if (!abierto.ok) return { ok: false, motivo: abierto.motivo };
-  /* Sin decisiones por registro: entre los equipos de UNA persona, dos fichas
-     con la misma cédula son la misma persona registrada dos veces, así que vale
-     el criterio por defecto (fundir). Preguntarlo, como sí hace Modo compartir
-     cuando llegan datos de otro funcionario, no tendría a quién preguntarle en
-     una sincronización que corre sola. */
-  var r = await ptAplicarPaquete(abierto, null);
-  if (!r.ok) return r;
-  r.cfg = syAplicarCfg(o.cfg);
+function syEsObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+/* Una lista se funde elemento a elemento solo si TODOS sus elementos traen un
+   identificador propio y distinto. Si no, es un valor único (las conductas, los
+   artículos, los vehículos): fundirla a medias sería peor que tratarla entera. */
+function syListaConId(v) {
+  if (!Array.isArray(v)) return false;
+  var vistos = {};
+  for (var i = 0; i < v.length; i++) {
+    var e = v[i];
+    if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return false;
+    if (vistos[String(e.id)]) return false;
+    vistos[String(e.id)] = 1;
+  }
+  return true;
+}
+function syConPropias(res, local) {
+  /* Las claves que empiezan por «_» son estado local de ESTE equipo (la marca de
+     Modo compartir, los conflictos anotados): no viajan, así que si el
+     resultado sale del otro equipo hay que devolvérselas. */
+  if (!syEsObj(res) || !syEsObj(local) || res === local) return res;
+  var out = null;
+  Object.keys(local).forEach(function (k) {
+    if (k.charAt(0) !== '_') return;
+    if (!out) out = Object.assign({}, res);
+    out[k] = local[k];
+  });
+  return out || res;
+}
+function syFundir3(b, l, r, ruta, conf) {
+  if (syEq(l, r)) return l;
+  if (syEq(l, b)) return syConPropias(r, l);
+  if (syEq(r, b)) return l;
+  var bObj = (b === undefined || b === null || syEsObj(b));
+  if (syEsObj(l) && syEsObj(r) && bObj) {
+    var bo = syEsObj(b) ? b : {}, out = {}, ks = {}, k, v;
+    Object.keys(l).forEach(function (x) { ks[x] = 1; });
+    Object.keys(r).forEach(function (x) { ks[x] = 1; });
+    Object.keys(bo).forEach(function (x) { ks[x] = 1; });
+    for (k in ks) {
+      if (k.charAt(0) === '_') { if (k in l) out[k] = l[k]; continue; }
+      v = syFundir3(bo[k], l[k], r[k], ruta + '/' + k, conf);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  var bLista = (b === undefined || b === null || syListaConId(b));
+  if (syListaConId(l) && syListaConId(r) && bLista)
+    return syFundirLista(Array.isArray(b) ? b : [], l, r, ruta, conf);
+  conf.push({ ruta: ruta, local: l, remoto: r });
+  return l;
+}
+/* Fusión de una lista por identificador. Conserva el orden de ESTE equipo —en
+   Personas la posición es el orden de registro— y añade detrás lo nuevo que
+   llegue. Lo que no trae identificador (no debería pasar en los registros de
+   primer nivel) se conserva tal cual: nunca se descarta un registro local. */
+function syFundirLista(b, l, r, ruta, conf) {
+  function indice(a) {
+    var o = {};
+    (a || []).forEach(function (e) {
+      if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
+      if (!(String(e.id) in o)) o[String(e.id)] = e;
+    });
+    return o;
+  }
+  var ib = indice(b), il = indice(l), ir = indice(r), out = [], vistos = {};
+  function uno(id) {
+    var eb = ib[id], el = il[id], er = ir[id], rr = ruta + '/#' + id;
+    if (el && er) return syFundir3(eb, el, er, rr, conf);
+    if (el) {
+      if (!eb) return el;                          // nuevo aquí
+      if (syEq(el, eb)) return undefined;          // retirado allá, sin tocar aquí
+      conf.push({ ruta: rr, local: el, remoto: null, nota: 'retirado en el otro equipo y cambiado en este: se conserva' });
+      return el;
+    }
+    if (er) {
+      if (!eb) return er;                          // nuevo allá
+      if (syEq(er, eb)) return undefined;          // retirado aquí, sin tocar allá
+      conf.push({ ruta: rr, local: null, remoto: er, nota: 'retirado en este equipo y cambiado en el otro: se recupera' });
+      return er;
+    }
+    return undefined;
+  }
+  (l || []).forEach(function (e) {
+    var id = syEsObj(e) && e.id !== undefined && e.id !== null && e.id !== '' ? String(e.id) : null;
+    if (id === null || vistos[id]) { out.push(e); return; }
+    vistos[id] = 1;
+    var v = uno(id);
+    if (v !== undefined) out.push(v);
+  });
+  (r || []).forEach(function (e) {
+    if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
+    var id = String(e.id);
+    if (vistos[id]) return;
+    vistos[id] = 1;
+    var v = uno(id);
+    if (v !== undefined) out.push(v);
+  });
+  /* Lo que estaba en la base y ya no está en ninguno de los dos: se retiró en
+     los dos equipos. No se vuelve a añadir (no hace falta recorrerlo). */
+  return out;
+}
+function syFundirEstado(base, local, remoto) {
+  var conf = [], b = base || null;
+  var estado = {
+    personas: syFundirLista(b ? (b.personas || []) : [], local.personas || [], remoto.personas || [], 'personas', conf),
+    casos: syFundirLista(b ? (b.casos || []) : [], local.casos || [], remoto.casos || [], 'casos', conf),
+    cfg: syFundir3(b ? (b.cfg || {}) : undefined, local.cfg || {}, remoto.cfg || {}, 'cfg', conf)
+  };
+  if (!syEsObj(estado.cfg)) estado.cfg = local.cfg || {};
+  return { estado: estado, conflictos: conf };
+}
+
+/* Lo que viaja, abierto y validado. Pasa por el MISMO validador que Modo
+   compartir (`ptAbrirPaquete`), así una copia dañada se descarta igual. */
+function syEstadoDe(o) {
+  var ab = ptAbrirPaquete(o);
+  if (!ab.ok) return { ok: false, motivo: ab.motivo };
+  var cfg = syEsObj(o.cfg) ? ptCanon(o.cfg) : {};
+  SY_CFG_LOCAL.forEach(function (k) { delete cfg[k]; });
+  return { ok: true, estado: { personas: ab.personas || [], casos: ab.casos || [], cfg: cfg },
+           rechazados: ab.rechazados || [] };
+}
+function syEstadoLocal() {
+  return { personas: DB.getPersons(), casos: DB.getCases(), cfg: syCfgParaEnviar() };
+}
+/* La base se guarda en forma canónica: sin marcas locales y con las claves en
+   orden, que es exactamente lo que se sube a Drive. */
+function syEstadoCanon(e) {
+  return { personas: (e.personas || []).map(ptParaEnviar).filter(Boolean),
+           casos: (e.casos || []).map(ptParaEnviar).filter(Boolean),
+           cfg: ptCanon(e.cfg || {}) };
+}
+function syContar(antes, despues, etiqueta) {
+  var ia = {}, id = {}, r = { nuevos: 0, actualizados: 0, borrados: 0, nombres: [] };
+  (antes || []).forEach(function (x) { if (x && x.id !== undefined) ia[String(x.id)] = x; });
+  (despues || []).forEach(function (x) {
+    if (!x || x.id === undefined) return;
+    id[String(x.id)] = 1;
+    var a = ia[String(x.id)];
+    if (!a) { r.nuevos++; r.nombres.push(etiqueta(x)); }
+    else if (!syEq(a, x)) { r.actualizados++; r.nombres.push(etiqueta(x)); }
+  });
+  Object.keys(ia).forEach(function (k) { if (!id[k]) r.borrados++; });
   return r;
+}
+
+/* Aplica la fusión en ESTE equipo. Entra entera o no entra: si el guardado de
+   las capturas falla después del de las personas, se devuelve todo a como
+   estaba, igual que `ptAplicarPaquete`. */
+async function syAplicarEstado(base, remoto) {
+  var local = syEstadoLocal();
+  var f = syFundirEstado(base, local, remoto);
+  var p = syContar(local.personas, f.estado.personas, ptNombreDe);
+  var c = syContar(local.casos, f.estado.casos, ptEtiquetaCaso);
+  var personasAntes = DB.getPersons().slice(), casosAntes = DB.getCases().slice();
+  try {
+    if (p.nuevos || p.actualizados || p.borrados) await DB.savePersons(f.estado.personas);
+    if (c.nuevos || c.actualizados || c.borrados) await DB.saveCases(f.estado.casos);
+  } catch (e) {
+    try { await DB.savePersons(personasAntes); await DB.saveCases(casosAntes); } catch (e2) {}
+    return { ok: false, motivo: 'No se pudo guardar lo que llegó. Nada cambió en este equipo.' };
+  }
+  var cfgCambio = 0;
+  if (!syEq(local.cfg, f.estado.cfg)) {
+    /* Se conservan las marcas de migración de ESTE equipo, que no viajan. */
+    var crudo = lcCfgCrudo(), nueva = JSON.parse(JSON.stringify(f.estado.cfg));
+    SY_CFG_LOCAL.forEach(function (k) { if (k in crudo) nueva[k] = crudo[k]; });
+    DB.saveConfig(nueva);
+    cfgCambio = 1;
+  }
+  return { ok: true, p: p, c: c, cfg: cfgCambio, conflictos: f.conflictos };
+}
+
+/* Entrada con un paquete ya descifrado. Sin `base` es la fusión sin base (lo de
+   aquí manda, lo que falta se trae, nada se borra). */
+async function syAplicar(o, base) {
+  var e = syEstadoDe(o);
+  if (!e.ok) return { ok: false, motivo: e.motivo };
+  var r = await syAplicarEstado(base || null, e.estado);
+  if (r.ok) r.rechazados = e.rechazados;
+  return r;
+}
+
+/* ── LA BASE ──────────────────────────────────────────────────────────────
+   Atada a la GENERACIÓN del vínculo (`st.gen`), no a la clave: cambiar la clave
+   no cambia lo que hay en Drive, pero vincular este equipo a otra copia sí, y
+   una base de otra copia haría borrar lo que no está en ella. */
+var SY_BASE_KEY = 'sync_base';
+function syGenNueva() {
+  var b = crypto.getRandomValues(new Uint8Array(8)), s = '';
+  for (var i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2);
+  return s;
+}
+async function syBaseLeer(st) {
+  if (!st || !st.gen || !_sessionKey) return null;
+  try {
+    var enc = await lcIdbGet(SY_BASE_KEY);
+    if (!enc) return null;
+    var o = JSON.parse(await _lcDecrypt(enc));
+    return (o && o.gen === st.gen && o.estado) ? o.estado : null;
+  } catch (e) { return null; }
+}
+async function syBaseGuardar(st, estado) {
+  if (!st || !st.gen || !_sessionKey) return false;
+  try {
+    await lcIdbSet(SY_BASE_KEY, await _lcEncrypt(JSON.stringify({ gen: st.gen, ts: Date.now(), estado: estado })));
+    return true;
+  } catch (e) { console.warn('[Flagrante] no se pudo guardar la base de la sincronización', e); return false; }
+}
+async function syBaseBorrar() { try { await lcIdbDel(SY_BASE_KEY); } catch (e) {} }
+/* Los conflictos se anotan en el estado cifrado de la sincronización (lc_sync),
+   los 50 más recientes: nada de lo que el otro equipo tenía se pierde sin rastro. */
+var SY_MAX_CONFLICTOS = 50;
+function syAnotarConflictos(st, lista) {
+  if (!lista || !lista.length) return;
+  var ts = Date.now();
+  var nuevos = lista.map(function (x) { return { ts: ts, ruta: x.ruta, local: x.local, remoto: x.remoto, nota: x.nota || '' }; });
+  st.conflictos = nuevos.concat(st.conflictos || []).slice(0, SY_MAX_CONFLICTOS);
 }
 
 /* ── GOOGLE ───────────────────────────────────────────────────────────────
@@ -24120,11 +24425,15 @@ async function sySincronizar(interactivo) {
   _syCorriendo = true;
   try {
     var st = syEstado();
+    /* Un vínculo anterior a la Fase 0 no tiene generación: se le da una, y su
+       primera vuelta es la fusión sin base (no revierte nada de este equipo). */
+    if (!st.gen) st.gen = syGenNueva();
     await syToken(interactivo);
     var key = await syClaveAES(syB32Dec(st.k));
+    var base = await syBaseLeer(st);
 
     var archivos = await syListar();
-    var res = null, i, bajado, legibles = [], ilegibles = 0;
+    var res = null, i, bajado, legibles = [], ilegibles = 0, remoto = null, rechazados = [];
     if (!archivos.length) {
       st.fileId = await syCrear();
     } else {
@@ -24145,9 +24454,13 @@ async function sySincronizar(interactivo) {
         bajado = await syDescargar(archivos[i].id, key);
         if (bajado === null) { legibles.push(archivos[i]); continue; }
         if (bajado.ok) {
+          var e = syEstadoDe(bajado.o);
+          if (!e.ok) { ilegibles++; continue; }
           legibles.push(archivos[i]);
-          var r = await syAplicar(bajado.o);
-          if (r.ok && !res) res = r; else if (r.ok) { res.c.nuevos += r.c.nuevos; res.p.nuevos += r.p.nuevos; }
+          rechazados = rechazados.concat(e.rechazados);
+          /* Si hubo bifurcación, las copias se juntan entre ellas sin base (ninguna
+             borra nada de la otra) y el resultado es «lo remoto» de la fusión. */
+          remoto = remoto ? syFundirEstado(null, remoto, e.estado).estado : e.estado;
         } else ilegibles++;
       }
       if (!legibles.length) return { ok: false, motivo: bajado ? bajado.motivo :
@@ -24155,7 +24468,21 @@ async function sySincronizar(interactivo) {
       st.fileId = legibles[0].id;
     }
 
-    await sySubirBytes(st.fileId, await syCifrar(sySnapshot(), key));
+    /* ⚠️ LA FUSIÓN ES A TRES VÍAS: base (lo que quedó en Drive la última vez que
+       este equipo sincronizó) · local · remoto. Ver «FUSIÓN A TRES VÍAS». */
+    if (remoto) {
+      res = await syAplicarEstado(base, remoto);
+      if (!res.ok) return res;
+      res.rechazados = rechazados;
+      syAnotarConflictos(st, res.conflictos);
+    }
+
+    var subir = sySnapshot();
+    await sySubirBytes(st.fileId, await syCifrar(subir, key));
+    /* La base es EXACTAMENTE lo que acaba de quedar en Drive, y se guarda solo
+       después de subirlo: si la subida falla, la base sigue siendo la anterior y
+       la próxima vuelta decide bien. */
+    await syBaseGuardar(st, syEstadoCanon({ personas: subir.personas, casos: subir.casos, cfg: subir.cfg }));
     for (i = 1; i < legibles.length; i++) await syBorrar(legibles[i].id);
 
     /* Una sola vez, y solo mientras falte: saber si la cuenta ya tiene caja de
@@ -24182,7 +24509,8 @@ async function sySincronizar(interactivo) {
 async function syVincular(codigo) {
   var bytes = syB32Dec(codigo);
   if (!bytes || bytes.length !== 16) return { ok: false, motivo: 'Ese código no tiene la forma de una clave de sincronización.' };
-  await syGuardarEstado({ k: syB32Enc(bytes), fileId: '', ts: 0 });
+  await syBaseBorrar();
+  await syGuardarEstado({ k: syB32Enc(bytes), fileId: '', ts: 0, gen: syGenNueva() });
   var r = await sySincronizar(true);
   if (!r.ok) { await syDesvincular(); return r; }
   return r;
@@ -24196,7 +24524,8 @@ async function syVincular(codigo) {
 async function syActivarNuevo(frase) {
   var mal = syFraseFloja(frase);
   if (mal) return { ok: false, motivo: mal };
-  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0, caja: false });
+  await syBaseBorrar();
+  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0, caja: false, gen: syGenNueva() });
   var r = await sySincronizar(true);
   if (!r.ok) return r;
   try {
@@ -24226,7 +24555,8 @@ async function syRecuperar(frase) {
     return { ok: false, motivo: m === 'reconectar' ? 'Google no entregó el permiso. Vuelve a intentarlo.' : m };
   }
   if (!caja.ok) return caja;
-  await syGuardarEstado({ k: caja.k, fileId: '', ts: 0, caja: true });
+  await syBaseBorrar();
+  await syGuardarEstado({ k: caja.k, fileId: '', ts: 0, caja: true, gen: syGenNueva() });
   var r = await sySincronizar(true);
   if (!r.ok) { await syDesvincular(); return r; }
   return r;
@@ -24567,9 +24897,18 @@ function syResumen(r) {
   var p = r.r.p || {}, c = r.r.c || {}, t = [];
   if (c.nuevos) t.push(c.nuevos + ' captura' + (c.nuevos === 1 ? '' : 's'));
   if (p.nuevos) t.push(p.nuevos + ' persona' + (p.nuevos === 1 ? '' : 's'));
+  if (c.actualizados) t.push(c.actualizados + ' captura' + (c.actualizados === 1 ? ' actualizada' : 's actualizadas'));
+  if (p.actualizados) t.push(p.actualizados + ' persona' + (p.actualizados === 1 ? ' actualizada' : 's actualizadas'));
+  if (c.borrados || p.borrados) t.push('se retiró lo que borraste en otro equipo');
   if (r.r.cfg) t.push('ajustes de tu unidad');
   if (r.duplicados) t.push('(se unieron ' + r.duplicados + ' copias que se habían separado)');
-  return t.length ? 'Llegó: ' + t.join(', ') + '.' : 'No había nada nuevo que traer.';
+  var s = t.length ? 'Llegó: ' + t.join(', ') + '.' : 'No había nada nuevo que traer.';
+  /* ⚠️ Un dato que cambió en los dos equipos se resolvió a favor de ESTE y el
+     otro valor quedó anotado. Decirlo es lo que hace que no sea silencioso. */
+  var n = (r.r.conflictos || []).length;
+  if (n) s += ' ' + n + (n === 1 ? ' dato había cambiado' : ' datos habían cambiado') +
+              ' en los dos equipos: se conservó el de este y el otro quedó anotado.';
+  return s;
 }
 
 async function syUiSincronizar() {
