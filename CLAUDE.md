@@ -7290,3 +7290,141 @@ identificador de OAuth de tipo Android (`SY_CLIENT_ID_NAT`), que depende de las 
 Play Console → Integridad de la app. El código nativo ya está escrito y el paquete versión 2 ya trae
 la puerta de retorno; pegar el identificador **no exige recompilar**.
 Anti-caché `?v=127` / `cache-v127`, `_BUILD=127`.
+
+## Fase 0 de seguridad (2026-09-25) — contención del fallo vivo y endurecimiento
+Primera fase del plan por etapas que aportó el usuario tras la auditoría del 2026-09-24
+(seguridad, cuenta, sincronización y membresías: Firebase Auth + Firestore como almacén de
+sobres cifrados, local-first). ⚠️ **El plan manda parar al final de cada fase y esperar
+aprobación**: esta fase vive en la rama `fase-0` y **no se ha publicado**. Verificado con
+`verify_sync` (**120**, antes 94), `verify_pin` (**21**, nuevo), `verify_csp` (**11**, nuevo), la
+regresión completa y el emulador Android.
+
+### 0.1 · La copia propia se funde a TRES VÍAS
+⚠️ **El fallo estaba vivo en producción.** La copia con Drive se fundía con `ptFundir` («lo que
+llega con dato gana, lo vacío no pisa, nada se borra») — correcta para RECIBIR de un compañero y
+equivocada para sincronizarse con una copia PROPIA: la copia de Drive trae el valor viejo de todo
+lo corregido aquí, y ese valor viejo «llega con dato». Toda corrección de un dato ya sincronizado
+volvía al valor anterior en todos los equipos, los borrados resucitaban, vaciar un campo no se
+propagaba y los Ajustes se revertían. Corría sola 2,5 s después de cada desbloqueo.
+- **La BASE** = lo que quedó en Drive la última vez que ESTE equipo sincronizó. Con base, local y
+  remoto se decide dato a dato quién cambió qué (`syFundir3`/`syFundirLista`/`syFundirEstado`):
+  local = base → manda el otro; remoto = base → manda este; los dos distintos → **conflicto: se
+  conserva el de este equipo y el otro queda anotado** en `lc_sync.conflictos` (50 más recientes)
+  y el resumen lo dice. Registros enteros igual: borrado aquí sin tocar allá → sigue borrado.
+- ⚠️ **La base vive en IndexedDB, cifrada con la llave del PIN** (`lcIdb*`, base de datos
+  `flagrante`, almacén `kv`, clave `sync_base`) — no en localStorage: es tan grande como los datos
+  y duplicarlos llenaría los ≈5 MB. Es la primera pieza de la Fase 1.
+- ⚠️ **Atada a la GENERACIÓN del vínculo (`st.gen`), no a la clave**: cambiar la clave no cambia lo
+  que hay en Drive, pero vincular a otra copia sí, y una base ajena haría borrar lo que no está en
+  ella. `syDesvincular`, `syVincular`, `syActivarNuevo` y `syRecuperar` la borran.
+- ⚠️ **Sin base** (la primera vuelta de un equipo, o la primera tras esta versión) se hace lo único
+  que no revierte nada de este equipo: lo de aquí manda, lo que falta se trae, nada se borra.
+- ⚠️ **La base se guarda DESPUÉS de subir**: si la subida falla, la anterior sigue y la próxima
+  vuelta decide bien. Es exactamente el snapshot que quedó en Drive.
+- Las claves «_» (la marca de Modo compartir, los conflictos) son estado local y la fusión se las
+  devuelve al registro aunque el resultado venga del otro equipo (`syConPropias`).
+- ⚠️ **`ptFundir` queda EXCLUSIVAMENTE para Modo compartir.** `syAplicarCfg` desapareció.
+- ⚠️ **Una prueba que inyecte en Drive un paquete que OMITE lo de este equipo significa, con tres
+  vías, que el otro lo BORRÓ.** `verify_sync` [I2] tuvo que construir el paquete del «otro equipo»
+  como uno real: lo que había en Drive MÁS lo suyo.
+- **Sección K de `verify_sync`**: los cinco escenarios del fallo con dos equipos y un Drive
+  compartido del lado de Node (`exposeFunction`). **Comprobado que muerden**: saboteando la base
+  fallan 10 checks.
+
+### Banderas de funcionalidad (`LC_FLAGS` / `lcFlag`)
+`syncAutoDesbloqueo`, `syncOnboarding` y `syncNativo`, las tres **apagadas**. ⚠️ Sin servidor una
+bandera solo cambia con un despliegue (y en Play, con un paquete nuevo): «apagar sin publicar»
+llega con la configuración remota de la Fase 2. `lc_flags` en localStorage las anula **solo para
+pruebas** — ninguna abre un agujero si alguien la enciende.
+
+### 0.2 · La app de Play no ofrece la copia
+`syDisponible()` pasa por `syncNativo` aunque `SY_CLIENT_ID_NAT` esté puesto, y `sySincronizar` y
+`syToken` lo vuelven a comprobar: ningún dato sale del teléfono por esa vía en la versión de Play,
+que es lo que dice `privacy.html`.
+
+### 0.3 · El PIN se verifica DESCIFRANDO
+- ⚠️ **`lc_key_hash` = SHA-256(sal‖PIN) de UNA pasada** dejaba probar los 10 000 PIN en menos de
+  un segundo con una copia del almacenamiento. Se retira; el PIN se verifica descifrando un
+  verificador AES-GCM (`lc_key_check`) con la llave PBKDF2. Un equipo anterior entra con el hash
+  **una última vez** y lo pierde (medido en el emulador).
+- **Intentos en disco** (`lc_pin_intentos`, en claro porque se lee antes del PIN): se cuentan
+  **antes** de verificar, recargar ya no los pone a cero, y tras el quinto la espera empieza en
+  30 s y se dobla hasta 1 h. «Olvidé mi PIN» borra también IndexedDB (`lcIdbBorrarTodo`).
+- ⚠️ **LÍMITE HONESTO**: un PIN de 4 dígitos sigue siendo débil contra una copia del almacenamiento
+  con una tarjeta gráfica (10 000 derivaciones PBKDF2 son segundos). Se cierra el atajo instantáneo
+  y los intentos ilimitados desde la app; el arreglo de fondo es la Fase 2 (Android Keystore y PIN
+  de 6 dígitos). **No se subieron las vueltas de PBKDF2**: cambiarlas obliga a re-cifrar todos los
+  datos en el desbloqueo, con riesgo de dejar el almacén a medias, y con 4 dígitos no cambia la
+  conclusión.
+
+### S3 · La configuración (`lc_cfg`) va cifrada
+Llevaba en claro nombre, cédula, teléfono y correo del titular y del compañero. Ahora va cifrada
+con caché en memoria (`_cfgCache`); **`lcCfgCrudo()` es el punto único** de lectura sin valores
+por defecto. Antes del PIN, `DB.getConfig()` devuelve los valores por defecto. Un equipo anterior
+la tiene en claro: se lee igual y se reescribe cifrada al desbloquear (idempotente). `saveConfig`
+actualiza la caché al instante, revierte si la escritura falla y avisa. `lc_theme` sigue en claro
+a propósito.
+- ⚠️ **Las pruebas ya NO pueden sembrar `lc_cfg` con `localStorage.setItem`** ni leer el disco con
+  `JSON.parse`: se siembra con `DB.saveConfig` y el disco se lee con `_lcDecrypt` tras
+  `_lcWriteChain.cfg`. Se adaptaron despachos, nunc_ano, orden, oj y sync.
+- ⚠️ **Guardar configuración exige la llave del PIN.** `verify_orden` simulaba un equipo recién
+  instalado guardando el orden SIN PIN; en la app real la pantalla del PIN tapa todo, así que la
+  prueba ahora crea el PIN primero.
+
+### CSP en una `<meta>` — lo que cierra y lo que no
+`default-src 'self'`, conexiones solo a Google (la copia en Drive), sin `unsafe-eval`,
+`object-src`/`base-uri 'none'`, `form-action 'none'`. ⚠️ **`'unsafe-inline'` sigue en
+`script-src`**: la app es un solo HTML con ~375 manejadores `onclick="…"` generados con
+`innerHTML`; quitarlo exige un nonce por petición (servidor propio, Fase 6.5). ⚠️ `frame-ancestors`
+y las cabeceras HTTP (HSTS, nosniff…) **no se pueden poner en una `<meta>`** y GitHub Pages no deja
+fijarlas. `verify_csp` comprueba que la política está, que **muerde** (script y conexión ajenos
+bloqueados) y que recorrer pantallas, documentos, impresión y QR no provoca ninguna violación.
+- ⚠️ **Ninguna prueba puede usar `eval()` DENTRO de la página**: `verify_compartir` montaba su
+  lector de QR con `eval` y moría con `EvalError`. Ahora lo instala como `<script>` en línea.
+
+### 0.4 · Sin copia de seguridad de Android
+`allowBackup="false"` + `fullBackupContent` + **`dataExtractionRules`** que excluyen todos los
+dominios. ⚠️ `allowBackup="false"` solo NO basta en Android 12+: sigue permitiendo la transferencia
+a un teléfono nuevo. ⚠️ **Consecuencia aceptada: al cambiar de teléfono Android NO restaura las
+capturas**; la recuperación es la cuenta (Fase 2). `privacy.html` lo dice.
+
+### 0.5 · El código viaja DENTRO del paquete (versionCode 4, build 132)
+⚠️ **Revierte la decisión de carga remota** (documentada como «decisión explícita del usuario»):
+el plan de la Fase 0 lo pide para que nadie con acceso al repositorio pueda cambiar el código que
+corre en los teléfonos sin pasar por Play. `build:android` copia la app a `www/` (como
+`index.html`) y corre `npx cap copy android`; `--debug` produce un APK para el emulador.
+- ⚠️ **`server.hostname = getcorenova.github.io` ES LO QUE EVITA PERDER DATOS.** El almacenamiento
+  del WebView va por ORIGEN, y ese es el origen de la versión de carga remota; con el `localhost`
+  por defecto, un teléfono que actualiza abriría un almacenamiento vacío. **Medido en el emulador**:
+  versionCode 3 remoto (build 131) con PIN, captura, persona y ajustes → se instala encima el 4 →
+  build 132 desde el teléfono, mismo origen, datos intactos, hash retirado, configuración cifrada.
+- En el envoltorio **no se registra el Service Worker** y se retiran el de la carga remota y sus
+  cachés (podían servir un HTML viejo): `_lcEnEnvoltorio()`.
+- En **modo avión** arranca desde el primer uso, genera FPJ-5 y oficio, **cero violaciones CSP**
+  (la <meta> convive con el puente que inyecta Capacitor) y el compartir nativo abre la hoja con
+  el `.docx`.
+- ⚠️ **Contracara aceptada: cada corrección en la app de Play es un paquete nuevo.**
+  `deploy:web` ya solo publica la versión web. `PUBLICAR.md` §4 lo dice.
+- ⚠️ `lexcapture-android/` **sigue sin git** (decisión documentada: que el keystore no pueda acabar
+  versionado). Sus cambios de esta fase —`capacitor.config.json`, manifiesto, `res/xml/*_rules.xml`,
+  `versionCode 4`— **no tienen commit**; quedan descritos aquí.
+
+### Regresiones
+Regresión completa (`node scripts/verify.mjs --todas`, 47 suites): **42 en verde** tras volver a
+correr `verify_compartir` con el arreglo del `eval` (**57/57**). En verde, entre otras: sync 120 ·
+pin 21 · csp 11 · compartir 57 · sincro 32 · almacén 13 · despachos 53 · NUNC año 39 · orden 33 ·
+OJ 187 · fpj6 140 · custodia 111 · incautación 141 · entrega 111 · firma 62 · export 66 · vía CR 41.
+⚠️ **Las cinco en rojo son las PREEXISTENTES ya documentadas**: `verify_ds` 9/10 («favorito con
+estrella SVG»), `verify_mejora6b` [47] y [53], `verify_jerarquia` 65/66 y `verify_dossier_historico`
+[20] y [21] (textos de Ajustes del commit `21ae35b`), y `verify_mejora7` [B23], **intermitente**
+(2 de 3 corridas en verde).
+Anti-caché `?v=132` / `cache-v132`, `_BUILD=132`.
+
+### Lecciones de método de esta sesión
+- ⚠️ **El heredoc de esta máquina se come las barras invertidas**: un `\n` dentro de un script de
+  Node escrito con heredoc llega como `n` y el reemplazo «no encuentra» el texto. Escribir los
+  parches con la herramienta de edición o con archivos, nunca con `\n` en un heredoc.
+- ⚠️ **Las suites están en CRLF en el árbol de trabajo** (`core.autocrlf=true`); un parche que
+  busque con `\n` no casa. El ayudante `rep.mjs` del scratchpad convierte los saltos al del archivo.
+- ⚠️ **No hay Python en esta máquina** (el alias de Microsoft Store responde en su lugar y no hace
+  nada): un parche por Python «pasa» sin aplicar. Comprobar SIEMPRE el diff antes de commitear.

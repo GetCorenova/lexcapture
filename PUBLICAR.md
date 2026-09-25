@@ -1,6 +1,7 @@
 # Subir Flagrante a Play Store — punto de partida
 
-> Medido el **2026-09-24** contra el **build 131** y el **`.aab` versionCode 3** (Mejora A).
+> Medido el **2026-09-25** contra el **build 132** y el **`.aab` versionCode 4** (Fase 0 de
+> seguridad: **el código web viaja DENTRO del paquete**, ya no se descarga de GitHub — §4).
 > Empezar el chat nuevo leyendo **este archivo**, no el `CLAUDE.md` entero (son
 > 4 000 líneas de historia del producto; aquí está solo lo que hace falta para
 > publicar).
@@ -17,13 +18,13 @@ En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 
 | # | Acción | Quién |
 |---|---|---|
-| 1 | Subir `app-release.aab` (**versionCode 3**, versión 1.1) a **prueba interna** desde el navegador | **[USUARIO]** |
+| 1 | Subir `app-release.aab` (**versionCode 4**, versión 1.2 — sustituye al 3; si el 3 no se llegó a subir, se sube directamente el 4) a **prueba interna** desde el navegador | **[USUARIO]** |
 | 2 | Probarlo en un teléfono real — empezar por las barras del sistema (§5) | **[USUARIO]** |
 | 3 | Pegar la ficha de `store-listing.md` y subir los gráficos | **[USUARIO]** |
 | 4 | **Promover a prueba cerrada e inscribir a los 12 probadores el mismo día** | **[USUARIO]** |
 | 5 | Pasar al chat la **huella SHA-1 de Google** (Play Console → Prueba y lanza → Integridad de la app) | **[USUARIO]** |
-| 6 | **Añadirla** al cliente OAuth de Android que ya existe · 2 min, sin recompilar ni tocar el código | usuario + asistente |
-| 7 | Corregir lo que salga en las pruebas · **casi todo por `npm run deploy:web`, sin paquete nuevo** | asistente |
+| 6 | ~~Añadirla al cliente OAuth de Android~~ → **aplazado a la Fase 2**: la copia en Drive quedó apagada en la app de Play por la bandera `syncNativo` (Fase 0) | — |
+| 7 | Corregir lo que salga en las pruebas · ⚠️ **desde la Fase 0 cada corrección es un paquete nuevo** (`npm run build:android`, `versionCode` +1): el código ya no se descarga de GitHub | asistente |
 | 8 | Cerrados los 14 días con los 12 dentro, **pedir el acceso a producción** | **[USUARIO]** |
 
 ⚠️ **El paso 4 es el que manda el calendario.** El reloj de 14 días **solo corre en
@@ -44,14 +45,16 @@ la clave de servicio, que todavía no existe.
 | Cuenta de Play Console | ✅ verificada |
 | App creada en Play Console | ✅ sí (22-09). Checklist de «Configura tu app» diligenciado |
 | Primera subida | ✅ versionCode **1** lanzado en prueba interna el 23-09. El **2** lo sustituyó; el **3** (Mejora A: barras del sistema) lo sustituye |
-| `.aab` listo | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **3 214 272 B** · `jar verified` · **versionCode 3** (1.1) · `com.getcorenova.flagrante` · minSdk 24 · targetSdk 36 · compilado 24-09 13:13 |
+| `.aab` listo | ✅ `lexcapture-android/android/app/build/outputs/bundle/release/app-release.aab` · **4 297 168 B** · `jar verified` · **versionCode 4** (1.2) · `com.getcorenova.flagrante` · minSdk 24 · targetSdk 36 · compilado 25-09 11:13 · **lleva dentro el build web 132** (`base/assets/public/index.html`) |
+| Copia de seguridad de Android | ⛔ **excluida a propósito** (Fase 0): `allowBackup="false"` + `dataExtractionRules` que excluyen todo. Al cambiar de teléfono Android **no** restaura las capturas |
+| Origen del WebView | `server.hostname = getcorenova.github.io` **a propósito**: es el origen de la versión de carga remota, así un teléfono que actualiza desde el 3 conserva sus datos (medido en el emulador) |
 | Consola de depuración en el `.aab` | ✅ **NO viaja** — comprobado extrayendo `base/assets/capacitor.config.json` del paquete |
 | Permisos del manifiesto fusionado | `INTERNET` · `ACCESS_NETWORK_STATE` · `CAMERA` (hardware **opcional**) · `DUMP`. **Sin `BILLING`** |
 | Plugins nativos | filesystem · share · status-bar · browser · app |
 | Ícono dentro del `.aab` | ✅ comprobado extrayéndolo: la F ámbar en el visor cian |
 | Nombre en Android | ✅ `Flagrante` (`strings.xml`) |
-| Código web publicado | ✅ **build 128** en vivo en https://getcorenova.github.io/lexcapture/ |
-| Sincronización con Drive | ✅ funciona en la **versión web** (`SY_CLIENT_ID` puesto). **Oculta en la app de Play** hasta el paso 6 |
+| Código web publicado | ⏳ **build 132** en la rama `fase-0`, **sin publicar** hasta que se apruebe la Fase 0 · en vivo sigue el **131** |
+| Sincronización con Drive | ✅ versión web, solo con el botón «Sincronizar ahora» y fusión a tres vías (Fase 0). **Apagada en la app de Play** (bandera `syncNativo`) hasta la Fase 2 |
 | Recuperación de la copia | ✅ correo + contraseña de recuperación (build 128) |
 | Google Cloud | ✅ proyecto `Flagrante`, Drive API, consentimiento **En producción**, `drive.appdata` (no sensible) |
 | Ficha de tienda | ✅ `store-listing.md` — nombre **Flagrante** |
@@ -77,6 +80,9 @@ npm run deploy:playstore -- --check  # Ruby, Fastlane, clave de servicio, firma
 Es el cuello de botella. Por orden de urgencia:
 
 1. **La huella SHA-1 de Google** (Play Console → Prueba y lanza → Integridad de la app).
+   ⚠️ Desde la Fase 0 ya no desbloquea nada por sí sola (la copia en la app de Play
+   está apagada por bandera), pero **la Fase 2 la necesita** para el inicio de sesión
+   con Firebase — conviene tenerla. Lo que sigue es la historia anterior:
    El cliente OAuth de Android **ya está creado** (23-09) con la huella del
    certificado de carga, así que la sincronización ya funciona en un paquete
    instalado a mano. Falta la huella con la que Google re-firma lo que baja de
@@ -99,7 +105,8 @@ técnicos, ninguno visible para el usuario. **No «corregirlos»:**
 
 | Dónde | Qué rompe si se cambia |
 |---|---|
-| `getcorenova.github.io/lexcapture/` (URL) | El `.aab` firmado carga de ahí: **deja tiesas las apps ya instaladas** |
+| `getcorenova.github.io/lexcapture/` (URL) | Es la **versión web**. El `.aab` ya no carga de ahí desde el versionCode 4, pero los versionCode 1-3 instalados sí: no moverla mientras quede alguno |
+| `server.hostname = getcorenova.github.io` (envoltorio) | Es el **origen** del almacenamiento del WebView: cambiarlo deja a cada teléfono con un almacenamiento **vacío** (las capturas siguen ahí, pero la app ya no las ve) |
 | `LexCapture_v8.html` | Lo referencian ~40 suites de regresión y el `sw.js` |
 | `lexcapture-sync-v1` (HKDF) · `lexcapture-sync.bin` · `PT_MARCA` · canal WebRTC | **Deja ilegible lo sincronizado en el Drive del usuario** y rompe el vínculo entre dos teléfonos |
 | alias del keystore | El keystore es **irremplazable** |
@@ -121,21 +128,24 @@ una copia fuera de este PC.
 
 ## 4. Qué obliga a un paquete nuevo y qué no
 
-⚠️ **El `.aab` NO lleva el código web dentro.** Capacitor carga la app desde
-`https://getcorenova.github.io/lexcapture/`. Es lo que permite corregir a diario
-durante las pruebas sin tocar Play Console.
+⚠️ **DESDE LA FASE 0 (2026-09-25) EL `.aab` LLEVA EL CÓDIGO WEB DENTRO.** Antes
+Capacitor cargaba la app desde `https://getcorenova.github.io/lexcapture/`: cómodo
+para corregir a diario, pero cualquiera con acceso al repositorio podía cambiar el
+código que corre en los teléfonos sin pasar por Play. Ahora `npm run build:android`
+copia la app al paquete y cada cambio pasa por la revisión de Play. La contracara,
+aceptada: **corregir durante las pruebas cuesta un paquete por corrección**.
 
 | Cambio | ¿Nuevo `.aab`? | Cómo se publica |
 |---|---|---|
-| Formularios, validaciones, textos, los siete documentos, dossier, estadísticas, navegación, CSS, botones, zonas seguras, pegar `SY_CLIENT_ID_NAT` | **No** | `npm run deploy:web` |
+| Formularios, validaciones, textos, los siete documentos, dossier, estadísticas, navegación, CSS, botones, zonas seguras | **Sí** (app de Play) · No (web) | `npm run build:android` + `versionCode` +1 · y `npm run deploy:web` para la versión web |
 | Permisos del manifiesto | Sí | Recompilar, `versionCode` +1 |
 | Plugin de Capacitor nuevo o retirado | Sí | Ídem |
 | Ícono del lanzador, nombre de la app, package | Sí | Ídem |
 | `minSdk` / `targetSdk`, tema nativo, splash, `MainActivity.java` | Sí | Ídem |
 
-⚠️ **La contracara:** una web rota se rompe al instante en **todos** los teléfonos.
-Por eso `npm run build:web` valida la sintaxis de los bloques de script y los tres
-tokens anticaché antes de dejar desplegar. **Ese paso no se salta.**
+`npm run build:web` sigue validando la sintaxis de los bloques de script y los tres
+tokens anticaché, y `build:android` empaqueta ese mismo HTML: **ese paso no se
+salta**. Para probar en el emulador sin firmar: `npm run build:android -- --debug`.
 
 ---
 
@@ -186,10 +196,9 @@ Con dos equipos: uno con barra de tres botones y otro con gestos.
 
 ### Lo que solo aparece instalado desde Play
 1. Las zonas seguras. El navegador no lo reproduce.
-2. ⚠️ **El primer arranque necesita señal.** Con carga remota, quien instala y abre
-   sin datos no ve nada; del segundo arranque en adelante el Service Worker ya la
-   tiene. **Decírselo a los probadores.**
-3. La sincronización con Drive, oculta hasta el paso 6.
+2. ~~El primer arranque necesita señal~~ — **resuelto en la Fase 0**: el código va
+   en el paquete y la app arranca en modo avión desde el primer uso (medido).
+3. La sincronización con Drive, apagada en la app de Play hasta la Fase 2.
 4. Compartir el documento de Word por el camino nativo.
 5. El diálogo del permiso de cámara.
 6. El botón atrás de Android · el teclado tapando campos · un System WebView viejo
@@ -265,7 +274,5 @@ derecho premium?», nunca por un producto concreto.
 - ⚠️ **Las capturas llevan datos inventados del simulador** (correos en el dominio
   reservado `.test`). **Nunca subir capturas de un procedimiento real**: son datos
   personales de un capturado, y en CESPA de un menor (Ley 1581 de 2012).
-- ⚠️ Cosmético y sin resolver: `lexcapture-android/www/index.html` conserva el
-  título `LexCapture`. Con `server.url` el WebView va directo a la URL remota y
-  **ese archivo no se carga**; el rótulo que ve el usuario sale de `strings.xml`,
-  que dice Flagrante. Se corrige la próxima vez que haya que recompilar.
+- ~~`lexcapture-android/www/index.html` con el título `LexCapture`~~ — resuelto en
+  la Fase 0: `build:android` escribe ahí la app misma.
