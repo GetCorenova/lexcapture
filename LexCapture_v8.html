@@ -154,8 +154,27 @@
   /* — Tipografía — */
   --font:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",system-ui,sans-serif;
   --m:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Consolas,monospace;
+  /* — Escala tipográfica (auditoría visual 2026-10-22). Antes había 23 tamaños
+     distintos (9,5 · 10 · 10,5 · 11 · 11,5 · 12 · 12,5 · 13 · 13,5 …) y pesos
+     550/650/750 que Roboto y Segoe no traen: cada equipo los aproximaba a su
+     manera. Ahora el texto corrido vive en seis escalones y tres pesos
+     (500/600/700). Lo que pasa de 17 px es de display (títulos, cifras, PIN). — */
+  --fs-tag:11px;   /* solo insignias en mayúscula */
+  --fs-xs:12px; --fs-sm:13px; --fs-md:14px; --fs-body:15px; --fs-lg:16px;
+  /* Texto de ejemplo de un campo vacío: legible (≥4,5:1) pero un escalón más
+     tenue que --text-3 (medido: 4,97:1 sobre el campo, 4,69 en un modal; claro
+     5,03 y 4,69). Lo que distingue un ejemplo de un dato es además el «Ej.:». */
+  --placeholder:#808D9A;
+  /* Segmento elegido de un control segmentado: tiene que SOBRESALIR de su pista.
+     En oscuro se usaba --surface-1, más oscuro que la pista: parecía hundido. */
+  --seg-on:#2A3A4A;
 
   /* — Alias legados (contrato con el JS) — */
+  /* Cinco tokens que el CSS usaba SIN haberlos definido nunca: las esquinas
+     salían cuadradas y la fuente mono no se aplicaba (cadena de custodia,
+     borrador, selector de exportación). */
+  --acc-bg:var(--accG); --mono:var(--m);
+  --r-s:var(--rs); --r-m:var(--radius); --radius-md:var(--radius-sm);
   --surface:var(--surface-1);
   --surface-2-legacy:var(--surface-2);
   --surface-strong:var(--elev);
@@ -208,6 +227,8 @@
 
   --surface-selected:rgba(0,49,83,.09);
   --surface-disabled:rgba(16,36,56,.04);
+  --placeholder:#65707E;
+  --seg-on:#FFFFFF;
 
   --flag:#B45309;  --flag-2:#9A4E06;  --flag-bg:rgba(180,83,9,.10);
   --oj:#6D3FD4;    --oj-2:#6D3FD4;    --oj-bg:rgba(109,63,212,.09);
@@ -260,7 +281,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 /* ═══ LAYOUT ═══ */
 #app{display:grid;min-height:100dvh;grid-template-rows:1fr}
 #sidebar{display:none}
-#main{display:flex;flex-direction:column;min-height:100dvh;padding-bottom:calc(96px + var(--sab))}
+/* ⚠️ min-width:0 — #main es un elemento de rejilla y su mínimo por defecto es su
+   contenido: una fila que no parte (las pestañas de Despachos) ensanchaba toda la
+   pantalla y a 360 px aparecía desplazamiento horizontal de 7 px. */
+#main{display:flex;flex-direction:column;min-height:100dvh;min-width:0;padding-bottom:calc(96px + var(--sab))}
 
 /* ═══ CROMO DE MARCA (2026-10-22) ═══
    Barra superior, barra inferior y panel lateral van en #003153 en los DOS
@@ -323,7 +347,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   position:fixed;left:12px;right:auto;top:auto;
   bottom:calc(76px + var(--sab));z-index:19;
   display:flex;align-items:center;gap:6px;
-  font-size:11px;line-height:15px;font-weight:600;letter-spacing:.01em;
+  font-size:12px;line-height:15px;font-weight:600;letter-spacing:.01em;
   padding:4px 10px;border-radius:999px;
   background:var(--elev);border:1px solid var(--border);
   color:var(--text-2);transition:all var(--d3) var(--ease);pointer-events:none;
@@ -343,7 +367,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 .exp-opt:active{background:var(--surface-3)}
 .exp-opt.on{border-color:var(--acc);background:var(--acc-bg)}
 .exp-opt-lbl{font-size:14px;font-weight:600}
-.exp-opt-sub{font-size:11.5px;color:var(--text-3);line-height:1.3}
+.exp-opt-sub{font-size:12px;color:var(--text-3);line-height:1.3}
 .exp-opt.on .exp-opt-lbl{color:var(--acc)}
 #exp-go[disabled]{opacity:.45;cursor:not-allowed}
 
@@ -359,7 +383,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #pt-barra{
   display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
   align-items:center;gap:12px;padding:calc(7px + var(--sat)) 14px 7px;
-  font-size:12.5px;line-height:1.35;
+  font-size:13px;line-height:1.35;
   /* OPACA desde la identidad azul (2026-10-22): se dibuja encima de la barra
      superior, que ahora es #003153, y un verde al 12 % sobre ese azul dejaba el
      texto ilegible. --ok-band es ese verde al 8 % ya mezclado sobre la
@@ -416,7 +440,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .cp-code .cc-hd{padding:16px 18px 12px}
 .cp-code .cc-ti{font-size:15px;font-weight:700;color:var(--text)}
-.cp-code .cc-de{font-size:12.5px;color:var(--text-3);margin-top:3px;line-height:1.45}
+.cp-code .cc-de{font-size:13px;color:var(--text-3);margin-top:3px;line-height:1.45}
 /* La zona de silencio: el código trae 4 módulos propios y la tarjeta le añade
    aire blanco por fuera. Un código pegado al borde de su recuadro se lee mucho
    peor, y es el fallo más común de un código mal presentado. */
@@ -430,7 +454,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .cp-code .cc-pie{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:12px 18px 16px;font-size:12.5px;color:var(--text-3);
+  padding:12px 18px 16px;font-size:13px;color:var(--text-3);
 }
 .cp-code .cc-pt{width:7px;height:7px;border-radius:999px;background:var(--text-3)}
 .cp-code .cc-pt.viva{background:var(--ok);animation:cpLat 2s ease-in-out infinite}
@@ -449,7 +473,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 @keyframes cpGiro{to{transform:rotate(360deg)}}
 .cp-esperando{
   display:flex;align-items:center;justify-content:center;gap:9px;
-  font-size:12.5px;color:var(--text-3);margin:0 0 12px;
+  font-size:13px;color:var(--text-3);margin:0 0 12px;
 }
 
 /* El respaldo por archivo, a la vista desde el principio y no escondido tras un
@@ -464,12 +488,12 @@ body.nat::after{bottom:0;height:var(--sab)}
 .cf-res .cf-l{font-size:13px;color:var(--text-2);line-height:1.7}
 .cf-mal{
   margin:10px 0;padding:11px 13px;border-radius:10px;
-  background:var(--errB);color:var(--err);font-size:12.5px;line-height:1.5;
+  background:var(--errB);color:var(--err);font-size:13px;line-height:1.5;
 }
 .cf-dups{display:flex;flex-direction:column;gap:10px;max-height:270px;overflow-y:auto}
 .cf-d{padding:12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border)}
-.cf-dn{font-size:13.5px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
-.cf-dd{font-size:11.5px;color:var(--text-3);margin-top:2px;overflow-wrap:anywhere}
+.cf-dn{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.cf-dd{font-size:12px;color:var(--text-3);margin-top:2px;overflow-wrap:anywhere}
 .cf-do{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
 .cf-op{
   padding:6px 12px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;
@@ -484,7 +508,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   margin:14px 0;padding:16px;border-radius:14px;text-align:center;
   background:var(--accG);border:1px solid color-mix(in srgb,var(--acc) 30%,transparent);
 }
-.cf-pin-t{font-size:12px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em}
+.cf-pin-t{font-size:13px;font-weight:600;color:var(--text-2)}
 .cf-pin-n{
   font-size:32px;font-weight:700;color:var(--acc);margin-top:6px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.12em;
@@ -528,7 +552,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);
 }
 .pt-est .pe-pt{flex:0 0 auto;width:10px;height:10px;border-radius:999px;background:var(--ok)}
-.pt-est .pe-ti{font-weight:600;font-size:13.5px;color:var(--ok)}
+.pt-est .pe-ti{font-weight:600;font-size:14px;color:var(--ok)}
 .pt-est .pe-de{font-size:12px;color:var(--text-3);margin-top:2px}
 
 /* Lo que se puede enviar. La lista se desplaza dentro de su tarjeta: con treinta
@@ -544,8 +568,8 @@ body.nat::after{bottom:0;height:var(--sab)}
 .cp-it.on{background:var(--surface-selected);border-color:var(--acc)}
 .cp-it input{flex:0 0 auto;width:18px;height:18px;accent-color:var(--acc)}
 .cp-it .cp-b{display:flex;flex-direction:column;min-width:0}
-.cp-it .cp-ti{font-size:13.5px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
-.cp-it .cp-de{font-size:11.5px;color:var(--text-3);margin-top:1px;overflow-wrap:anywhere}
+.cp-it .cp-ti{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.cp-it .cp-de{font-size:12px;color:var(--text-3);margin-top:1px;overflow-wrap:anywhere}
 
 /* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
 #pt-scan{
@@ -569,7 +593,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 #pt-scan .ps-marco .e4{bottom:-2px;right:-2px;border-left:0;border-top:0;border-radius:0 0 10px 0}
 #pt-scan .ps-est{
   position:absolute;left:16px;right:16px;top:calc(44% + min(38vw,160px) + 52px);
-  text-align:center;color:var(--acc);font-size:12.5px;font-weight:600;
+  text-align:center;color:var(--acc);font-size:13px;font-weight:600;
 }
 #pt-scan .ps-txt{
   position:absolute;left:16px;right:16px;top:calc(44% + min(36vw,150px) + 20px);
@@ -679,21 +703,21 @@ body.nat::after{bottom:0;height:var(--sab)}
   display:flex;flex-direction:column;align-items:center;text-align:center;
   gap:4px;padding:28px 16px;color:var(--text-2);
 }
-.stat-empty-mini b{color:var(--text);font-size:14.5px;font-weight:650}
+.stat-empty-mini b{color:var(--text);font-size:15px;font-weight:600}
 .stat-empty-mini span{font-size:13px;color:var(--text-3);max-width:280px}
 
 /* ── KPI principal + distribución: UNA unidad analítica, no dos tarjetas ── */
 .stat-hero{padding:20px 18px 18px;animation:fadeIn var(--d2) var(--ease)}
-.stat-hero-lbl{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
-.stat-hero-num{font-size:46px;line-height:1.04;font-weight:750;letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums;margin-top:6px}
-.stat-hero-ctx{font-size:13.5px;color:var(--text-2);margin-top:4px}
+.stat-hero-lbl{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-3)}
+.stat-hero-num{font-size:46px;line-height:1.04;font-weight:700;letter-spacing:-.03em;color:var(--text);font-variant-numeric:tabular-nums;margin-top:6px}
+.stat-hero-ctx{font-size:14px;color:var(--text-2);margin-top:4px}
 .stat-dist{margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
 .stat-dist-bar{display:flex;height:8px;border-radius:999px;overflow:hidden;background:var(--surface-3);margin-bottom:12px}
 .stat-dist-seg{height:100%;flex:0 0 auto;transition:width var(--d3) var(--ease)}
 .stat-dist-seg+.stat-dist-seg{margin-left:1.5px}
 .stat-dist-row{display:flex;align-items:center;gap:10px;padding:6px 0}
 .stat-dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
-.stat-dist-lbl{font-size:13.5px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-dist-lbl{font-size:14px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stat-dist-n{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;min-width:18px;text-align:right}
 .stat-dist-pct{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums;min-width:36px;text-align:right}
 
@@ -703,16 +727,16 @@ body.nat::after{bottom:0;height:var(--sab)}
 .stat-rank-sub{font-size:12px;color:var(--text-3);margin:-6px 0 10px}
 .stat-rank-row{display:grid;grid-template-columns:20px 1fr auto;column-gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid var(--border)}
 .stat-rank-row:last-of-type{border-bottom:none}
-.stat-rank-n{font-family:var(--m);font-size:11.5px;font-weight:700;color:var(--text-3);padding-top:2px;font-variant-numeric:tabular-nums}
+.stat-rank-n{font-family:var(--m);font-size:12px;font-weight:700;color:var(--text-3);padding-top:2px;font-variant-numeric:tabular-nums}
 .stat-rank-row.r1 .stat-rank-n{color:var(--acc)}
-.stat-rank-name{font-size:13.5px;line-height:1.4;color:var(--text-2);overflow-wrap:break-word;padding-top:1px}
-.stat-rank-row.r1 .stat-rank-name{font-weight:650;color:var(--text)}
+.stat-rank-name{font-size:14px;line-height:1.4;color:var(--text-2);overflow-wrap:break-word;padding-top:1px}
+.stat-rank-row.r1 .stat-rank-name{font-weight:600;color:var(--text)}
 .stat-rank-count{display:flex;align-items:baseline;gap:6px;white-space:nowrap}
 .stat-rank-count b{font-size:14px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
-.stat-rank-count span{font-size:11px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.stat-rank-count span{font-size:12px;color:var(--text-3);font-variant-numeric:tabular-nums}
 .stat-rank-bartrack{grid-column:2/4;height:4px;border-radius:2px;background:var(--surface-3);margin-top:7px;overflow:hidden}
 .stat-rank-barfill{height:100%;border-radius:2px;background:var(--acc)}
-.stat-rank-more{font-size:11.5px;color:var(--text-3);text-align:center;padding-top:10px}
+.stat-rank-more{font-size:12px;color:var(--text-3);text-align:center;padding-top:10px}
 
 /* ── Actividad en el tiempo: histograma real, sin curvas fabricadas ── */
 .stat-act-card{animation:fadeIn var(--d2) var(--ease)}
@@ -722,9 +746,9 @@ body.nat::after{bottom:0;height:var(--sab)}
 .stat-act-bar{width:58%;max-width:15px;min-height:3px;border-radius:2px 2px 1px 1px;background:var(--border-strong);transition:background var(--d1) var(--ease)}
 .stat-act-col.has .stat-act-bar{background:var(--acc)}
 .stat-act-col.now .stat-act-bar{background:var(--acc)}
-.stat-act-lbl{font-size:9.5px;line-height:12px;color:var(--text-3);margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat-act-lbl{font-size:11px;line-height:12px;color:var(--text-3);margin-top:5px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .stat-act-col.now .stat-act-lbl{color:var(--acc);font-weight:700}
-.stat-act-cap{font-size:12.5px;color:var(--text-2);margin-top:10px;min-height:16px}
+.stat-act-cap{font-size:13px;color:var(--text-2);margin-top:10px;min-height:16px}
 
 
 
@@ -742,7 +766,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .bn-item{
   flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
   padding:4px 2px;border-radius:8px;color:var(--text-2);
-  font-size:11.5px;line-height:14px;font-weight:500;letter-spacing:.01em;
+  font-size:12px;line-height:14px;font-weight:500;letter-spacing:.01em;
   transition:color var(--d1) var(--ease);
 }
 .bn-item svg{
@@ -776,8 +800,8 @@ body.nat::after{bottom:0;height:var(--sab)}
   box-shadow:var(--sh-1);
 }
 .sb-logo-wrap img{width:100%;height:100%;object-fit:cover}
-.sb-brand .nm{font-weight:650;font-size:15px;letter-spacing:-.01em}
-.sb-brand .v{font-size:11px;color:var(--text-3);margin-top:1px}
+.sb-brand .nm{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.sb-brand .v{font-size:12px;color:var(--text-3);margin-top:1px}
 .sb-item{
   display:flex;align-items:center;gap:12px;
   padding:9px 12px;border-radius:8px;
@@ -789,7 +813,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .sb-item.on{background:var(--accG);color:var(--acc);font-weight:600}
 .sb-item svg{width:18px;height:18px;stroke-width:1.8}
 .sb-sec{
-  font-size:11px;font-weight:650;letter-spacing:.08em;text-transform:uppercase;
+  font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
   color:var(--text-3);padding:18px 12px 6px;user-select:none;
 }
 .sb-bottom{
@@ -829,8 +853,8 @@ body.nat::after{bottom:0;height:var(--sab)}
 .sheet.on{transform:none}
 .sheet-handle{width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 10px}
 .sheet-title{
-  font-size:11px;line-height:15px;font-weight:650;color:var(--text-3);
-  padding:2px 12px 10px;text-transform:uppercase;letter-spacing:.07em;
+  font-size:13px;line-height:18px;font-weight:600;color:var(--text-2);
+  padding:2px 12px 10px;
 }
 .sheet-item{
   display:flex;align-items:center;gap:14px;
@@ -856,7 +880,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   display:flex;gap:11px;align-items:flex-start;
   margin:0 4px 10px;padding:11px 13px;
   background:var(--surface-2);border:1px solid var(--border);border-radius:12px;
-  font-size:12.5px;line-height:1.5;color:var(--text-2);
+  font-size:13px;line-height:1.5;color:var(--text-2);
 }
 .share-coach svg{flex:none;width:19px;height:19px;stroke-width:1.8;color:var(--acc);margin-top:1px}
 .share-coach b{color:var(--text);font-weight:600}
@@ -893,20 +917,29 @@ body.nat::after{bottom:0;height:var(--sab)}
    que lo rodeaban, así que la jerarquía estaba invertida: el aviso pesaba más
    que el título. Ahora el título sube a --text-2, gana cuerpo y estrena una
    barra de acento que lo separa del texto corrido sin ocupar un renglón más. */
+/* ⚠️ AUDITORÍA VISUAL (2026-10-22): de VERSALITAS a TIPO FRASE. Con 81 títulos en
+   mayúscula espaciada la pantalla «gritaba» y los títulos competían con las
+   insignias, que sí van en mayúscula. Material 3 e iOS escriben sus títulos de
+   sección en tipo frase y les dan peso por tamaño y color, no por mayúsculas.
+   Sube a 15 px en --text (antes 12,5 px en --text-2) y conserva su barra. */
 .st{
-  font-size:12.5px;line-height:16px;font-weight:700;color:var(--text-2);
-  text-transform:uppercase;letter-spacing:.06em;
-  margin:26px 0 12px;
+  font-size:15px;line-height:20px;font-weight:700;color:var(--text);
+  letter-spacing:-.005em;
+  margin:24px 0 10px;
   display:flex;align-items:center;gap:8px;
 }
 .st::before{
-  content:'';flex:0 0 auto;width:3px;height:13px;border-radius:2px;
+  content:'';flex:0 0 auto;width:3px;height:15px;border-radius:2px;
   background:var(--acc);
 }
+/* El primer título de una tarjeta no lleva el margen superior: el relleno de la
+   tarjeta ya lo da. Antes se tapaba caso por caso con style="margin-top:0" y
+   donde faltaba (Sincronización) quedaba un hueco de 26 px arriba. */
+.card>.st:first-child{margin-top:0}
 
 /* ═══ FORMULARIOS ═══ */
 .fg{margin-bottom:14px}
-.fl{display:block;font-size:13px;line-height:18px;font-weight:550;color:var(--text-2);margin-bottom:6px}
+.fl{display:block;font-size:13px;line-height:18px;font-weight:500;color:var(--text-2);margin-bottom:6px}
 /* ═══ JERARQUÍA ENTIDAD → ATRIBUTO (Mejora 7, 3.er pase) ═══
    El usuario marcó la pantalla con dos colores: los campos de nivel superior y
    los atributos que cuelgan de cada uno. Esto lo dibuja, y nada más — la sangría
@@ -914,7 +947,7 @@ body.nat::after{bottom:0;height:var(--sab)}
    renglón de texto que la explique.
    ⚠️ El padre solo sube de peso y de color: pasa a --text (lleno) frente al
    --text-2 del atributo. Una diferencia de jerarquía, no un adorno. */
-.fl-p{font-weight:650;color:var(--text)}
+.fl-p{font-weight:600;color:var(--text)}
 .lc-hijos{
   margin:0 0 4px;padding-left:14px;
   border-left:2px solid var(--border);
@@ -930,7 +963,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .fi:hover,.fs:hover,.ft:hover{border-color:var(--border-strong)}
 .fi:focus,.fs:focus,.ft:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--focus-ring);background:var(--surface-1)}
-.fi::placeholder,.ft::placeholder{color:var(--text-3)}
+.fi::placeholder,.ft::placeholder{color:var(--placeholder)}
 .fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237b8499' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;cursor:pointer}
 .fs option{background:var(--surface-1);color:var(--text)}
 .ft{min-height:72px;resize:vertical;font-size:14px;line-height:1.6}
@@ -969,7 +1002,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .badge{
   display:inline-flex;align-items:center;gap:4px;
   padding:3px 8px;border-radius:6px;
-  font-size:10.5px;line-height:14px;font-weight:700;
+  font-size:11px;line-height:14px;font-weight:700;
   letter-spacing:.05em;text-transform:uppercase;
   font-variant-numeric:tabular-nums;
 }
@@ -991,7 +1024,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   background:var(--surface-2);border:1px solid var(--border);
   font-size:12px;line-height:1.45;color:var(--text-2);
 }
-.exp-sync b{display:block;color:var(--text);font-size:12.5px;margin-bottom:2px}
+.exp-sync b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
 .exp-sync .dot{flex:0 0 auto;width:8px;height:8px;margin-top:5px;border-radius:999px;background:var(--text-3)}
 .exp-sync.viva{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 28%,transparent)}
 .exp-sync.viva b{color:var(--ok)}
@@ -1058,7 +1091,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .wp{padding:4px 0 6px;margin-bottom:4px}
 .wz-mob{display:block;margin-bottom:4px}
 .wz-mob .wz-lbl{font-size:13px;color:var(--text-2);margin-bottom:8px;line-height:1.4}
-.wz-mob .wz-lbl strong{color:var(--text);font-weight:650}
+.wz-mob .wz-lbl strong{color:var(--text);font-weight:600}
 /* La barra de relleno era redundante con la fila de puntos, que además dice en
    qué paso falta algo. Se retira: son ~14px menos de alto en cada pantalla. */
 .wz-mob .wz-bar{display:none;height:4px;background:var(--surface-3);border-radius:2px;overflow:hidden}
@@ -1071,7 +1104,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .wd{
   width:28px;height:28px;min-width:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;
+  font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;
   background:var(--surface-2);border:1.5px solid var(--border-strong);color:var(--text-3);
   transition:all var(--d3) var(--ease);
 }
@@ -1104,7 +1137,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   border-radius:50%;background:var(--surface-2);color:var(--warn)}
 .draft-card .dc-ic svg{width:18px;height:18px;stroke-width:2}
 .draft-card .dc-b{flex:1;min-width:0}
-.draft-card .dc-t{font-size:13.5px;font-weight:650;color:var(--text);line-height:1.3}
+.draft-card .dc-t{font-size:14px;font-weight:600;color:var(--text);line-height:1.3}
 .draft-card .dc-s{font-size:12px;color:var(--text-3);margin-top:2px;line-height:1.35}
 .draft-card .dc-a{display:flex;gap:8px;flex-shrink:0}
 @media(max-width:520px){
@@ -1158,7 +1191,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   display:flex;align-items:center;gap:10px;padding:calc(12px + var(--sat)) 12px 12px;
   border-bottom:1px solid var(--border);background:var(--surface-1);
 }
-.lp-top h2{font-size:17px;font-weight:650;letter-spacing:-.01em;flex:1;min-width:0}
+.lp-top h2{font-size:17px;font-weight:600;letter-spacing:-.01em;flex:1;min-width:0}
 .lp-body{padding:24px 16px;flex:1;overflow-y:auto;width:100%;max-width:560px;margin:0 auto}
 .lp-lead{font-size:22px;font-weight:700;letter-spacing:-.02em;line-height:1.25;margin:4px 0 6px}
 .lp-sub{font-size:14px;color:var(--text-2);line-height:1.45;margin-bottom:22px}
@@ -1175,7 +1208,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   display:flex;align-items:center;justify-content:center;border:1px solid transparent;
 }
 .rol-card .rc-ic svg{width:24px;height:24px;stroke-width:1.9}
-.rol-card .rc-t{font-size:16px;font-weight:650}
+.rol-card .rc-t{font-size:16px;font-weight:600}
 .rol-card .rc-d{font-size:13px;color:var(--text-2);margin-top:3px;line-height:1.4}
 .rol-card .rc-arr{margin-left:auto;color:var(--text-3);font-size:22px;line-height:1}
 .rol-card.r-cap .rc-ic{background:var(--uriB);border-color:var(--uriBd);color:var(--uriT)}
@@ -1183,7 +1216,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .rol-card.r-tes .rc-ic{background:var(--oj-bg);border-color:var(--ojBd);color:var(--oj-2)}
 .mc::before{content:'';display:block;width:36px;height:4px;background:var(--border-strong);border-radius:2px;margin:0 auto 16px}
 .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-.mh h2{font-size:17px;font-weight:650;letter-spacing:-.01em}
+.mh h2{font-size:17px;font-weight:600;letter-spacing:-.01em}
 .mx{
   width:32px;height:32px;border-radius:50%;
   background:var(--surface-2);border:1px solid var(--border);color:var(--text-2);
@@ -1204,7 +1237,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .pin-logo{text-align:center;font-size:34px;margin-bottom:12px;color:var(--acc)}
 .pin-logo svg{width:40px;height:40px;stroke-width:1.6;margin:0 auto}
-.pin-title{text-align:center;font-size:17px;font-weight:650;letter-spacing:-.01em;color:var(--text);margin-bottom:4px}
+.pin-title{text-align:center;font-size:17px;font-weight:600;letter-spacing:-.01em;color:var(--text);margin-bottom:4px}
 .pin-sub{text-align:center;font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.5}
 .pin-in{
   width:100%;padding:14px 16px;min-height:52px;
@@ -1309,9 +1342,9 @@ body.nat::after{bottom:0;height:var(--sab)}
   border:1px solid var(--border);border-radius:var(--radius);
   padding:16px;margin:16px 0;background:var(--surface-2);
 }
-.simr h3{color:var(--text);font-size:14px;margin-bottom:10px;font-weight:650}
+.simr h3{color:var(--text);font-size:14px;margin-bottom:10px;font-weight:600}
 .sim-section{border-top:1px solid var(--border);padding-top:20px;margin-top:24px}
-.sim-divider{text-align:center;font-size:11px;color:var(--text-3);margin-bottom:12px;letter-spacing:.07em;text-transform:uppercase;font-weight:650}
+.sim-divider{text-align:center;font-size:12px;color:var(--text-3);margin-bottom:12px;font-weight:600}
 
 /* ═══ TARJETAS DE TIPO (nueva captura) ═══ */
 .type-card{
@@ -1343,21 +1376,21 @@ body.nat::after{bottom:0;height:var(--sab)}
    System v2: ni un color escrito a pelo, ni gradientes, ni emojis. */
 .cc-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);
   border-radius:var(--r-s);background:var(--surface-1);margin-bottom:6px}
-.cc-n{font:600 .72rem/1 var(--mono);color:var(--txD);flex:0 0 auto}
-.cc-d{flex:1 1 auto;font-size:.78rem;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.cc-cad{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--txD)}
+.cc-n{font:600 12px/1 var(--mono);color:var(--txD);flex:0 0 auto}
+.cc-d{flex:1 1 auto;font-size:13px;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cc-cad{flex:0 0 auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txD)}
 .cc-cad .fi{width:56px;padding:6px 8px;text-align:center}
 .cc-func{border:1px solid var(--border);border-radius:var(--r-m);padding:12px;margin-bottom:10px;background:var(--surface-1)}
 .cc-func-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.cc-func-t{font:600 .72rem/1 var(--font);letter-spacing:.04em;text-transform:uppercase;color:var(--txD)}
+.cc-func-t{font:600 12px/1 var(--font);color:var(--txD)}
 .cc-hre{display:flex;gap:14px;flex-wrap:wrap;margin-top:4px}
-.cc-chk{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--tx);cursor:pointer}
+.cc-chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tx);cursor:pointer}
 .cc-chk input{width:18px;height:18px;accent-color:var(--acc);cursor:pointer}
 
 /* ═══ DOSSIER ═══ */
 .dos-preview{
   background:var(--field);border:1px solid var(--field-bd);border-radius:12px;
-  padding:16px;font-family:var(--m);font-size:12.5px;
+  padding:16px;font-family:var(--m);font-size:13px;
   white-space:pre-wrap;word-break:break-word;line-height:1.75;color:var(--text);
   min-height:220px;max-height:520px;overflow-y:auto;width:100%;box-sizing:border-box;
   resize:none;outline:none;
@@ -1383,7 +1416,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .sec-ord{
   width:32px;height:32px;border-radius:8px;
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
-  font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   flex-shrink:0;padding:0;
   transition:all var(--d1) var(--ease);
 }
@@ -1405,11 +1438,11 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .pf-ic svg{width:20px;height:20px;stroke-width:1.8}
 .pf-body{flex:1;min-width:0}
-.pf-name{font-size:14px;font-weight:650;color:var(--text)}
+.pf-name{font-size:14px;font-weight:600;color:var(--text)}
 .pf-grado{font-size:13px;color:var(--text-2);margin-top:2px}
 .pf-cargo{font-size:12px;color:var(--text-3);margin-top:1px}
 .pf-badge{
-  display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
   padding:2px 8px;border-radius:6px;
   background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);
   margin-top:6px;
@@ -1418,7 +1451,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .pf-btn{
   padding:6px 10px;min-height:32px;border-radius:8px;
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
-  font-size:12px;cursor:pointer;min-width:64px;text-align:center;font:inherit;font-weight:550;
+  font-size:12px;cursor:pointer;min-width:64px;text-align:center;font:inherit;font-weight:500;
   transition:all var(--d1) var(--ease);
 }
 .pf-btn.act{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 30%,transparent);color:var(--ok)}
@@ -1451,7 +1484,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   /* ⚠️ Literal a propósito: el lienzo de firma tiene fondo BLANCO FIJO en los dos
      temas (la firma es un PNG de trazo negro), así que este texto no puede usar un
      token que se invierta. #6E7685 da 4,57:1 sobre blanco — el anterior, 3,09:1. */
-  color:#6E7685;font-size:12.5px;text-align:center;padding:0 18px;pointer-events:none;
+  color:#6E7685;font-size:13px;text-align:center;padding:0 18px;pointer-events:none;
 }
 .fw-pad.inked .fw-ph,.fw-pad.inked .fw-base{opacity:0}
 .fw-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -1490,8 +1523,8 @@ body.nat::after{bottom:0;height:var(--sab)}
 .exp-hd .btn svg{width:15px;height:15px;stroke-width:2.1}
 .exp-lst{margin:6px 0 14px;display:flex;flex-direction:column;gap:8px}
 .exp-lst .el{padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border)}
-.exp-lst .el b{display:block;font-size:13.5px;margin-bottom:3px}
-.exp-lst .el span{display:block;font-size:12.5px;color:var(--text-2);line-height:1.4}
+.exp-lst .el b{display:block;font-size:14px;margin-bottom:3px}
+.exp-lst .el span{display:block;font-size:13px;color:var(--text-2);line-height:1.4}
 .exp-lst .el.ok b{color:var(--ok)}
 
 /* ═══ DESPACHOS ═══ */
@@ -1500,14 +1533,14 @@ body.nat::after{bottom:0;height:var(--sab)}
   border-radius:12px;margin-bottom:8px;box-shadow:var(--sh-1);
 }
 .desp-tipo{
-  display:inline-block;font-size:10px;font-weight:700;letter-spacing:.05em;
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.05em;
   padding:2px 7px;border-radius:6px;margin-bottom:6px;text-transform:uppercase;
 }
 .desp-tipo.fiscalia{background:var(--uriB);color:var(--uriT);border:1px solid var(--uriBd)}
 .desp-tipo.cespa{background:var(--cspB);color:var(--cspT);border:1px solid var(--cspBd)}
 .desp-tipo.juzgado{background:var(--ojB);color:var(--oj-2);border:1px solid var(--ojBd)}
 .desp-tipo.guardia{background:var(--flag-bg);color:var(--flag-2);border:1px solid color-mix(in srgb,var(--flag-2) 30%,transparent)}
-.desp-nombre{font-size:14px;font-weight:650;color:var(--text);margin-bottom:3px;line-height:1.35}
+.desp-nombre{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.35}
 .desp-dir{font-size:12px;color:var(--text-2);margin-top:2px}
 .desp-acts{display:flex;gap:7px;margin-top:10px;align-items:center}
 .desp-usar{
@@ -1526,7 +1559,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .desp-search:hover{border-color:var(--border-strong)}
 .desp-search:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--focus-ring);background:var(--surface-1)}
-.desp-search::placeholder{color:var(--text-3)}
+.desp-search::placeholder{color:var(--placeholder)}
 /* El autocompletado de Chrome/Android pinta el campo de blanco e ignora background/color.
    Se neutraliza con inset-shadow + text-fill-color (única vía que respeta el autofill). */
 .desp-search:-webkit-autofill,
@@ -1556,7 +1589,7 @@ body.nat::after{bottom:0;height:var(--sab)}
    encontrar de un vistazo entre diez tarjetas, y en el acento se confundía con
    la insignia del tipo de despacho, que va justo al lado. */
 .desp-def{
-  display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;
+  display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;
   padding:2px 7px;border-radius:6px;text-transform:uppercase;
   background:var(--neon-bg);color:var(--neon);border:1px solid var(--neon-bd);
 }
@@ -1565,9 +1598,9 @@ body.nat::after{bottom:0;height:var(--sab)}
   font-size:12px;color:var(--text-2);
 }
 .desp-nunc span{
-  font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--text-3);
+  font-size:11px;font-weight:700;letter-spacing:.05em;color:var(--text-3);
 }
-.desp-nunc b{font-family:var(--m);font-size:12.5px;font-weight:600;color:var(--text);letter-spacing:.02em}
+.desp-nunc b{font-family:var(--m);font-size:13px;font-weight:600;color:var(--text);letter-spacing:.02em}
 .desp-nunc.falta{color:var(--text-3);font-style:italic}
 /* Los 4 últimos dígitos del NUNC son el AÑO, y es lo único que cambia con el
    tiempo (se actualiza solo cada 1 de enero). Va marcado para que se pueda
@@ -1580,7 +1613,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .desp-act{
   padding:8px 12px;min-height:38px;border-radius:10px;
   border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);
-  font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  font:inherit;font-size:13px;font-weight:600;cursor:pointer;
   display:inline-flex;align-items:center;gap:6px;
   transition:background var(--d1) var(--ease),color var(--d1) var(--ease),border-color var(--d1) var(--ease);
 }
@@ -1595,9 +1628,9 @@ body.nat::after{bottom:0;height:var(--sab)}
   border-radius:14px;background:var(--surface-1);
 }
 .desp-vacio svg{width:40px;height:40px;color:var(--text-3);margin-bottom:12px}
-.desp-vacio h3{font-size:16px;font-weight:650;color:var(--text);margin:0 0 8px}
+.desp-vacio h3{font-size:16px;font-weight:600;color:var(--text);margin:0 0 8px}
 .desp-vacio p{font-size:13px;color:var(--text-2);line-height:1.5;margin:0 auto 10px;max-width:34em}
-.desp-vacio .desp-vacio-nunc{color:var(--text-3);font-size:12.5px}
+.desp-vacio .desp-vacio-nunc{color:var(--text-3);font-size:13px}
 .desp-vacio .btn{margin-top:6px}
 
 /* ═══ ACORDEÓN — Ajustes y Perfil ═══
@@ -1633,27 +1666,27 @@ body.nat::after{bottom:0;height:var(--sab)}
    abrirlo. Un panel plegado que no anuncia su contenido es indistinguible de
    uno vacío. */
 .lc-acc-tit{display:flex;align-items:center;gap:10px}
-.lc-acc-sum{font-size:11.5px;line-height:1.4;color:var(--text-3);font-weight:400;margin-top:3px}
+.lc-acc-sum{font-size:12px;line-height:1.4;color:var(--text-3);font-weight:400;margin-top:3px}
 .lc-acc-lbl{align-items:flex-start;flex-direction:column;gap:0}
 /* Nota de un renglón. ⚠️ Sustituye a los párrafos de cinco y seis renglones que
    llenaban esta pantalla: reportado en campo —«esa clase de avisos son
    demasiado largos y no se ven bien desde el celular»—. La regla que quedó es
    una sola frase, y solo cuando dice algo que el campo no dice ya. */
-.aj-nota{font-size:11.5px;line-height:1.45;color:var(--text-3);margin:-4px 0 12px}
+.aj-nota{font-size:12px;line-height:1.45;color:var(--text-3);margin:-4px 0 12px}
 
 
 /* ═══ SELECTOR DE TEMA (segmented control) ═══ */
 /* Pista bajo un campo de grado: enseña la abreviatura que se va a derivar. */
-.lc-ab{font-size:11.5px;line-height:1.3;color:var(--text-3);margin-top:5px;min-height:15px}
-.lc-ab.ok{color:var(--ok);font-weight:550}
+.lc-ab{font-size:12px;line-height:1.3;color:var(--text-3);margin-top:5px;min-height:15px}
+.lc-ab.ok{color:var(--ok);font-weight:500}
 .theme-seg{display:flex;gap:0;background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:3px}
 .theme-seg button{
   flex:1;padding:10px;min-height:42px;border-radius:8px;border:none;
   background:transparent;color:var(--text-2);
-  font:inherit;font-size:14px;font-weight:550;cursor:pointer;
+  font:inherit;font-size:14px;font-weight:500;cursor:pointer;
   transition:all var(--d2) var(--ease);
 }
-.theme-seg button.on{background:var(--surface-1);color:var(--text);font-weight:600;box-shadow:var(--sh-1)}
+.theme-seg button.on{background:var(--seg-on);color:var(--text);font-weight:600;box-shadow:var(--sh-1)}
 
 /* ═══ ORDEN JUDICIAL (wizard del oficio de disposición) ═══ */
 .oj-blk{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px}
@@ -1663,23 +1696,23 @@ body.nat::after{bottom:0;height:var(--sab)}
 .oj-row{background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;position:relative}
 .oj-row .fg{margin-bottom:8px}
 .oj-row-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.oj-row-n{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+.oj-row-n{font-size:12px;color:var(--text-3);font-weight:600}
 .oj-row-x{background:none;border:0;color:var(--danger);font-size:13px;cursor:pointer;padding:2px 6px;border-radius:6px}
 .oj-row-x:active{background:var(--pressed)}
-.oj-chk{display:flex;align-items:flex-start;gap:9px;padding:9px 0;cursor:pointer;font-size:13.5px;line-height:1.4;color:var(--text)}
+.oj-chk{display:flex;align-items:flex-start;gap:9px;padding:9px 0;cursor:pointer;font-size:14px;line-height:1.4;color:var(--text)}
 .oj-chk input{width:18px;height:18px;flex:0 0 auto;margin-top:1px;accent-color:var(--acc)}
 .oj-chk span small{display:block;color:var(--text-3);font-size:12px;margin-top:2px}
 .oj-alert{border-radius:var(--radius-sm);padding:11px 13px;margin-bottom:10px;font-size:13px;line-height:1.5;border:1px solid}
-.oj-alert b{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.oj-alert b{display:block;font-size:13px;font-weight:700;margin-bottom:2px}
 .oj-alert.dura{background:var(--errB);border-color:var(--danger);color:var(--text)}
 .oj-alert.dura b{color:var(--danger)}
-.oj-alert.blanda{background:var(--warn-bg);border-color:rgba(232,165,79,.35);color:var(--text)}
+.oj-alert.blanda{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text)}
 .oj-alert.blanda b{color:var(--warn)}
-.oj-alert.ok{background:var(--ok-bg);border-color:rgba(91,201,140,.35);color:var(--text)}
+.oj-alert.ok{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 35%,transparent);color:var(--text)}
 .oj-alert.ok b{color:var(--ok)}
 .oj-alert.info{background:var(--ojB);border-color:var(--ojBd);color:var(--text)}
 .oj-alert.info b{color:var(--oj-2)}
-.oj-sem{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.oj-sem{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 11px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
 .oj-sem.ok{background:var(--ok-bg);color:var(--ok)}
 .oj-sem.alerta{background:var(--warn-bg);color:var(--warn)}
 .oj-sem.urgente,.oj-sem.vencido{background:var(--errB);color:var(--danger)}
@@ -1692,8 +1725,8 @@ body.nat::after{bottom:0;height:var(--sab)}
   background:var(--surface-3);border:1.5px solid var(--border);border-radius:var(--radius-sm);
   padding:10px 12px;color:var(--text-2);transition:border-color var(--d2) var(--ease),background var(--d2) var(--ease)
 }
-.oj-via b{display:block;font-size:13.5px;font-weight:650;color:var(--text)}
-.oj-via small{display:block;font-size:11.5px;line-height:1.35;color:var(--text-3);margin-top:2px}
+.oj-via b{display:block;font-size:14px;font-weight:600;color:var(--text)}
+.oj-via small{display:block;font-size:12px;line-height:1.35;color:var(--text-3);margin-top:2px}
 .oj-via.on{background:var(--ojB);border-color:var(--oj)}
 .oj-via.on b{color:var(--oj-2)}
 .oj-via:active{background:var(--pressed)}
@@ -1701,23 +1734,23 @@ body.nat::after{bottom:0;height:var(--sab)}
 .oj-kv:last-child{border-bottom:0}
 .oj-kv span:first-child{color:var(--text-3);flex:0 0 auto}
 .oj-kv span:last-child{text-align:right;color:var(--text)}
-.oj-fund{font-size:11.5px;color:var(--text-3);margin-top:6px;font-style:italic}
+.oj-fund{font-size:12px;color:var(--text-3);margin-top:6px;font-style:italic}
 /* Expediente: dato de solo lectura. A diferencia de .oj-kv (etiqueta y valor en
    una línea, valor a la derecha), aquí el valor puede ser una lista de nombres o
    los elementos ya numerados, así que va debajo, alineado a la izquierda y
    respetando los saltos de línea. */
 .exp-kv{padding:9px 0;border-bottom:1px solid var(--border)}
 .exp-kv:last-child{border-bottom:0}
-.exp-kv .k{display:block;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--text-3);margin-bottom:3px}
-.exp-kv .v{display:block;font-size:13.5px;color:var(--text);white-space:pre-line;line-height:1.55}
+.exp-kv .k{display:block;font-size:12px;color:var(--text-3);margin-bottom:3px}
+.exp-kv .v{display:block;font-size:14px;color:var(--text);white-space:pre-line;line-height:1.55}
 /* Estado de un documento dentro de su tarjeta. */
-.exp-st{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;margin-top:3px}
+.exp-st{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;margin-top:3px}
 .exp-st.ok{color:var(--ok)}
 .exp-st.falta{color:var(--warn)}
 .exp-st .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
 /* Bloque plegable: datos que no salen en el oficio y no deben costar scroll. */
 .oj-mas>summary{
-  cursor:pointer;list-style:none;font-size:12.5px;font-weight:650;color:var(--text-2);
+  cursor:pointer;list-style:none;font-size:13px;font-weight:600;color:var(--text-2);
   padding:2px 0;display:flex;align-items:center;gap:6px
 }
 .oj-mas>summary::-webkit-details-marker{display:none}
@@ -1773,9 +1806,9 @@ body.nat::after{bottom:0;height:var(--sab)}
   padding:11px 13px;font-size:13px;
 }
 .oj-estado>summary::-webkit-details-marker{display:none}
-.oj-estado>summary::after{content:"▾";margin-left:auto;font-size:11px;opacity:.7;transition:transform var(--d2) var(--ease)}
+.oj-estado>summary::after{content:"▾";margin-left:auto;font-size:12px;opacity:.7;transition:transform var(--d2) var(--ease)}
 .oj-estado[open]>summary::after{transform:rotate(180deg)}
-.oj-estado>summary b{font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.oj-estado>summary b{font-size:13px}
 .oj-estado>summary span{
   font-variant-numeric:tabular-nums;font-weight:700;font-size:12px;
   min-width:22px;height:22px;padding:0 6px;border-radius:999px;
@@ -1784,7 +1817,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 .oj-estado.dura{background:var(--errB);border-color:var(--danger)}
 .oj-estado.dura>summary b,.oj-estado.dura>summary::after{color:var(--danger)}
 .oj-estado.dura>summary span{background:var(--danger);color:#fff}
-.oj-estado.blanda{background:var(--warn-bg);border-color:rgba(232,165,79,.35)}
+.oj-estado.blanda{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .oj-estado.blanda>summary b,.oj-estado.blanda>summary::after{color:var(--warn)}
 .oj-estado.blanda>summary span{background:var(--warn);color:var(--acc-fg)}
 .oj-estado-it{padding:6px 13px 0;font-size:13px;line-height:1.5;color:var(--text)}
@@ -1794,10 +1827,10 @@ body.nat::after{bottom:0;height:var(--sab)}
 .oj-plazo{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   padding:9px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);
-  background:var(--surface-2);font-size:12.5px;color:var(--text-2);margin-bottom:10px;
+  background:var(--surface-2);font-size:13px;color:var(--text-2);margin-bottom:10px;
 }
 .oj-plazo.dura{border-color:var(--danger);background:var(--errB)}
-.oj-plazo.blanda{border-color:rgba(232,165,79,.35);background:var(--warn-bg)}
+.oj-plazo.blanda{border-color:color-mix(in srgb,var(--warn) 35%,transparent);background:var(--warn-bg)}
 
 /* Destinatario del informe: el bloque por el que existe la pantalla. Se le da
    el peso visual que tiene en el procedimiento — borde de acento del módulo,
@@ -1807,7 +1840,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   border-radius:var(--radius);padding:16px 14px;margin-bottom:14px;
 }
 .oj-dest-hd{
-  font-size:15px;font-weight:650;color:var(--text);margin-bottom:12px;
+  font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;
   display:flex;align-items:center;
 }
 .oj-dest .oj-vias{margin-bottom:12px}
@@ -1816,10 +1849,10 @@ body.nat::after{bottom:0;height:var(--sab)}
   padding:12px 14px;margin-bottom:10px;
 }
 .oj-dest-box.falta{color:var(--text-3);font-size:13px;border-style:dashed}
-.oj-dest-nom{font-size:15px;font-weight:650;line-height:1.35;color:var(--text)}
+.oj-dest-nom{font-size:15px;font-weight:600;line-height:1.35;color:var(--text)}
 .oj-dest-dir{font-size:13px;line-height:1.45;color:var(--text-2);margin-top:3px}
 .oj-dest-src{
-  font-size:11px;letter-spacing:.04em;text-transform:uppercase;font-weight:650;
+  font-size:12px;font-weight:600;
   color:var(--ok);margin-top:8px;
 }
 .oj-dest-mas{margin-top:4px}
@@ -1847,13 +1880,13 @@ body.nat::after{bottom:0;height:var(--sab)}
 /* Homónimos del catálogo geográfico: los departamentos posibles, en un toque. */
 .lc-geo-hom{
   display:flex;flex-wrap:wrap;align-items:center;gap:8px;
-  background:var(--warn-bg);border:1px solid rgba(232,165,79,.35);border-radius:var(--radius-sm);
-  padding:9px 11px;margin:-4px 0 14px;font-size:12.5px;color:var(--text-2);line-height:1.45;
+  background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:var(--radius-sm);
+  padding:9px 11px;margin:-4px 0 14px;font-size:13px;color:var(--text-2);line-height:1.45;
 }
 .lc-geo-hom>span{flex:1 1 100%}
 .lc-geo-op{
   background:var(--surface-1);border:1px solid var(--border);border-radius:999px;
-  padding:5px 12px;font-size:12.5px;font-weight:600;color:var(--text);cursor:pointer;
+  padding:5px 12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;
   font-family:inherit;
 }
 .lc-geo-op:hover{border-color:var(--acc);background:var(--hover)}
@@ -1875,9 +1908,9 @@ body.nat::after{bottom:0;height:var(--sab)}
 .lc-dir-sep{font-size:14px;font-weight:700;color:var(--text-3);text-align:center;user-select:none}
 /* Vista previa de lo que se va a imprimir: la estandarización solo sirve si el
    usuario la ve antes de generar el documento. */
-.lc-dir-prev{font-size:11.5px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.lc-dir-prev{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lc-dir-prev b{color:var(--acc);font-family:var(--m);letter-spacing:.02em}
-.lc-dir-link{background:none;border:0;padding:0;font:inherit;font-size:11.5px;color:var(--acc);cursor:pointer;text-decoration:underline}
+.lc-dir-link{background:none;border:0;padding:0;font:inherit;font-size:12px;color:var(--acc);cursor:pointer;text-decoration:underline}
 /* Pareja campo-ancho + campo-corto SIEMPRE en la misma línea, también en el
    teléfono. Con `.fr` (una columna hasta 580px) cada conducta y cada elemento
    ocupaban cuatro renglones, que es justo lo que hacía el paso interminable. */
@@ -1899,7 +1932,7 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 /* Fecha y hora: dos controles nativos en vez de cinco casillas sueltas. */
 .lc-dt{display:grid;grid-template-columns:1fr;gap:0}
-.lc-dt-prev{font-size:11.5px;color:var(--text-3);margin:-6px 0 12px}
+.lc-dt-prev{font-size:12px;color:var(--text-3);margin:-6px 0 12px}
 .lc-dt-prev b{color:var(--text-2)}
 /* Vista previa del numeral 7 ya numerado y en orden. */
 .lc-emp-prev{
@@ -1919,10 +1952,86 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 .fe-el.off{opacity:.5}
 .fe-el-h{display:flex;align-items:flex-start;gap:9px;cursor:pointer;
-  font-size:12.5px;line-height:1.5;color:var(--text-2)}
+  font-size:13px;line-height:1.5;color:var(--text-2)}
 .fe-el-c{margin-top:2px;flex:0 0 auto;accent-color:var(--acc);width:16px;height:16px}
 .fe-el-o{margin-top:8px}
 @media(min-width:520px){ .lc-dt{grid-template-columns:1.4fr 1fr;column-gap:10px} }
+
+/* ═══ AUDITORÍA VISUAL (2026-10-22) ═══
+   Correcciones de consistencia medidas sobre la app. Van al final a propósito:
+   ajustan componentes ya definidos sin reescribirlos, así las clases que leen el
+   JS y las suites siguen siendo las mismas. */
+
+/* Una sola capa de elevación. Los documentos del expediente eran tarjetas con
+   sombra y radio propios DENTRO de otra tarjeta: blanco sobre blanco con doble
+   canto. Dentro de una .card pasan a filas de lista agrupada (el patrón de
+   Ajustes de iOS y de las listas de Material): llegan al borde, se separan con un
+   divisor y la tarjeta exterior es la única superficie elevada. Fuera de una
+   tarjeta (pantalla «Nueva captura») siguen siendo tarjetas. */
+.card>.type-card{
+  margin:0 calc(-1 * var(--pad));width:calc(100% + 2 * var(--pad));
+  padding:14px var(--pad);border:0;border-top:1px solid var(--border);
+  border-radius:0;box-shadow:none;background:transparent;
+}
+.card>.type-card:hover{background:var(--hover);border-color:var(--border)}
+/* En una pantalla táctil :hover se queda pegado tras el toque: la fila seguía
+   resaltada al volver del documento. Solo se resalta con un puntero real. */
+@media(hover:none){.card>.type-card:hover{background:transparent}}
+
+/* Botones sueltos dentro de una tarjeta (Sincronización): estaban pegados unos a
+   otros sin ningún espacio. En teléfono se apilan a lo ancho —el patrón de una
+   acción por renglón, fácil de acertar con el pulgar— y en pantalla ancha van en
+   fila con su separación. Los pequeños (.bsm) conservan su tamaño. */
+.card>.btn:not(.bsm)+.btn:not(.bsm){margin-left:8px}
+@media(max-width:579px){
+  .card>.btn:not(.bsm){display:flex;width:100%}
+  .card>.btn:not(.bsm)+.btn:not(.bsm){margin:8px 0 0}
+}
+/* Un párrafo que ES el texto de una tarjeta no es una pista de campo: va al
+   cuerpo de lectura, no a 12 px en el gris más tenue. */
+.card>.oj-hint{font-size:14px;line-height:1.5;color:var(--text-2);margin:0 0 14px}
+.card>.type-card:active{transform:none;background:var(--pressed)}
+.card>.type-card:last-child{margin-bottom:calc(-1 * var(--pad));border-radius:0 0 var(--radius) var(--radius)}
+.card>.type-card .tic{width:40px;height:40px;border-radius:10px}
+.card>.type-card .tic svg{width:20px;height:20px}
+.card>.type-card .tbt{font-size:15px}
+
+/* El chevron de las tarjetas era el carácter «›»: otra familia tipográfica y
+   otro grosor que los iconos SVG del sistema. Se dibuja con el mismo trazo que el
+   caret de los plegables, sin tocar el JS que sigue emitiendo el carácter. */
+.type-card .tarr,.rol-card .rc-arr{
+  font-size:0;line-height:0;flex:none;width:8px;height:8px;margin-right:4px;
+  border:solid var(--text-3);border-width:2px 2px 0 0;transform:rotate(45deg);
+}
+
+/* Tarjetas de lista con el mismo radio y el mismo canto que .card: había 12 y 14
+   px en tarjetas equivalentes, y algunas dibujaban borde Y sombra en claro. */
+.pcard,.prow,.pf-card,.desp-card{border-radius:var(--radius);border-color:var(--card-bd)}
+
+/* «Nueva» quedaba 8 px más arriba que las otras cuatro etiquetas de la barra:
+   4 de relleno + 28 visibles del disco + 6 de separación = las mismas 38 px a las
+   que arrancan las demás (4 + 30 del icono con su píldora + 4). */
+.bn-cta{padding-top:4px;gap:6px}
+
+/* El caret de .oj-estado era el carácter «▾»: el mismo que .oj-mas, dibujado. */
+.oj-estado>summary::after{
+  content:"";width:6px;height:6px;margin:0 3px 3px auto;opacity:.75;
+  border:solid currentColor;border-width:0 1.8px 1.8px 0;transform:rotate(45deg);
+}
+.oj-estado[open]>summary::after{transform:rotate(225deg);margin-bottom:-3px}
+
+/* Chevron del botón «Secciones del dossier» (antes «▼» / «▲» escritos por JS). */
+.sec-car{
+  width:7px;height:7px;flex:none;margin:0 4px 3px 0;
+  border:solid var(--text-3);border-width:0 2px 2px 0;transform:rotate(45deg);
+  transition:transform var(--d1) var(--ease);
+}
+#dos-sec-btn.open .sec-car{transform:rotate(225deg);margin-bottom:-3px}
+.sec-ord svg{width:14px;height:14px;stroke-width:2.2}
+/* Los 42 botones de cerrar y quitar eran el carácter «✕»: su grosor y su tamaño
+   dependían de la fuente de cada equipo. Ahora son el mismo trazo SVG del sistema. */
+.ic-x{width:15px;height:15px;stroke-width:2.2;margin:auto}
+.ib-close .ic-x{width:16px;height:16px}
 
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
@@ -1952,7 +2061,7 @@ body.nat::after{bottom:0;height:var(--sab)}
   #bottombar{display:none}
   #net-badge{bottom:16px;left:auto;right:16px}
   #main{padding-bottom:0}
-  .screen{padding:0 40px;max-width:1120px;width:100%;margin:0 auto}
+  .screen{padding:0 40px;max-width:880px;width:100%;margin:0 auto}
   .pane,.pane-t,.pane-x{padding-left:0;padding-right:0}
   .pane{padding-top:20px;padding-bottom:40px}
   #wz-panels{max-width:580px;margin:0 auto;width:100%}
@@ -2120,7 +2229,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
       <div class="ttl">
         <h1 id="wz-title">Nuevo caso</h1>
       </div>
-      <button class="topbar-btn" onclick="cancelWiz()" style="font-size:13px;color:var(--text-2)">✕</button>
+      <button class="topbar-btn" onclick="cancelWiz()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </header>
     <div class="pane-t">
       <div class="wp" id="wz-prog"></div>
@@ -2212,13 +2321,13 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
              1 y 4): sacarlos del formulario principal lo acortó, pero tienen que
              seguir estando en algún sitio, y su sitio es donde se usan. -->
         <button class="btn bs bsm" style="margin-top:12px" onclick="lcDossierExtra()">Datos del Dossier</button>
-        <p style="font-size:.72rem;color:var(--txD);margin:8px 0 0" id="dos-extra-hint"></p>
+        <p style="font-size:12px;color:var(--txD);margin:8px 0 0" id="dos-extra-hint"></p>
 
         <!-- Editor de secciones. El motor (toggleSecEditor / renderSecEditor y sus
              cinco funciones) estaba completo y con su CSS, pero se había quedado
              SIN este botón y sin el contenedor: no había forma de abrirlo. -->
         <button class="btn bs bsm" id="dos-sec-btn" style="margin-top:8px;display:flex;justify-content:space-between;width:100%" onclick="toggleSecEditor()">
-          <span>Secciones del dossier</span><span>▼</span>
+          <span>Secciones del dossier</span><span class="sec-car"></span>
         </button>
         <div id="dos-sec-inner" style="display:none;margin-top:10px"></div>
       </div>
@@ -2595,7 +2704,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <span>Funciona 100% sin internet</span>
   </div>
   <button class="ib-btn" onclick="pwaInstall()">Instalar</button>
-  <button class="ib-close" onclick="pwaDismiss()" aria-label="Cerrar">✕</button>
+  <button class="ib-close" onclick="pwaDismiss()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 
 <!-- ====== BOTTOM NAV ====== -->
@@ -2971,7 +3080,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 134;
+var _BUILD = 135;
 
 /* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
    Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
@@ -4489,7 +4598,7 @@ function renderCases() {
     /* Una captura que se actualiza sola tiene que decirlo en la lista: si no,
        verla cambiar es indistinguible de verla estropearse. */
     var syncBadge = lcBadgeSync(c);
-    var extra = nCap>1?' <span class="txd" style="font-size:.75rem">(+'+(nCap-1)+' más)</span>':'';
+    var extra = nCap>1?' <span class="txd" style="font-size:12px">(+'+(nCap-1)+' más)</span>':'';
     var conducta = (c.conductas||[]).filter(Boolean)[0]||c.delitoOrden||'Sin conducta';
     /* ⚠️ La tarjeta abre el EXPEDIENTE, no el wizard. Tocarla entraba a
        modificar la captura —con su foto inicial, su autoguardado y su diálogo al
@@ -4787,7 +4896,7 @@ function wizPreguntarBorrador(idDestino, reintentar){
   window._wizReintento = reintentar;
   openModal(
     '<div class="mh"><h2>'+(mismo?'Cambios sin guardar':'Captura sin terminar')+'</h2>'+
-    '<button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<p class="txs txd" style="margin-bottom:14px">'+
       (mismo
         ? 'Esta captura tiene cambios que no llegaste a guardar'
@@ -4861,7 +4970,7 @@ function renderDraftSlot(){
 function cancelWiz() {
   if (!wizSucio()) { wc=null; go('capturas'); renderDraftSlot(); return; }
   openModal(
-    '<div class="mh"><h2>¿Salir de la captura?</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>¿Salir de la captura?</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<p class="txs txd" style="margin-bottom:14px">Tienes datos diligenciados que todavía no se han guardado como captura.</p>'+
     '<button class="btn bp bbl" onclick="closeModal()">Seguir diligenciando</button>'+
     '<button class="btn bs bbl" style="margin-top:8px" onclick="wizSalirGuardando()">Guardar borrador y salir</button>'+
@@ -5830,7 +5939,7 @@ function lcCondHtml(){
           '<input class="fi" data-c="art" value="'+escAttr(f.art)+'" placeholder="'+(i===0?'Art. 239':'Art. …')+'"></div>'+
       '</div></div>'+
       (filas.length>1
-        ?'<button type="button" class="lc-rowx-del" title="Quitar esta conducta" aria-label="Quitar conducta '+(i+1)+'" onclick="lcCondQuitar('+i+')">✕</button>'
+        ?'<button type="button" class="lc-rowx-del" title="Quitar esta conducta" aria-label="Quitar conducta '+(i+1)+'" onclick="lcCondQuitar('+i+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'
         :'')+
     '</div>';
   }).join('');
@@ -5841,7 +5950,7 @@ function lcCondBoton(){
   var n=lcCondFilas().length;
   return n<4
     ? '<button type="button" class="btn bs bsm" onclick="lcCondAgregar()">+ Agregar conducta</button>'
-    : '<p style="font-size:.72rem;color:var(--txD);margin:4px 0 0">El FPJ-5 imprime hasta cuatro conductas punibles.</p>';
+    : '<p style="font-size:12px;color:var(--txD);margin:4px 0 0">El FPJ-5 imprime hasta cuatro conductas punibles.</p>';
 }
 function lcCondSync(){
   var rows=lcListaLeer('w-conds',['cond','art']);
@@ -6012,7 +6121,7 @@ function rMultiPerson(key,label,showSenas){
   var cards=arr.map(function(p,i){
     return '<div class="pcard"><div><div class="pinfo">'+(fullName(p)||'Sin nombre')+'</div><div class="pdoc">'+(p.tipoDoc||'CC')+' '+(p.numDoc||'')+'</div></div>'+
       '<div class="pcard-actions"><button class="pcard-btn" onclick="editMultiPerson(\''+key+'\','+i+','+showSenas+')" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
-      '<button class="pcard-btn" onclick="wc[\''+key+'\'].splice('+i+',1);renderWiz()" title="Quitar">✕</button></div></div>';
+      '<button class="pcard-btn" onclick="wc[\''+key+'\'].splice('+i+',1);renderWiz()" title="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>';
   }).join('');
   return '<div class="st">'+label+'(s) — '+arr.length+' registrado(s)</div>'+cards+
     '<div class="flx g8 mt8"><button class="btn bp bsm" onclick="addMultiPerson(\''+key+'\','+showSenas+')">+ Agregar '+label+'</button>'+
@@ -6023,7 +6132,7 @@ function addMultiPerson(key,showSenas){openPersonModal(key,-1,{},showSenas);}
 function editMultiPerson(key,idx,showSenas){openPersonModal(key,idx,wc[key][idx],showSenas);}
 function pickExistingPerson(key,showSenas){
   var persons=DB.getPersons();if(!persons.length){toast('No hay personas registradas');return;}
-  openModal('<div class="mh"><h2>Seleccionar persona</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+  openModal('<div class="mh"><h2>Seleccionar persona</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     persons.map(function(p){return '<div class="pcard" onclick="pickPersonInto(\''+key+'\',\''+p.id+'\');closeModal();renderWiz()" style="cursor:pointer"><div><div class="pinfo">'+fullName(p)+'</div><div class="pdoc">'+(p.tipoDoc||'')+' '+(p.numDoc||'')+'</div></div></div>';}).join(''));
 }
 function pickPersonInto(key,pid){var p=DB.getPerson(pid);if(p) wc[key].push(JSON.parse(JSON.stringify(p)));}
@@ -6102,7 +6211,7 @@ function openPersonModal(key,idx,p,showSenas,showRole){
   var resDatos=[p.edad?p.edad+' años':'',lcSexoLbl(p.sexo),p.ocup].filter(Boolean).join(' · ');
   var resCont=[p.dirRes,p.tel].filter(Boolean).join(' · ');
 
-  openModal('<div class="mh"><h2>'+(isEdit?'Editar':'Agregar')+' persona</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+  openModal('<div class="mh"><h2>'+(isEdit?'Editar':'Agregar')+' persona</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     roleB+
     lcAccHtml('pm-ident','Identificación','',
     '<div class="fr"><div class="fg"><label class="fl">Tipo doc</label><select class="fs" id="pm-tipoDoc">'+
@@ -6220,7 +6329,7 @@ function renderPersonas() {
     // Distinguir "no hay nada guardado" de "el filtro no encontró nada": si hay
     // personas registradas pero el buscador las oculta, hay que decirlo y ofrecer salida.
     el.innerHTML = q
-      ? '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div><p>Sin resultados para «'+escHtml(q)+'»</p><p style="font-size:.78rem;color:var(--txD);margin-top:4px">'+all.length+' persona(s) registrada(s) están ocultas por la búsqueda.</p><button class="btn bs bsm" style="margin-top:12px" onclick="resetPersonSearch()">Limpiar búsqueda</button></div>'
+      ? '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div><p>Sin resultados para «'+escHtml(q)+'»</p><p style="font-size:13px;color:var(--txD);margin-top:4px">'+all.length+' persona(s) registrada(s) están ocultas por la búsqueda.</p><button class="btn bs bsm" style="margin-top:12px" onclick="resetPersonSearch()">Limpiar búsqueda</button></div>'
       : '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div><p>No hay personas registradas</p></div>';
     return;
   }
@@ -6231,7 +6340,7 @@ function renderPersonas() {
       '<div class="prow-body">'+
         '<div class="prow-name">'+escHtml(fullName(p))+'</div>'+
         '<div class="prow-meta">'+
-          '<span class="badge '+badgeCls+'" style="font-size:.6rem">'+escHtml(p.rol||'—')+'</span>'+
+          '<span class="badge '+badgeCls+'">'+escHtml(p.rol||'—')+'</span>'+
           '<span class="prow-doc">'+escHtml((p.tipoDoc||'')+' '+(p.numDoc||''))+'</span>'+
         '</div>'+
       '</div>'+
@@ -6324,7 +6433,7 @@ function openPersonSheet(id) {
     '<div class="prow-body">'+
       '<div class="prow-name">'+escHtml(fullName(p))+'</div>'+
       '<div class="prow-meta">'+
-        '<span class="badge '+cls+'" style="font-size:.6rem">'+escHtml(p.rol||'—')+'</span>'+
+        '<span class="badge '+cls+'">'+escHtml(p.rol||'—')+'</span>'+
         '<span class="prow-doc">'+escHtml((p.tipoDoc||'')+' '+(p.numDoc||''))+'</span>'+
       '</div>'+
     '</div>';
@@ -6345,7 +6454,7 @@ function openCaseSheet(id) {
     '<div class="prow-body">'+
       '<div class="prow-name">'+escHtml(cap)+'</div>'+
       '<div class="prow-meta">'+
-        '<span class="badge '+tbadge+'" style="font-size:.6rem">'+escHtml(tipoLbl)+'</span>'+
+        '<span class="badge '+tbadge+'">'+escHtml(tipoLbl)+'</span>'+
         '<span class="prow-doc">'+escHtml(fmtDate(c.fechaProc)||'Sin fecha')+'</span>'+
       '</div>'+
     '</div>';
@@ -6628,7 +6737,7 @@ function lcEmpFilaHtml(it,i){
          la ubicación de hallazgo a ESE elemento. */
       '<input type="hidden" data-c="id" value="'+escAttr(it.id)+'">'+
     '</div></div>'+
-    '<button type="button" class="lc-rowx-del" title="Quitar este elemento" aria-label="Quitar elemento '+(i+1)+'" onclick="lcEmpQuitar('+i+')">✕</button>'+
+    '<button type="button" class="lc-rowx-del" title="Quitar este elemento" aria-label="Quitar elemento '+(i+1)+'" onclick="lcEmpQuitar('+i+')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
   '</div>';
 }
 function lcEmpListaHtml(){
@@ -6754,7 +6863,7 @@ function rStepVeh(){
     var sub=(v.placas?v.placas:'Sin placa')+(v.color?' · '+v.color:'');
     return '<div class="pcard"><div><div class="pinfo">'+escHtml(titulo)+'</div><div class="pdoc">'+escHtml(sub)+'</div></div>'+
       '<div class="pcard-actions"><button class="pcard-btn" onclick="editVeh('+i+')" title="Editar"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
-      '<button class="pcard-btn" onclick="wc.vehiculos.splice('+i+',1);renderWiz()" title="Quitar">✕</button></div></div>';
+      '<button class="pcard-btn" onclick="wc.vehiculos.splice('+i+',1);renderWiz()" title="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>';
   }).join('');
   return '<div class="st" style="margin-top:0">¿Hay vehículos implicados?</div>'+
     '<div class="fg"><label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="w-hayVeh" '+(has?'checked':'')+' onchange="wc.hayVehiculos=this.checked;if(!this.checked)wc.vehiculos=[];renderWiz()"> <span class="txd txs">Sí, uno o más vehículos están implicados</span></label></div>'+
@@ -6763,7 +6872,7 @@ function rStepVeh(){
          los apartados 4/5/6 con varias personas (observación 7). */
       ?('<div class="st">Vehículos — '+arr.length+' registrado(s)</div>'+cards+
         '<div class="flx g8 mt8"><button class="btn bp bsm" onclick="addVeh()">+ Agregar vehículo</button></div>'+
-        (arr.length>2?'<p style="font-size:.72rem;color:var(--txD);margin-top:8px">El formato trae dos filas; las demás se reproducen en el documento.</p>':''))
+        (arr.length>2?'<p style="font-size:12px;color:var(--txD);margin-top:8px">El formato trae dos filas; las demás se reproducen en el documento.</p>':''))
       /* Sin marcar la casilla no hay nada que diligenciar en este paso: el
          renglón que mandaba «continuar al siguiente paso» sobraba igual que su
          gemelo del paso de EMP. */
@@ -6773,7 +6882,7 @@ function addVeh(){openVehModal(-1,{});}
 function editVeh(i){openVehModal(i,(wc.vehiculos||[])[i]||{});}
 function openVehModal(idx,v){
   v=v||{}; var isEdit=idx>=0;
-  openModal('<div class="mh"><h2>'+(isEdit?'Editar':'Agregar')+' vehículo</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+  openModal('<div class="mh"><h2>'+(isEdit?'Editar':'Agregar')+' vehículo</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<div class="st" style="margin-top:0">Datos del vehículo</div>'+
     '<div class="fr"><div class="fg"><label class="fl">Marca</label><input class="fi" id="vm-marca" value="'+escHtml(v.marca)+'"></div>'+
     '<div class="fg"><label class="fl">Clase</label><input class="fi" id="vm-clase" value="'+escHtml(v.clase)+'" placeholder="Automóvil, motocicleta…"></div></div>'+
@@ -8515,7 +8624,7 @@ function lcCompartirExpediente(id) {
   var c = JSON.parse(JSON.stringify(c0));
   var t = lcExpedienteTrabajos(c);
   if (!t.faltas.length && !t.jobs.some(function (j) { return j.venc; })) { lcGenerarExpediente(id); return; }
-  var html = '<div class="mh"><h2>Compartir expediente</h2><button class="mx" onclick="closeModal()">✕</button></div>';
+  var html = '<div class="mh"><h2>Compartir expediente</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>';
   if (t.faltas.length) {
     html += '<div class="oj-alert dura"><b>Faltan datos en ' + t.faltas.length +
       (t.faltas.length === 1 ? ' documento' : ' documentos') + '</b>' +
@@ -8562,7 +8671,7 @@ async function lcGenerarExpediente(id) {
   var puede = _capNative() || (_docShareOk() && (function () {
     try { return navigator.canShare({ files: outs.map(function (o) { return o.file; }) }); } catch (e) { return false; }
   })());
-  openModal('<div class="mh"><h2>Expediente listo</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+  openModal('<div class="mh"><h2>Expediente listo</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin:0 0 10px">' + outs.length + (outs.length === 1 ? ' documento preparado.' : ' documentos preparados.') + '</p>' +
     '<div class="exp-lst">' + outs.map(function (o) { return '<div class="el ok"><b>' + escHtml(o.fname) + '</b></div>'; }).join('') + '</div>' +
     (fallos.length ? '<div class="oj-alert info"><b>Avisos</b>' + fallos.map(escHtml).join('<br>') + '</div>' : '') +
@@ -8658,8 +8767,8 @@ function lcDossierExtraHint(caso){
 function lcDossierExtra(){
   var caso=_dosCasoId?DB.getCase(_dosCasoId):null;
   if(!caso){ toast('Sin captura seleccionada'); return; }
-  openModal('<div class="mh"><h2>Datos del Dossier</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
-    '<p style="font-size:.8rem;color:var(--txD);margin:0 0 14px">Estos datos no aparecen en el FPJ-5; solo alimentan el dossier, por eso no se piden en el formulario de la captura.</p>'+
+  openModal('<div class="mh"><h2>Datos del Dossier</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
+    '<p style="font-size:13px;color:var(--txD);margin:0 0 14px">Estos datos no aparecen en el FPJ-5; solo alimentan el dossier, por eso no se piden en el formulario de la captura.</p>'+
     '<div class="fg"><label class="fl">SPOA</label><input class="fi mono" id="dx-spoa" value="'+escAttr(caso.spoa)+'" inputmode="numeric"></div>'+
     '<div class="fr"><div class="fg"><label class="fl">No. Incidente</label><input class="fi mono" id="dx-inc" value="'+escAttr(caso.numIncidente)+'" inputmode="numeric"></div>'+
     '<div class="fg"><label class="fl">Recibe (fiscal)</label><input class="fi" id="dx-recibe" value="'+escAttr(caso.recibe)+'"></div></div>'+
@@ -10502,7 +10611,7 @@ function abrirActaDerechos(id) {
   if (!caps.length) { toast('Esta captura no tiene ninguna persona registrada'); return; }
   if (caps.length === 1) { f6Abrir(id, 0); return; }
   openModal(
-    '<div class="mh"><h2>¿De quién es el acta?</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>¿De quién es el acta?</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint">El acta de derechos es individual: cada persona ' + termino + ' firma la suya.</p>' +
     caps.map(function(p, i) {
       return '<button class="exp-opt" style="width:100%;margin-bottom:8px" onclick="f6Abrir(\'' + id + '\',' + i + ')">' +
@@ -10542,7 +10651,7 @@ function f6Abrir(id, idx) {
     kv('Delito', m.delito);
 
   openModal(
-    '<div class="mh"><h2>Acta de derechos — FPJ-6</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Acta de derechos — FPJ-6</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' + escHtml(fullName(cap) || 'Sin nombre') +
     ' · ' + (menor ? 'aprehensión' : 'captura') + ' del ' + escHtml(fmtDate(c.fechaProc)) + '</p>' +
 
@@ -10730,7 +10839,7 @@ async function f6Generar() {
   var faltan = f6Faltantes(c, cap), menor = f6EsMenor(c);
   if (faltan.length) {
     openModal(
-      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
       '<div class="oj-alert dura"><b>No se puede generar todavía</b>' +
       'El acta la firma ' + (menor ? 'el aprehendido' : 'el capturado') +
       ': no puede salir con la fecha, la hora o su identificación en blanco.</div>' +
@@ -11659,7 +11768,7 @@ async function ccPreparar(id) {
   return DB.getCase(id) || c;
 }
 function ccSinElementos(c) {
-  openModal('<div class="mh"><h2>Sin elementos recolectados</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+  openModal('<div class="mh"><h2>Sin elementos recolectados</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="oj-alert info"><b>Esta captura no tiene EMP ni EF</b>' +
     'El acta de incautación, la cadena de custodia y el rótulo salen del numeral 7 del informe. Registra allí ' +
     'los elementos materiales ' +
@@ -11697,7 +11806,7 @@ function ccPintar(c) {
   var funcs = (cu.funcionarios || []).map(ccFuncHtml).join('');
 
   openModal(
-    '<div class="mh"><h2>Cadena de custodia — FPJ-8</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Cadena de custodia — FPJ-8</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' +
       escHtml(its.length + (its.length === 1 ? ' elemento recolectado' : ' elementos recolectados')) +
       ' · ' + escHtml(fmtDate(c.fechaProc)) + '</p>' +
@@ -11744,7 +11853,7 @@ function ccFuncHtml(f, i) {
   return '<div class="cc-func" data-fila>' +
     '<div class="cc-func-h"><span class="cc-func-t">Funcionario ' + (i + 1) + '</span>' +
       (i > 0 ? '<button type="button" class="lc-rowx-del" onclick="ccQuitarFunc(' + i + ')" ' +
-        'aria-label="Quitar funcionario ' + (i + 1) + '">✕</button>' : '') + '</div>' +
+        'aria-label="Quitar funcionario ' + (i + 1) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>' : '') + '</div>' +
     '<div class="fg"><label class="fl">¿Quién es?</label><select class="fs" data-c="origen" onchange="ccCambiarOrigen(' + i + ')">' +
       opts.map(function (o) {
         return '<option value="' + o[0] + '"' + (f.origen === o[0] ? ' selected' : '') + '>' + escHtml(o[1]) + '</option>';
@@ -11881,7 +11990,7 @@ async function abrirRotuloEmp(id) {
   if (!its.length) { ccSinElementos(c); return; }
   if (its.length === 1) { rtAbrir(id, its[0].id); return; }
   openModal(
-    '<div class="mh"><h2>¿De qué elemento es el rótulo?</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>¿De qué elemento es el rótulo?</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint">Un rótulo por elemento, con el número que tiene en su cadena.</p>' +
     its.map(function (it) {
       var g = ccGrupoDe(c, it.id);
@@ -11905,7 +12014,7 @@ function rtAbrir(id, empId) {
   function kv(k, v) { return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>'; }
 
   openModal(
-    '<div class="mh"><h2>Rótulo de EMP y EF — FPJ-7</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Rótulo de EMP y EF — FPJ-7</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' + escHtml(lcEmpLinea(it) || 'Sin descripción') + '</p>' +
 
     '<details class="oj-mas"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
@@ -12700,7 +12809,7 @@ async function abrirActaIncautacion(id) {
      elegir por la app. Mismo criterio que el rótulo con «a quien se le encontró
      el EMP». */
   openModal(
-    '<div class="mh"><h2>¿A nombre de quién es el acta?</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>¿A nombre de quién es el acta?</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint">El acta la firma quien tenía los elementos: es quien aparece como ' +
     '«propietario o poseedor».</p>' +
     caps.map(function (p, i) {
@@ -12797,7 +12906,7 @@ function aiAbrir(id, idx) {
     kv('Motivo de la incautación', m.motivo);
 
   openModal(
-    '<div class="mh"><h2>Acta de incautación de elementos</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Acta de incautación de elementos</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' + escHtml(m.capNombre || 'Sin nombre') +
     ' · ' + m.elementos.length + (m.elementos.length === 1 ? ' elemento' : ' elementos') +
     ' del numeral 7</p>' +
@@ -12887,7 +12996,7 @@ async function aiGenerar() {
   var faltan = aiFaltantes(c);
   if (faltan.length) {
     openModal(
-      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
       '<div class="oj-alert dura"><b>No se puede generar todavía</b>' +
       'El acta la firma el capturado: no puede salir con la fecha, la hora o su identificación en blanco.</div>' +
       faltan.map(function (x) { return '<div class="oj-kv"><span>Falta</span><span>' + escHtml(x) + '</span></div>'; }).join('') +
@@ -13649,7 +13758,7 @@ function feAbrir(id) {
     kv('Dirección de la autoridad', m.dirAutoridad);
 
   openModal(
-    '<div class="mh"><h2>Acta de entrega de elementos</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Acta de entrega de elementos</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">FPJ-30 · <span id="fe-elem-res">' + n +
     (n === 1 ? ' elemento por entregar' : ' elementos por entregar') + '</span></p>' +
 
@@ -13796,7 +13905,7 @@ async function feGenerar() {
   var faltan = feFaltantes(c);
   if (faltan.length) {
     openModal(
-      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+      '<div class="mh"><h2>Faltan datos para el acta</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
       '<div class="oj-alert dura"><b>No se puede generar todavía</b>' +
       'El acta la firma quien recibe los elementos: no puede salir sin su identificación ' +
       'ni sin decir si la entrega es provisional o definitiva.</div>' +
@@ -14167,8 +14276,8 @@ function toggleSecEditor() {
   var inner=document.getElementById('dos-sec-inner');
   var btn=document.getElementById('dos-sec-btn');
   if(!inner) return;
-  if(_dosSecEditorOpen){renderSecEditor();inner.style.display='block';if(btn)btn.querySelector('span:last-child').textContent='▲';}
-  else{inner.style.display='none';if(btn)btn.querySelector('span:last-child').textContent='▼';}
+  if(_dosSecEditorOpen){renderSecEditor();inner.style.display='block';if(btn)btn.classList.add('open');}
+  else{inner.style.display='none';if(btn)btn.classList.remove('open');}
 }
 
 function renderSecEditor() {
@@ -14182,9 +14291,9 @@ function renderSecEditor() {
       /* Etiqueta RESUELTA: las dos secciones del mando salen con el indicativo
          que el equipo tenga configurado, no con el nombre por defecto. */
       '<span class="sec-lbl">'+escHtml(dosSecLabel(sec,_cfg))+'</span>'+
-      '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',-1)" title="Subir">▲</button>'+
-      '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',1)" title="Bajar">▼</button>'+
-      (sec.tipo==='texto_fijo'?'<button class="sec-ord" onclick="delSecItem(\''+sec.id+'\')" style="color:var(--danger);border-color:rgba(239,68,68,.4)">✕</button>':'')+
+      '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',-1)" title="Subir" aria-label="Subir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>'+
+      '<button class="sec-ord" onclick="moveSecItem(\''+sec.id+'\',1)" title="Bajar" aria-label="Bajar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>'+
+      (sec.tipo==='texto_fijo'?'<button class="sec-ord" onclick="delSecItem(\''+sec.id+'\')" style="color:var(--danger);border-color:rgba(239,68,68,.4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>':'')+
       '</div>';
   }).join('');
   el.innerHTML='<div class="sec-editor-inner">'+rows+'</div>'+
@@ -14245,7 +14354,7 @@ function renderPerfilScreen() {
       '<div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>'+
       /* Dos frases para un estado vacío que ya tiene su botón debajo: la
          segunda repetía en imperativo lo que dice el propio botón. */
-      '<p style="font-size:.88rem;margin-bottom:16px">Todavía no hay ningún funcionario registrado.</p>'+
+      '<p style="font-size:14px;margin-bottom:16px">Todavía no hay ningún funcionario registrado.</p>'+
       '<button class="btn bs" onclick="openPerfilForm(null)">+ Agregar perfil</button>'+
       '</div>';
     return;
@@ -14328,7 +14437,7 @@ function openPerfilForm(id) {
      interpolaban el valor SIN escAttr, así que un nombre con comillas rompía el
      campo (issue S2). lcInput escapa siempre. */
   openModal(
-    '<div class="mh"><h2>'+(id?'Editar perfil':'Nuevo perfil')+'</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>'+(id?'Editar perfil':'Nuevo perfil')+'</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     lcAccHtml('pfm-mis','Mis datos','',
       pfmCampos('pfm-',p), true)+
     /* Compañero de patrulla. Un procedimiento lo hace una patrulla de dos, y la
@@ -14388,8 +14497,8 @@ function lcJurisRender(cfg) {
      La patrulla va primero porque es lo único del bloque que no trae valor por
      defecto: es la señal de «sin diligenciar» que abre el panel. */
   var cuerpo=
-    '<div class="fg"><label class="fl fl-p">Patrulla</label>'+lcInput('pj-patrulla',cfg.patrullaNum,'32')+'</div>'+
-    lcAtribs('<div class="fg"><label class="fl">CAI (si aplica)</label>'+lcInput('pj-cai',cfg.patrullaUnidad,'CAI Parque Bolívar')+'</div>')+
+    '<div class="fg"><label class="fl fl-p">Patrulla</label>'+lcInput('pj-patrulla',cfg.patrullaNum,'Ej.: 32')+'</div>'+
+    lcAtribs('<div class="fg"><label class="fl">CAI (si aplica)</label>'+lcInput('pj-cai',cfg.patrullaUnidad,'Ej.: CAI Parque Bolívar')+'</div>')+
     lcEntidad(
       '<label class="fl fl-p" style="display:block;margin-bottom:6px">Lugar por defecto de mis capturas</label>'+
       lcAtribs(
@@ -14595,7 +14704,7 @@ function openFirmaModal(id){
   _fwPerfil=id;
   var fg=DB.getFirma(id);
   openModal(
-    '<div class="mh"><h2>Firma digital</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>Firma digital</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<p class="oj-hint" style="margin:0 0 12px">'+escHtml(p.grado||'')+' '+escHtml(p.nombre||'')+
       ' — firma con el dedo, un lápiz táctil o el mouse. Se guarda en este perfil y se '+
       'imprime sola sobre tu nombre en el oficio de orden judicial.</p>'+
@@ -15716,7 +15825,7 @@ function renderDespachos(tab){
   });
 
   if(!filtrados.length){
-    list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:.83rem">'+
+    list.innerHTML='<div style="text-align:center;padding:32px 16px;color:var(--text-3);font-size:13px">'+
       (query?'Sin resultados para «'+escHtml(query)+'»':'No tienes despachos de este tipo todavía.')+'</div>';
     return;
   }
@@ -15787,7 +15896,7 @@ function lcDespForm(id,pre){
   window._lcDespEdit={id:d.id,clase:cl,tipo:d.tipo||''};
   openModal(
     '<div class="mh"><h2>'+(nuevo?'Nuevo despacho':'Editar despacho')+'</h2>'+
-      '<button class="mx" onclick="closeModal()">✕</button></div>'+
+      '<button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     lcCampo('Tipo de despacho',
       '<select class="fs" id="dp-clase" onchange="lcDespClaseChg()">'+
       LC_DESP_CLASES.map(function(c){
@@ -15899,7 +16008,7 @@ function lcSelectorDespacho(slot,cb){
     return def&&def.slot===slot;
   });
   openModal(
-    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="lcCerrarSelDesp()">✕</button></div>'+
+    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="lcCerrarSelDesp()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     (lista.length
       ? '<input class="fi" id="dp-q" placeholder="Buscar por nombre, dirección o NUNC…" oninput="lcDespSelFiltrar()" style="margin-bottom:12px">'+
         '<div id="dp-res"></div>'
@@ -17885,7 +17994,7 @@ function ojSelectorDespacho(modoDestino,clase){
   var todos=ojDespachosGuardados();
   if(clase) todos=todos.filter(function(d){ return lcDespClase(d)===clase; });
   openModal(
-    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>Elegir despacho</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<input class="fi" id="oj-desp-q" placeholder="Buscar por nombre o municipio…" oninput="ojSelectorDespachoFiltrar()" style="margin-bottom:12px">'+
     '<div id="oj-desp-res"></div>'
   );
@@ -18010,7 +18119,7 @@ function ojRequeridoCard(){
         '<button class="pcard-btn" onclick="ojAbrirRequerido()" title="Editar" aria-label="Editar">'+
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+
           '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
-        '<button class="pcard-btn del" onclick="ojQuitarRequerido()" title="Quitar" aria-label="Quitar">✕</button>'+
+        '<button class="pcard-btn del" onclick="ojQuitarRequerido()" title="Quitar" aria-label="Quitar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
       '</div>'+
     '</div>'+
     (faltan.length
@@ -18045,7 +18154,7 @@ function ojAbrirRequerido(){
   ojCollect();                       // no perder lo que haya en el paso visible
   var t=ojTermino(wc);
   openModal('<div class="mh"><h2>Datos del '+escHtml(t.sust)+'</h2>'+
-      '<button class="mx" onclick="ojCerrarRequerido()">✕</button></div>'+
+      '<button class="mx" onclick="ojCerrarRequerido()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
       '<div id="oj-req-form">'+ojRequeridoForm()+'</div>'+
       '<button class="btn bp bbl mt16" onclick="ojGuardarRequerido()">Guardar</button>');
 }
@@ -18187,7 +18296,7 @@ function ojCargarPersona(){
   var personas=DB.getPersons();
   if(!personas.length){ toast('Aún no hay personas guardadas'); return; }
   openModal(
-    '<div class="mh"><h2>Cargar persona</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>Cargar persona</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<input class="fi" id="oj-per-q" placeholder="Buscar por nombre o documento…" oninput="ojCargarPersonaFiltrar()" style="margin-bottom:12px">'+
     '<div id="oj-per-res"></div>'
   );
@@ -20095,7 +20204,7 @@ function ojModalFaltantes(id,duras,legado){
       '<span style="text-align:left">'+escHtml(v.msg)+'</span></div>';
   }).join('');
   openModal(
-    '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()">✕</button></div>'+
+    '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<div class="oj-alert dura"><b>No se puede generar todavía</b>'+
     'Sin estos datos el oficio saldría incompleto ante el despacho judicial.</div>'+
     (legado?'<div class="oj-hint" style="margin:0 0 12px">Captura del formato anterior: estos datos se piden una sola vez.</div>':'')+
@@ -20142,7 +20251,7 @@ function ojConfirmarVigencia(caso,cb){
   if(!vig){ cb(); return; }
   window._ojSeguirVencida=cb;
   openModal(
-    '<div class="mh"><h2>La orden figura vencida</h2><button class="mx" onclick="ojCancelarVencida()">✕</button></div>'+
+    '<div class="mh"><h2>La orden figura vencida</h2><button class="mx" onclick="ojCancelarVencida()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<div class="oj-alert dura"><b>Advertencia — vigencia de la orden</b>'+
     'La orden No. '+escHtml((caso.oj.orden.numero)||'—')+' venció el '+escHtml(ojFechaCorta(vig.hasta))+
     ' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden vencida obliga a la libertad inmediata: '+
@@ -23368,7 +23477,7 @@ function ptUiExportar() {
    «marca algo primero» que no lleva a ninguna parte, se abren aquí mismo. */
 function ptUiElegirParaArchivo() {
   _ptUiPaso = 'inicio';
-  openModal('<div class="mh"><h2>Qué le pasas al compañero</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+  openModal('<div class="mh"><h2>Qué le pasas al compañero</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<div class="cf-sel">' + _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste') +
     _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro') + '</div>' +
     '<button class="btn bp bbl" onclick="ptUiExportarDesdeModal()">Guardar el archivo</button>');
@@ -23406,7 +23515,7 @@ function ptUiEnviar() {
 
 function ptUiDesvincular() {
   openModal(
-    '<div class="mh"><h2>Desvincular</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Desvincular</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="txd txs">Lo que ya te llegó se queda guardado aquí. Pueden volver a vincularse cuando quieran.</p>' +
     '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
       '<button class="btn bs" onclick="closeModal()">Seguir vinculados</button>' +
@@ -23588,7 +23697,7 @@ function ptConfirmarImportacion(abierto, deQuien, cb) {
   }
 
   var h = '<div class="mh"><h2>Revisa lo que llegó</h2>' +
-    '<button class="mx" onclick="ptConfCancelar()">✕</button></div>' +
+    '<button class="mx" onclick="ptConfCancelar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="txd txs">Te lo envió ' + escHtml(deQuien) + '. Nada se guarda hasta que lo aceptes.</p>';
 
   h += '<div class="cf-res">';
@@ -23741,7 +23850,7 @@ async function ptExportarArchivo(personas, casos) {
   setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
 
   openModal(
-    '<div class="mh"><h2>Archivo guardado</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Archivo guardado</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="txd txs">Quedó en Descargas como <b>' + escHtml(nombre) + '</b>, con ' +
     _ptResumenLinea(n, 'registro dentro', 'registros dentro') + '.</p>' +
     '<div class="cf-pin"><div class="cf-pin-t">Clave para abrirlo</div>' +
@@ -23771,7 +23880,7 @@ function ptArchivoElegido(inp) {
 function ptPedirClaveArchivo(buf, nombre) {
   window.__ptArchBuf = buf;
   openModal(
-    '<div class="mh"><h2>Clave del archivo</h2><button class="mx" onclick="closeModal()">✕</button></div>' +
+    '<div class="mh"><h2>Clave del archivo</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="txd txs">Teclea los seis dígitos que te dijo el compañero.</p>' +
     '<p class="txd txs">Archivo: <b>' + escHtml(nombre) + '</b></p>' +
     '<input class="fi cf-pin-in" id="pt-arch-pin" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="000000">' +

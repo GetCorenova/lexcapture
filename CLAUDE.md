@@ -7495,3 +7495,36 @@ antes 40) y mirando las pantallas en los dos temas, en teléfono y computador.
 - ⚠️ **Para que llegue a la app de Play hace falta un `.aab` nuevo** (el código viaja dentro desde la
   Fase 0). La web se publica con `deploy:web`.
 - Anti-caché `?v=134` / `cache-v134`, `_BUILD=134`.
+
+## Auditoría visual UI/UX (2026-10-22) — consistencia, no colores
+Pedido del usuario: «hay algo en el entorno visual que hace que la experiencia no sea lo
+suficientemente agradable», sin saber qué. Rama `ui-auditoria`. Se midió la hoja de estilos y se
+capturaron las 12 pantallas a 360/412/768/1440 px en los dos temas **antes** de tocar nada. La
+paleta azul del mismo día estaba bien; la sensación venía de **siete causas de consistencia**.
+Solo CSS y marcado visual: ningún flujo, campo, documento ni regla de negocio cambió.
+
+| Causa medida | Corrección |
+|---|---|
+| **Tarjeta dentro de tarjeta**: los documentos del expediente (`.type-card` con sombra y radio) dentro de `#exp-docs` (`.card`) | `.card>.type-card` pasa a **fila de lista agrupada** (iOS Ajustes / Material): llega al borde, divisor de 1 px, una sola superficie elevada. Fuera de una tarjeta («Nueva captura») sigue siendo tarjeta |
+| **23 tamaños de letra** (9,5 · 10 · 10,5 · 11 · 11,5 · 12,5 · 13,5 · 14,5 …) y pesos 550/650/750/800 que Roboto y Segoe no traen | Texto corrido en **11 (solo insignias) · 12 · 13 · 14 · 15 · 16**; pesos **400/500/600/700**. Lo de 17 px o más es display. Tokens `--fs-*` en `:root` |
+| **81 títulos en VERSALITAS** con tracking (`.st`), más `sheet-title`, `exp-kv .k`, `oj-alert b`… la pantalla «gritaba» y los títulos competían con las insignias | `.st` en **tipo frase, 15 px/700 en `--text`**, conserva la barra de acento (la exige `verify_mejora6b` [48]-[49]). Las mayúsculas quedan solo en **insignias**, `sb-sec`, `oj-sem` y la etiqueta de KPI |
+| **Escritorio sin ancho de lectura**: `.screen` hasta 1120 px, líneas de ~180 caracteres a 12 px | `max-width:880px` |
+| Primer `.st` de una tarjeta con 26 px de margen (hueco arriba en Sincronización); botones de tarjeta **pegados** sin separación; párrafo de tarjeta a 12 px en el gris más tenue | `.card>.st:first-child{margin-top:0}`; botones apilados a lo ancho en teléfono y en fila con 8 px en pantalla ancha; `.card>.oj-hint` a 14 px `--text-2` |
+| **Glifos de texto como iconos**: `›` (tarjetas), 42 × `✕` (cerrar/quitar), `▼▲` (dossier), `▾` (`.oj-estado`); y «Nueva» 8 px más arriba que las demás etiquetas de la barra | Chevrons dibujados con CSS (mismo trazo que `.oj-mas`), `✕` → SVG `.ic-x`, triángulos → chevrons SVG; `.bn-cta{padding-top:4px;gap:6px}` |
+| **Defectos reales**: 5 tokens usados y nunca definidos (`--acc-bg`, `--mono`, `--r-m`, `--r-s`, `--radius-md`: esquinas cuadradas y fuente equivocada en cadena de custodia y borrador); bordes con el ámbar/verde **del tema oscuro** escritos a pelo en el claro; desborde horizontal de 7 px en Despachos a 360 px; segmento elegido de Apariencia **más oscuro** que su pista en tema oscuro (parecía hundido) | Alias en `:root`; `color-mix(in srgb,var(--warn|--ok) 35%,transparent)`; **`#main{min-width:0}`** (elemento de rejilla cuyo mínimo era su contenido); token `--seg-on` |
+
+- ⚠️ **Placeholders que parecían datos**: «32» y «CAI Parque Bolívar» en «Mi jurisdicción» se leían
+  como una patrulla ya diligenciada. Pasan a «Ej.: …» (único cambio de texto) y el placeholder usa
+  el token `--placeholder`, medido **≥4,5:1** sobre el campo y dentro de un modal en los dos temas.
+- ⚠️ **`:hover` se queda pegado tras un toque** en pantallas táctiles: las filas del expediente se
+  resaltan solo con `@media(hover:none)` anulado.
+- **Badges con `font-size:.6rem` (9,6 px)** escritos en línea en la lista de Personas: retirados; la
+  insignia usa su tamaño del sistema. Los `rem` sueltos del CSS de cadena de custodia y de varios
+  `style` del JS pasaron a px de la escala.
+- ⚠️ **Regla que deja**: un tamaño o un peso nuevo se elige de la escala; un color de borde de estado
+  se deriva del token con `color-mix`, nunca un `rgba()` del tema oscuro; un icono es SVG, nunca un
+  carácter.
+- ⚠️ **No se tocó**: la paleta ni el cromo de marca, `--text-3` (medido AA por `verify_tema`), el
+  lienzo de la firma y el código QR (blanco fijo a propósito), ni ningún motor documental.
+- Regresión completa: **43/47 en verde**; las 4 en rojo fallan en los mismos checks preexistentes ya documentados (`dossier_historico` [20][21], `ds` «favorito con estrella SVG», `jerarquia` y `mejora6b` [47][53]). Repetidas tras las últimas ediciones: expediente 13 · menú+expediente 16 · personas 25 · tema 51 · sync 120 · mejora1 157 · custodia 111 · ola1 38.
+- Anti-caché `?v=135` / `cache-v135`, `_BUILD=135`. Para la app de Play hace falta un `.aab` nuevo.
