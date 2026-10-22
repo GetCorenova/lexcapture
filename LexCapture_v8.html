@@ -15,7 +15,7 @@
      hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#0C0E13">
+<meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -55,36 +55,54 @@
      o la línea de gestos): todo lo que se ancla ABAJO la consume. */
   --sat:var(--safe-area-inset-top,env(safe-area-inset-top,0px));
   --sab:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
-  --bg:#0C0E13;
-  --surface-1:#12151C;
-  --surface-2:#171C26;
-  --surface-3:#1E2430;
-  --elev:#1A202B;
-  --field:#161B24;
-  --hover:rgba(163,174,199,.07);
-  --pressed:rgba(163,174,199,.12);
-  --border:rgba(163,174,199,.13);
-  --border-strong:rgba(163,174,199,.22);
-  --scrim:rgba(3,5,9,.62);
+  /* ⚠️ IDENTIDAD AZUL DE MARCA (2026-10-22): los neutros llevan el matiz del
+     #003153 en vez del gris frío anterior, así fondo, tarjetas y barras se leen
+     como una sola familia. */
+  --bg:#0B1219;
+  --surface-1:#111A23;
+  --surface-2:#16212C;
+  --surface-3:#1D2A37;
+  --elev:#18232F;
+  --field:#141E28;
+  --field-bd:var(--border);
+  --hover:rgba(150,180,206,.07);
+  --pressed:rgba(150,180,206,.12);
+  --border:rgba(150,180,206,.13);
+  --border-strong:rgba(150,180,206,.22);
+  --scrim:rgba(2,6,10,.64);
 
-  /* — Texto: 15.2:1 / 7.8:1 / 5.1:1 sobre --bg — */
-  --text:#E7EAF2;
-  --text-2:#9BA3B5;
-  --text-3:#838B9F;
+  /* — Texto: medidos ≥4,5:1 sobre las cuatro superficies — */
+  --text:#E6ECF2;
+  --text-2:#A0ADBB;
+  --text-3:#8795A5;
 
-  /* — Acento índigo (7:1 sobre --bg) — */
-  --acc:#8A94F8;
-  --acc-hover:#98A1F9;
-  --acc-press:#7680EA;
-  --accD:#6B76E8;
-  --acc-fg:#0E1020;
-  --accG:rgba(138,148,248,.12);
-  --accGlow:rgba(138,148,248,.30);
-  --focus-ring:rgba(138,148,248,.35);
+  /* — Acento: el #003153 aclarado para leerse sobre oscuro. Mismo matiz (205°)
+       y menos saturado que el azul URI (#5FA8F5), que es un dato legal y no
+       puede confundirse con un botón. — */
+  --acc:#8FC3EA;
+  --acc-hover:#A3CEEE;
+  --acc-press:#7AB3DE;
+  --accD:#5F9CCB;
+  --acc-fg:#00223A;
+  --accG:rgba(143,195,234,.12);
+  --accGlow:rgba(143,195,234,.30);
+  --focus-ring:rgba(143,195,234,.35);
   --accent:var(--acc);
 
+  /* — Marca: #003153. Es el color de las BARRAS (superior, inferior y panel
+       lateral) en los DOS temas — la identidad no cambia de día a de noche — y
+       el de las franjas del sistema dentro del envoltorio. Blanco sobre él:
+       13,4:1. Las barras redefinen sus tokens de texto (ver «CROMO DE MARCA»),
+       así lo que vive dentro de ellas se adapta sin tocar el JS. — */
+  --brand:#003153;
+  --brand-fg:#FFFFFF;
+  --brand-fg-2:rgba(255,255,255,.78);
+  --brand-hover:rgba(255,255,255,.10);
+  --brand-pill:rgba(255,255,255,.16);
+  --brand-line:rgba(255,255,255,.14);
+
   /* — Semánticos de estado — */
-  --ok:#5BC98C;      --ok-bg:rgba(91,201,140,.12);
+  --ok:#5BC98C;      --ok-bg:rgba(91,201,140,.12); --ok-band:#17282B;
   --danger:#F27078;  --err:var(--danger); --errB:rgba(242,112,120,.10);
   --warn:#E8A54F;    --warn-bg:rgba(232,165,79,.12);
   /* Informativo: reutiliza el azul que ya tiene el canal de correo — no se
@@ -100,8 +118,8 @@
 
   /* — Superficies de estado. Antes cada componente resolvía «seleccionado» y
      «deshabilitado» por su cuenta; ahora tienen token, como --hover y --pressed. — */
-  --surface-selected:rgba(138,148,248,.14);
-  --surface-disabled:rgba(163,174,199,.05);
+  --surface-selected:rgba(143,195,234,.14);
+  --surface-disabled:rgba(150,180,206,.05);
   --text-disabled:var(--text-3);
 
   /* — Semánticos legales (hue reconocible en campo, contraste ≥7:1) — */
@@ -121,12 +139,9 @@
 
   /* — Elevación (oscuro: sombra mínima, la superficie hace el trabajo) — */
   --sh-1:0 1px 2px rgba(0,0,0,.30);
-
-  /* — Anillo del logotipo. La baldosa del logo es navy en los DOS temas: es la
-       misma del ícono del lanzador, y ese no cambia con el tema (se entrega uno
-       solo). Sobre superficie clara necesita entonces un canto propio que la
-       integre, en vez de quedar como un bloque oscuro pegado. Solo se redefine
-       el token; el componente no se toca. — */
+  /* Canto de las tarjetas: en oscuro la sombra no se ve y el borde hace el
+     trabajo; el tema claro lo anula y deja que separe la sombra. */
+  --card-bd:var(--border);
   --sh-2:0 4px 14px rgba(0,0,0,.35);
   --sh-3:0 20px 50px rgba(0,0,0,.50);
   --shadow:var(--sh-2);
@@ -150,34 +165,40 @@
   --tx:var(--text); --txD:var(--text-2); --txM:var(--text-3);
 }
 
-/* ═══ TEMA CLARO — diseñado aparte: blanco neutro, aire, sombra suave ═══ */
+/* ═══ TEMA CLARO — el PREDETERMINADO desde 2026-10-22: gris frío con un toque
+   del azul de marca, tarjetas blancas que se separan del fondo por SOMBRA y no
+   por borde, y el #003153 como acento. ═══ */
 :root[data-theme="light"]{
-  --bg:#F4F5F8;
+  --bg:#EEF2F6;
   --surface-1:#FFFFFF;
-  --surface-2:#F6F7FA;
-  --surface-3:#ECEEF3;
+  --surface-2:#F5F7FA;
+  --surface-3:#E7ECF2;
   --elev:#FFFFFF;
-  --field:#F2F4F8;
-  --hover:rgba(24,28,38,.045);
-  --pressed:rgba(24,28,38,.09);
-  --border:rgba(24,28,38,.10);
-  --border-strong:rgba(24,28,38,.18);
-  --scrim:rgba(18,21,28,.40);
+  /* Campos BLANCOS sobre el fondo gris, como el buscador de la referencia: un
+     campo gris sobre gris no se distinguía del fondo. El canto, algo más firme
+     que el de las tarjetas, lo separa dentro de un sheet o modal blanco. */
+  --field:#FFFFFF;
+  --field-bd:rgba(16,36,56,.17);
+  --hover:rgba(0,49,83,.05);
+  --pressed:rgba(0,49,83,.10);
+  --border:rgba(16,36,56,.10);
+  --border-strong:rgba(16,36,56,.19);
+  --scrim:rgba(4,18,30,.42);
 
-  --text:#181C25;
-  --text-2:#4E5666;
-  --text-3:#636B7D;
+  --text:#14202B;
+  --text-2:#44505E;
+  --text-3:#5D6877;
 
-  --acc:#4E5BD8;
-  --acc-hover:#4351CE;
-  --acc-press:#3A48C4;
-  --accD:#3A48C4;
+  --acc:#003153;
+  --acc-hover:#0A4470;
+  --acc-press:#00243E;
+  --accD:#00243E;
   --acc-fg:#FFFFFF;
-  --accG:rgba(78,91,216,.09);
-  --accGlow:rgba(78,91,216,.22);
-  --focus-ring:rgba(78,91,216,.25);
+  --accG:rgba(0,49,83,.08);
+  --accGlow:rgba(0,49,83,.20);
+  --focus-ring:rgba(0,49,83,.28);
 
-  --ok:#0C7A4F;      --ok-bg:rgba(12,122,79,.06);
+  --ok:#0C7A4F;      --ok-bg:rgba(12,122,79,.06);  --ok-band:#ECF4F1;
   --danger:#C7222F;  --errB:rgba(199,34,47,.07);
   --warn:#A85A12;    --warn-bg:rgba(168,90,18,.10);
   --info:#1663C7;    --info-bg:rgba(22,99,199,.09);
@@ -185,8 +206,8 @@
      #4CFF88 como texto sobre blanco da 1,4:1 — ilegible. Así medido: 7,9:1. */
   --neon:#0B3D22;    --neon-bg:#4BE87E;              --neon-bd:#22C55E;
 
-  --surface-selected:rgba(78,91,216,.10);
-  --surface-disabled:rgba(24,28,38,.04);
+  --surface-selected:rgba(0,49,83,.09);
+  --surface-disabled:rgba(16,36,56,.04);
 
   --flag:#B45309;  --flag-2:#9A4E06;  --flag-bg:rgba(180,83,9,.10);
   --oj:#6D3FD4;    --oj-2:#6D3FD4;    --oj-bg:rgba(109,63,212,.09);
@@ -197,15 +218,16 @@
   --wa:#0F7A3D;   --wa-fg:#FFFFFF;
   --mailc:#1663C7; --mail-fg:#FFFFFF;
 
-  --sh-1:0 1px 2px rgba(23,26,34,.06),0 1px 1px rgba(23,26,34,.04);
-
-  /* Anillo ámbar + halo suave: ata la baldosa navy del logo al blanco */
-  --sh-2:0 2px 6px rgba(23,26,34,.05),0 10px 28px rgba(23,26,34,.07);
-  --sh-3:0 4px 12px rgba(23,26,34,.08),0 28px 64px rgba(23,26,34,.16);
+  /* La sombra ES la elevación en claro (como en la referencia): las tarjetas
+     dejan de dibujar borde y se separan del fondo por esta capa. */
+  --sh-1:0 1px 2px rgba(10,30,50,.06),0 2px 8px rgba(10,30,50,.06);
+  --sh-2:0 2px 6px rgba(10,30,50,.06),0 10px 28px rgba(10,30,50,.08);
+  --sh-3:0 4px 12px rgba(10,30,50,.09),0 28px 64px rgba(10,30,50,.18);
   --shadow:var(--sh-2);
+  --card-bd:transparent;
 
   --bg2:#FFFFFF;
-  --bg3:#F2F4F8;
+  --bg3:#F3F6F9;
 }
 
 /* ═══ BASE ═══ */
@@ -240,16 +262,36 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
 #sidebar{display:none}
 #main{display:flex;flex-direction:column;min-height:100dvh;padding-bottom:calc(96px + var(--sab))}
 
+/* ═══ CROMO DE MARCA (2026-10-22) ═══
+   Barra superior, barra inferior y panel lateral van en #003153 en los DOS
+   temas. En vez de reescribir cada cosa que vive dentro de ellas (botón volver,
+   «+», el botón primario de Personas, insignias…), el cromo REDEFINE sus tokens:
+   lo de dentro sigue pidiendo var(--text) o var(--acc) y recibe la versión que
+   se lee sobre azul. Mismo principio que el tema claro: se cambian tokens, no
+   componentes, y el JS que genera HTML con var(--tx) no se entera. */
+.topbar,#bottombar,#sidebar{
+  --text:var(--brand-fg);
+  --text-2:var(--brand-fg-2);
+  --text-3:rgba(255,255,255,.62);
+  --hover:var(--brand-hover);
+  --pressed:rgba(255,255,255,.18);
+  --border:var(--brand-line);
+  --border-strong:rgba(255,255,255,.24);
+  --acc:#FFFFFF; --acc-hover:#E6EEF5; --acc-press:#D3E0EB;
+  --acc-fg:var(--brand);
+  --accG:var(--brand-pill);
+  --accGlow:rgba(0,0,0,.25);
+  --focus-ring:rgba(255,255,255,.45);
+  color:var(--text);
+}
 .topbar{
   position:sticky;top:0;z-index:20;
-  background:color-mix(in srgb,var(--bg) 82%,transparent);
-  backdrop-filter:blur(var(--blur));
-  -webkit-backdrop-filter:blur(var(--blur));
-  border-bottom:1px solid var(--border);
+  background:var(--brand);
   padding:calc(12px + var(--sat)) 16px 12px;
-  display:flex;align-items:center;gap:12px;min-height:56px;
+  display:flex;align-items:center;gap:12px;min-height:60px;
+  box-shadow:0 1px 3px rgba(0,0,0,.18);
 }
-.topbar h1{font-size:17px;font-weight:650;letter-spacing:-.012em;line-height:24px}
+.topbar h1{font-size:18px;font-weight:600;letter-spacing:.005em;line-height:24px}
 .topbar .sub{font-size:12px;line-height:16px;color:var(--text-2);font-weight:400;display:block;margin-top:1px}
 .topbar .ttl{flex:1;min-width:0}
 .topbar-btn{
@@ -318,7 +360,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:none}
   display:none;position:fixed;top:0;left:0;right:0;z-index:1390;
   align-items:center;gap:12px;padding:calc(7px + var(--sat)) 14px 7px;
   font-size:12.5px;line-height:1.35;
-  background:var(--ok-bg);color:var(--ok);
+  /* OPACA desde la identidad azul (2026-10-22): se dibuja encima de la barra
+     superior, que ahora es #003153, y un verde al 12 % sobre ese azul dejaba el
+     texto ilegible. --ok-band es ese verde al 8 % ya mezclado sobre la
+     superficie de cada tema, así mide lo mismo sobre cualquier cosa que tape
+     (claro 4,8:1 · oscuro 7,4:1). Va como valor fijo y no como color-mix() para
+     no depender de que el WebView lo soporte. */
+  background:var(--ok-band);color:var(--ok);
   border-bottom:1px solid color-mix(in srgb,var(--ok) 28%,transparent);
 }
 #pt-barra.on{display:flex}
@@ -338,6 +386,17 @@ body.pt{padding-top:calc(36px + var(--sat))}
    informe —o el equipo traiga una muesca más alta— manda el valor real y esto no
    estorba. En el navegador la clase no existe y no cambia un píxel. */
 body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)}
+/* Franjas del sistema (hora y batería arriba; botones o gestos abajo) SIEMPRE en
+   el azul de marca, por encima de cualquier pantalla, modal o sheet. Así los
+   iconos del sistema van siempre claros (lcBarraColor pide DARK) y nunca quedan
+   oscuros sobre un modal blanco ni claros sobre un formulario claro. Solo dentro
+   del envoltorio: en el navegador --sat y --sab valen 0 y esto no pinta nada. */
+body.nat::before,body.nat::after{
+  content:"";position:fixed;left:0;right:0;z-index:2147483000;
+  background:var(--brand);pointer-events:none;
+}
+body.nat::before{top:0;height:var(--sat)}
+body.nat::after{bottom:0;height:var(--sab)}
 
 /* ── EL CÓDIGO EN PANTALLA ─────────────────────────────────────────────────
    ⚠️ LA PRIORIDAD ES LEER, NO DECORAR. El propio código no lleva encima ni un
@@ -550,7 +609,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 /* ═══ CARD ═══ */
 .card{
   background:var(--surface-1);
-  border:1px solid var(--border);
+  border:1px solid var(--card-bd);
   border-radius:var(--radius);
   padding:var(--pad);
   box-shadow:var(--sh-1);
@@ -596,7 +655,9 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
   transition:all var(--d1) var(--ease);
 }
 .tab:hover{background:var(--hover)}
-.tab.on{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+/* Pestaña activa en el acento de marca, no en «texto invertido»: en claro es
+   el #003153 con texto blanco, en oscuro el azul aclarado con texto marino. */
+.tab.on{background:var(--acc);color:var(--acc-fg);border-color:var(--acc);font-weight:600}
 
 
 /* ═══ ESTADÍSTICAS — centro de análisis operativo (2026-08-31) ═══
@@ -670,32 +731,39 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 /* ═══ BOTTOM NAV ═══ */
 #bottombar{
   position:fixed;bottom:0;left:0;right:0;z-index:30;
-  background:color-mix(in srgb,var(--bg) 88%,transparent);
-  backdrop-filter:blur(var(--blur));
-  -webkit-backdrop-filter:blur(var(--blur));
-  border-top:1px solid var(--border);
+  background:var(--brand);
+  box-shadow:0 -1px 3px rgba(0,0,0,.16);
   display:flex;
   padding:8px 6px calc(8px + var(--sab));
 }
+/* Ítem activo = PÍLDORA detrás del icono, como en la referencia: con la barra
+   en color sólido, cambiar solo el color del ítem no basta para leerlo de un
+   vistazo. Inactivos en blanco al 78 % (6,5:1 sobre el azul). */
 .bn-item{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
-  padding:6px 4px;border-radius:8px;color:var(--text-3);
-  font-size:11px;line-height:14px;font-weight:500;
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:4px 2px;border-radius:8px;color:var(--text-2);
+  font-size:11.5px;line-height:14px;font-weight:500;letter-spacing:.01em;
   transition:color var(--d1) var(--ease);
 }
-.bn-item.on{color:var(--acc);font-weight:600}
-.bn-item svg{width:22px;height:22px;stroke-width:1.8}
-.bn-item.on svg{stroke-width:2.1}
+.bn-item svg{
+  width:22px;height:22px;stroke-width:1.8;
+  box-sizing:content-box;padding:4px 18px;border-radius:999px;
+  transition:background var(--d2) var(--ease);
+}
+.bn-item.on{color:var(--text);font-weight:600}
+.bn-item.on svg{stroke-width:2.1;background:var(--brand-pill)}
 
 .bn-cta{font-weight:600;gap:2px;padding-top:0;color:var(--text-2)}
 .bn-cta .bn-cta-ic{
-  width:48px;height:48px;border-radius:50%;margin-top:-22px;
+  width:50px;height:50px;border-radius:50%;margin-top:-22px;
   background:var(--acc);
   color:var(--acc-fg);display:flex;align-items:center;justify-content:center;
-  box-shadow:0 6px 16px var(--accGlow),var(--sh-1);
-  border:4px solid var(--bg);
+  box-shadow:0 4px 12px rgba(0,0,0,.28);
+  border:4px solid var(--brand);
   transition:transform var(--d1) var(--ease),background var(--d1) var(--ease);
 }
+/* El icono del CTA no lleva píldora: el disco ya es su forma. */
+.bn-cta .bn-cta-ic svg{padding:0;background:none!important}
 .bn-cta:active .bn-cta-ic{transform:scale(.94);background:var(--acc-press)}
 .bn-cta .bn-cta-ic svg{width:22px;height:22px;stroke-width:2.4}
 
@@ -855,7 +923,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 .fi,.fs,.ft{
   width:100%;padding:12px 14px;
   background:var(--field);
-  border:1px solid var(--border);border-radius:10px;
+  border:1px solid var(--field-bd);border-radius:10px;
   color:var(--text);font-size:15px;
   transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease),background var(--d1) var(--ease);
   outline:none;min-height:48px;font-family:inherit;
@@ -931,7 +999,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 
 /* ═══ TARJETA DE CASO ═══ */
 .cc{
-  background:var(--surface-1);border:1px solid var(--border);
+  background:var(--surface-1);border:1px solid var(--card-bd);
   border-radius:var(--radius);padding:0;margin-bottom:10px;overflow:hidden;
   cursor:pointer;box-shadow:var(--sh-1);
   transition:border-color var(--d1) var(--ease),transform var(--d1) var(--ease),background var(--d1) var(--ease);
@@ -940,7 +1008,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 .cc:active{transform:scale(.997);background:var(--surface-2)}
 .cc-top{padding:14px 16px 12px}
 .cc-badges{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
-.cc-name{font-size:15px;font-weight:650;letter-spacing:-.01em;color:var(--text);margin-bottom:2px}
+.cc-name{font-size:16px;font-weight:600;letter-spacing:.005em;color:var(--text);margin-bottom:2px}
 .cc-conducta{font-size:13px;color:var(--text-2)}
 /* Padding derecho reducido: el botón ⋮ ya aporta su propia área táctil de 38px. */
 .cc-bottom{padding:5px 8px 5px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)}
@@ -958,7 +1026,9 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
   transition:all var(--d1) var(--ease);
 }
 .fc:hover{background:var(--hover)}
-.fc.on{border-color:transparent;color:var(--acc);background:var(--accG);font-weight:600}
+/* Filtro activo = el mismo lenguaje que la pestaña activa: fondo de marca. Con
+   el acento oscuro del tema claro, un tinte al 8 % se leía como gris neutro. */
+.fc.on{border-color:var(--acc);color:var(--acc-fg);background:var(--acc);font-weight:600}
 
 /* ═══ ORDEN DE LA LISTA (Capturas y Personas) ═══
    La etiqueta dice SIEMPRE cómo está ordenada la lista en este momento y el
@@ -1138,7 +1208,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 .pin-sub{text-align:center;font-size:13px;color:var(--text-2);margin-bottom:20px;line-height:1.5}
 .pin-in{
   width:100%;padding:14px 16px;min-height:52px;
-  background:var(--field);border:1px solid var(--border);border-radius:10px;
+  background:var(--field);border:1px solid var(--field-bd);border-radius:10px;
   color:var(--text);font-size:21px;letter-spacing:.35em;text-align:center;
   font-variant-numeric:tabular-nums;
   margin-bottom:10px;outline:none;box-sizing:border-box;
@@ -1165,11 +1235,11 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 
 /* ═══ TARJETA DE PERSONA ═══ */
 .pcard{
-  background:var(--surface-1);border:1px solid var(--border);border-radius:12px;
+  background:var(--surface-1);border:1px solid var(--card-bd);border-radius:12px;
   padding:12px 14px;margin-bottom:8px;
   display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh-1);
 }
-.pcard .pinfo{font-size:14px;font-weight:600}
+.pcard .pinfo{font-size:15px;font-weight:600;letter-spacing:.005em}
 .pcard .pdoc{font-family:var(--m);font-variant-numeric:tabular-nums;font-size:12px;color:var(--text-2);margin-top:2px}
 .pcard-actions{display:flex;gap:5px}
 .pcard-btn{
@@ -1247,7 +1317,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 .type-card{
   display:flex;align-items:center;gap:14px;
   padding:14px 16px;border-radius:var(--radius);
-  border:1px solid var(--border);background:var(--surface-1);
+  border:1px solid var(--card-bd);background:var(--surface-1);
   width:100%;text-align:left;margin-bottom:10px;cursor:pointer;box-shadow:var(--sh-1);
   transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease),transform var(--d1) var(--ease);
 }
@@ -1259,7 +1329,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 }
 .type-card .tic svg{width:24px;height:24px;stroke-width:1.8}
 .type-card .tbd{flex:1}
-.type-card .tbt{font-size:15px;font-weight:650;letter-spacing:-.01em;color:var(--text);margin-bottom:2px}
+.type-card .tbt{font-size:16px;font-weight:600;letter-spacing:.005em;color:var(--text);margin-bottom:2px}
 .type-card .tbd2{font-size:13px;color:var(--text-2)}
 .type-card .tarr{color:var(--text-3);font-size:18px}
 .tc-uri .tic{background:var(--uriB);color:var(--uriT)}
@@ -1286,7 +1356,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 
 /* ═══ DOSSIER ═══ */
 .dos-preview{
-  background:var(--field);border:1px solid var(--border);border-radius:12px;
+  background:var(--field);border:1px solid var(--field-bd);border-radius:12px;
   padding:16px;font-family:var(--m);font-size:12.5px;
   white-space:pre-wrap;word-break:break-word;line-height:1.75;color:var(--text);
   min-height:220px;max-height:520px;overflow-y:auto;width:100%;box-sizing:border-box;
@@ -1450,7 +1520,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 .desp-usar:active{background:color-mix(in srgb,var(--acc) 24%,transparent)}
 .desp-search{
   width:100%;padding:12px 14px;min-height:48px;border-radius:10px;
-  border:1px solid var(--border);background:var(--field);color:var(--text);
+  border:1px solid var(--field-bd);background:var(--field);color:var(--text);
   font:inherit;font-size:15px;outline:none;margin-bottom:14px;
   transition:border-color var(--d1) var(--ease),box-shadow var(--d1) var(--ease),background var(--d1) var(--ease);
 }
@@ -1576,7 +1646,7 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 /* Pista bajo un campo de grado: enseña la abreviatura que se va a derivar. */
 .lc-ab{font-size:11.5px;line-height:1.3;color:var(--text-3);margin-top:5px;min-height:15px}
 .lc-ab.ok{color:var(--ok);font-weight:550}
-.theme-seg{display:flex;gap:0;background:var(--field);border:1px solid var(--border);border-radius:10px;padding:3px}
+.theme-seg{display:flex;gap:0;background:var(--surface-3);border:1px solid var(--border);border-radius:10px;padding:3px}
 .theme-seg button{
   flex:1;padding:10px;min-height:42px;border-radius:8px;border:none;
   background:transparent;color:var(--text-2);
@@ -1866,9 +1936,18 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
   #app{grid-template-columns:264px 1fr;grid-template-rows:1fr}
   #sidebar{
     display:flex;flex-direction:column;gap:2px;padding:calc(20px + var(--sat)) 14px 20px;
-    background:var(--surface-1);
-    border-right:1px solid var(--border);
+    background:var(--brand);
     position:sticky;top:0;height:100dvh;overflow-y:auto;
+  }
+  /* En computador la marca la lleva el panel lateral: la barra superior va
+     DENTRO del área de contenido, con márgenes, y un bloque azul ahí no
+     llegaría a los bordes. Vuelve a los tokens de la página (inherit) y a un
+     fondo que se funde con ella. */
+  .topbar{
+    --text:inherit;--text-2:inherit;--text-3:inherit;--hover:inherit;--pressed:inherit;
+    --border:inherit;--border-strong:inherit;--acc:inherit;--acc-hover:inherit;
+    --acc-press:inherit;--acc-fg:inherit;--accG:inherit;--accGlow:inherit;--focus-ring:inherit;
+    box-shadow:none;border-bottom:1px solid var(--border);
   }
   #bottombar{display:none}
   #net-badge{bottom:16px;left:auto;right:16px}
@@ -1878,8 +1957,8 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
   .pane{padding-top:20px;padding-bottom:40px}
   #wz-panels{max-width:580px;margin:0 auto;width:100%}
   .pane-t{max-width:580px;margin:0 auto;width:100%}
-  .topbar{padding:calc(20px + var(--sat)) 0 16px;min-height:76px;background:color-mix(in srgb,var(--bg) 88%,transparent)}
-  .topbar h1{font-size:22px;line-height:28px;letter-spacing:-.015em}
+  .topbar{padding:calc(20px + var(--sat)) 0 16px;min-height:76px;background:var(--bg)}
+  .topbar h1{font-size:22px;line-height:28px;letter-spacing:-.01em}
   .topbar .sub{font-size:13px}
   /* Estadísticas: en pantalla ancha los dos rankings caben lado a lado — el
      móvil (foco real de la app) los apila, que es lo que ya hace `.stack`. */
@@ -1892,10 +1971,10 @@ body.nat{--sat:max(var(--safe-area-inset-top,env(safe-area-inset-top,0px)),24px)
 <script>/* Anti-parpadeo: corre ANTES de pintar. Resuelve las tres preferencias
    ('dark' | 'light' | 'system') a los dos únicos estados que el CSS conoce, así
    que la hoja de estilos NO cambia: el documento sigue llevando data-theme="light"
-   o nada. ⚠️ Sin clave guardada se resuelve OSCURO, que es el comportamiento que
-   la app ya tenía — un equipo que nunca abrió Ajustes no puede cambiar de aspecto
-   al actualizar. Sistema es una elección explícita, no el nuevo defecto. */
-try{var _t=localStorage.getItem('lc_theme')||'dark';
+   o nada. ⚠️ Sin clave guardada se resuelve CLARO desde 2026-10-22 (identidad
+   azul de marca, decisión del usuario): es el tema recomendado. Quien eligió
+   Oscuro o Sistema en Ajustes lo tiene guardado y lo conserva. */
+try{var _t=localStorage.getItem('lc_theme')||'light';
 if(_t==='system')_t=(window.matchMedia&&matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark';
 if(_t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}</script>
 </head>
@@ -2277,11 +2356,11 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         </div>
         <div class="aj-sec-body" id="aj-body-apariencia-sec" style="padding-top:12px">
           <div class="theme-seg" role="group" aria-label="Tema de la interfaz">
-            <button type="button" id="th-dark" class="on" aria-pressed="true" onclick="setTheme('dark')">Oscuro</button>
-            <button type="button" id="th-light" aria-pressed="false" onclick="setTheme('light')">Claro</button>
+            <button type="button" id="th-light" class="on" aria-pressed="true" onclick="setTheme('light')">Claro</button>
+            <button type="button" id="th-dark" aria-pressed="false" onclick="setTheme('dark')">Oscuro</button>
             <button type="button" id="th-system" aria-pressed="false" onclick="setTheme('system')">Sistema</button>
           </div>
-          <p id="th-nota" class="aj-nota">Se aplica al instante.</p>
+          <p id="th-nota" class="aj-nota">Claro es el recomendado. Se aplica al instante.</p>
         </div>
       </div>
 
@@ -2732,13 +2811,14 @@ function markActive(name) {
 
    ⚠️ La clave 'lc_theme' se guarda en localStorage PLANO, no cifrada: tiene que
    poder aplicarse antes de desbloquear el PIN. Decisión anterior, se mantiene.
-   ⚠️ Sin clave guardada se resuelve OSCURO. Sistema no es el nuevo defecto: un
-   equipo que nunca tocó Ajustes conserva el aspecto que ya tenía. */
+   ⚠️ Sin clave guardada se resuelve CLARO (identidad azul de marca, 2026-10-22,
+   decisión del usuario: es el tema recomendado). 'dark' y 'system' solo existen
+   si alguien los eligió, y se respetan. */
 function getTheme() {
   try {
     var t = localStorage.getItem('lc_theme');
-    return (t === 'light' || t === 'system') ? t : 'dark';
-  } catch (e) { return 'dark'; }
+    return (t === 'dark' || t === 'system') ? t : 'light';
+  } catch (e) { return 'light'; }
 }
 /* Lo que pide el sistema operativo ahora mismo. */
 function lcThemeSistema() {
@@ -2754,12 +2834,14 @@ function applyTheme(pref) {
   var real = lcThemeResuelto(pref);
   if (real === 'light') document.documentElement.setAttribute('data-theme', 'light');
   else document.documentElement.removeAttribute('data-theme');
+  /* La barra del navegador es CROMO, y el cromo va en el azul de marca en los
+     dos temas: así continúa la barra superior de la app sin un corte de color. */
   var meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', real === 'light' ? '#F4F5F8' : '#0C0E13');
+  if (meta) meta.setAttribute('content', '#003153');
   /* Los botones marcan la PREFERENCIA, no el aspecto: con Sistema activo el
      marcado sigue siendo «Sistema» aunque se esté viendo claro. Marcar el
      aspecto haría que la elección del usuario pareciera haberse perdido. */
-  var p = (pref === 'light' || pref === 'system') ? pref : 'dark';
+  var p = (pref === 'dark' || pref === 'system') ? pref : 'light';
   [['th-dark','dark'],['th-light','light'],['th-system','system']].forEach(function (b) {
     var el = document.getElementById(b[0]);
     if (el) { el.classList.toggle('on', p === b[1]); el.setAttribute('aria-pressed', p === b[1] ? 'true' : 'false'); }
@@ -2771,7 +2853,7 @@ function applyTheme(pref) {
   var nota = document.getElementById('th-nota');
   if (nota) nota.textContent = p === 'system'
     ? 'Sigue al dispositivo — ahora mismo, ' + (real === 'light' ? 'claro' : 'oscuro') + '.'
-    : 'Se aplica al instante.';
+    : (p === 'light' ? 'Claro es el recomendado. Se aplica al instante.' : 'Se aplica al instante.');
   lcBarraSistema(0);
 }
 /* Color de los iconos del sistema (hora, batería, señal) dentro del envoltorio.
@@ -2834,7 +2916,11 @@ function lcBarraColor(S) {
     var P = window.Capacitor && window.Capacitor.Plugins;
     if (!S) S = P && (P.SystemBars || P.StatusBar);
     if (!S || !S.setStyle) return;
-    var st = lcThemeResuelto() === 'light' ? 'LIGHT' : 'DARK';
+    /* ⚠️ Desde la identidad azul (2026-10-22) las dos franjas del sistema se
+       pintan SIEMPRE en #003153 (body.nat::before/::after), en claro y en
+       oscuro. Los iconos van entonces siempre CLAROS, o sea DARK. Seguir el
+       tema aquí pondría iconos oscuros sobre azul en modo claro. */
+    var st = 'DARK';
     /* SystemBars (del núcleo de Capacitor) pinta los iconos de las DOS barras:
        la de estado y la de navegación. StatusBar solo sabe de la de arriba. */
     S.setStyle({ style: st });
@@ -2885,7 +2971,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 133;
+var _BUILD = 134;
 
 /* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
    Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
