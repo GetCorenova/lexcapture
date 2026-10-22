@@ -135,8 +135,10 @@ await page.waitForTimeout(300);
 // ═══ TEMA CLARO ═══
 await page.evaluate(() => setTheme('light'));
 await page.waitForTimeout(400);
-const metaLight = await page.$eval('meta[name="theme-color"]', el => el.content);
-log(metaLight === '#F4F5F8', 'meta theme-color claro', metaLight);
+/* Desde la identidad azul (2026-10-22) la barra del navegador va en #003153 en
+   los dos temas: lo que dice que el claro se aplicó es el atributo del documento. */
+const metaLight = await page.evaluate(() => document.documentElement.getAttribute('data-theme') + ' · ' + document.querySelector('meta[name="theme-color"]').content);
+log(metaLight === 'light · #003153', 'tema claro aplicado, barra de marca', metaLight);
 await page.screenshot({ path: OUT('14_capturas_light') });
 await page.evaluate(() => go('nueva'));
 await page.waitForTimeout(300);

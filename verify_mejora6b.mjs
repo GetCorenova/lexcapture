@@ -265,8 +265,11 @@ log(desp.primeroEsDefecto === true,
    primero lo que la app usa sin preguntar, y dentro de cada grupo, alfabetico. */
 log(desp.orden.join('|') === 'Mmm CESPA|Zzz Fiscalia Ultima|Aaa Fiscalia Primera',
   '[34] Y dentro de cada grupo se conserva el orden alfabetico en espanol', desp.orden.join(' · '));
-log(/#4CFF88/i.test(desp.neon) || /4cff88/i.test(desp.neon),
-  '[35] La marca usa el token de verde fosforescente, no el acento indigo', desp.neon);
+/* ⚠️ Desde 2026-10-22 la app arranca en CLARO, donde --neon vale #0B3D22 (texto
+   casi negro sobre fondo neón) y no #4CFF88: los dos son el MISMO token en sus
+   dos temas. Lo que se protege es que la marca use ese token, no el acento. */
+log(/#4CFF88|#0B3D22/i.test(desp.neon),
+  '[35] La marca usa el token de verde fosforescente, no el acento', desp.neon);
 log(desp.color !== '' && desp.fondo !== '', '[36] Y se pinta resuelta en pantalla', desp.color);
 
 console.log('\n══ Obs. 9 a 17 · Ajustes: cinco secciones, sin datos repetidos ══');

@@ -8,10 +8,10 @@
       se pinta— y que el botón marcado sea el de la preferencia, no el del
       aspecto: con Sistema activo sobre un teléfono en claro, lo marcado tiene
       que seguir siendo «Sistema» o la elección parecerá haberse perdido.
-   2. ⚠️ Sin clave guardada se resuelve OSCURO. Sistema NO es el nuevo defecto:
-      un equipo que nunca abrió Ajustes no puede cambiar de aspecto al
-      actualizar. Es la misma regla con la que se eligieron los defectos del
-      orden de las listas: el defecto es el comportamiento que ya había.
+   2. ⚠️ Sin clave guardada se resuelve CLARO desde la identidad azul de marca
+      (2026-10-22, decisión explícita del usuario: es el tema recomendado). Antes
+      era OSCURO. Quien eligió Oscuro o Sistema lo tiene guardado y lo conserva;
+      Sistema sigue sin ser el defecto.
    3. El aspecto se resuelve ANTES de pintar (script del <head>), o el usuario ve
       un fogonazo del tema contrario en cada arranque.
    4. Los contrastes se MIDEN sobre el color computado real, no se leen del CSS:
@@ -85,10 +85,10 @@ console.log('\n── I · Las tres preferencias existen y se distinguen ──\
 console.log('\n── II · Preferencia guardada → aspecto pintado ──\n');
 {
   const casos = [
-    { pref: 'dark',   os: 'light', attr: null,    meta: '#0C0E13', marca: 'th-dark',   d: 'Oscuro explícito ignora un sistema en claro' },
-    { pref: 'light',  os: 'dark',  attr: 'light', meta: '#F4F5F8', marca: 'th-light',  d: 'Claro explícito ignora un sistema en oscuro' },
-    { pref: 'system', os: 'light', attr: 'light', meta: '#F4F5F8', marca: 'th-system', d: 'Sistema en claro pinta claro' },
-    { pref: 'system', os: 'dark',  attr: null,    meta: '#0C0E13', marca: 'th-system', d: 'Sistema en oscuro pinta oscuro' }
+    { pref: 'dark',   os: 'light', attr: null,    meta: '#003153', marca: 'th-dark',   d: 'Oscuro explícito ignora un sistema en claro' },
+    { pref: 'light',  os: 'dark',  attr: 'light', meta: '#003153', marca: 'th-light',  d: 'Claro explícito ignora un sistema en oscuro' },
+    { pref: 'system', os: 'light', attr: 'light', meta: '#003153', marca: 'th-system', d: 'Sistema en claro pinta claro' },
+    { pref: 'system', os: 'dark',  attr: null,    meta: '#003153', marca: 'th-system', d: 'Sistema en oscuro pinta oscuro' }
   ];
   for (const c of casos) {
     const { ctx, page } = await abrir({ colorScheme: c.os, pref: c.pref });
@@ -101,14 +101,15 @@ console.log('\n── II · Preferencia guardada → aspecto pintado ──\n');
   }
 }
 
-console.log('\n── III · El defecto no cambia para quien nunca abrió Ajustes ──\n');
+console.log('\n── III · Sin preferencia guardada: CLARO, el tema recomendado ──\n');
 {
   for (const os of ['light', 'dark']) {
     const { ctx, page } = await abrir({ colorScheme: os });
     await page.waitForTimeout(400);
     const e = await estado(page);
-    log(e.attr === null && e.meta === '#0C0E13',
-      `Sin clave guardada y sistema en ${os}: sigue siendo OSCURO`, 'el comportamiento anterior se conserva');
+    const marcado = await page.$eval('.theme-seg button.on', b => b.id).catch(() => '—');
+    log(e.attr === 'light' && e.meta === '#003153' && marcado === 'th-light',
+      `Sin clave guardada y sistema en ${os}: arranca en CLARO`, 'identidad azul de marca · ' + marcado);
     log(e.pref === null, '  …y no se escribe ninguna preferencia por el mero hecho de arrancar', 'lc_theme sin sembrar');
     await ctx.close();
   }
@@ -138,7 +139,7 @@ console.log('\n── V · El cambio del sistema en caliente ──\n');
   const despues = await estado(page);
   log(antes.attr === null && despues.attr === 'light',
     'Con Sistema activo, cambiar el SO repinta la app sin recargar', 'oscuro → claro en caliente');
-  log(despues.meta === '#F4F5F8', '  …y el color de la barra del navegador acompaña', despues.meta);
+  log(despues.meta === '#003153', '  …y la barra del navegador sigue en el azul de marca (es cromo)', despues.meta);
 
   /* Y lo contrario: una preferencia explícita NO puede moverse sola. */
   await page.evaluate(() => setTheme('dark'));
@@ -223,17 +224,18 @@ console.log('\n── VII · Las fugas de color medidas ──\n');
   log(cph >= 4.5, 'Texto guía del lienzo de firma sobre su fondo blanco fijo', cph.toFixed(2) + ':1');
   await ctx.close();
 
-  /* ⚠️ Guarda estructural del defecto que costó la barra de invitado: #0E1020 es
-     el primer plano del tema OSCURO y solo puede vivir como valor del token. En
+  /* ⚠️ Guarda estructural del defecto que costó la barra de invitado: el primer
+     plano del acento del tema OSCURO (#00223A desde la identidad azul; antes
+     #0E1020) solo puede vivir como valor del token. En
      una regla de componente congelaría ese tema dentro del otro, que es
      exactamente la fuga que se midió —y que no se detecta leyendo el valor, que
      era correcto, sino viendo DÓNDE está escrito. */
   const hojaCss = (await readFile(join(ROOT, 'LexCapture_v8.html'), 'utf8'));
   const usos = hojaCss.slice(hojaCss.indexOf('<style>'), hojaCss.indexOf('</style>'))
-    .split('\n').filter(l => /#0E1020/i.test(l));
+    .split('\n').filter(l => /#00223A|#0E1020/i.test(l));
   const malos = usos.filter(l => !/--acc-fg\s*:/.test(l));
   log(usos.length > 0 && malos.length === 0,
-    '#0E1020 solo se declara como valor de --acc-fg, nunca dentro de un componente',
+    'El primer plano del acento oscuro solo se declara como valor de --acc-fg, nunca en un componente',
     malos.length ? malos[0].trim().slice(0, 70) : usos.length + ' definición(es) del token');
 }
 
@@ -282,6 +284,81 @@ console.log('\n── IX · El CSS no tuvo que cambiar para esto ──\n');
     'La hoja de estilos sigue sin ninguna regla prefers-color-scheme', 'un solo punto decide el aspecto');
   log(/function lcThemeResuelto/.test(html), 'Ese punto único existe y tiene nombre', 'lcThemeResuelto()');
   log(/matchMedia\('\(prefers-color-scheme: light\)'\)/.test(html), 'El sistema operativo se consulta con matchMedia', '');
+}
+
+console.log('\n── X · El cromo de marca (#003153) ──\n');
+{
+  /* Barras superior e inferior en el azul de marca en los DOS temas, y lo que
+     vive dentro de ellas legible: el cromo redefine sus tokens (--text, --acc…),
+     así que se mide el color COMPUTADO de lo que hay dentro, no el CSS. */
+  const AZUL = 'rgb(0, 49, 83)';
+  for (const tema of ['light', 'dark']) {
+    const { ctx, page } = await abrir({ pref: tema });
+    await page.waitForTimeout(400);
+    const m = await page.evaluate(() => {
+      const tb = document.querySelector('#screen-personas .topbar');
+      const bb = document.getElementById('bottombar');
+      document.getElementById('screen-personas').classList.add('on');
+      const h1 = tb.querySelector('h1'), sub = tb.querySelector('.sub'), bp = tb.querySelector('.btn.bp');
+      const ina = bb.querySelector('.bn-item:not(.on):not(.bn-cta)'), act = bb.querySelector('.bn-item.on');
+      const cs = (e) => getComputedStyle(e);
+      return {
+        tbBg: cs(tb).backgroundColor, bbBg: cs(bb).backgroundColor,
+        h1: cs(h1).color, sub: cs(sub).color, bpBg: cs(bp).backgroundColor, bpFg: cs(bp).color,
+        ina: cs(ina).color, act: cs(act).color
+      };
+    });
+    log(m.tbBg === AZUL && m.bbBg === AZUL, `Barras superior e inferior en el azul de marca (${tema})`, m.tbBg + ' · ' + m.bbBg);
+    log(contraste(m.h1, AZUL) >= 7 && contraste(m.sub, AZUL) >= 4.5,
+      `  …título y subtítulo legibles sobre el azul (${tema})`, contraste(m.h1, AZUL).toFixed(1) + ' · ' + contraste(m.sub, AZUL).toFixed(1));
+    log(contraste(m.bpFg, m.bpBg) >= 4.5 && contraste(m.bpBg, AZUL) >= 3,
+      `  …el botón primario de la barra se adapta solo y se distingue del azul (${tema})`, m.bpBg + ' / ' + m.bpFg);
+    log(contraste(m.ina, AZUL) >= 4.5 && contraste(m.act, AZUL) >= 4.5,
+      `  …ítems de la barra inferior, activo e inactivo, ≥4,5:1 (${tema})`, contraste(m.ina, AZUL).toFixed(1) + ' · ' + contraste(m.act, AZUL).toFixed(1));
+    await ctx.close();
+  }
+
+  /* En computador la marca la lleva el panel lateral; la barra superior vuelve
+     a los tokens de la página (no queda un bloque azul con márgenes). */
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await ctx.newPage();
+    await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(400);
+    const d = await page.evaluate(() => ({
+      sb: getComputedStyle(document.getElementById('sidebar')).backgroundColor,
+      tb: getComputedStyle(document.querySelector('#screen-capturas .topbar')).backgroundColor,
+      h1: getComputedStyle(document.querySelector('#screen-capturas .topbar h1')).color,
+      body: getComputedStyle(document.body).backgroundColor
+    }));
+    log(d.sb === AZUL && d.tb !== AZUL && contraste(d.h1, d.body) >= 7,
+      'Computador: panel lateral azul; la barra superior usa los tokens de la página', d.sb + ' · ' + d.tb);
+    await ctx.close();
+  }
+
+  /* Franjas del sistema dentro del envoltorio: siempre azules, y los iconos del
+     sistema siempre claros (estilo DARK), también en tema claro. */
+  {
+    const { ctx, page } = await abrir({ pref: 'light' });
+    await page.waitForTimeout(400);
+    const r = await page.evaluate(() => {
+      document.body.classList.add('nat');
+      /* --sab se resuelve en :root y se hereda ya calculado: la zona segura
+         simulada hay que ponerla ahí, como la inyecta el envoltorio. */
+      document.documentElement.style.setProperty('--safe-area-inset-bottom', '30px');
+      const a = getComputedStyle(document.body, '::before'), b = getComputedStyle(document.body, '::after');
+      const pedido = [];
+      window.Capacitor = { isNativePlatform: () => true, Plugins: { SystemBars: { setStyle: (o) => pedido.push(o.style) } } };
+      lcBarraColor();
+      delete window.Capacitor;
+      return { aBg: a.backgroundColor, aH: a.height, bBg: b.backgroundColor, bH: b.height, pedido };
+    });
+    log(r.aBg === AZUL && r.bBg === AZUL && parseFloat(r.aH) >= 24 && parseFloat(r.bH) === 30,
+      'Envoltorio: franjas de hora y de navegación pintadas en azul', `${r.aH} · ${r.bH}`);
+    log(r.pedido.length === 1 && r.pedido[0] === 'DARK',
+      '  …y en tema CLARO se piden iconos claros del sistema (DARK)', JSON.stringify(r.pedido));
+    await ctx.close();
+  }
 }
 
 log(consoleErrors.length === 0, 'Sin errores de consola en todo el recorrido',
