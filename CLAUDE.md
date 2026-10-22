@@ -69,8 +69,9 @@ Cuando el usuario diga **"ejecutar fase X"** (ej: "ejecutar fase A", "ejecutar f
 Todos los colores fluyen por tokens CSS; el tema claro solo redefine tokens, no componentes. Los nombres legados (`--acc`, `--bg2`, `--tx`, `--txD`, `--rs`, `--uriT`…) se mantienen como **alias** porque el JS genera HTML que los referencia — no eliminarlos.
 | Decisión | Oscuro | Claro |
 |----------|--------|-------|
-| Acento (índigo, botones primarios, nav activa) | `#8A94F8` (texto `#0E1020`) | `#4E5BD8` (texto blanco) |
-| Fondo / superficies | `#0C0E13` · surface-1 `#12151C` · surface-2 `#171C26` · surface-3 `#1E2430` · elev `#1A202B` | `#F4F5F8` · blanco · `#F6F7FA` · `#ECEEF3` |
+| **Marca / cromo** (barras superior e inferior, panel lateral, franjas del sistema, `theme-color`) — 2026-10-22 | `#003153` (texto blanco) | `#003153` (texto blanco) |
+| Acento (botones primarios, foco, filtro/pestaña activa) — 2026-10-22, antes índigo | `#8FC3EA` (texto `#00223A`) | `#003153` (texto blanco) |
+| Fondo / superficies — 2026-10-22 | `#0B1219` · surface-1 `#111A23` · surface-2 `#16212C` · surface-3 `#1D2A37` · elev `#18232F` | `#EEF2F6` · blanco · `#F5F7FA` · `#E7ECF2` · campos blancos |
 | Flagrancia (ámbar) | `#D98E35` / `#E8A54F` | `#B45309` |
 | OJ (violeta) | `#9E8CF2` / `#B3A6F7` | `#6D3FD4` |
 | URI (azul) / CESPA (rosa) | `#5FA8F5` / `#F2879D` | `#1663C7` / `#BE2A55` |
@@ -87,11 +88,11 @@ Todos los colores fluyen por tokens CSS; el tema claro solo redefine tokens, no 
 - **Bottom bar móvil** (5 ítems): Capturas · Personas · **Nueva** (botón central circular destacado `.bn-cta`, gradiente ámbar→púrpura) · Dossier · Más. El FAB se eliminó por redundante con el CTA central. Estadísticas vive en el sheet "Más" (que ya no repite Personas).
 
 ## Tema claro/oscuro (2026-07-17)
-- Oscuro por defecto; el modo claro se activa en **Ajustes → 🎨 Apariencia** (aplica al instante, sin "Guardar ajustes").
+- ⚠️ **Desde el 2026-10-22 el predeterminado es CLARO** (ver «Identidad azul de marca» al final). Antes era oscuro. Se cambia en **Ajustes → Apariencia** (aplica al instante, sin "Guardar ajustes").
 - Persistencia: clave `lc_theme` en localStorage **plano** (no cifrada a propósito — debe aplicarse antes de desbloquear el PIN). Script anti-flash inline en el `<head>`.
 - Mecanismo: `:root[data-theme="light"]` sobreescribe las variables CSS + overrides puntuales de los colores oscuros hardcodeados, todo en un bloque al final del `<style>`. JS: `getTheme()` / `applyTheme()` / `setTheme()`.
-- `--acc-fg` = color de texto sobre fondos `var(--acc)`: `#0E1020` en oscuro, `#fff` en claro. **No hardcodear texto sobre fondos `var(--acc)`** — usar siempre `var(--acc-fg)`.
-- El `<meta name="theme-color">` se actualiza dinámicamente (`#0C0E13` oscuro / `#F4F5F8` claro).
+- `--acc-fg` = color de texto sobre fondos `var(--acc)`: `#00223A` en oscuro (antes `#0E1020`), `#fff` en claro. **No hardcodear texto sobre fondos `var(--acc)`** — usar siempre `var(--acc-fg)`.
+- El `<meta name="theme-color">` va en `#003153` en los dos temas desde el 2026-10-22: es cromo, como las barras.
 
 ## Encabezado del dossier — campos granulares (reemplaza `cfg.dosEncabezado`)
 ```
@@ -3449,7 +3450,7 @@ Había **cero** reglas `prefers-color-scheme` en 1 449 líneas de CSS: `getTheme
   no cambió**, y por eso `verify_tema` [36] exige que siga sin ninguna `prefers-color-scheme`: si
   alguien «mejora» esto metiendo una media query de color, el aspecto pasaría a decidirse en **dos
   sitios** que pueden discrepar. El punto único es `lcThemeResuelto()`.
-- ⚠️ **Sin clave guardada se resuelve OSCURO, no Sistema.** Sistema es una elección explícita, no el
+- ⚠️ **(Revisado el 2026-10-22: ahora se resuelve CLARO.)** **Sin clave guardada se resuelve OSCURO, no Sistema.** Sistema es una elección explícita, no el
   nuevo defecto: un equipo que nunca abrió Ajustes no puede cambiar de aspecto al actualizar. Es la
   misma regla con la que se eligieron los defectos del orden de las listas (2026-08-14): *el defecto
   de cada pantalla es el comportamiento que ya tenía*.
@@ -7444,3 +7445,53 @@ Anti-caché `?v=132` / `cache-v132`, `_BUILD=132`.
   busque con `\n` no casa. El ayudante `rep.mjs` del scratchpad convierte los saltos al del archivo.
 - ⚠️ **No hay Python en esta máquina** (el alias de Microsoft Store responde en su lugar y no hace
   nada): un parche por Python «pasa» sin aplicar. Comprobar SIEMPRE el diff antes de commitear.
+
+## Identidad azul de marca (2026-10-22) — #003153, y el claro pasa a ser el predeterminado
+Pedido del usuario con un pantallazo de otra app de referencia (barras de color sólido arriba y
+abajo, fondo gris claro, tarjetas blancas con sombra, ítem activo en píldora): adoptar ese estilo
+como tema predeterminado sin quitar el cambio claro/oscuro/sistema, e incorporar **#003153** como
+color de identidad. Dos decisiones del usuario: **sin preferencia guardada → CLARO**, y **barras en
+#003153 en los DOS temas**. Rama `estilo-marca`. Verificado con `verify_tema.mjs` (**51 checks**,
+antes 40) y mirando las pantallas en los dos temas, en teléfono y computador.
+
+- ⚠️ **Es casi todo tokens**, que es lo que el Design System v2 permitía: ningún módulo, flujo, campo
+  ni documento cambió. Los alias legados (`--acc`, `--tx`…) siguen siendo el contrato con el JS.
+- **`--brand` (#003153) es el CROMO**: barra superior, barra inferior, panel lateral en computador,
+  `theme-color` y las franjas del sistema del envoltorio. Blanco sobre él 13,4:1; blanco al 78 % 8,7:1.
+- ⚠️ **El cromo REDEFINE sus tokens** (`.topbar,#bottombar,#sidebar{ --text:…; --acc:#fff; --acc-fg:
+  var(--brand); … }`): lo que vive dentro de las barras —volver, «+», el `.btn.bp` de Personas— se
+  adapta sin tocar su HTML ni el JS. **No poner colores a pelo dentro de una barra**: pide el token.
+- ⚠️ **En computador (≥900 px) la barra superior vuelve a los tokens de la página** con `inherit`:
+  va dentro del área con márgenes y un bloque azul ahí no llegaría a los bordes. La marca la lleva el
+  panel lateral.
+- **Acento**: en claro es el propio `#003153`; en oscuro `#8FC3EA` (mismo matiz 205°, menos saturado
+  que el azul URI `#5FA8F5`, que es un dato legal). El índigo `#8A94F8/#4E5BD8` se retiró. Los
+  semánticos (flagrancia, OJ, URI, CESPA, ok/error, neón) **no cambian**.
+- **Claro**: fondo `#EEF2F6`, tarjetas blancas **sin borde, separadas por sombra** (`--card-bd`:
+  transparente en claro, `--border` en oscuro) y **campos blancos** (`--field`, con su propio canto
+  `--field-bd`), como el buscador de la referencia: un campo gris sobre fondo gris no se distinguía.
+- **Píldora** detrás del icono activo de la barra inferior y del panel; el CTA «Nueva» es un disco
+  blanco con anillo del azul. Pestañas y filtros activos (`.tab.on`, `.fc.on`) en fondo de acento.
+- ⚠️ **Franjas del sistema**: `body.nat::before/::after` pintan `--sat`/`--sab` en azul por encima de
+  todo, y **`lcBarraColor` pide siempre `DARK`** (iconos claros). Seguir el tema pondría iconos
+  oscuros sobre azul en modo claro. En el navegador `--sat`/`--sab` valen 0 y no pintan nada.
+- ⚠️ **La franja del Modo compartir pasó a ser OPACA** (`--ok-band`, valor fijo por tema): se dibuja
+  encima de la barra superior y un verde al 12 % sobre azul era ilegible. ⚠️ **No usar `color-mix()`
+  para un color que se mide**: Chrome lo serializa como `color(srgb …)` y la función de contraste de
+  las suites lo leía mal (daba 3,89:1 siendo 4,8:1).
+- **Contraste medido** (WCAG 2): texto/text-2/text-3 sobre las cuatro superficies ≥4,76:1 en los dos
+  temas; acento sobre fondo 11,9 (claro) y 10,0 (oscuro).
+- **Tipografía**: se mantiene la pila del sistema (Roboto en Android) — no se embebe fuente (CSP
+  `font-src` y uso sin conexión). Títulos de barra 18 px/600, nombres de tarjeta 16 px/600, con
+  `letter-spacing` levemente positivo en vez del negativo anterior.
+- ⚠️ **`verify_ds` y `verify_estadisticas` comprobaban el claro por el `theme-color`**, que ya no
+  cambia con el tema: ahora miran el atributo `data-theme` + la barra de marca.
+- ⚠️ **`verify_mejora6b` [35] daba por hecho el arranque en OSCURO** (esperaba `--neon` = `#4CFF88`);
+  en claro el mismo token vale `#0B3D22` por diseño. Ahora acepta los dos valores del token.
+- Regresión completa: **42/47 en verde**. Las 5 en rojo son las preexistentes ya documentadas
+  (`dossier_historico` [20][21], `ds`, `jerarquia`, `mejora6b` [47][53] y `mejora7` [B23]).
+  ⚠️ `mejora7` [B23] **se comprobó**: pasa 3 de 4 veces con este build. Lo que busca solo aparece
+  cuando el relato aleatorio del simulador menciona la patrulla; no tiene relación con los colores.
+- ⚠️ **Para que llegue a la app de Play hace falta un `.aab` nuevo** (el código viaja dentro desde la
+  Fase 0). La web se publica con `deploy:web`.
+- Anti-caché `?v=134` / `cache-v134`, `_BUILD=134`.
