@@ -1474,10 +1474,14 @@ body.nat::after{bottom:0;height:var(--sab)}
 }
 /* ⚠️ touch-action:none en el canvas es lo que impide que el dedo haga scroll de
    la pantalla mientras se firma: sin esto, en Android el trazo se corta. */
-.fw-pad canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+.fw-pad canvas{position:relative;z-index:1;display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}
+/* Línea guía de la firma: se queda a la vista mientras se firma (es la referencia
+   para apoyar el trazo) y va DEBAJO del canvas, que es transparente, así el trazo
+   pasa por encima. Es un elemento del DOM, no se dibuja en el canvas: no viaja en
+   el PNG de la firma. Literal a propósito, como .fw-ph: fondo blanco fijo. */
 .fw-base{
-  position:absolute;left:7%;right:7%;bottom:26%;
-  border-bottom:1px solid rgba(0,0,0,.18);pointer-events:none;
+  position:absolute;left:7%;right:7%;bottom:26%;z-index:0;
+  border-bottom:1.5px solid rgba(0,0,0,.4);pointer-events:none;
 }
 .fw-ph{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
@@ -1486,7 +1490,7 @@ body.nat::after{bottom:0;height:var(--sab)}
      token que se invierta. #6E7685 da 4,57:1 sobre blanco — el anterior, 3,09:1. */
   color:#6E7685;font-size:13px;text-align:center;padding:0 18px;pointer-events:none;
 }
-.fw-pad.inked .fw-ph,.fw-pad.inked .fw-base{opacity:0}
+.fw-pad.inked .fw-ph{opacity:0}
 .fw-acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .fw-acts .btn{flex:1;min-width:120px}
 .fw-prev{
