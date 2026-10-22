@@ -7528,3 +7528,30 @@ Solo CSS y marcado visual: ningún flujo, campo, documento ni regla de negocio c
   lienzo de la firma y el código QR (blanco fijo a propósito), ni ningún motor documental.
 - Regresión completa: **43/47 en verde**; las 4 en rojo fallan en los mismos checks preexistentes ya documentados (`dossier_historico` [20][21], `ds` «favorito con estrella SVG», `jerarquia` y `mejora6b` [47][53]). Repetidas tras las últimas ediciones: expediente 13 · menú+expediente 16 · personas 25 · tema 51 · sync 120 · mejora1 157 · custodia 111 · ola1 38.
 - Anti-caché `?v=135` / `cache-v135`, `_BUILD=135`. Para la app de Play hace falta un `.aab` nuevo.
+
+## Logo nuevo: la F plateada con chulo (2026-10-22)
+El usuario aportó su propio logo (`marca/logo-fuente.jpg`, 2048×2048, F plateada biselada con un chulo
+de verificación sobre una baldosa azul, fotografiada sobre fondo gris) y pidió que fuera el de la app.
+**Sustituye** al visor cian con la F ámbar («El ícono vuelve al original», 2026-09-22).
+
+- ⚠️ **No se recorta la baldosa tal cual.** Sus esquinas traen el gris del fondo de la foto, y el chulo
+  llega al **92 % del radio** de la baldosa: en el maskable (círculo del 80 %) y en el adaptativo de
+  Android (72/108) quedaría cortado. `scripts/gen-icons.mjs` **separa la F y el chulo del fondo**
+  (alfa por «azulidad» b−r frente a un plano de mínimos cuadrados del degradado, error medio 3 niveles;
+  el color se des-mezcla, así las sombras salen como negro semitransparente) y los recompone sobre ese
+  mismo degradado, **escalando alrededor del centro de la baldosa** para conservar la composición.
+- Escalas medidas: web y ficha 0,335 (la baldosa del usuario llena el ícono, esquina r = 100 px en 512);
+  maskable 0,286 → 200 de 204,8 px seguros; Android 0,237 → 166 de 170,7. El generador **aborta** si
+  algo se sale.
+- ⚠️ **Todo se MIDE de la imagen** (baldosa, radio de esquina, contenido, degradado): si el usuario
+  cambia el logo, basta con reemplazar el JPG y correr `npm run gen:icons`.
+- ⚠️ La guarda `enBaldosa` es la que impide que el gris de fuera de la esquina —tan neutro como la F—
+  entre en el sprite como contenido (sin ella el contenido «llegaba al 127 % del radio»).
+- `icon.svg` ya no es vectorial: envuelve el PNG de 512 (lo siguen leyendo el manifiesto, el Service
+  Worker, el build de Android y el gráfico de la ficha). El logo del sidebar lo escribe el generador
+  directamente en el HTML (PNG 96 px a sangre; `.sb-logo-wrap` redondea). Fondo del adaptativo: `#0B3551`.
+- El gráfico de la ficha (`store-feature.mjs`) pasa de ámbar/cian a azul de marca y plata.
+- ⚠️ **Para que el ícono cambie en el teléfono hace falta un `.aab` nuevo**: el del lanzador sale de
+  los recursos del envoltorio. La web y la PWA lo toman con `deploy:web`.
+- Regresiones: tema 51 · csp 11 · expediente 13 · almacén 13 · ds 9/10 (fallo preexistente).
+  Anti-caché `?v=138` / `cache-v138`, `_BUILD=138`.

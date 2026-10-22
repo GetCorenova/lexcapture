@@ -16,7 +16,7 @@ dependencias externas: funciona sin conexión, que es como se usa.
 | `index.html` | Redirige a la app con el token `?v=N` que fuerza al navegador a descargar la versión nueva |
 | `sw.js` | Service Worker: caché offline. El HTML va siempre a red primero |
 | `manifest.json` | Manifiesto PWA |
-| `icon-*.png`, `icon.svg` | Íconos. Los genera `npm run gen:icons` desde `icon.svg` |
+| `icon-*.png`, `icon.svg` | Íconos. Los genera `npm run gen:icons` desde `marca/logo-fuente.jpg` |
 | `privacy.html` | Política de privacidad (la exige Google Play) |
 | `.nojekyll` | Desactiva el procesado Jekyll de GitHub Pages |
 
@@ -28,7 +28,7 @@ npm run serve:web          # sirve en local (hace falta http:// para que el SW s
 npm run deploy:web         # valida, commitea y publica
 npm run verify             # lista las suites de regresión
 npm run verify -- <nombre> # corre las que casen con ese nombre
-npm run gen:icons          # regenera los íconos desde icon.svg
+npm run gen:icons          # regenera los íconos desde marca/logo-fuente.jpg
 ```
 
 ## Verificación
