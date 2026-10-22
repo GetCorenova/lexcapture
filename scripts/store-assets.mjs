@@ -37,6 +37,14 @@ await page.evaluate(async ()=>{
   await DB.saveConfig(cfg);
   const tp=['flagrancia-uri','flagrancia-uri','flagrancia-cespa','flagrancia-uri'];for(const t of tp){ const c=SIM.genFlagrancia(t); c.isTest=false; await DB.saveCase(c); }
   const o=SIM.genOJ(); o.isTest=false; await DB.saveCase(o);
+  // Una fiscalía registrada en la jurisdicción del caso que enseña el formulario:
+  // sin ella el paso 2 sale como «Escrito a mano — la app no lo propone».
+  const cw=DB.getCases()[1], cfg2=DB.getConfig(), mu=(cw.lugar||{}).muni||'Medellín';
+  const dz=lcDespGuardar({clase:'FISCALIA',tipo:'FISCALIA',nombre:'Fiscalía URI '+mu,direccion:'CL 51 # 45-40',
+    barrio:'Centro',municipio:mu,departamento:(cw.lugar||{}).depto||'Antioquia',telefono:'6044445566',
+    correo:'uri@fiscalia.test',nunc:String(cw.nunc||'').replace(/\D/g,'')},cfg2);
+  lcDespMarcarDefecto(dz.id,cfg2); await DB.saveConfig(cfg2);
+  cw.destino=dz.nombre; cw.destinoManual=false; await DB.saveCase(cw);
   const PZ=[['Yeison Felipe','Betancur','Flores','CC','1017245896','Capturado','Medellín'],
     ['María Estiven','Ramírez','Cardona','TI','1098776554','Aprehendido','Bello'],
     ['Laura Daniela','González','Mesa','CC','43987112','Víctima','Envigado'],
@@ -50,11 +58,12 @@ await page.evaluate(async ()=>{
 });
 await page.waitForTimeout(600);
 
-const tiro=async(n,fn)=>{ await fn(); await page.waitForTimeout(700); await page.evaluate(()=>{const t=document.getElementById('toast'); if(t){t.className='toast'; t.style.display='none';}}); await page.waitForTimeout(150); await page.screenshot({path:join(OUT,n+'.png')}); console.log('· '+n); };
+const tiro=async(n,fn)=>{ await fn(); await page.waitForTimeout(700); await page.evaluate(()=>{const t=document.getElementById('toast'); if(t){t.className='toast'; t.style.display='none';}}); await page.waitForTimeout(150); await page.mouse.move(1,1); await page.waitForTimeout(150); await page.screenshot({path:join(OUT,n+'.png')}); console.log('· '+n); };
 await tiro('01_capturas', ()=>page.evaluate(()=>go('capturas')));
 await tiro('02_expediente', ()=>page.evaluate(()=>{const c=DB.getCases()[0]; abrirDossierCaso(c.id);}));
 await tiro('03_personas', ()=>page.evaluate(()=>go('personas')));
 await tiro('04_estadisticas', ()=>page.evaluate(()=>go('estadisticas')));
-await tiro('06_wizard', ()=>page.evaluate(()=>{const c=DB.getCases()[1]; editCase(c.id);}));
+// Paso 2 («Datos del caso»), no el 1: a 360 px el selector de vía del paso 1 sale cortado.
+await tiro('06_wizard', async ()=>{ await page.evaluate(()=>{const c=DB.getCases()[1]; editCase(c.id);}); await page.waitForTimeout(500); await page.evaluate(()=>wizGoto(1)); });
 console.log('errores:',errs.length, errs.slice(0,4));
 await b.close(); server.close();
