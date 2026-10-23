@@ -13,7 +13,7 @@
      frame-ancestors y el resto de cabeceras (HSTS, nosniff…) NO se pueden poner
      en una <meta>: el navegador las ignora ahí. Van en las cabeceras HTTP del
      hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/ https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1265,6 +1265,64 @@ body.nat::after{bottom:0;height:var(--sab)}
 .pin-btn.sec{background:transparent;color:var(--text-2);border:1px solid var(--border)}
 .pin-btn.sec:hover{background:var(--hover)}
 .pin-forget{text-align:center;margin-top:14px;font-size:13px;color:var(--text-2);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+/* ═══ CUENTA (F2, 2026-10-23) ═══
+   Bienvenida, crear cuenta, iniciar sesión, código de recuperación y Ajustes →
+   Cuenta. Todo por tokens del Design System v2: el tema claro no redefine nada
+   aquí. ⚠️ Va DEBAJO de #pin-ov (z 490 frente a 500): un error del almacén o la
+   migración del PIN tienen que poder taparla. */
+#cu-ov{display:none;position:fixed;inset:0;z-index:490;background:var(--bg);overflow-y:auto;-webkit-overflow-scrolling:touch}
+#cu-ov.on{display:block}
+body.cu-on{overflow:hidden}
+.cu-box{max-width:420px;margin:0 auto;min-height:100%;padding:calc(28px + var(--sat)) 20px calc(28px + var(--sab));display:flex;flex-direction:column;justify-content:center}
+.cu-pant{display:flex;flex-direction:column;gap:16px}
+.cu-marca{display:flex;flex-direction:column;align-items:center;gap:10px;margin:8px 0 12px;text-align:center}
+.cu-logo{width:76px;height:76px;border-radius:20px;box-shadow:var(--sh-2)}
+.cu-nom{font-size:26px;font-weight:700;letter-spacing:.01em;color:var(--text)}
+.cu-lema{font-size:15px;line-height:1.45;color:var(--text-2);max-width:340px}
+.cu-card{background:var(--surface-1);border:1px solid var(--card-bd);border-radius:16px;box-shadow:var(--sh-1);padding:20px;display:flex;flex-direction:column;gap:12px}
+.cu-card .fg{margin-bottom:2px}
+.cu-h{font-size:22px;font-weight:700;line-height:1.25;color:var(--text);margin:0}
+.cu-p{font-size:14px;line-height:1.5;color:var(--text-2);margin:0}
+.mc .cu-p{margin-bottom:14px}
+.cu-c{text-align:center}
+.cu-pie{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--text-2);margin:4px 4px 0}
+.cu-pie svg{width:18px;height:18px;flex:0 0 auto;stroke-width:1.8;color:var(--acc);margin-top:1px}
+.cu-volver{align-self:flex-start;display:inline-flex;align-items:center;gap:4px;background:none;border:none;color:var(--acc);font:inherit;font-size:14px;font-weight:600;padding:8px 8px 8px 0;cursor:pointer;min-height:40px}
+.cu-volver svg{width:18px;height:18px;stroke-width:2}
+.cu-link{background:none;border:none;color:var(--acc);font:inherit;font-size:14px;font-weight:600;padding:10px;cursor:pointer;align-self:center;min-height:44px}
+.cu-link:disabled,.cu-volver:disabled{opacity:.45}
+.cu-clave{position:relative}
+.cu-clave .fi{padding-right:52px}
+.cu-ver{position:absolute;right:4px;top:4px;bottom:4px;width:44px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text-3);cursor:pointer;border-radius:8px}
+.cu-ver svg{width:20px;height:20px;stroke-width:1.8}
+.cu-ver.on{color:var(--acc)}
+.cu-pista{font-size:12px;line-height:1.4;color:var(--text-3);margin-top:6px}
+.cu-err,.cu-ok-msg{font-size:13px;line-height:1.45;border-radius:10px;padding:10px 12px}
+.cu-err{color:var(--danger);background:var(--errB);border:1px solid color-mix(in srgb,var(--danger) 35%,transparent)}
+.cu-ok-msg{color:var(--ok);background:var(--ok-bg);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
+.mc .cu-err{margin-bottom:12px}
+.cu-err[hidden],.cu-ok-msg[hidden]{display:none}
+.cu-ic-grande{width:60px;height:60px;border-radius:50%;margin:8px auto 0;display:flex;align-items:center;justify-content:center;background:var(--surface-selected);color:var(--acc)}
+.cu-ic-grande svg{width:28px;height:28px;stroke-width:1.8}
+.cu-ic-warn{background:var(--warn-bg);color:var(--warn)}
+.cu-ic-ok{background:var(--ok-bg);color:var(--ok)}
+.cu-codigo{font-family:var(--m);font-size:20px;font-weight:600;letter-spacing:.06em;text-align:center;line-height:1.6;color:var(--text);background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:12px;padding:16px 12px;user-select:all;white-space:nowrap}
+.cu-mono{font-family:var(--m);letter-spacing:.08em;text-transform:uppercase}
+.cu-espera{display:flex;flex-direction:column;align-items:center;gap:16px;padding:40px 0}
+.cu-giro{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--acc);animation:cuGiro .8s linear infinite}
+@keyframes cuGiro{to{transform:rotate(360deg)}}
+.cu-sep{height:1px;background:var(--border);margin:18px 0}
+/* Ajustes → Cuenta */
+.cu-aj-fila{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.cu-aj-k{font-size:12px;font-weight:500;color:var(--text-3)}
+.cu-aj-v{font-size:15px;color:var(--text);word-break:break-all;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cu-aj-btn{margin-bottom:12px}
+.cu-aj-acc{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cu-aj-alerta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:13px;line-height:1.45;color:var(--text);background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);border-radius:12px;padding:12px;margin-bottom:12px}
+.cu-aj-alerta svg{width:18px;height:18px;color:var(--warn);stroke-width:1.8;flex:0 0 auto}
+.cu-aj-alerta span{flex:1 1 200px}
+.b-cu-ok{background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
+@media(min-width:600px){.cu-aj-acc{flex-direction:row;flex-wrap:wrap}.cu-aj-acc .btn{flex:1 1 auto}}
 
 /* ═══ TARJETA DE PERSONA ═══ */
 .pcard{
@@ -2462,6 +2520,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
 
+      <!-- 0. Cuenta — la pinta renderAjCuenta() solo donde hay cuenta (ver «CUENTA»). -->
+      <div id="aj-cuenta"></div>
+
       <!-- 1. Apariencia -->
       <div class="aj-section">
         <div class="aj-sec-hdr" onclick="toggleAjSec('apariencia-sec')">
@@ -2774,6 +2835,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div class="pin-box" id="pin-box"></div>
 </div>
 
+<!-- ====== CUENTA (F2): bienvenida, crear cuenta, iniciar sesión ====== -->
+<div id="cu-ov" role="dialog" aria-modal="true" aria-label="Cuenta"><div class="cu-box" id="cu-box"></div></div>
+
 <!-- ====== SIM SHEET ====== -->
 <div class="sheet-back" id="sim-back" onclick="closeSimSheet()"></div>
 <div class="sheet" id="sim-sheet">
@@ -2884,7 +2948,7 @@ function go(name) {
   if (name === 'dossierwa') renderDossierWA();
   if (name === 'compartir') renderCompartir();
   if (name === 'sync') renderSync();
-  if (name === 'ajustes') { loadAjustesFields(); }
+  if (name === 'ajustes') { loadAjustesFields(); renderAjCuenta(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
   // El navegador puede autocompletar o restaurar el buscador con un valor viejo
@@ -3645,7 +3709,7 @@ function lcPedirExport(kind, nombreDoc, cb){
 var _lcListo = false;
 var LC_LLAVE_EQUIPO = 'llave_equipo';
 /* Lo que va cifrado en localStorage con la llave de la sesión. */
-var LC_CLAVES_CIFRADAS = ['lc_cases', 'lc_persons', 'lc_draft', 'lc_firmas', 'lc_cfg', 'lc_sync'];
+var LC_CLAVES_CIFRADAS = ['lc_cases', 'lc_persons', 'lc_draft', 'lc_firmas', 'lc_cfg', 'lc_sync', 'lc_cuenta'];
 
 function _lcEsClaro(raw) { return !!raw && (raw.charAt(0) === '[' || raw.charAt(0) === '{'); }
 
@@ -3704,6 +3768,8 @@ function _lcTrasAbrir() {
   syPintarNav();
   lcBarraSistema();
   if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
+  /* La cuenta decide si se ve la app o la bienvenida (ver «CUENTA»). */
+  cuArranque();
   _lcListo = true;
 }
 
@@ -4017,6 +4083,11 @@ async function _lcLoadCaches() {
   /* La clave de sincronización entre los equipos del usuario: cifrada y en su
      propia clave, igual que las firmas. */
   if (typeof syCargarEstado === 'function') await syCargarEstado();
+  /* La cuenta de este equipo (correo, dueño de los datos y la llave de la nube):
+     cifrada con la llave del equipo, igual que todo lo demás. Ver «CUENTA». */
+  enc = localStorage.getItem('lc_cuenta');
+  if (enc) { try { _cuenta = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _cuenta = null; } }
+  else { _cuenta = null; }
   /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
      memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
      vuelva a abrir su formulario. No se fuerza ninguna escritura — el dato se
@@ -24100,22 +24171,27 @@ var _syTok = '', _syTokExp = 0, _syGisP = null, _syCorriendo = false, _syEstado 
    Crockford base32: sin I, L, O ni U. No es capricho — es el alfabeto pensado
    para que un humano transcriba sin equivocarse, y al leer trata I y L como 1
    y O como 0, que son justo los errores que se cometen copiando a mano. Son
-   16 bytes (128 bits) en 26 caracteres: se teclea UNA vez por equipo. */
-var SY_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-function syB32Enc(bytes) {
+   16 bytes (128 bits) en 26 caracteres: se teclea UNA vez por equipo.
+   ⚠️ Desde la cuenta (F2, 2026-10-23) el alfabeto lo usa también el código de
+   recuperación de la cuenta, así que vive con nombre neutro (`lcB32*`): la copia
+   en Drive se retira en la F4 y el código de la cuenta no puede irse con ella.
+   Los nombres `sy*` quedan como alias mientras exista la copia en Drive. */
+var LC_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+var SY_B32 = LC_B32;
+function lcB32Enc(bytes) {
   var bits = 0, val = 0, out = '', i;
   for (i = 0; i < bytes.length; i++) {
     val = (val << 8) | bytes[i]; bits += 8;
-    while (bits >= 5) { out += SY_B32.charAt((val >>> (bits - 5)) & 31); bits -= 5; }
+    while (bits >= 5) { out += LC_B32.charAt((val >>> (bits - 5)) & 31); bits -= 5; }
   }
-  if (bits > 0) out += SY_B32.charAt((val << (5 - bits)) & 31);
+  if (bits > 0) out += LC_B32.charAt((val << (5 - bits)) & 31);
   return out;
 }
-function syB32Dec(s) {
+function lcB32Dec(s) {
   var t = String(s || '').toUpperCase().replace(/[IL]/g, '1').replace(/O/g, '0').replace(/[^0-9A-Z]/g, '');
   var bits = 0, val = 0, out = [], i, d;
   for (i = 0; i < t.length; i++) {
-    d = SY_B32.indexOf(t.charAt(i));
+    d = LC_B32.indexOf(t.charAt(i));
     if (d < 0) return null;
     val = (val << 5) | d; bits += 5;
     if (bits >= 8) { out.push((val >>> (bits - 8)) & 255); bits -= 8; }
@@ -24123,7 +24199,10 @@ function syB32Dec(s) {
   return new Uint8Array(out);
 }
 /* En grupos de cuatro para leerlo en voz alta y teclearlo sin perder el sitio. */
-function syCodigoBonito(k) { return String(k || '').replace(/(.{4})(?=.)/g, '$1-'); }
+function lcCodigoBonito(k) { return String(k || '').replace(/(.{4})(?=.)/g, '$1-'); }
+function syB32Enc(bytes) { return lcB32Enc(bytes); }
+function syB32Dec(s) { return lcB32Dec(s); }
+function syCodigoBonito(k) { return lcCodigoBonito(k); }
 
 /* ── LA CLAVE ─────────────────────────────────────────────────────────────
    ⚠️ Los 16 bytes ya son aleatorios de verdad, así que NO se estiran con
@@ -25417,6 +25496,906 @@ function syAlDesbloquear() {
 }
 
 // ====== SERVICE WORKER (Fase G) ======
+/* ═══ CUENTA (F2 del plan de cuenta, 2026-10-23) ═══════════════════════════
+   El usuario crea su cuenta con correo y contraseña la primera vez; después solo
+   inicia sesión. La cuenta es lo que, en las fases siguientes, abre la prueba
+   gratuita (F3) y lleva la información a cualquier teléfono y a la web (F4).
+
+   JERARQUÍA DE LLAVES (estilo Bitwarden) — FIREBASE NUNCA RECIBE LA CONTRASEÑA:
+   1. maestra = PBKDF2-SHA256(contraseña, «flagrante|» + correo, 600 000 vueltas).
+   2. De la maestra salen, con HKDF, DOS llaves que no se parecen entre sí:
+      · `auth` — lo que se le manda a Firebase como si fuera la contraseña;
+      · `envoltura` — nunca sale del equipo.
+   3. La DEK (32 bytes al azar) es la llave de los datos en la nube. Se guarda en
+      `users/{uid}/llaves/main` DOS veces y siempre cifrada: con la llave de
+      envoltura (`dekClave`) y con el código de recuperación (`dekRec`).
+   4. El código de recuperación son 24 caracteres (120 bits) que se enseñan UNA
+      vez al crear la cuenta. Sin la contraseña y sin el código, lo que hay en la
+      nube no lo abre nadie: ni Google ni nosotros.
+
+   EN ESTE EQUIPO: el registro `lc_cuenta` (correo, uid, la DEK) va cifrado con la
+   llave del equipo, como todo lo demás. Por eso la sesión no pide nada al abrir y
+   la app abre sin señal: el SDK de Firebase solo se carga cuando hace falta.
+
+   ⚠️ LOS DATOS DE ESTE EQUIPO TIENEN DUEÑO. La primera cuenta que entra se queda
+   con ellos (`_cuenta.uid`). Otra cuenta no los ve: o entra la dueña, o se borran.
+   Cerrar sesión no los borra (salvo que se pida): los deja detrás de la bienvenida.
+
+   ⚠️ DÓNDE NO HAY CUENTA: sin configuración de Firebase (`CU_FB` vacío) la cuenta
+   está «pendiente de instalación» y la app funciona como antes, sin bienvenida —
+   mismo patrón que `SY_CLIENT_ID`. Y en `localhost` (las suites de regresión y
+   `npm run serve:web`) tampoco, salvo que `lc_flags.cuentaEmulador` apunte a los
+   emuladores de Firebase: así la prueba de la cuenta la ejerce entera y las demás
+   suites no tienen que crear una cuenta para medir un documento. En localhost no
+   protege nada: quien sirve la app en su equipo ya tiene el código. */
+
+/* La configuración web del proyecto de Firebase: se pega desde la consola
+   (Configuración del proyecto → Tus apps → App web). No es secreta: la protegen
+   las reglas de Firestore y, en la F3, App Check. */
+var CU_FB = { apiKey: '', authDomain: '', projectId: '', appId: '' };
+var CU_KDF_IT = 600000;
+/* Lo que Firebase recibe empieza siempre por mayúscula, minúscula, número y
+   símbolo: así pasa cualquier política de contraseñas que se active en la consola. */
+var CU_AUTH_PRE = 'Fa1!';
+var CU_COD_BYTES = 15;     // 15 bytes = 24 caracteres Crockford = 120 bits
+var _cuenta = null;        // {v, uid, correo, dek, sesion, verificado, codigoPend, creada}
+var _cuFB = null, _cuSdkP = null;
+var _cuPend = null;        // {uid, correo, env}: entró, pero las llaves no abren con esta contraseña
+var _cuAccion = null;      // {modo, oob}: llegó por un enlace del correo
+var _cuNube = '';          // '' sin comprobar · 'ok' · 'vencida'
+var _cuOcupado = false;
+
+/* ── Dónde hay cuenta ───────────────────────────────────────────────────── */
+function cuEsLocal() { return /^(localhost|127\.0\.0\.1)$/.test(location.hostname); }
+function cuEmulador() {
+  if (!cuEsLocal()) return null;
+  try {
+    var o = JSON.parse(localStorage.getItem('lc_flags') || 'null');
+    var e = o && o.cuentaEmulador;
+    if (e && e.auth && e.host && e.puerto) return e;
+  } catch (x) {}
+  return null;
+}
+function cuConfig() {
+  var e = cuEmulador();
+  if (e) return { apiKey: 'demo-flagrante', authDomain: 'demo-flagrante.firebaseapp.com', projectId: e.proyecto || 'demo-flagrante', appId: 'demo' };
+  return CU_FB;
+}
+function cuInstalada() { return !!cuConfig().apiKey; }
+function cuActiva() { return cuInstalada() && (!cuEsLocal() || !!cuEmulador()); }
+function cuSesion() { return !!(_cuenta && _cuenta.sesion && _cuenta.dek); }
+
+/* ── El SDK, solo cuando hace falta ─────────────────────────────────────── */
+function cuSdk() {
+  if (_cuFB) return Promise.resolve(_cuFB);
+  if (_cuSdkP) return _cuSdkP;
+  _cuSdkP = new Promise(function (res, rej) {
+    if (window.FB && FB.initializeApp) { res(); return; }
+    var s = document.createElement('script');
+    s.src = 'vendor/firebase.js';
+    s.onload = function () { (window.FB && FB.initializeApp) ? res() : rej(new Error('cu-sdk')); };
+    s.onerror = function () { rej(new Error('cu-sdk')); };
+    document.head.appendChild(s);
+  }).then(function () {
+    var em = cuEmulador();
+    var app = FB.initializeApp(cuConfig(), 'flagrante');
+    var auth = FB.initializeAuth(app, { persistence: [FB.indexedDBLocalPersistence, FB.inMemoryPersistence] });
+    var db = FB.initializeFirestore(app, { localCache: FB.memoryLocalCache() });
+    if (em) {
+      FB.connectAuthEmulator(auth, em.auth, { disableWarnings: true });
+      FB.connectFirestoreEmulator(db, em.host, em.puerto);
+    }
+    _cuFB = { app: app, auth: auth, db: db };
+    return _cuFB;
+  });
+  _cuSdkP.catch(function () { _cuSdkP = null; });
+  return _cuSdkP;
+}
+async function _cuUsuarioListo() {
+  var a = (await cuSdk()).auth;
+  if (a.authStateReady) await a.authStateReady();
+  return a.currentUser;
+}
+
+/* ── Correo y contraseña ────────────────────────────────────────────────── */
+function cuNormCorreo(c) { return String(c || '').trim().toLowerCase(); }
+function cuCorreoValido(c) { return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cuNormCorreo(c)); }
+function cuClaveFloja(k) {
+  k = String(k || '');
+  if (k.length < 10) return 'La contraseña necesita al menos 10 caracteres.';
+  if (!/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(k)) return 'La contraseña necesita al menos una letra.';
+  if (!/[0-9]/.test(k)) return 'La contraseña necesita al menos un número.';
+  return '';
+}
+/* n•••@gmail.com: para decir de quién es un equipo sin enseñar el correo entero. */
+function cuCorreoOculto(c) {
+  c = String(c || ''); var i = c.indexOf('@');
+  return i > 0 ? c.charAt(0) + '•••' + c.slice(i) : '•••';
+}
+
+/* ── Llaves ─────────────────────────────────────────────────────────────── */
+function _cuTE(s) { return new TextEncoder().encode(s); }
+function _cuDeB64(b64) { return Uint8Array.from(atob(b64), function (c) { return c.charCodeAt(0); }); }
+function _cuB64u(u8) { return _b64FromBytes(u8).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+/* HKDF sin sal propia: la entropía y la sal ya las puso PBKDF2. */
+var CU_HKDF_SAL = new Uint8Array(32);
+async function cuDerivar(correo, clave) {
+  var base = await crypto.subtle.importKey('raw', _cuTE(String(clave).normalize('NFC')), 'PBKDF2', false, ['deriveBits']);
+  var bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: _cuTE('flagrante|' + cuNormCorreo(correo)), iterations: CU_KDF_IT }, base, 256);
+  var hk = await crypto.subtle.importKey('raw', bits, 'HKDF', false, ['deriveBits', 'deriveKey']);
+  var a = await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt: CU_HKDF_SAL, info: _cuTE('flagrante|auth') }, hk, 256);
+  var env = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: CU_HKDF_SAL, info: _cuTE('flagrante|envoltura') }, hk,
+    { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  return { auth: CU_AUTH_PRE + _cuB64u(new Uint8Array(a)), env: env };
+}
+/* Un sobre: IV de 12 bytes + AES-GCM, con el uid y el uso como dato adicional
+   autenticado. Un sobre copiado a otra cuenta o a otro campo no abre. */
+async function cuEnvolver(llave, crudo, aad) {
+  var iv = _ptAzar(12);
+  var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv, additionalData: _cuTE(aad) }, llave, crudo);
+  var b = new Uint8Array(12 + ct.byteLength); b.set(iv); b.set(new Uint8Array(ct), 12);
+  return _b64FromBytes(b);
+}
+async function cuDesenvolver(llave, b64, aad) {
+  if (!llave || !b64) return null;
+  try {
+    var b = _cuDeB64(b64);
+    var p = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b.slice(0, 12), additionalData: _cuTE(aad) }, llave, b.slice(12));
+    return new Uint8Array(p);
+  } catch (e) { return null; }
+}
+function _cuAadClave(uid) { return 'flagrante|dek|clave|' + uid; }
+function _cuAadRec(uid) { return 'flagrante|dek|recuperacion|' + uid; }
+function cuCodigoNuevo() { return lcB32Enc(_ptAzar(CU_COD_BYTES)); }
+function cuCodigoBytes(c) { var b = lcB32Dec(c); return b && b.length === CU_COD_BYTES ? b : null; }
+/* El código ya tiene entropía completa: se expande con HKDF, no se estira. */
+async function cuLlaveRec(codigo, uid) {
+  var b = cuCodigoBytes(codigo); if (!b) return null;
+  var hk = await crypto.subtle.importKey('raw', b, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: _cuTE('flagrante|recuperacion|' + uid), info: _cuTE('flagrante|recuperacion') }, hk,
+    { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+function _cuRef(uid) { return FB.doc(_cuFB.db, 'users', uid, 'llaves', 'main'); }
+/* Llaves completas para un uid: el documento y el código nuevo que lo abre. */
+async function _cuLlavesNuevas(uid, env, dek) {
+  var codigo = cuCodigoNuevo();
+  var rec = await cuLlaveRec(codigo, uid);
+  return {
+    codigo: codigo,
+    datos: { v: 1, kdf: 'PBKDF2-SHA256/' + CU_KDF_IT,
+             dekClave: await cuEnvolver(env, dek, _cuAadClave(uid)),
+             dekRec: await cuEnvolver(rec, dek, _cuAadRec(uid)),
+             act: FB.serverTimestamp() }
+  };
+}
+async function _cuLeerLlaves(uid) {
+  var snap = await FB.getDocFromServer(_cuRef(uid));
+  return snap.exists() ? snap.data() : null;
+}
+function cuGuardarLocal(c) { _cuenta = c; return _lcEncSave('cuenta', c); }
+function _cuErr(code) { var e = new Error(code); e.code = code; return e; }
+
+/* ── Operaciones de la cuenta ───────────────────────────────────────────── */
+async function cuCrear(correo, clave) {
+  correo = cuNormCorreo(correo);
+  if (_cuenta && _cuenta.uid) throw _cuErr('cu/otra-cuenta');
+  var fb = await cuSdk();
+  var k = await cuDerivar(correo, clave);
+  var cred = await FB.createUserWithEmailAndPassword(fb.auth, correo, k.auth);
+  var uid = cred.user.uid, dek = _ptAzar(32);
+  var n = await _cuLlavesNuevas(uid, k.env, dek);
+  try { await FB.setDoc(_cuRef(uid), n.datos); }
+  catch (e) { await FB.signOut(fb.auth).catch(function () {}); throw _cuErr('cu/a-medias'); }
+  await cuGuardarLocal({ v: 1, uid: uid, correo: correo, dek: _b64FromBytes(dek), sesion: true,
+                         verificado: false, codigoPend: n.codigo, creada: Date.now() });
+  FB.sendEmailVerification(cred.user).catch(function () {});
+  return n.codigo;
+}
+
+async function cuEntrar(correo, clave) {
+  correo = cuNormCorreo(correo);
+  var fb = await cuSdk();
+  var k = await cuDerivar(correo, clave);
+  var cred = await FB.signInWithEmailAndPassword(fb.auth, correo, k.auth);
+  return _cuTrasEntrar(cred.user, correo, k.env);
+}
+
+/* Lo que sigue a cualquier inicio de sesión. Devuelve {necesitaCodigo} si las
+   llaves no abren con esta contraseña (un restablecimiento que no terminó), o
+   {codigo} si hubo que estrenar código. */
+async function _cuTrasEntrar(user, correo, env) {
+  var uid = user.uid;
+  if (_cuenta && _cuenta.uid && _cuenta.uid !== uid) {
+    await FB.signOut(_cuFB.auth).catch(function () {});
+    throw _cuErr('cu/otra-cuenta');
+  }
+  var d = await _cuLeerLlaves(uid), dek = null, codigo = null;
+  if (!d) {
+    /* La cuenta quedó a medio crear: sin llaves no hay nada cifrado con ellas,
+       así que se estrenan aquí. */
+    dek = _ptAzar(32);
+    var n = await _cuLlavesNuevas(uid, env, dek);
+    await FB.setDoc(_cuRef(uid), n.datos);
+    codigo = n.codigo;
+  } else {
+    dek = await cuDesenvolver(env, d.dekClave, _cuAadClave(uid));
+    if (!dek && d.dekClaveNueva) {
+      /* Un cambio de contraseña que se cortó después de cambiarla en Firebase:
+         se termina aquí. */
+      dek = await cuDesenvolver(env, d.dekClaveNueva, _cuAadClave(uid));
+      if (dek) await FB.updateDoc(_cuRef(uid), { dekClave: d.dekClaveNueva, dekClaveNueva: FB.deleteField(), act: FB.serverTimestamp() });
+    }
+    if (!dek) { _cuPend = { uid: uid, correo: correo, env: env }; return { necesitaCodigo: true }; }
+  }
+  await _cuAbrirSesion(user, correo, dek, codigo);
+  return { codigo: codigo, verificado: !!user.emailVerified };
+}
+function _cuAbrirSesion(user, correo, dek, codigo) {
+  var prev = (_cuenta && _cuenta.uid === user.uid) ? _cuenta : {};
+  _cuNube = 'ok';
+  return cuGuardarLocal({ v: 1, uid: user.uid, correo: correo, dek: _b64FromBytes(dek), sesion: true,
+                          verificado: !!user.emailVerified, codigoPend: codigo || prev.codigoPend || null,
+                          creada: prev.creada || Date.now() });
+}
+
+/* Con el código de recuperación: abre la DEK, la vuelve a guardar con la
+   contraseña de ahora y estrena código — el usado ya se tecleó en algún sitio. */
+async function cuUsarCodigo(codigo) {
+  var p = _cuPend; if (!p) throw _cuErr('cu/sin-pendiente');
+  var rec = await cuLlaveRec(codigo, p.uid);
+  if (!rec) throw _cuErr('cu/codigo-formato');
+  var d = await _cuLeerLlaves(p.uid);
+  var dek = d ? await cuDesenvolver(rec, d.dekRec, _cuAadRec(p.uid)) : null;
+  if (!dek) throw _cuErr('cu/codigo-mal');
+  var n = await _cuLlavesNuevas(p.uid, p.env, dek);
+  await FB.setDoc(_cuRef(p.uid), n.datos);
+  await _cuAbrirSesion(_cuFB.auth.currentUser, p.correo, dek, n.codigo);
+  _cuPend = null;
+  return n.codigo;
+}
+
+/* Sin código: llaves nuevas. Lo que estuviera en la nube cifrado con las
+   anteriores ya no lo abre nadie; lo de este equipo no se toca.
+   (F4: aquí se borran también los registros de la nube.) */
+async function cuEmpezarDeCero() {
+  var p = _cuPend; if (!p) throw _cuErr('cu/sin-pendiente');
+  var dek = _ptAzar(32);
+  var n = await _cuLlavesNuevas(p.uid, p.env, dek);
+  await FB.setDoc(_cuRef(p.uid), n.datos);
+  await _cuAbrirSesion(_cuFB.auth.currentUser, p.correo, dek, n.codigo);
+  _cuPend = null;
+  return n.codigo;
+}
+
+/* Restablecer la contraseña desde el enlace del correo. Firebase solo cambia
+   la contraseña; la llave de los datos sigue envuelta con la anterior, así que
+   después hace falta el código de recuperación. */
+async function cuRestablecer(oob, correo, clave) {
+  var fb = await cuSdk();
+  var k = await cuDerivar(correo, clave);
+  await FB.confirmPasswordReset(fb.auth, oob, k.auth);
+  var cred = await FB.signInWithEmailAndPassword(fb.auth, correo, k.auth);
+  return _cuTrasEntrar(cred.user, cuNormCorreo(correo), k.env);
+}
+
+/* El usuario de Firebase de esta sesión, recién autenticado con la contraseña
+   que acaba de escribir (cambiar la contraseña o borrar la cuenta lo exigen). */
+async function _cuUsuarioVivo(k) {
+  var u = await _cuUsuarioListo();
+  if (u && u.uid === _cuenta.uid) {
+    await FB.reauthenticateWithCredential(u, FB.EmailAuthProvider.credential(_cuenta.correo, k.auth));
+    return u;
+  }
+  var cred = await FB.signInWithEmailAndPassword(_cuFB.auth, _cuenta.correo, k.auth);
+  if (cred.user.uid !== _cuenta.uid) { await FB.signOut(_cuFB.auth).catch(function () {}); throw _cuErr('cu/otra-cuenta'); }
+  return cred.user;
+}
+async function _cuDekConClave(clave) {
+  var k = await cuDerivar(_cuenta.correo, clave);
+  var user = await _cuUsuarioVivo(k);
+  var d = await _cuLeerLlaves(user.uid);
+  var dek = d ? await cuDesenvolver(k.env, d.dekClave, _cuAadClave(user.uid)) : null;
+  if (!dek) throw _cuErr('cu/llaves-cambiaron');
+  _cuNube = 'ok';
+  return { user: user, dek: dek, k: k };
+}
+
+/* Cambiar la contraseña sin tocar los datos: se vuelve a envolver la MISMA DEK.
+   ⚠️ En TRES pasos para que ningún corte deje la cuenta sin abrir: primero se
+   guarda la DEK con la contraseña nueva en un campo aparte, después se cambia
+   en Firebase, y al final se promueve. Entre medias abren las dos. */
+async function cuCambiarClave(actual, nueva) {
+  var x = await _cuDekConClave(actual), uid = x.user.uid;
+  var kN = await cuDerivar(_cuenta.correo, nueva);
+  var sobreN = await cuEnvolver(kN.env, x.dek, _cuAadClave(uid));
+  await FB.updateDoc(_cuRef(uid), { dekClaveNueva: sobreN, act: FB.serverTimestamp() });
+  await FB.updatePassword(x.user, kN.auth);
+  await FB.updateDoc(_cuRef(uid), { dekClave: sobreN, dekClaveNueva: FB.deleteField(), act: FB.serverTimestamp() });
+  var dekB64 = _b64FromBytes(x.dek);
+  if (_cuenta.dek !== dekB64) await cuGuardarLocal(Object.assign({}, _cuenta, { dek: dekB64 }));
+}
+
+/* Un código de recuperación nuevo; el anterior deja de servir. */
+async function cuNuevoCodigo(clave) {
+  var x = await _cuDekConClave(clave), uid = x.user.uid;
+  var codigo = cuCodigoNuevo();
+  var rec = await cuLlaveRec(codigo, uid);
+  await FB.updateDoc(_cuRef(uid), { dekRec: await cuEnvolver(rec, x.dek, _cuAadRec(uid)), act: FB.serverTimestamp() });
+  await cuGuardarLocal(Object.assign({}, _cuenta, { codigoPend: codigo }));
+  return codigo;
+}
+
+/* Cerrar sesión. Sin `borrar`, la información se queda en el equipo detrás de
+   la bienvenida y solo la vuelve a abrir esta cuenta. */
+async function cuCerrarSesion(borrar) {
+  try { var fb = await cuSdk(); await FB.signOut(fb.auth); } catch (e) {}
+  _cuNube = '';
+  if (borrar) { await _cuBorrarEquipo(); return; }
+  var c = Object.assign({}, _cuenta, { sesion: false });
+  delete c.dek; delete c.codigoPend;
+  await cuGuardarLocal(c);
+  cuMostrar('bienvenida');
+}
+
+/* Eliminar la cuenta: llaves de la nube, el usuario de Firebase y lo de este
+   equipo. Las llaves van primero: sin usuario ya no habría permiso para borrarlas.
+   (F4: aquí se borran también los registros de la nube.) */
+async function cuEliminarCuenta(clave) {
+  var k = await cuDerivar(_cuenta.correo, clave);
+  var user = await _cuUsuarioVivo(k);
+  await FB.deleteDoc(_cuRef(user.uid));
+  await FB.deleteUser(user);
+  await _cuBorrarEquipo();
+}
+
+/* Borra la información de este equipo (como «empezar de cero») pero conserva el
+   tema, que es una preferencia del teléfono y no un dato. */
+function _cuBorrarEquipo() {
+  var tema = null;
+  try { tema = localStorage.getItem('lc_theme'); localStorage.clear(); if (tema) localStorage.setItem('lc_theme', tema); } catch (e) {}
+  _cuenta = null;
+  return lcIdbBorrarTodo().then(function () { location.replace(location.pathname); });
+}
+
+async function cuReenviarVerificacion() {
+  var u = await _cuUsuarioListo();
+  if (!u) throw _cuErr('cu/sin-nube');
+  await FB.sendEmailVerification(u);
+}
+async function cuComprobarVerificacion() {
+  var u = await _cuUsuarioListo();
+  if (!u) throw _cuErr('cu/sin-nube');
+  await FB.reload(u);
+  if (u.emailVerified && !_cuenta.verificado) await cuGuardarLocal(Object.assign({}, _cuenta, { verificado: true }));
+  return !!u.emailVerified;
+}
+
+/* En segundo plano y sin bloquear nada: ¿la sesión de la nube sigue viva?
+   Una contraseña cambiada en otro equipo la cierra aquí; la información de este
+   equipo sigue abierta (es local), y Ajustes → Cuenta pide volver a entrar. */
+function cuRevisarNube() {
+  if (!cuSesion() || !navigator.onLine) return;
+  setTimeout(async function () {
+    try {
+      var u = await _cuUsuarioListo();
+      if (!u || u.uid !== _cuenta.uid) { _cuNube = 'vencida'; }
+      else {
+        await FB.reload(u);
+        _cuNube = 'ok';
+        if (u.emailVerified && !_cuenta.verificado) await cuGuardarLocal(Object.assign({}, _cuenta, { verificado: true }));
+      }
+    } catch (e) {
+      if (e && /user-token-expired|user-disabled|user-not-found|invalid-user-token/.test(e.code || '')) _cuNube = 'vencida';
+    }
+    if (_cuAjVisible()) renderAjCuenta();
+  }, 2500);
+}
+
+/* ── Mensajes ───────────────────────────────────────────────────────────── */
+var CU_MSG = {
+  'auth/email-already-in-use': 'Ya hay una cuenta con ese correo. Inicia sesión.',
+  'auth/invalid-email': 'El correo no es válido.',
+  'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+  'auth/invalid-login-credentials': 'Correo o contraseña incorrectos.',
+  'auth/wrong-password': 'Correo o contraseña incorrectos.',
+  'auth/user-not-found': 'Correo o contraseña incorrectos.',
+  'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos y vuelve a intentarlo.',
+  'auth/network-request-failed': 'Sin conexión. Para esto hace falta internet.',
+  'auth/user-disabled': 'Esta cuenta está deshabilitada.',
+  'auth/requires-recent-login': 'Por seguridad, vuelve a escribir tu contraseña.',
+  'auth/expired-action-code': 'El enlace venció. Pide uno nuevo.',
+  'auth/invalid-action-code': 'El enlace ya se usó o no es válido. Pide uno nuevo.',
+  'auth/operation-not-allowed': 'El inicio de sesión con correo no está activado en el servidor.',
+  'auth/user-token-expired': 'Tu sesión venció. Vuelve a iniciar sesión.',
+  'permission-denied': 'El servidor rechazó la operación.',
+  'unavailable': 'Sin conexión. Para esto hace falta internet.',
+  'cu/otra-cuenta': 'Este equipo tiene la información de otra cuenta.',
+  'cu/a-medias': 'La cuenta quedó a medio crear. Inicia sesión con el mismo correo y contraseña para terminar.',
+  'cu/codigo-formato': 'El código tiene 24 caracteres. Revísalo.',
+  'cu/codigo-mal': 'Ese código no corresponde a esta cuenta.',
+  'cu/llaves-cambiaron': 'Las llaves de tu cuenta cambiaron en otro equipo. Cierra sesión y vuelve a entrar.',
+  'cu/sin-nube': 'Vuelve a iniciar sesión para esto.',
+  'cu/sin-pendiente': 'Vuelve a iniciar sesión.'
+};
+function cuMsgError(e) {
+  var c = (e && e.code) || '';
+  if (CU_MSG[c]) return CU_MSG[c];
+  if (e && e.message === 'cu-sdk') return 'No se pudo cargar el módulo de la cuenta. Revisa la conexión.';
+  if (/offline|unavailable|network|failed-precondition/i.test(c + ' ' + ((e && e.message) || ''))) return CU_MSG.unavailable;
+  console.error('[Flagrante] cuenta', e);
+  return 'No se pudo completar. Vuelve a intentarlo.';
+}
+
+/* ── El enlace del correo ───────────────────────────────────────────────────
+   Firebase manda los enlaces de verificación y de restablecimiento a la URL de
+   acción que se fija en la consola (ver PUBLICAR.md). ⚠️ El restablecimiento NO
+   puede usar la página de Google: allí se escribe la contraseña real y Firebase
+   la recibiría — y esta app le manda otra cosa. */
+function cuLeerAccion() {
+  try {
+    var q = new URLSearchParams(location.search), m = q.get('mode'), o = q.get('oobCode');
+    if (m && o && /^(verifyEmail|resetPassword|recoverEmail)$/.test(m)) return { modo: m, oob: o };
+  } catch (e) {}
+  return null;
+}
+function _cuLimpiarUrl() { try { history.replaceState(history.state, '', location.pathname + location.hash); } catch (e) {} }
+
+/* ── Arranque ───────────────────────────────────────────────────────────── */
+function cuArranque() {
+  _cuAccion = cuLeerAccion();
+  if (!cuActiva()) { if (_cuAccion) { _cuAccion = null; _cuLimpiarUrl(); } return; }
+  if (_cuAccion) { cuAtenderAccion(_cuAccion); return; }
+  cuContinuar();
+  cuRevisarNube();
+}
+function cuContinuar() {
+  if (_cuAccion) { _cuAccion = null; _cuLimpiarUrl(); }
+  if (!cuSesion()) { cuMostrar('bienvenida'); return; }
+  if (_cuenta.codigoPend) { cuMostrar('codigo', { codigo: _cuenta.codigoPend }); return; }
+  cuOcultar();
+  if (_cuAjVisible()) renderAjCuenta();
+}
+async function cuAtenderAccion(a) {
+  cuMostrar('espera', { texto: 'Abriendo el enlace…' });
+  try {
+    var fb = await cuSdk();
+    if (a.modo === 'resetPassword') {
+      var correo = await FB.verifyPasswordResetCode(fb.auth, a.oob);
+      cuMostrar('restablecer', { oob: a.oob, correo: correo });
+      return;
+    }
+    if (a.modo === 'verifyEmail') {
+      await FB.applyActionCode(fb.auth, a.oob);
+      if (cuSesion()) {
+        var u = await _cuUsuarioListo();
+        if (u && u.uid === _cuenta.uid) { await FB.reload(u).catch(function () {}); }
+        await cuGuardarLocal(Object.assign({}, _cuenta, { verificado: true }));
+      }
+      cuMostrar('mensaje', { titulo: 'Correo verificado', texto: 'Listo: tu correo quedó confirmado. Ya puedes volver a la aplicación.', ok: true });
+      return;
+    }
+    cuMostrar('mensaje', { titulo: 'Enlace no válido', texto: 'Flagrante no cambia el correo de una cuenta, así que este enlace no aplica.' });
+  } catch (e) {
+    cuMostrar('mensaje', { titulo: 'No se pudo usar el enlace', texto: cuMsgError(e) });
+  }
+}
+
+/* ═══ PANTALLAS ════════════════════════════════════════════════════════════
+   Ocupan la pantalla entera (`#cu-ov`) hasta que hay sesión. */
+var CU_IC = {
+  candado: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  volver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  ojo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  correo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>',
+  llave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
+  usuario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+};
+function _cuMarca(lema) {
+  var img = document.querySelector('.sb-logo-wrap img');
+  return '<div class="cu-marca">' + (img ? '<img class="cu-logo" alt="" src="' + img.getAttribute('src') + '">' : '') +
+    '<div class="cu-nom">Flagrante</div>' + (lema ? '<div class="cu-lema">' + lema + '</div>' : '') + '</div>';
+}
+function _cuVolver(a) { return '<button type="button" class="cu-volver" onclick="cuMostrar(\'' + a + '\')">' + CU_IC.volver + 'Volver</button>'; }
+function _cuCampo(id, etq, tipo, extra, pista, mono) {
+  var clave = tipo === 'password';
+  return '<div class="fg"><label class="fl" for="' + id + '">' + etq + '</label>' +
+    (clave ? '<div class="cu-clave">' : '') +
+    '<input class="fi' + (mono ? ' cu-mono' : '') + '" id="' + id + '" type="' + tipo + '" ' + (extra || '') + '>' +
+    (clave ? '<button type="button" class="cu-ver" aria-label="Mostrar u ocultar la contraseña" onclick="cuVerClave(\'' + id + '\',this)">' + CU_IC.ojo + '</button></div>' : '') +
+    (pista ? '<div class="cu-pista">' + pista + '</div>' : '') + '</div>';
+}
+var CU_CORREO_ATR = 'autocomplete="username" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false"';
+function cuVerClave(id, btn) {
+  var i = document.getElementById(id); if (!i) return;
+  i.type = i.type === 'password' ? 'text' : 'password';
+  btn.classList.toggle('on', i.type === 'text');
+}
+function _cuVal(id) { var e = document.getElementById(id); return e ? e.value : ''; }
+function _cuError(t) {
+  var e = document.getElementById('cu-err'); if (!e) return;
+  e.textContent = t || ''; e.hidden = !t;
+}
+function _cuInfo(t) {
+  var e = document.getElementById('cu-info'); if (!e) return;
+  e.textContent = t || ''; e.hidden = !t;
+}
+/* Mientras trabaja: botones apagados y el principal dice qué está haciendo. */
+function _cuTrabajando(on, txt) {
+  _cuOcupado = on;
+  var box = document.getElementById('cu-box'); if (!box) return;
+  box.querySelectorAll('button,input').forEach(function (b) { b.disabled = on; });
+  var p = document.getElementById('cu-ok');
+  if (p) { if (on) { p.dataset.txt = p.textContent; p.textContent = txt || 'Un momento…'; } else if (p.dataset.txt) p.textContent = p.dataset.txt; }
+}
+async function _cuHacer(txt, fn) {
+  if (_cuOcupado) return;
+  _cuError(''); _cuInfo('');
+  _cuTrabajando(true, txt);
+  try { await fn(); }
+  catch (e) { _cuTrabajando(false); _cuError(cuMsgError(e)); return; }
+  _cuTrabajando(false);
+}
+
+function cuMostrar(p, d) {
+  d = d || {};
+  var h = '';
+  if (p === 'bienvenida') {
+    h = _cuMarca('Tus capturas y sus documentos, listos en el sitio.') +
+      '<div class="cu-card">' +
+        '<button type="button" class="btn bp bbl" onclick="cuMostrar(\'crear\')">Crear cuenta</button>' +
+        '<button type="button" class="btn bs bbl" onclick="cuMostrar(\'entrar\')">Ya tengo cuenta</button>' +
+      '</div>' +
+      '<p class="cu-pie">' + CU_IC.candado + '<span>Tu información se cifra en este equipo. Nadie más puede leerla, ni nosotros.</span></p>';
+  } else if (p === 'crear') {
+    h = _cuVolver('bienvenida') +
+      '<h2 class="cu-h">Crear cuenta</h2><p class="cu-p">Con ella abres tu información en cualquier teléfono.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarCrear()" novalidate>' +
+        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR) +
+        _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="new-password"', 'Mínimo 10 caracteres, con letras y números.') +
+        _cuCampo('cu-clave2', 'Repite la contraseña', 'password', 'autocomplete="new-password"') +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Crear cuenta</button>' +
+      '</form>' +
+      '<p class="cu-pie">' + CU_IC.llave + '<span>Te daremos un código de recuperación: sin él, olvidar la contraseña es perder la información.</span></p>';
+  } else if (p === 'entrar') {
+    h = _cuVolver('bienvenida') +
+      '<h2 class="cu-h">Iniciar sesión</h2><p class="cu-p">La primera vez en este equipo hace falta internet.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarEntrar()" novalidate>' +
+        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR + (d.correo ? ' value="' + escAttr(d.correo) + '"' : '')) +
+        _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"') +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Entrar</button>' +
+        '<button type="button" class="cu-link" onclick="cuMostrar(\'olvido\')">¿Olvidaste tu contraseña?</button>' +
+      '</form>';
+  } else if (p === 'olvido') {
+    h = _cuVolver('entrar') +
+      '<h2 class="cu-h">Restablecer contraseña</h2><p class="cu-p">Te enviaremos un enlace. Ten a mano tu código de recuperación.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarOlvido()" novalidate>' +
+        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR) +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<div class="cu-ok-msg" id="cu-info" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Enviar enlace</button>' +
+      '</form>';
+  } else if (p === 'codigo') {
+    h = '<div class="cu-ic-grande">' + CU_IC.llave + '</div>' +
+      '<h2 class="cu-h cu-c">Tu código de recuperación</h2>' +
+      '<p class="cu-p cu-c">Si olvidas la contraseña, es la única forma de abrir tu información. Anótalo en papel.</p>' +
+      '<div class="cu-card">' +
+        /* Dos renglones de tres grupos: partido por el ancho, un guion quedaba colgando al final. */
+        '<div class="cu-codigo" id="cu-codigo" data-codigo="' + escAttr(lcCodigoBonito(d.codigo)) + '">' +
+          escHtml(lcCodigoBonito(String(d.codigo).slice(0, 12))) + '<br>' + escHtml(lcCodigoBonito(String(d.codigo).slice(12))) + '</div>' +
+        '<button type="button" class="btn bs bbl" id="cu-copiar" onclick="cuCopiarCodigo()">Copiar</button>' +
+      '</div>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuConfirmarCodigo()" novalidate>' +
+        _cuCampo('cu-conf', 'Escribe los últimos 4 caracteres para confirmar', 'text', 'maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false"', '', true) +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Ya lo guardé</button>' +
+      '</form>';
+  } else if (p === 'verificar') {
+    h = '<div class="cu-ic-grande">' + CU_IC.correo + '</div>' +
+      '<h2 class="cu-h cu-c">Verifica tu correo</h2>' +
+      '<p class="cu-p cu-c">Te enviamos un enlace a <b>' + escHtml(_cuenta && _cuenta.correo) + '</b>. Ábrelo para confirmar que es tuyo.</p>' +
+      '<div class="cu-card">' +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<div class="cu-ok-msg" id="cu-info" hidden></div>' +
+        '<button type="button" class="btn bp bbl" id="cu-ok" onclick="cuYaVerifique()">Ya lo verifiqué</button>' +
+        '<button type="button" class="btn bs bbl" onclick="cuReenviar()">Reenviar el correo</button>' +
+        '<button type="button" class="cu-link" onclick="cuContinuar()">Hacerlo después</button>' +
+      '</div>';
+  } else if (p === 'necesitaCodigo') {
+    h = '<div class="cu-ic-grande">' + CU_IC.llave + '</div>' +
+      '<h2 class="cu-h cu-c">Escribe tu código de recuperación</h2>' +
+      '<p class="cu-p cu-c">Tu contraseña cambió y la llave de tu información sigue con la anterior.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarCodigo()" novalidate>' +
+        _cuCampo('cu-cod', 'Código de 24 caracteres', 'text', 'autocomplete="off" autocapitalize="characters" spellcheck="false"', '', true) +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Recuperar</button>' +
+        '<button type="button" class="cu-link" onclick="cuSinCodigo()">No tengo el código</button>' +
+      '</form>';
+  } else if (p === 'restablecer') {
+    h = '<h2 class="cu-h">Contraseña nueva</h2><p class="cu-p">Para <b>' + escHtml(d.correo) + '</b>.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarRestablecer()" novalidate>' +
+        '<input type="hidden" id="cu-oob" value="' + escAttr(d.oob) + '"><input type="hidden" id="cu-rcorreo" value="' + escAttr(d.correo) + '">' +
+        _cuCampo('cu-clave', 'Contraseña nueva', 'password', 'autocomplete="new-password"', 'Mínimo 10 caracteres, con letras y números.') +
+        _cuCampo('cu-clave2', 'Repítela', 'password', 'autocomplete="new-password"') +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Guardar contraseña</button>' +
+      '</form>';
+  } else if (p === 'otraCuenta') {
+    h = '<div class="cu-ic-grande cu-ic-warn">' + CU_IC.usuario + '</div>' +
+      '<h2 class="cu-h cu-c">Este equipo es de otra cuenta</h2>' +
+      '<p class="cu-p cu-c">Tiene la información de <b>' + escHtml(cuCorreoOculto(_cuenta && _cuenta.correo)) + '</b>. Inicia sesión con esa cuenta para verla.</p>' +
+      '<div class="cu-card">' +
+        '<button type="button" class="btn bp bbl" onclick="cuMostrar(\'entrar\')">Iniciar sesión con esa cuenta</button>' +
+        '<button type="button" class="btn bd bbl" onclick="cuBorrarParaOtra()">Borrar la información de este equipo</button>' +
+      '</div>';
+  } else if (p === 'espera') {
+    h = '<div class="cu-espera"><div class="cu-giro"></div><p class="cu-p cu-c">' + escHtml(d.texto || 'Un momento…') + '</p></div>';
+  } else if (p === 'mensaje') {
+    h = '<div class="cu-ic-grande' + (d.ok ? ' cu-ic-ok' : ' cu-ic-warn') + '">' + (d.ok ? CU_IC.ok : CU_IC.alerta) + '</div>' +
+      '<h2 class="cu-h cu-c">' + escHtml(d.titulo) + '</h2><p class="cu-p cu-c">' + escHtml(d.texto) + '</p>' +
+      '<div class="cu-card"><button type="button" class="btn bp bbl" onclick="cuContinuar()">Continuar</button></div>';
+  }
+  var box = document.getElementById('cu-box');
+  box.innerHTML = '<div class="cu-pant" data-p="' + p + '">' + h + '</div>';
+  _cuOcupado = false;
+  document.getElementById('cu-ov').classList.add('on');
+  document.body.classList.add('cu-on');
+  box.parentNode.scrollTop = 0;
+  var f = box.querySelector('input:not([type=hidden])');
+  if (f && p !== 'codigo' && !('ontouchstart' in window)) setTimeout(function () { try { f.focus(); } catch (e) {} }, 60);
+}
+function cuOcultar() {
+  var ov = document.getElementById('cu-ov'); if (!ov) return;
+  ov.classList.remove('on');
+  document.body.classList.remove('cu-on');
+  document.getElementById('cu-box').innerHTML = '';
+}
+
+/* ── Lo que hace cada botón ─────────────────────────────────────────────── */
+function _cuValidarNueva(c1, c2) {
+  var f = cuClaveFloja(c1);
+  if (f) return f;
+  if (c1 !== c2) return 'Las dos contraseñas no coinciden.';
+  return '';
+}
+function cuEnviarCrear() {
+  var correo = _cuVal('cu-correo'), c1 = _cuVal('cu-clave'), c2 = _cuVal('cu-clave2');
+  if (!cuCorreoValido(correo)) { _cuError('Escribe un correo válido.'); return; }
+  var m = _cuValidarNueva(c1, c2); if (m) { _cuError(m); return; }
+  if (_cuenta && _cuenta.uid) { cuMostrar('otraCuenta'); return; }
+  _cuHacer('Creando tu cuenta…', async function () {
+    var codigo = await cuCrear(correo, c1);
+    cuMostrar('codigo', { codigo: codigo });
+  });
+}
+function cuEnviarEntrar() {
+  var correo = _cuVal('cu-correo'), c = _cuVal('cu-clave');
+  if (!cuCorreoValido(correo)) { _cuError('Escribe un correo válido.'); return; }
+  if (!c) { _cuError('Escribe tu contraseña.'); return; }
+  _cuHacer('Entrando…', async function () {
+    var r;
+    try { r = await cuEntrar(correo, c); }
+    catch (e) { if (e && e.code === 'cu/otra-cuenta') { cuMostrar('otraCuenta'); return; } throw e; }
+    _cuTrasPantalla(r);
+  });
+}
+/* Qué pantalla sigue a entrar, a usar el código o a empezar de cero. */
+function _cuTrasPantalla(r) {
+  if (r && r.necesitaCodigo) { cuMostrar('necesitaCodigo'); return; }
+  if (_cuenta && _cuenta.codigoPend) { cuMostrar('codigo', { codigo: _cuenta.codigoPend }); return; }
+  if (_cuenta && !_cuenta.verificado) { cuMostrar('verificar'); return; }
+  renderCases();
+  cuContinuar();
+}
+function cuEnviarOlvido() {
+  var correo = _cuVal('cu-correo');
+  if (!cuCorreoValido(correo)) { _cuError('Escribe un correo válido.'); return; }
+  _cuHacer('Enviando…', async function () {
+    var fb = await cuSdk();
+    await FB.sendPasswordResetEmail(fb.auth, cuNormCorreo(correo));
+    _cuInfo('Si hay una cuenta con ese correo, te llegó un enlace. Ábrelo en este teléfono o en un computador.');
+  });
+}
+function cuCopiarCodigo() {
+  var t = ((document.getElementById('cu-codigo') || {}).dataset || {}).codigo || '';
+  /* La confirmación va en el propio botón: el aviso flotante queda detrás de esta pantalla. */
+  var b = document.getElementById('cu-copiar');
+  try { navigator.clipboard.writeText(t).then(function () { if (b) { b.textContent = 'Copiado'; setTimeout(function () { b.textContent = 'Copiar'; }, 2000); } }, function () {}); } catch (e) {}
+}
+function cuConfirmarCodigo() {
+  var c = _cuenta && _cuenta.codigoPend;
+  var t = String(_cuVal('cu-conf') || '').toUpperCase().replace(/[IL]/g, '1').replace(/O/g, '0');
+  if (!c || t !== c.slice(-4)) { _cuError('No coincide. Mira los últimos 4 caracteres del código.'); return; }
+  _cuHacer('Guardando…', async function () {
+    await cuGuardarLocal(Object.assign({}, _cuenta, { codigoPend: null }));
+    _cuTrasPantalla({});
+  });
+}
+function cuYaVerifique() {
+  _cuHacer('Comprobando…', async function () {
+    if (await cuComprobarVerificacion()) { renderCases(); cuContinuar(); toast('Correo verificado'); }
+    else _cuError('Todavía no aparece verificado. Abre el enlace del correo y vuelve a intentarlo.');
+  });
+}
+function cuReenviar() {
+  _cuHacer('Enviando…', async function () {
+    await cuReenviarVerificacion();
+    _cuInfo('Te enviamos otro enlace. Revisa también la carpeta de spam.');
+  });
+}
+function cuEnviarCodigo() {
+  var c = _cuVal('cu-cod');
+  if (!cuCodigoBytes(c)) { _cuError(CU_MSG['cu/codigo-formato']); return; }
+  _cuHacer('Recuperando…', async function () {
+    await cuUsarCodigo(c);
+    _cuTrasPantalla({});
+  });
+}
+function cuSinCodigo() {
+  if (!confirm('Sin el código, lo que esta cuenta tenga en la nube no se puede abrir y se borra.\n\nLo que está en este teléfono se conserva. ¿Empezar de cero?')) return;
+  _cuHacer('Preparando la cuenta…', async function () {
+    await cuEmpezarDeCero();
+    _cuTrasPantalla({});
+  });
+}
+function cuEnviarRestablecer() {
+  var c1 = _cuVal('cu-clave'), c2 = _cuVal('cu-clave2');
+  var m = _cuValidarNueva(c1, c2); if (m) { _cuError(m); return; }
+  var oob = _cuVal('cu-oob'), correo = _cuVal('cu-rcorreo');
+  _cuHacer('Guardando…', async function () {
+    var r;
+    try { r = await cuRestablecer(oob, correo, c1); }
+    catch (e) {
+      if (e && e.code === 'cu/otra-cuenta') {
+        cuMostrar('mensaje', { titulo: 'Contraseña cambiada', ok: true,
+          texto: 'Inicia sesión en tu teléfono con la contraseña nueva; allí te pedirá tu código de recuperación.' });
+        return;
+      }
+      throw e;
+    }
+    _cuAccion = null; _cuLimpiarUrl();
+    _cuTrasPantalla(r);
+  });
+}
+function cuBorrarParaOtra() {
+  if (!confirm('Se BORRARÁ toda la información de este equipo: capturas, personas y configuración.\n\nNo se puede deshacer. ¿Continuar?')) return;
+  if (!confirm('Confirmación final: se borra todo lo de este equipo. ¿Continuar?')) return;
+  _cuBorrarEquipo();
+}
+
+/* ═══ AJUSTES → CUENTA ═════════════════════════════════════════════════════
+   Solo existe donde hay cuenta (ver «Dónde hay cuenta»): sin ella la sección no
+   se pinta, en vez de enseñar botones que no pueden funcionar. */
+function _cuAjVisible() { var s = document.getElementById('screen-ajustes'); return !!(s && s.classList.contains('on')); }
+function renderAjCuenta() {
+  var box = document.getElementById('aj-cuenta'); if (!box) return;
+  if (!cuActiva() || !cuSesion()) { box.innerHTML = ''; return; }
+  var abierta = !document.getElementById('aj-body-cuenta-sec') || document.getElementById('aj-body-cuenta-sec').style.display !== 'none';
+  var ver = !!_cuenta.verificado;
+  box.innerHTML =
+    '<div class="aj-section">' +
+      '<div class="aj-sec-hdr" onclick="toggleAjSec(\'cuenta-sec\')">' +
+        '<span class="aj-sec-lbl">' + CU_IC.usuario + 'Cuenta</span>' +
+        '<span class="aj-sec-arr' + (abierta ? ' open' : '') + '" id="aj-arr-cuenta-sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>' +
+      '</div>' +
+      '<div class="aj-sec-body" id="aj-body-cuenta-sec" style="' + (abierta ? '' : 'display:none;') + 'padding-top:12px">' +
+        '<div class="cu-aj-fila"><div class="cu-aj-k">Correo</div><div class="cu-aj-v">' + escHtml(_cuenta.correo) +
+          ' <span class="badge ' + (ver ? 'b-cu-ok' : 'b-test') + '">' + (ver ? 'Verificado' : 'Sin verificar') + '</span></div></div>' +
+        (ver ? '' : '<button type="button" class="btn bs bsm cu-aj-btn" onclick="cuAjReenviar()">Reenviar el correo de verificación</button>') +
+        (_cuNube === 'vencida' ? '<div class="cu-aj-alerta">' + CU_IC.alerta + '<span>La sesión en la nube se cerró (¿cambiaste la contraseña en otro equipo?).</span>' +
+          '<button type="button" class="btn bp bsm" onclick="cuAjReentrar()">Volver a entrar</button></div>' : '') +
+        '<div class="cu-aj-acc">' +
+          '<button type="button" class="btn bs" onclick="cuAjCambiarClave()">Cambiar contraseña</button>' +
+          '<button type="button" class="btn bs" onclick="cuAjNuevoCodigo()">Código de recuperación nuevo</button>' +
+          '<button type="button" class="btn bs" onclick="cuAjCerrar()">Cerrar sesión</button>' +
+        '</div>' +
+        '<button type="button" class="btn bd bbl" onclick="cuAjEliminar()">Eliminar mi cuenta</button>' +
+      '</div>' +
+    '</div>';
+}
+var CU_X = '<button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+function _cuModal(titulo, cuerpo, accion, txtOk, peligro) {
+  openModal('<div class="mh"><h2>' + titulo + '</h2>' + CU_X + '</div>' +
+    '<form id="cu-box-m" onsubmit="event.preventDefault();' + accion + '()" novalidate>' + cuerpo +
+      '<div class="cu-err" id="cu-err" hidden></div>' +
+      '<button class="btn ' + (peligro ? 'bd' : 'bp') + ' bbl" id="cu-ok" type="submit">' + txtOk + '</button>' +
+    '</form>');
+}
+/* Lo mismo que `_cuHacer`, para los modales de Ajustes. */
+async function _cuHacerM(txt, fn) {
+  if (_cuOcupado) return;
+  var f = document.getElementById('cu-box-m'); var ok = document.getElementById('cu-ok');
+  _cuError('');
+  _cuOcupado = true;
+  if (f) f.querySelectorAll('button,input').forEach(function (b) { b.disabled = true; });
+  var t0 = ok ? ok.textContent : ''; if (ok) ok.textContent = txt;
+  try { await fn(); }
+  catch (e) { _cuError(cuMsgError(e)); }
+  _cuOcupado = false;
+  f = document.getElementById('cu-box-m'); ok = document.getElementById('cu-ok');
+  if (f) f.querySelectorAll('button,input').forEach(function (b) { b.disabled = false; });
+  if (ok && t0) ok.textContent = t0;
+}
+function cuAjReenviar() {
+  cuReenviarVerificacion().then(function () { toast('Te enviamos otro enlace de verificación'); }, function (e) { toast(cuMsgError(e)); });
+}
+function cuAjCambiarClave() {
+  _cuModal('Cambiar contraseña',
+    _cuCampo('cu-clave', 'Contraseña actual', 'password', 'autocomplete="current-password"') +
+    _cuCampo('cu-clave1', 'Contraseña nueva', 'password', 'autocomplete="new-password"', 'Mínimo 10 caracteres, con letras y números.') +
+    _cuCampo('cu-clave2', 'Repite la nueva', 'password', 'autocomplete="new-password"') +
+    '<p class="aj-nota">Tu información no cambia: solo la contraseña que la abre.</p>',
+    'cuAjCambiarClaveOk', 'Cambiar contraseña');
+}
+function cuAjCambiarClaveOk() {
+  var a = _cuVal('cu-clave'), n1 = _cuVal('cu-clave1'), n2 = _cuVal('cu-clave2');
+  if (!a) { _cuError('Escribe tu contraseña actual.'); return; }
+  var m = _cuValidarNueva(n1, n2); if (m) { _cuError(m); return; }
+  if (a === n1) { _cuError('La contraseña nueva tiene que ser distinta de la actual.'); return; }
+  _cuHacerM('Cambiando…', async function () {
+    await cuCambiarClave(a, n1);
+    closeModal(); toast('Contraseña cambiada'); renderAjCuenta();
+  });
+}
+function cuAjNuevoCodigo() {
+  _cuModal('Código de recuperación nuevo',
+    '<p class="cu-p">El código anterior dejará de servir. Escribe tu contraseña para continuar.</p>' +
+    _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"'),
+    'cuAjNuevoCodigoOk', 'Generar código');
+}
+function cuAjNuevoCodigoOk() {
+  var a = _cuVal('cu-clave'); if (!a) { _cuError('Escribe tu contraseña.'); return; }
+  _cuHacerM('Generando…', async function () {
+    var codigo = await cuNuevoCodigo(a);
+    closeModal(); cuMostrar('codigo', { codigo: codigo });
+  });
+}
+function cuAjReentrar() {
+  _cuModal('Volver a entrar',
+    '<p class="cu-p">Escribe la contraseña de <b>' + escHtml(_cuenta.correo) + '</b>.</p>' +
+    _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"'),
+    'cuAjReentrarOk', 'Entrar');
+}
+function cuAjReentrarOk() {
+  var a = _cuVal('cu-clave'); if (!a) { _cuError('Escribe tu contraseña.'); return; }
+  _cuHacerM('Entrando…', async function () {
+    var r = await cuEntrar(_cuenta.correo, a);
+    closeModal();
+    if (r && r.necesitaCodigo) { cuMostrar('necesitaCodigo'); return; }
+    renderAjCuenta(); toast('Sesión renovada');
+  });
+}
+function cuAjCerrar() {
+  openModal('<div class="mh"><h2>Cerrar sesión</h2>' + CU_X + '</div>' +
+    '<p class="cu-p">Tu información se queda en este equipo y solo se vuelve a abrir con tu cuenta.</p>' +
+    '<button type="button" class="btn bp bbl" onclick="cuAjCerrarOk(false)">Cerrar sesión</button>' +
+    '<div class="cu-sep"></div>' +
+    '<p class="cu-p">¿Vas a entregar el teléfono? Borra también la información. Aún no está en la nube: se perdería.</p>' +
+    '<button type="button" class="btn bd bbl" onclick="cuAjCerrarOk(true)">Cerrar sesión y borrar este equipo</button>');
+}
+function cuAjCerrarOk(borrar) {
+  if (borrar && !confirm('Se BORRARÁ toda la información de este equipo y NO está en la nube.\n\nNo se puede deshacer. ¿Continuar?')) return;
+  closeModal();
+  cuCerrarSesion(!!borrar);
+}
+function cuAjEliminar() {
+  _cuModal('Eliminar mi cuenta',
+    '<p class="cu-p">Se borran tu cuenta, lo que tenga en la nube y la información de este equipo. No se puede deshacer.</p>' +
+    '<p class="cu-p">Si quieres conservar algo, exporta antes una copia (Copia de seguridad).</p>' +
+    _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"'),
+    'cuAjEliminarOk', 'Eliminar mi cuenta', true);
+}
+function cuAjEliminarOk() {
+  var a = _cuVal('cu-clave'); if (!a) { _cuError('Escribe tu contraseña.'); return; }
+  if (!confirm('Confirmación final: se elimina tu cuenta y toda su información. ¿Continuar?')) return;
+  _cuHacerM('Eliminando…', async function () {
+    await cuEliminarCuenta(a);
+  });
+}
+
 // NOTA: el SW solo funciona en HTTPS o localhost.
 // Para deploy: subir todos los archivos a GitHub Pages u otro hosting HTTPS.
 /* ⚠️ FASE 0 (2026-09-25): dentro de la app de Play el código ya viaja EN EL

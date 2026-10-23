@@ -36,6 +36,34 @@ tener la app «terminada»: se corrige mientras el reloj corre (§5).
 `npm run deploy:playstore` sirve a partir de la segunda subida, y además necesita
 la clave de servicio, que todavía no existe.
 
+### La cuenta (F2, rama `f2-cuenta`): lo que hay que hacer en Firebase **[USUARIO]**
+
+El código de la cuenta está hecho y probado contra los emuladores (`verify_cuenta.mjs`).
+Mientras `CU_FB` esté vacío en `LexCapture_v8.html`, la cuenta queda «pendiente de
+instalación» y la app funciona como antes. Para encenderla:
+
+1. **Crear el proyecto** en https://console.firebase.google.com (sin Google Analytics).
+2. **Firestore Database → Crear base de datos → ubicación `southamerica-east1` (São Paulo)**,
+   modo producción. ⚠️ **Irreversible**: la ubicación no se puede cambiar después.
+3. **Authentication → Método de acceso → Correo electrónico/contraseña: habilitar**
+   (solo el primer interruptor; el «vínculo por correo» queda apagado). **No** activar una
+   política de contraseñas: la app ya la exige en el teléfono, y Firebase nunca ve la real.
+4. **Authentication → Plantillas → cualquier plantilla → «Personalizar URL de acción»** →
+   `https://getcorenova.github.io/lexcapture/LexCapture_v8.html`.
+   ⚠️ **Obligatorio.** Con la página de Google, quien restablece la contraseña la escribe
+   allí, Firebase recibe la contraseña real y la cuenta deja de abrir desde la app.
+5. **Authentication → Configuración → Dominios autorizados**: añadir `getcorenova.github.io`.
+6. **Configuración del proyecto → Tus apps → Web (`</>`)**, sin Hosting → pasar al chat
+   el bloque `firebaseConfig` (`apiKey`, `authDomain`, `projectId`, `appId`). No es secreto.
+7. **Reglas**: las sube el asistente con `npx firebase deploy --only firestore:rules`
+   tras un `npx firebase login` que haces tú una vez. (O se pegan a mano desde
+   `firebase/firestore.rules` en Firestore → Reglas.)
+8. Opcional y recomendable: en Google Cloud → Credenciales, restringir la clave de
+   navegador a `https://getcorenova.github.io/*`.
+
+El plan **Blaze** con alerta de presupuesto hace falta en la F3 (Cloud Functions); para
+la F2 basta el plan gratuito.
+
 ---
 
 ## 1. Estado real, medido (no supuesto)

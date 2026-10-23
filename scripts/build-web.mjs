@@ -28,6 +28,7 @@ import { execFileSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
+import { comprobar as comprobarFirebase, empaquetar as empaquetarFirebase } from './build-firebase.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const APP = join(RAIZ, 'LexCapture_v8.html');
@@ -97,6 +98,19 @@ const externos = [
 ].map(m => m[1]).filter(u => /^(https?:)?\/\//.test(u));
 if (externos.length) externos.forEach(u => err(`recurso externo en el HTML: ${u}`));
 else ok('cero recursos externos — arranca sin red');
+
+// ── 3b. El SDK de Firebase empaquetado en local ────────────────────────────
+// La cuenta (F2) carga vendor/firebase.js bajo demanda. Tiene que existir y ser
+// de la versión exacta de package.json: un paquete viejo cambia sin avisar el
+// comportamiento de la cuenta. Al compilar se regenera; con --check solo se mira.
+console.log('\nSDK de Firebase (vendor/firebase.js)');
+if (!soloCheck) {
+  try { const r = await empaquetarFirebase(); ok(`regenerado (Firebase ${r.version}, ${r.kb} KB)`); }
+  catch (e) { err('no se pudo empaquetar: ' + e.message); }
+} else {
+  const r = comprobarFirebase();
+  if (r.ok) ok(`al día (Firebase ${r.version}, ${r.kb} KB)`); else r.fallos.forEach(err);
+}
 
 // ── 4. Peso ────────────────────────────────────────────────────────────────
 const mb = Buffer.byteLength(html) / 1048576;

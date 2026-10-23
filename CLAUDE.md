@@ -11,8 +11,9 @@
 > F2 cuenta Firebase + jerarquía de llaves · F3 derecho de uso (prueba sin tarjeta anclada al
 > teléfono con Play Integrity Device Recall / pagado / vencido) · F4 sincronización por registro con
 > Firestore (retira la copia en Drive) · F5 compras (RevenueCat + Play Billing, solo Android) ·
-> F6 cumplimiento. Detalle en «Sin PIN (F1)», al final. **F1 hecha en la rama `f1-sin-pin`, sin
-> fusionar ni publicar.** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
+> F6 cumplimiento. Detalle en «Sin PIN (F1)» y «La cuenta (F2)», al final. **F1 fusionada en
+> `main` el 2026-10-23 (sin publicar). F2 hecha en la rama `f2-cuenta`, sin fusionar ni publicar;
+> la cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
 > la CSP, y `lexcapture-android/` sin git.
@@ -7585,3 +7586,62 @@ usuario: la app abre directo. Verificado con `verify_migracion_pin.mjs` (**23 ch
   o escribían el PIN se adaptaron de forma mecánica a esperarla (`waitForFunction`), y las que
   medían la pantalla del PIN (`verify_ds`, `verify_orden`, `verify_sync` J13-J17 y K0) miden ahora
   que el arranque es directo y que el arranque guiado no quedó como código sin puerta.
+
+## La cuenta (F2 del plan de cuenta, 2026-10-23)
+Segunda fase del plan vigente. Rama `f2-cuenta`, **sin fusionar ni publicar**. Verificado con
+`verify_cuenta.mjs` (**55 checks**, nuevo) contra los **emuladores de Firebase** (Auth + Firestore),
+que la propia suite arranca y apaga: ninguna comprobación toca un proyecto real.
+
+- **Bloque aislado `cu*`** al final del script. Pantallas a pantalla completa en `#cu-ov` (z 490,
+  debajo de `#pin-ov` para que un error del almacén o la migración del PIN la tapen): bienvenida ·
+  crear cuenta · iniciar sesión · olvidé la contraseña · código de recuperación · verificar el correo ·
+  «escribe tu código» · contraseña nueva (desde el enlace) · equipo de otra cuenta. Y **Ajustes →
+  Cuenta** (`#aj-cuenta`, `renderAjCuenta`): correo y verificación, cambiar contraseña, código nuevo,
+  cerrar sesión y **eliminar la cuenta** (obligatorio en Play).
+- **Jerarquía de llaves (estilo Bitwarden) — Firebase nunca recibe la contraseña**:
+  `maestra = PBKDF2-SHA256(contraseña NFC, «flagrante|»+correo, 600 000)` → HKDF → `auth` (lo que va
+  a Firebase como contraseña, siempre con el prefijo `Fa1!` para pasar cualquier política) y
+  `envoltura` (no sale del equipo). La **DEK** (32 bytes) se guarda en `users/{uid}/llaves/main`
+  dos veces cifrada: `dekClave` (con la envoltura) y `dekRec` (con el código). Sobres AES-GCM con
+  el uid y el uso como dato adicional autenticado: un sobre copiado a otra cuenta o a otro campo no abre.
+- **Código de recuperación**: 15 bytes = **24 caracteres Crockford** (120 bits), expandido con HKDF
+  (no se estira: tiene entropía completa). Se enseña en dos renglones de tres grupos y se confirma
+  tecleando los 4 últimos; mientras no se confirma vive en `lc_cuenta.codigoPend` para poder
+  enseñarlo otra vez sin red. **Al usarlo se estrena otro** (el usado ya se tecleó en algún sitio).
+  El alfabeto pasó a `lcB32Enc/lcB32Dec/lcCodigoBonito` (los `sy*` quedan como alias hasta la F4).
+- **Cambiar la contraseña sin tocar los datos, en TRES pasos** para que ningún corte deje la cuenta
+  sin abrir: `dekClaveNueva` → `updatePassword` → se promueve. `_cuTrasEntrar` termina un cambio
+  cortado al entrar. Lo mide [D4] cortándolo a propósito.
+- **Olvidé la contraseña**: enlace del correo → contraseña nueva → `confirmPasswordReset` → la DEK
+  sigue envuelta con la anterior → **«escribe tu código»**. Sin código: llaves nuevas (lo de la nube
+  queda ilegible; lo del teléfono no se toca). ⚠️ **La URL de acción de Firebase TIENE que ser la
+  app** (PUBLICAR.md, paso 4): en la página de Google se escribiría la contraseña real.
+  `index.html` conserva ahora los parámetros y el ancla al redirigir.
+- **Los datos del equipo tienen dueño** (`_cuenta.uid`): la primera cuenta que entra se queda con
+  ellos (también lo que había antes de la cuenta). Otra cuenta no los ve: «Este equipo es de otra
+  cuenta» → entrar con la dueña o borrarlos. Cerrar sesión **no borra** salvo que se pida (aviso: en
+  la F2 todavía no están en la nube).
+- **`lc_cuenta`** (uid, correo, la DEK, sesión) va cifrado con la llave del equipo y entra en
+  `LC_CLAVES_CIFRADAS`. **Con sesión la app abre directo y sin señal**: el SDK no se carga al abrir;
+  `cuRevisarNube` lo carga 2,5 s después y solo con red, para saber si la sesión de la nube sigue viva
+  (una contraseña cambiada en otro equipo la cierra: Ajustes lo dice y ofrece volver a entrar).
+- **El SDK** (`firebase@12.19.0`, auth + firestore con caché en memoria) se empaqueta en
+  **`vendor/firebase.js` (596 KB)** con esbuild (`scripts/build-firebase.mjs`, que llama
+  `build:web`; con `--check` comprueba la versión de la cabecera). Sin CDN, sin el resolutor de
+  ventanas emergentes (iframe de Google). Lo precachea el Service Worker y lo copia
+  `build:android`. ⚠️ Objetivo `es2020`: con uno más viejo esbuild no transforma la desestructuración.
+- **Dónde hay cuenta** (`cuActiva()`): sin `CU_FB` (configuración vacía) la cuenta queda **pendiente de
+  instalación** y la app funciona como antes — mismo patrón que `SY_CLIENT_ID`. En `localhost` solo
+  con `lc_flags.cuentaEmulador`: así las 46 suites restantes no crean cuentas y la de la cuenta la
+  ejerce entera. No protege nada en local: quien sirve la app en su equipo ya tiene el código.
+- **Firestore** (`firebase/firestore.rules`, `firebase/firebase.json`): solo `users/{uid}/llaves/main`,
+  solo el dueño, solo los campos de sobre y con tamaño acotado; todo lo demás cerrado. La F3 añade
+  el derecho de uso y la F4 los registros. **CSP**: `connect-src` abre identitytoolkit, securetoken
+  y firestore.googleapis.com.
+- **Eliminar la cuenta**: llaves de la nube → usuario de Firebase → equipo (conserva `lc_theme`).
+  Las llaves van primero: sin usuario ya no habría permiso para borrarlas. ⚠️ Pendiente para la F3/F6:
+  una Cloud Function que borre en el servidor si el borrado del cliente se corta a la mitad.
+- `privacy.html` gana la sección «La cuenta» y la eliminación desde Ajustes. **App Check** se deja para
+  la F3 (Play Integrity).
+- ⚠️ **El emulador responde `auth/wrong-password`** donde Firebase real responde
+  `auth/invalid-credential` (protección contra enumeración): la app trata los dos igual.

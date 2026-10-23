@@ -69,8 +69,28 @@
   Los datos se guardan en el <strong>almacenamiento local del propio dispositivo</strong>
   (<code>localStorage</code>), <strong>cifrados con AES-GCM</strong> con una llave propia del equipo que
   la aplicación genera al instalarse y que no se puede extraer ni copiar. También va cifrada la configuración, que incluye los datos del funcionario y
-  de su compañero de patrulla. La aplicación no cuenta con servidor ni con base de datos propia: no
+  de su compañero de patrulla. Las capturas y las personas no se guardan en ningún servidor: no
   hay ningún lugar al que quien la desarrolla pueda ir a consultar esa información.
+</p>
+
+<h2>La cuenta</h2>
+<p>
+  Para usar la aplicación se crea una cuenta con correo electrónico y contraseña. La cuenta se
+  administra con <strong>Google Firebase</strong> (Firebase Authentication y Cloud Firestore, con
+  servidores en São Paulo, Brasil). Lo que recibe Firebase es únicamente:
+</p>
+<ul>
+  <li>el <strong>correo electrónico</strong>, para iniciar sesión, comprobar que es tuyo y enviarte
+      el enlace si olvidas la contraseña;</li>
+  <li>una <strong>llave derivada de la contraseña</strong>, en lugar de la contraseña: la contraseña
+      nunca sale del teléfono;</li>
+  <li>la <strong>llave de tus datos, cifrada</strong> dos veces: una con tu contraseña y otra con tu
+      código de recuperación. Sin una de las dos no se puede abrir: ni Google ni quien desarrolla
+      Flagrante pueden hacerlo.</li>
+</ul>
+<p>
+  Si olvidas la contraseña y no tienes el código de recuperación, lo que la cuenta tenga en la nube
+  no se puede recuperar. Lo que esté en el teléfono no se pierde por eso.
 </p>
 <p>
   La aplicación de Android <strong>no incluye estos datos en la copia de seguridad de Android</strong>
@@ -207,6 +227,11 @@
   la desinstala o borra sus datos. Si activó la copia de seguridad, puede eliminarla borrando los
   datos de la aplicación desde su cuenta de Google. El control total sobre la conservación y la
   eliminación corresponde al usuario.
+</p>
+<p>
+  La cuenta se elimina desde la propia aplicación, en <strong>Ajustes → Cuenta → Eliminar mi
+  cuenta</strong>: se borran la cuenta de Firebase, lo que tenga en la nube y la información del
+  teléfono. Cerrar sesión, en cambio, no borra nada salvo que se pida.
 </p>
 
 <h2>12. Seguridad</h2>
