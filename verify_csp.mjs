@@ -37,8 +37,13 @@ log(!/unsafe-eval/.test(csp), '[C3] sin unsafe-eval');
 log((dir['object-src'] || []).join(' ') === "'none'" && (dir['base-uri'] || []).join(' ') === "'none'",
     "[C4] object-src 'none' y base-uri 'none'");
 const conexiones = (dir['connect-src'] || []).filter(x => x !== "'self'");
-log(conexiones.every(u => /^https:\/\/([a-z0-9]+\.)?(googleapis\.com|accounts\.google\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))),
-    '[C5] las únicas conexiones fuera de la app son las de Google (la copia en Drive)', conexiones.join(' '));
+/* F3 (2026-10-23): las funciones del servidor de la cuenta viven en
+   cloudfunctions.net. El comodín no abre más que firestore.googleapis.com, que
+   ya es de todos los proyectos de Firebase: la protección real es que el código
+   de la app solo habla con el proyecto de `CU_FB`. */
+log(conexiones.every(u => /^https:\/\/([a-z0-9]+\.)?(googleapis\.com|accounts\.google\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))
+                       || u === 'https://*.cloudfunctions.net'),
+    '[C5] las únicas conexiones fuera de la app son las de Google (cuenta, funciones del servidor y copia en Drive)', conexiones.join(' '));
 log(!/frame-ancestors/.test(csp), '[C6] no pide en <meta> lo que el navegador ignora ahí (frame-ancestors)');
 /* Que la <meta> vaya ANTES de cualquier script: una política declarada después
    no protege lo que ya corrió. */

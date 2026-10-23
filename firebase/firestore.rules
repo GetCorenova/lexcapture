@@ -8,8 +8,11 @@ rules_version = '2';
 // reglas deciden QUIÉN puede leer y escribir esos sobres; lo que contienen no
 // lo puede leer nadie más que el dueño, aunque las reglas fallaran.
 //
-// F2 (cuenta): solo existe users/{uid}/llaves/main.
-// F3 añadirá el derecho de uso (entitlements) y F4 los registros (reg/*).
+// F2 (cuenta): users/{uid}/llaves/main.
+// F3 (derecho de uso): entitlements/{uid}. Solo lo escriben las funciones del
+// servidor (el SDK de administración no pasa por estas reglas): el teléfono lo
+// lee y nunca lo escribe — si pudiera, se regalaría la prueba.
+// F4 añadirá los registros (reg/*).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -32,7 +35,12 @@ service cloud.firestore {
         && (!('dekClaveNueva' in request.resource.data) || sobre(request.resource.data.dekClaveNueva));
     }
 
-    // Todo lo demás, cerrado.
+    match /entitlements/{uid} {
+      allow read: if esDueno(uid);
+      allow write: if false;
+    }
+
+    // Todo lo demás, cerrado — también dispositivosPrueba (solo el servidor).
     match /{document=**} {
       allow read, write: if false;
     }

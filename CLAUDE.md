@@ -11,9 +11,11 @@
 > F2 cuenta Firebase + jerarquía de llaves · F3 derecho de uso (prueba sin tarjeta anclada al
 > teléfono con Play Integrity Device Recall / pagado / vencido) · F4 sincronización por registro con
 > Firestore (retira la copia en Drive) · F5 compras (RevenueCat + Play Billing, solo Android) ·
-> F6 cumplimiento. Detalle en «Sin PIN (F1)» y «La cuenta (F2)», al final. **F1 fusionada en
-> `main` el 2026-10-23 (sin publicar). F2 hecha en la rama `f2-cuenta`, sin fusionar ni publicar;
-> la cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
+> F6 cumplimiento. Detalle en «Sin PIN (F1)», «La cuenta (F2)» y «El derecho de uso (F3)», al
+> final. **F1 y F2 fusionadas en `main` el 2026-10-23 (sin publicar). F3 hecha en la rama
+> `f3-derecho`, sin fusionar ni publicar — y NO se publica antes que la F5 (cierra la app al día 15
+> y todavía no se puede pagar). La cuenta queda dormida hasta pegar la configuración de Firebase
+> (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
 > la CSP, y `lexcapture-android/` sin git.
@@ -7645,3 +7647,86 @@ que la propia suite arranca y apaga: ninguna comprobación toca un proyecto real
   la F3 (Play Integrity).
 - ⚠️ **El emulador responde `auth/wrong-password`** donde Firebase real responde
   `auth/invalid-credential` (protección contra enumeración): la app trata los dos igual.
+
+## El derecho de uso (F3 del plan de cuenta, 2026-10-23)
+Tercera fase del plan vigente. Rama `f3-derecho`, **sin fusionar ni publicar**. ⚠️ **No se publica
+antes que la F5**: cierra la app al día 15 y la compra todavía no existe. Verificado con
+`verify_prueba.mjs` (**71 checks**, nuevo) contra los emuladores de Firebase (Auth + Firestore +
+**Functions**), que la suite arranca y apaga, con Play Integrity **simulado**.
+
+- **La prueba la concede el SERVIDOR, nunca el teléfono.** `firebase/functions/index.js`
+  (región `southamerica-east1`): `iniciarPrueba` · `miDerecho` (plan + **hora del servidor**) ·
+  `alBorrarUsuario` (trigger de Auth v1: borra `users/{uid}/**` y `entitlements/{uid}` aunque el
+  borrado del teléfono se haya cortado — cierra el pendiente de la F2). La lógica pura (correo
+  desechable, veredicto, Device Recall) vive aparte en `prueba.js` para probarla sin emuladores.
+- **Lo que exige `iniciarPrueba`**, en orden: sesión · `entitlements/{uid}` sin prueba previa (si la
+  tiene vigente la devuelve igual; si ya la tuvo, «no») · correo **verificado** (lo lee del token,
+  que firma Firebase) · dominio no desechable · token de **Play Integrity** de esta app
+  (`requestHash` = SHA-256 de `flagrante|prueba|uid`, `PLAY_RECOGNIZED`, `MEETS_DEVICE_INTEGRITY`, de
+  menos de 10 min) · **Device Recall** bit 1 sin poner (un bit de más de 24 meses no cuenta: teléfono
+  revendido) · **ANDROID_ID** sin usar, guardado como HMAC con el secreto `PRUEBA_HMAC` en
+  `dispositivosPrueba/{hash}` **sin el uid**. La concesión va en **una transacción**; el bit de Device
+  Recall se escribe **después** (si Google falla, el respaldo ya quedó). Ningún intento fallido gasta
+  la prueba.
+- ⚠️ **El motivo del «no» va en `details.motivo`, no en el mensaje**: el SDK web 12 añade el estado
+  HTTP al texto («correo-sin-verificar [400]»). `cuMsgError` lo traduce con `DR_MSG`.
+- ⚠️ **firebase-admin 13: imports modulares** (`firebase-admin/app`, `firebase-admin/firestore`).
+  `admin.firestore.Timestamp` ya no existe y la función moría con «Cannot read properties of
+  undefined (reading 'fromMillis')».
+- ⚠️ **SIMULACIÓN ENCERRADA EN EL EMULADOR.** Play Integrity no se puede pedir desde un navegador ni
+  desde un emulador de Android: la suite manda tokens `SIM.` + JSON y la función los acepta **solo**
+  si `FUNCTIONS_EMULATOR === 'true'` (en el emulador, cualquier otro token es «no», sin hablar con
+  Google). `verify_prueba` [E3] quita todos los bloques `if (EMULADOR…) {…}` y exige que fuera no
+  quede rastro de la simulación — comprobado que muerde.
+- **El teléfono**: complemento propio `IntegridadPlugin.java` (`com.google.android.play:integrity:1.6.0`,
+  petición estándar, se prepara en cada llamada porque Device Recall solo se refresca al preparar) +
+  `@capacitor/device@8.0.3` para el ANDROID_ID. **versionCode 6**. Probado en el emulador de Android
+  por CDP: `drNativo()` verdadero, `Device.getId()` da el ANDROID_ID y Play Integrity responde (con
+  un número de proyecto falso, error −16, que llega a la página como `integridad--16`). El número de
+  proyecto es `CU_FB.messagingSenderId`.
+- ⚠️ **Android Studio actualizó su JDK a Java 25 y Gradle 8.14 no lo soporta** («Unsupported class
+  file major version 69»). `build-android.mjs` busca un JDK 17-21 instalado y se lo pasa SOLO a
+  Gradle (en esta PC, Microsoft OpenJDK 21).
+- **La app — `lcDerecho()`** → `'activo' | 'sinPrueba' | 'vencido' | 'sinSesion'` es el **punto
+  único**. Un solo guardián (`lcGuardia`) en `go()` (solo con `_lcListo`), `startWizard`, `editCase`,
+  `lcSalida`, `lcProducirDoc`, `ptEnviarRegistros`, `ptExportarArchivo`, `ptImportarArchivo` y
+  `ptConfirmarImportacion`. ⚠️ **`wizSave` NO tiene guardián a propósito**: perder media hora de
+  diligenciamiento porque el plan venció a la mitad es peor que dejarla guardar; al salir del
+  formulario ya se ve el bloqueo.
+- **Pantallas** (dentro de `#cu-ov`): `prueba` (en Android «Empezar mis 14 días»; en la web «la
+  prueba se inicia en la app de Android» + enlace a Play + «Ya la inicié») · `vencido` (Suscribirme ·
+  Ya pagué: revisar · Exportar mis datos · Cerrar sesión · Eliminar mi cuenta, y nada más) ·
+  `exportado` · `eliminar`. «Suscribirme» llama a `lcComprar` **si existe** (lo define la F5); hasta
+  entonces lo dice, en vez de un botón que no hace nada. **Exportar** = el `.lexc` de Modo compartir
+  con todas las personas y capturas y una clave de 6 dígitos (share nativo en Android).
+- **EL RELOJ NO RETROCEDE**: `_cuenta.derecho = {plan, vence, srv, loc}` y `_cuenta.reloj` (marca
+  que solo sube, guardada al ir a segundo plano). `drAhora() = max(srv, max(ahora, marca) + (srv −
+  loc))`. Cada respuesta del servidor **reinicia la marca**: un reloj que estuvo adelantado no
+  castiga a nadie después de comprobar. Sin señal la prueba vence a su hora; el plan **pagado** tiene
+  **3 días de gracia**.
+- El plan se pregunta al entrar (`_cuAbrirSesion`, ahora `async`), en cada apertura con señal
+  (`cuRevisarNube`) y al volver a la app si hace más de 6 h. **Avisos** a 2 días y el último día.
+  **Ajustes → Cuenta** muestra el plan y cuántos días quedan.
+- **Reglas**: `entitlements/{uid}` se lee si es tuyo y **nunca se escribe desde el teléfono**;
+  `dispositivosPrueba` y `_simRecall` quedan en el cierre general.
+- **Dónde no rige**: sin cuenta (`cuActiva()` falso) todo abierto, como antes. En localhost
+  `lc_flags.pruebaLibre` lo abre también con cuenta — solo localhost — y lo usa `verify_cuenta`
+  (55/55 sin tocar sus expectativas salvo la forma de `CU_FB`, que ganó `messagingSenderId`).
+- `vendor/firebase.js` exporta ahora `getFunctions`/`httpsCallable`/`connectFunctionsEmulator`, y su
+  cabecera lleva la **huella de `firebase-entry.mjs`**: con solo la versión, una exportación nueva
+  dejaba el paquete viejo pasando el `--check`. **CSP**: `connect-src` abre `https://*.cloudfunctions.net`.
+- `privacy.html` gana «La prueba gratuita» (Play Integrity y el identificador del dispositivo, solo
+  antifraude). `PUBLICAR.md` §0 lista las tareas de consola (Blaze, Play Integrity API, vincular el
+  proyecto en Play Console, Device Recall, el secreto `PRUEBA_HMAC` — que **no se cambia nunca** —
+  y el despliegue).
+- **App Check NO se activó en esta fase**, a conciencia: `iniciarPrueba` ya exige su propio token de
+  Play Integrity, que es más fuerte para lo que protege; App Check cobra sentido en la F4, cuando por
+  Firestore pasen los registros.
+- Regresión completa: **45/49 en verde** (prueba 71 · cuenta 55 · csp 11, que solo necesitó admitir
+  el dominio de las funciones en su lista de conexiones). Las 4 en rojo son las preexistentes ya
+  documentadas (`dossier_historico` [20][21], `ds`, `jerarquia`, `mejora6b` [47][53]).
+  Anti-caché `?v=139` / `cache-v139`, `_BUILD=139`.
+- ⚠️ `lexcapture-android/` sigue **sin git**: sus cambios de esta fase (`IntegridadPlugin.java`, el
+  `registerPlugin` en `MainActivity`, la dependencia de Play Integrity y `versionCode 6` en
+  `app/build.gradle`, `@capacitor/device` en `package.json`) quedan descritos aquí y no tienen commit.
+  El `.aab` de la F3 no se compiló a propósito: no se sube hasta la F5.

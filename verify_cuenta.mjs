@@ -88,6 +88,8 @@ async function telefono(conEmulador = true) {
   const ctx = await browser.newContext({ viewport: { width: 384, height: 800 } });
   if (conEmulador) await ctx.addInitScript(e => {
     const o = JSON.parse(localStorage.getItem('lc_flags') || '{}'); o.cuentaEmulador = e;
+    /* El derecho de uso (F3) lo ejerce verify_prueba.mjs: aquí no se concede prueba. */
+    o.pruebaLibre = true;
     localStorage.setItem('lc_flags', JSON.stringify(o));
   }, EMU);
   const page = await ctx.newPage();
@@ -113,7 +115,7 @@ await abrir(T0);
 const a1 = await T0.page.evaluate(() => ({ ov: document.getElementById('cu-ov').classList.contains('on'), activa: cuActiva(),
   inst: cuInstalada(), aj: (go('ajustes'), document.getElementById('aj-cuenta').innerHTML) }));
 log(!a1.ov && !a1.activa && a1.aj === '', '[A1] en localhost sin emuladores la app abre como antes, sin bienvenida ni sección Cuenta');
-log(!a1.inst && /var CU_FB = \{ apiKey: '', authDomain: '', projectId: '', appId: '' \};/.test(src),
+log(!a1.inst && /var CU_FB = \{ apiKey: '', authDomain: '', projectId: '', appId: '', messagingSenderId: '' \};/.test(src),
     '[A2] sin configuración de Firebase la cuenta queda «pendiente de instalación» y no bloquea nada');
 await T0.ctx.close();
 

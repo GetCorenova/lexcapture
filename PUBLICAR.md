@@ -54,7 +54,8 @@ instalación» y la app funciona como antes. Para encenderla:
    allí, Firebase recibe la contraseña real y la cuenta deja de abrir desde la app.
 5. **Authentication → Configuración → Dominios autorizados**: añadir `getcorenova.github.io`.
 6. **Configuración del proyecto → Tus apps → Web (`</>`)**, sin Hosting → pasar al chat
-   el bloque `firebaseConfig` (`apiKey`, `authDomain`, `projectId`, `appId`). No es secreto.
+   el bloque `firebaseConfig` **entero** (`apiKey`, `authDomain`, `projectId`, `appId` **y
+   `messagingSenderId`**, que es el número del proyecto y lo pide Play Integrity). No es secreto.
 7. **Reglas**: las sube el asistente con `npx firebase deploy --only firestore:rules`
    tras un `npx firebase login` que haces tú una vez. (O se pegan a mano desde
    `firebase/firestore.rules` en Firestore → Reglas.)
@@ -63,6 +64,38 @@ instalación» y la app funciona como antes. Para encenderla:
 
 El plan **Blaze** con alerta de presupuesto hace falta en la F3 (Cloud Functions); para
 la F2 basta el plan gratuito.
+
+### La prueba de 14 días (F3, rama `f3-derecho`) **[USUARIO]**
+
+El código está hecho y probado contra los emuladores (`verify_prueba.mjs`, con Play
+Integrity simulado). ⚠️ **La F3 NO se publica sola**: cierra la app al día 15 y la
+compra llega en la F5. Publicarla antes dejaría a los usuarios sin forma de pagar.
+Lo que hace falta, además de lo de la cuenta:
+
+1. **Firebase → Actualizar al plan Blaze** y, en Google Cloud → Facturación →
+   Presupuestos, una **alerta** (p. ej. 10 USD). Las funciones no corren sin Blaze.
+2. **Google Cloud (el MISMO proyecto de Firebase) → APIs → habilitar «Google Play
+   Integrity API»**.
+3. **Play Console → Protegido por Play → Play Integrity API → Vincular el proyecto de
+   Cloud** (el de Firebase). Sin esto el token no se puede descifrar en el servidor.
+4. **Device Recall (beta)**: pedirlo en el formulario de interés
+   (https://forms.gle/2d24B4gNyoVrqztG6); cuando lo aprueben, Play Console → Protegido
+   por Play → Play Integrity API → Administrar → Cambiar respuestas → **Device recall:
+   activado**. ⚠️ Activarlo borra las respuestas de prueba que hubiera configuradas.
+   Mientras no esté, el respaldo por ANDROID_ID ya impide repetir la prueba (no tras
+   restablecer de fábrica).
+5. **El secreto del respaldo**: `npx firebase functions:secrets:set PRUEBA_HMAC` con un
+   valor largo al azar. ⚠️ **No cambiarlo nunca**: con otro secreto, todos los teléfonos
+   que ya usaron la prueba quedarían «nuevos».
+6. **Desplegar** (lo hace el asistente tras `npx firebase login`):
+   `cd firebase/functions && npm install` y luego
+   `npx firebase deploy --only functions,firestore:rules`.
+7. La app de Android que se suba tiene que traer el complemento de Play Integrity
+   (**versionCode 6** en adelante).
+
+⚠️ La prueba **solo se inicia desde la app instalada desde Google Play** (prueba cerrada
+o producción): un APK de depuración, un emulador o un teléfono con root reciben «no».
+Para probarla en un teléfono real hay que instalarla desde la pista de prueba.
 
 ---
 

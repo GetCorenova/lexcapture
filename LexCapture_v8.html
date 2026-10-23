@@ -13,7 +13,7 @@
      frame-ancestors y el resto de cabeceras (HSTS, nosniff…) NO se pueden poner
      en una <meta>: el navegador las ignora ahí. Van en las cabeceras HTTP del
      hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/ https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/ https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1322,6 +1322,10 @@ body.cu-on{overflow:hidden}
 .cu-aj-alerta svg{width:18px;height:18px;color:var(--warn);stroke-width:1.8;flex:0 0 auto}
 .cu-aj-alerta span{flex:1 1 200px}
 .b-cu-ok{background:var(--ok-bg);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 35%,transparent)}
+/* F3 · derecho de uso: las salidas que quedan con el plan vencido. */
+.cu-fila-links{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 16px}
+.cu-link-peligro{color:var(--danger)}
+.cu-card a.btn{text-decoration:none}
 @media(min-width:600px){.cu-aj-acc{flex-direction:row;flex-wrap:wrap}.cu-aj-acc .btn{flex:1 1 auto}}
 
 /* ═══ TARJETA DE PERSONA ═══ */
@@ -2937,6 +2941,9 @@ var wc = null, ws = 0;
 
 function go(name) {
   if (screens.indexOf(name) < 0) return;
+  /* F3: sin derecho de uso no se navega (ver «DERECHO DE USO»). Antes de abrir
+     la sesión no se sabe nada todavía: el arranque decide después. */
+  if (_lcListo && !lcGuardia()) return;
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('on'); });
   var el = document.getElementById('screen-' + name);
   if (el) el.classList.add('on');
@@ -3148,7 +3155,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 138;
+var _BUILD = 139;
 
 /* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
    Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
@@ -3246,6 +3253,7 @@ var _shareSeq = 0;                // el sheet puede cambiar de documento mientra
      único botón, «Descargar», que es exactamente la ceremonia que la auditoría
      del menú vino a quitar. */
 function lcSalida(kind, ctx, nombre) {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   lcPedirExport(kind, nombre, function(sel) {
     if (sel.fmt === 'PDF' && !lcDoc(kind).esPDF) { lcProducirDoc(kind, ctx, sel); return; }
     if (!_docShareOk() && !_capNative()) { lcProducirDoc(kind, ctx, sel); return; }
@@ -4826,6 +4834,7 @@ function getWizConfig() {
 }
 
 function startWizard(tipo) {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   // Si hay una captura a medias sin guardar, se pregunta antes de pisarla.
   if (wizPreguntarBorrador(null, function(){ startWizard(tipo); })) return;
   if (tipo === 'OJ') {                       // módulo propio (Fase I)
@@ -4882,6 +4891,7 @@ function startWizard(tipo) {
 }
 
 function editCase(id) {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   var raw = DB.getCase(id); if (!raw) return;
   if (wizPreguntarBorrador(id, function(){ editCase(id); })) return;
   wc = JSON.parse(JSON.stringify(raw));
@@ -6690,6 +6700,7 @@ function lcProducirAhora(c, sel, esOJ) {
    de orden judicial o el acta de derechos: quien agregue un formato solo
    registra su `build` en LC_DOCS y hereda descarga, aviso y vista de impresión. */
 async function lcProducirDoc(kind, ctx, sel) {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   toast('Generando documento…');
   var out = await lcDoc(kind).build(ctx, sel.papel);
   if (!out) return;                       // no se pudo generar (p. ej. NUNC inválido)
@@ -23214,6 +23225,7 @@ function _ptEnvioSeRindio() {
   }
 }
 function ptEnviarRegistros(personas, casos, cb) {
+  if (!lcGuardia()) return { ok: false, motivo: 'sin derecho de uso' };   // F3
   if (!ptEstado().activa) return { ok: false, motivo: 'sin vínculo' };
   if (_ptEnvio) return { ok: false, motivo: 'hay un envío en curso' };
   personas = personas || []; casos = casos || [];
@@ -23818,6 +23830,7 @@ function _ptResumenLinea(n, sing, plur) {
   return n + ' ' + (n === 1 ? sing : plur);
 }
 function ptConfirmarImportacion(abierto, deQuien, cb) {
+  if (!lcGuardia()) { cb(false); return; }   // F3: nada entra sin derecho de uso
   var locP = DB.getPersons(), locC = DB.getCases();
   var cp = ptClasificar(abierto.personas, locP, 'p');
   var cc = ptClasificar(abierto.casos, locC, 'c');
@@ -23972,6 +23985,7 @@ async function ptArchivoAbrir(buf, pin) {
 
 /* ── EXPORTAR ───────────────────────────────────────────────────────────── */
 async function ptExportarArchivo(personas, casos) {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   var n = (personas || []).length + (casos || []).length;
   if (!n) { toast('Marca antes lo que quieras pasarle al compañero.'); return; }
   var pin = ptClaveNumerica();
@@ -24000,6 +24014,7 @@ async function ptExportarArchivo(personas, casos) {
 
 /* ── IMPORTAR ───────────────────────────────────────────────────────────── */
 function ptImportarArchivo() {
+  if (!lcGuardia()) return;                  // F3: derecho de uso
   var inp = document.getElementById('pt-arch');
   if (!inp) return;
   inp.value = '';
@@ -25531,8 +25546,11 @@ function syAlDesbloquear() {
 
 /* La configuración web del proyecto de Firebase: se pega desde la consola
    (Configuración del proyecto → Tus apps → App web). No es secreta: la protegen
-   las reglas de Firestore y, en la F3, App Check. */
-var CU_FB = { apiKey: '', authDomain: '', projectId: '', appId: '' };
+   las reglas de Firestore y, en la F3, App Check. `messagingSenderId` es el
+   NÚMERO del proyecto: Play Integrity lo pide para dar el token de la prueba. */
+var CU_FB = { apiKey: '', authDomain: '', projectId: '', appId: '', messagingSenderId: '' };
+/* Las funciones del servidor viven en la misma región que la base de datos. */
+var CU_REGION = 'southamerica-east1';
 var CU_KDF_IT = 600000;
 /* Lo que Firebase recibe empieza siempre por mayúscula, minúscula, número y
    símbolo: así pasa cualquier política de contraseñas que se active en la consola. */
@@ -25558,7 +25576,7 @@ function cuEmulador() {
 }
 function cuConfig() {
   var e = cuEmulador();
-  if (e) return { apiKey: 'demo-flagrante', authDomain: 'demo-flagrante.firebaseapp.com', projectId: e.proyecto || 'demo-flagrante', appId: 'demo' };
+  if (e) return { apiKey: 'demo-flagrante', authDomain: 'demo-flagrante.firebaseapp.com', projectId: e.proyecto || 'demo-flagrante', appId: 'demo', messagingSenderId: '123456789012' };
   return CU_FB;
 }
 function cuInstalada() { return !!cuConfig().apiKey; }
@@ -25581,11 +25599,13 @@ function cuSdk() {
     var app = FB.initializeApp(cuConfig(), 'flagrante');
     var auth = FB.initializeAuth(app, { persistence: [FB.indexedDBLocalPersistence, FB.inMemoryPersistence] });
     var db = FB.initializeFirestore(app, { localCache: FB.memoryLocalCache() });
+    var fns = FB.getFunctions(app, CU_REGION);
     if (em) {
       FB.connectAuthEmulator(auth, em.auth, { disableWarnings: true });
       FB.connectFirestoreEmulator(db, em.host, em.puerto);
+      if (em.fnPuerto) FB.connectFunctionsEmulator(fns, em.host, em.fnPuerto);
     }
-    _cuFB = { app: app, auth: auth, db: db };
+    _cuFB = { app: app, auth: auth, db: db, fns: fns };
     return _cuFB;
   });
   _cuSdkP.catch(function () { _cuSdkP = null; });
@@ -25730,12 +25750,16 @@ async function _cuTrasEntrar(user, correo, env) {
   await _cuAbrirSesion(user, correo, dek, codigo);
   return { codigo: codigo, verificado: !!user.emailVerified };
 }
-function _cuAbrirSesion(user, correo, dek, codigo) {
+async function _cuAbrirSesion(user, correo, dek, codigo) {
   var prev = (_cuenta && _cuenta.uid === user.uid) ? _cuenta : {};
   _cuNube = 'ok';
-  return cuGuardarLocal({ v: 1, uid: user.uid, correo: correo, dek: _b64FromBytes(dek), sesion: true,
-                          verificado: !!user.emailVerified, codigoPend: codigo || prev.codigoPend || null,
-                          creada: prev.creada || Date.now() });
+  await cuGuardarLocal({ v: 1, uid: user.uid, correo: correo, dek: _b64FromBytes(dek), sesion: true,
+                         verificado: !!user.emailVerified, codigoPend: codigo || prev.codigoPend || null,
+                         creada: prev.creada || Date.now(),
+                         derecho: prev.derecho || null, reloj: prev.reloj || 0 });
+  /* F3: el plan de la cuenta se pide al entrar (hay red, se acaba de usar).
+     Si falla, la pantalla que sigue lo dice y deja reintentarlo. */
+  try { await drActualizar(); } catch (e) {}
 }
 
 /* Con el código de recuperación: abre la DEK, la vuelve a guardar con la
@@ -25883,6 +25907,8 @@ function cuRevisarNube() {
         await FB.reload(u);
         _cuNube = 'ok';
         if (u.emailVerified && !_cuenta.verificado) await cuGuardarLocal(Object.assign({}, _cuenta, { verificado: true }));
+        /* F3: el plan y la hora del servidor, en cada apertura con señal. */
+        try { if (await drActualizar()) drTrasActualizar(); } catch (e2) {}
       }
     } catch (e) {
       if (e && /user-token-expired|user-disabled|user-not-found|invalid-user-token/.test(e.code || '')) _cuNube = 'vencida';
@@ -25920,6 +25946,12 @@ var CU_MSG = {
 function cuMsgError(e) {
   var c = (e && e.code) || '';
   if (CU_MSG[c]) return CU_MSG[c];
+  /* Las funciones del servidor dicen el motivo en `details` (ver DR_MSG). El
+     SDK añade al mensaje el estado HTTP («motivo [400]»): no se lee de ahí. */
+  var mot = e && e.details && e.details.motivo;
+  if (mot && DR_MSG[mot]) return DR_MSG[mot];
+  if (DR_MSG[c]) return DR_MSG[c] + (e.detalle ? ' (' + e.detalle + ')' : '');
+  if (c === 'functions/not-found') return 'El servidor de la prueba todavía no está instalado.';
   if (e && e.message === 'cu-sdk') return 'No se pudo cargar el módulo de la cuenta. Revisa la conexión.';
   if (/offline|unavailable|network|failed-precondition/i.test(c + ' ' + ((e && e.message) || ''))) return CU_MSG.unavailable;
   console.error('[Flagrante] cuenta', e);
@@ -25952,7 +25984,12 @@ function cuContinuar() {
   if (_cuAccion) { _cuAccion = null; _cuLimpiarUrl(); }
   if (!cuSesion()) { cuMostrar('bienvenida'); return; }
   if (_cuenta.codigoPend) { cuMostrar('codigo', { codigo: _cuenta.codigoPend }); return; }
+  /* F3: sin derecho de uso vigente no se ve la app (ver «DERECHO DE USO»). */
+  var der = lcDerecho();
+  if (der === 'sinPrueba') { cuMostrar('prueba'); return; }
+  if (der === 'vencido') { cuMostrar('vencido'); return; }
   cuOcultar();
+  drAvisar();
   if (_cuAjVisible()) renderAjCuenta();
 }
 async function cuAtenderAccion(a) {
@@ -25990,7 +26027,9 @@ var CU_IC = {
   llave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/></svg>',
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   alerta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
-  usuario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
+  usuario: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  reloj: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  descarga: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>'
 };
 function _cuMarca(lema) {
   var img = document.querySelector('.sb-logo-wrap img');
@@ -26131,6 +26170,62 @@ function cuMostrar(p, d) {
         '<button type="button" class="btn bp bbl" onclick="cuMostrar(\'entrar\')">Iniciar sesión con esa cuenta</button>' +
         '<button type="button" class="btn bd bbl" onclick="cuBorrarParaOtra()">Borrar la información de este equipo</button>' +
       '</div>';
+  } else if (p === 'prueba') {
+    /* F3 · sin plan todavía. La prueba solo se inicia en la app de Android:
+       ahí está Play Integrity, que es lo que impide repetirla. */
+    var ver = !!(_cuenta && _cuenta.verificado);
+    h = '<div class="cu-ic-grande">' + CU_IC.reloj + '</div>' +
+      '<h2 class="cu-h cu-c">Empieza tu prueba gratuita</h2>' +
+      '<p class="cu-p cu-c">14 días con todas las funciones. Sin tarjeta.</p>' +
+      '<div class="cu-card">' +
+        (drNativo()
+          ? (ver ? '' : '<p class="cu-p">Antes, confirma tu correo con el enlace que te enviamos a <b>' + escHtml(_cuenta && _cuenta.correo) + '</b>.</p>') +
+            '<div class="cu-err" id="cu-err" hidden></div><div class="cu-ok-msg" id="cu-info" hidden></div>' +
+            '<button type="button" class="btn bp bbl" id="cu-ok" onclick="drEmpezar()">Empezar mis 14 días</button>' +
+            (ver ? '' : '<button type="button" class="btn bs bbl" onclick="cuReenviar()">Reenviar el correo</button>')
+          : '<p class="cu-p">La prueba se inicia desde la app de Android. Después entras aquí con esta misma cuenta.</p>' +
+            '<div class="cu-err" id="cu-err" hidden></div><div class="cu-ok-msg" id="cu-info" hidden></div>' +
+            '<a class="btn bp bbl" href="' + DR_PLAY + '" target="_blank" rel="noopener">Abrir Google Play</a>' +
+            '<button type="button" class="btn bs bbl" id="cu-ok" onclick="drRevisar()">Ya la inicié</button>') +
+        '<button type="button" class="cu-link" onclick="drCerrarSesion()">Cerrar sesión</button>' +
+      '</div>' +
+      '<p class="cu-pie">' + CU_IC.candado + '<span>Una prueba por persona y por teléfono.</span></p>';
+  } else if (p === 'vencido') {
+    /* F3 · el plan terminó. Solo se puede pagar, exportar, salir o borrar la
+       cuenta: la información sigue en el equipo, cifrada, y nadie la toca. */
+    var pagado = !!(_cuenta && _cuenta.derecho && _cuenta.derecho.plan === 'pagado');
+    h = '<div class="cu-ic-grande cu-ic-warn">' + CU_IC.reloj + '</div>' +
+      '<h2 class="cu-h cu-c">' + (pagado ? 'Tu suscripción venció' : 'Tu prueba terminó') + '</h2>' +
+      '<p class="cu-p cu-c">Tu información sigue en este equipo, cifrada. Para volver a registrar capturas y generar documentos, suscríbete.</p>' +
+      '<div class="cu-card">' +
+        '<div class="cu-err" id="cu-err" hidden></div><div class="cu-ok-msg" id="cu-info" hidden></div>' +
+        '<button type="button" class="btn bp bbl" id="cu-ok" onclick="drComprar()">Suscribirme</button>' +
+        '<button type="button" class="btn bs bbl" onclick="drRevisar()">Ya pagué: revisar</button>' +
+        '<button type="button" class="btn bs bbl" onclick="drExportar()">' + CU_IC.descarga + 'Exportar mis datos</button>' +
+      '</div>' +
+      '<div class="cu-fila-links">' +
+        '<button type="button" class="cu-link" onclick="drCerrarSesion()">Cerrar sesión</button>' +
+        '<button type="button" class="cu-link cu-link-peligro" onclick="cuMostrar(\'eliminar\')">Eliminar mi cuenta</button>' +
+      '</div>';
+  } else if (p === 'exportado') {
+    h = '<div class="cu-ic-grande cu-ic-ok">' + CU_IC.ok + '</div>' +
+      '<h2 class="cu-h cu-c">Copia lista</h2>' +
+      '<p class="cu-p cu-c">' + escHtml(d.donde) + ' <b>' + escHtml(d.nombre) + '</b>, con ' + escHtml(String(d.n)) + ' registros.</p>' +
+      '<div class="cu-card">' +
+        '<div class="cu-aj-k">Clave para abrirla</div>' +
+        '<div class="cu-codigo" id="dr-clave">' + escHtml(d.pin.slice(0, 3) + ' ' + d.pin.slice(3)) + '</div>' +
+        '<p class="cu-p">Anótala: sin ella el archivo no se abre. Se importa en Modo compartir → Recibir un archivo.</p>' +
+        '<button type="button" class="btn bp bbl" onclick="cuContinuar()">Listo</button>' +
+      '</div>';
+  } else if (p === 'eliminar') {
+    h = _cuVolver('vencido') +
+      '<h2 class="cu-h">Eliminar mi cuenta</h2>' +
+      '<p class="cu-p">Se borran tu cuenta, lo que tenga en la nube y la información de este equipo. No se puede deshacer.</p>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();drEliminar()" novalidate>' +
+        _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"') +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bd bbl" id="cu-ok" type="submit">Eliminar mi cuenta</button>' +
+      '</form>';
   } else if (p === 'espera') {
     h = '<div class="cu-espera"><div class="cu-giro"></div><p class="cu-p cu-c">' + escHtml(d.texto || 'Un momento…') + '</p></div>';
   } else if (p === 'mensaje') {
@@ -26285,6 +26380,7 @@ function renderAjCuenta() {
         '<div class="cu-aj-fila"><div class="cu-aj-k">Correo</div><div class="cu-aj-v">' + escHtml(_cuenta.correo) +
           ' <span class="badge ' + (ver ? 'b-cu-ok' : 'b-test') + '">' + (ver ? 'Verificado' : 'Sin verificar') + '</span></div></div>' +
         (ver ? '' : '<button type="button" class="btn bs bsm cu-aj-btn" onclick="cuAjReenviar()">Reenviar el correo de verificación</button>') +
+        drPlanFila() +
         (_cuNube === 'vencida' ? '<div class="cu-aj-alerta">' + CU_IC.alerta + '<span>La sesión en la nube se cerró (¿cambiaste la contraseña en otro equipo?).</span>' +
           '<button type="button" class="btn bp bsm" onclick="cuAjReentrar()">Volver a entrar</button></div>' : '') +
         '<div class="cu-aj-acc">' +
@@ -26395,6 +26491,264 @@ function cuAjEliminarOk() {
     await cuEliminarCuenta(a);
   });
 }
+
+/* ═══ DERECHO DE USO (F3 del plan de cuenta, 2026-10-23) ════════════════════
+   14 días de prueba con todas las funciones y sin tarjeta; después, si no hay
+   suscripción, la app queda cerrada salvo Suscribirme, revisar el pago, Exportar
+   mis datos, Cerrar sesión y Eliminar la cuenta.
+
+   ⚠️ LA PRUEBA LA CONCEDE EL SERVIDOR (función `iniciarPrueba`), NUNCA EL
+   TELÉFONO. El teléfono pide, con un token de Play Integrity atado al uid y el
+   ANDROID_ID; el servidor comprueba correo verificado, integridad, Device Recall
+   y que ni la cuenta ni el teléfono hayan tenido prueba (ver firebase/functions).
+   Por eso la prueba SOLO se inicia en la app de Android: en la web no hay Play
+   Integrity, y ahí solo se entra con una cuenta que ya tenga plan.
+
+   PUNTO ÚNICO: `lcDerecho()` → 'activo' | 'sinPrueba' | 'vencido' | 'sinSesion'.
+   Lo consultan un solo guardián (`lcGuardia`) en go(), startWizard, editCase,
+   las salidas de documentos y Modo compartir, y `cuContinuar`, que decide qué
+   pantalla se ve. Lo que NO se guarda: guardar una captura que ya se estaba
+   diligenciando (wizSave). Perder media hora de trabajo porque el plan venció
+   a la mitad sería peor que dejarla guardar; al salir del formulario ya se ve
+   el bloqueo.
+
+   EL RELOJ NO RETROCEDE. El vencimiento se cuenta con la HORA DEL SERVIDOR
+   (`ahora` de `miDerecho`) más lo transcurrido en este equipo desde entonces, y
+   con una marca que solo sube (`reloj`): atrasar la hora del teléfono no revive
+   una prueba. Sin señal la prueba vence a su hora; el plan pagado tiene 3 días
+   de gracia, por si el teléfono pasa días sin conexión en campo.
+
+   ⚠️ DÓNDE NO RIGE: donde no hay cuenta (`cuActiva()` falso: sin configuración
+   de Firebase, o en localhost sin emuladores) todo está abierto, como antes. En
+   localhost `lc_flags.pruebaLibre` lo abre también con cuenta: así la suite de
+   la cuenta (F2) no tiene que conceder una prueba para medir lo suyo. */
+var DR_DIA = 86400000;
+var DR_GRACIA = 3 * DR_DIA;
+var DR_AVISO = 2 * DR_DIA;
+var DR_PLAY = 'https://play.google.com/store/apps/details?id=com.getcorenova.flagrante';
+var _drMarca = 0;
+var _drAvisado = '';
+
+function drLibre() {
+  if (!cuEsLocal()) return false;
+  try { return !!(JSON.parse(localStorage.getItem('lc_flags') || 'null') || {}).pruebaLibre; } catch (e) { return false; }
+}
+function lcDerecho() {
+  if (!cuActiva() || drLibre()) return 'activo';
+  if (!cuSesion()) return 'sinSesion';
+  var d = _cuenta.derecho;
+  if (!d || !d.plan || !d.vence) return 'sinPrueba';
+  var t = drAhora();
+  if (t < d.vence) return 'activo';
+  if (d.plan === 'pagado' && t < d.vence + DR_GRACIA) return 'activo';
+  return 'vencido';
+}
+/* La hora con la que se cuenta el vencimiento (ver «EL RELOJ NO RETROCEDE»). */
+function drAhora() {
+  var d = _cuenta && _cuenta.derecho;
+  _drMarca = Math.max(_drMarca, (_cuenta && _cuenta.reloj) || 0, Date.now());
+  if (!d || !d.srv) return _drMarca;
+  return Math.max(d.srv, _drMarca + (d.srv - d.loc));
+}
+/* La marca del reloj se guarda con la cuenta, sin escribir en cada consulta. */
+function drGuardarReloj() {
+  if (!cuSesion()) return;
+  drAhora();
+  if (_drMarca - ((_cuenta && _cuenta.reloj) || 0) < 60000) return;
+  cuGuardarLocal(Object.assign({}, _cuenta, { reloj: _drMarca })).catch(function () {});
+}
+/* Lo que respondió el servidor. La hora del servidor manda: una marca alta de
+   un reloj que estuvo adelantado no castiga a nadie después de comprobar. */
+function drDesdeServidor(r) {
+  var loc = Date.now();
+  _drMarca = loc;
+  var der = { plan: r && r.plan || null, vence: Number(r && r.vence) || 0, pruebaUsada: !!(r && r.pruebaUsada),
+              srv: Number(r && r.ahora) || loc, loc: loc };
+  return cuGuardarLocal(Object.assign({}, _cuenta, { derecho: der, reloj: loc }));
+}
+/* Pregunta el plan al servidor. false si no hay cómo (sin red o sin la sesión
+   de la nube); lanza si el servidor responde un error. */
+async function drActualizar() {
+  if (!cuActiva() || drLibre() || !cuSesion() || !navigator.onLine) return false;
+  var fb = await cuSdk();
+  var u = await _cuUsuarioListo();
+  if (!u || u.uid !== _cuenta.uid) return false;
+  var r = await FB.httpsCallable(fb.fns, 'miDerecho')({});
+  await drDesdeServidor(r.data);
+  return true;
+}
+/* Tras una comprobación en segundo plano: se cambia de pantalla solo si el
+   estado cambió (no se repinta encima de un mensaje que alguien está leyendo). */
+function drTrasActualizar() {
+  if (!cuSesion() || _cuOcupado) return;
+  var ov = document.getElementById('cu-ov');
+  var pa = ov && ov.classList.contains('on') ? ov.querySelector('.cu-pant') : null;
+  var pant = pa ? pa.dataset.p : '';
+  var der = lcDerecho();
+  if (der === 'activo') { if (pant === 'prueba' || pant === 'vencido') { renderCases(); cuContinuar(); } else if (!pant) drAvisar(); return; }
+  if ((der === 'sinPrueba' && pant === 'prueba') || (der === 'vencido' && pant === 'vencido')) return;
+  if (!pant || pant === 'prueba' || pant === 'vencido') cuContinuar();
+}
+
+/* ── El guardián ─────────────────────────────────────────────────────────── */
+function lcGuardia() {
+  if (lcDerecho() === 'activo') return true;
+  drBloquear();
+  return false;
+}
+/* Si ya hay una pantalla de la cuenta a la vista (crear, el código, verificar…),
+   no se interrumpe: al terminarla, `cuContinuar` lleva al bloqueo. */
+function drBloquear() {
+  var ov = document.getElementById('cu-ov');
+  if (ov && ov.classList.contains('on')) return;
+  cuContinuar();
+}
+
+/* ── Los avisos del día 12 en adelante ───────────────────────────────────── */
+function drAvisar() {
+  var d = _cuenta && _cuenta.derecho;
+  if (!d || d.plan !== 'prueba' || lcDerecho() !== 'activo') return;
+  var falta = d.vence - drAhora();
+  if (falta > DR_AVISO || falta <= 0) return;
+  var hoy = new Date().toDateString();
+  if (_drAvisado === hoy) return;
+  _drAvisado = hoy;
+  var horas = Math.ceil(falta / 3600000);
+  toast(horas <= 24 ? 'Tu prueba gratuita termina en menos de un día. Suscríbete para no perder el acceso.'
+                    : 'Te quedan 2 días de prueba gratuita.', 6000);
+}
+function drPlanFila() {
+  var d = _cuenta && _cuenta.derecho, der = lcDerecho();
+  if (drLibre()) return '';
+  var t, b, s = '';
+  if (!d || !d.plan) { t = 'Sin plan'; b = 'b-test'; s = 'La prueba gratuita se inicia en la app de Android.'; }
+  else {
+    var f = new Date(d.vence).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+    var dias = Math.max(0, Math.ceil((d.vence - drAhora()) / DR_DIA));
+    if (d.plan === 'prueba') { t = der === 'activo' ? 'Prueba gratuita' : 'Prueba terminada'; b = der === 'activo' ? 'b-cu-ok' : 'b-test';
+      s = der === 'activo' ? 'Termina el ' + f + ' (' + (dias === 1 ? 'queda 1 día' : 'quedan ' + dias + ' días') + ').' : 'Terminó el ' + f + '.'; }
+    else { t = der === 'activo' ? 'Suscripción' : 'Suscripción vencida'; b = der === 'activo' ? 'b-cu-ok' : 'b-test';
+      s = (der === 'activo' ? 'Vigente hasta el ' : 'Venció el ') + f + '.'; }
+  }
+  return '<div class="cu-aj-fila"><div class="cu-aj-k">Plan</div><div class="cu-aj-v">' + t +
+    ' <span class="badge ' + b + '">' + (der === 'activo' ? 'Activo' : 'Inactivo') + '</span></div>' +
+    '<div class="cu-pista">' + s + '</div></div>';
+}
+
+/* ── Pedir la prueba (solo en la app de Android) ─────────────────────────── */
+function drNativo() {
+  try {
+    var C = window.Capacitor;
+    return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform() === 'android' &&
+              C.Plugins && C.Plugins.Integridad && C.Plugins.Device);
+  } catch (e) { return false; }
+}
+/* El `requestHash` de Play Integrity: ata el token a esta cuenta sin enseñar el
+   uid. El servidor calcula lo mismo y compara. */
+async function drHashSolicitud(uid) {
+  var h = await crypto.subtle.digest('SHA-256', _cuTE('flagrante|prueba|' + uid));
+  return Array.from(new Uint8Array(h)).map(function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+}
+async function drIniciarPrueba() {
+  if (!drNativo()) throw _cuErr('dr/solo-android');
+  if (!navigator.onLine) throw _cuErr('unavailable');
+  var fb = await cuSdk();
+  var u = await _cuUsuarioListo();
+  if (!u || u.uid !== _cuenta.uid) throw _cuErr('cu/sin-nube');
+  await FB.reload(u);
+  if (!u.emailVerified) throw _cuErr('dr/correo-sin-verificar');
+  if (!_cuenta.verificado) await cuGuardarLocal(Object.assign({}, _cuenta, { verificado: true }));
+  /* El token de sesión tiene que decir ya que el correo está verificado: el
+     servidor lee eso del token, no de Firebase. */
+  await u.getIdToken(true);
+  var P = window.Capacitor.Plugins, t, id;
+  try { t = await P.Integridad.token({ requestHash: await drHashSolicitud(u.uid), proyecto: String(cuConfig().messagingSenderId || '') }); }
+  catch (e) { var x = _cuErr('dr/integridad-local'); x.detalle = (e && (e.code || e.message)) || ''; throw x; }
+  try { id = await P.Device.getId(); } catch (e) { throw _cuErr('dr/sin-dispositivo'); }
+  var r = await FB.httpsCallable(fb.fns, 'iniciarPrueba')({ integridad: t && t.token, dispositivo: id && id.identifier });
+  await drDesdeServidor(r.data);
+}
+
+var DR_MSG = {
+  'correo-sin-verificar': 'Primero confirma tu correo con el enlace que te enviamos.',
+  'correo-desechable': 'La prueba no se concede a correos temporales.',
+  'telefono-ya-uso-prueba': 'Este teléfono ya usó su prueba gratuita. Puedes suscribirte para seguir.',
+  'cuenta-ya-uso-prueba': 'Esta cuenta ya usó su prueba gratuita. Puedes suscribirte para seguir.',
+  'integridad': 'La prueba solo se puede iniciar desde la app instalada desde Google Play.',
+  'integridad-app': 'La prueba solo se puede iniciar desde la app instalada desde Google Play.',
+  'integridad-telefono': 'Este teléfono no pasa la verificación de seguridad de Google Play (root o emulador). Puedes suscribirte igual.',
+  'integridad-vieja': 'La verificación tardó demasiado. Vuelve a intentarlo.',
+  'integridad-servicio': 'Google Play no respondió. Vuelve a intentarlo en unos minutos.',
+  'sin-dispositivo': 'No se pudo identificar el teléfono. Vuelve a intentarlo.',
+  'sin-sesion': 'Vuelve a iniciar sesión para esto.',
+  'servidor': 'El servidor no pudo completar la operación. Vuelve a intentarlo.',
+  'dr/solo-android': 'La prueba se inicia desde la app de Android.',
+  'dr/correo-sin-verificar': 'Primero confirma tu correo con el enlace que te enviamos.',
+  'dr/integridad-local': 'Google Play no pudo verificar este teléfono. Actualiza Play Store y vuelve a intentarlo.',
+  'dr/sin-dispositivo': 'No se pudo identificar el teléfono. Vuelve a intentarlo.'
+};
+
+/* ── Lo que hace cada botón ──────────────────────────────────────────────── */
+function drEmpezar() {
+  _cuHacer('Verificando el teléfono…', async function () {
+    await drIniciarPrueba();
+    renderCases(); cuContinuar();
+    toast('Tu prueba de 14 días empezó', 5000);
+  });
+}
+function drRevisar() {
+  _cuHacer('Revisando…', async function () {
+    if (!navigator.onLine) throw _cuErr('unavailable');
+    if (!(await drActualizar())) throw _cuErr('cu/sin-nube');
+    if (lcDerecho() === 'activo') { renderCases(); cuContinuar(); toast('Tu plan está activo'); }
+    else _cuInfo('Esta cuenta todavía no tiene un plan activo.');
+  });
+}
+/* La compra llega en la F5 (RevenueCat + Google Play): esa fase define
+   `lcComprar`. Hasta entonces se dice, en vez de un botón que no hace nada. */
+function drComprar() {
+  if (typeof lcComprar === 'function') { lcComprar(); return; }
+  _cuError('');
+  _cuInfo(drNativo() ? 'La suscripción todavía no está disponible en esta versión.'
+                     : 'La suscripción se compra en la app de Android, con Google Play. Después entras aquí con la misma cuenta.');
+}
+/* Exportar: el mismo archivo cifrado (.lexc) de Modo compartir, con todas las
+   personas y capturas y una clave de seis dígitos. Funciona sin señal. */
+function drExportar() {
+  _cuHacer('Preparando la copia…', async function () {
+    var per = DB.getPersons() || [], cas = DB.getCases() || [];
+    var pin = ptClaveNumerica();
+    var bytes = await ptArchivoCifrar(ptPaquete(per, cas), pin);
+    var nombre = 'Flagrante_copia_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + PT_ARCH_EXT;
+    var blob = new Blob([bytes], { type: 'application/octet-stream' });
+    var donde = 'Quedó en Descargas como';
+    if (_capNative()) {
+      try { await _shareNativo({ blob: blob, fname: nombre, label: 'Copia de Flagrante' }); donde = 'Se compartió como'; }
+      catch (e) { _dlDocBlob(blob, nombre); }
+    } else _dlDocBlob(blob, nombre);
+    cuMostrar('exportado', { nombre: nombre, pin: pin, n: per.length + cas.length, donde: donde });
+  });
+}
+function drCerrarSesion() {
+  if (!confirm('Tu información se queda en este equipo y solo se vuelve a abrir con tu cuenta. ¿Cerrar sesión?')) return;
+  cuCerrarSesion(false);
+}
+function drEliminar() {
+  var a = _cuVal('cu-clave'); if (!a) { _cuError('Escribe tu contraseña.'); return; }
+  if (!confirm('Confirmación final: se elimina tu cuenta y toda su información. ¿Continuar?')) return;
+  _cuHacer('Eliminando…', async function () { await cuEliminarCuenta(a); });
+}
+
+/* Al volver a la app: si el plan venció mientras estaba en segundo plano, se
+   cierra; si hace más de 6 horas que no se pregunta y hay señal, se pregunta. */
+document.addEventListener('visibilitychange', function () {
+  if (!_lcListo || !cuActiva() || !cuSesion()) return;
+  if (document.visibilityState === 'hidden') { drGuardarReloj(); return; }
+  if (lcDerecho() !== 'activo') drBloquear();
+  var d = _cuenta.derecho;
+  if (navigator.onLine && (!d || Date.now() - (d.loc || 0) > 6 * 3600000))
+    drActualizar().then(function (ok) { if (ok) drTrasActualizar(); }, function () {});
+});
 
 // NOTA: el SW solo funciona en HTTPS o localhost.
 // Para deploy: subir todos los archivos a GitHub Pages u otro hosting HTTPS.
