@@ -40,10 +40,11 @@
 </p>
 
 <p class="destacado">
-  <strong>En resumen:</strong> Flagrante funciona en el propio dispositivo. No existe ningún
-  servidor de la aplicación, y quien la desarrolla <strong>no recibe, no accede y no almacena</strong>
-  los datos de las capturas, de las personas ni de los documentos. La información solo sale del
-  dispositivo si el usuario lo decide de forma expresa, y cuando sale, sale <strong>cifrada</strong>.
+  <strong>En resumen:</strong> Flagrante funciona en el propio dispositivo y guarda una copia de la
+  información en la nube de la cuenta del usuario para que esté en todos sus equipos. Esa copia sale
+  del teléfono <strong>cifrada con una llave que solo tiene el usuario</strong>: quien desarrolla la
+  aplicación y el proveedor de la nube <strong>no pueden leer</strong> los datos de las capturas, de
+  las personas ni de los documentos.
 </p>
 
 <h2>1. Responsable del tratamiento</h2>
@@ -66,11 +67,12 @@
 
 <h2>3. Dónde se almacena</h2>
 <p>
-  Los datos se guardan en el <strong>almacenamiento local del propio dispositivo</strong>
-  (<code>localStorage</code>), <strong>cifrados con AES-GCM</strong> con una llave propia del equipo que
-  la aplicación genera al instalarse y que no se puede extraer ni copiar. También va cifrada la configuración, que incluye los datos del funcionario y
-  de su compañero de patrulla. Las capturas y las personas no se guardan en ningún servidor: no
-  hay ningún lugar al que quien la desarrolla pueda ir a consultar esa información.
+  En el dispositivo, los datos se guardan en su <strong>almacenamiento local</strong> (IndexedDB y
+  <code>localStorage</code>), <strong>cifrados con AES-GCM</strong> con una llave propia del equipo que
+  la aplicación genera al instalarse y que no se puede extraer ni copiar. También va cifrada la
+  configuración, que incluye los datos del funcionario y de su compañero de patrulla.
+  Con una cuenta, además, una copia cifrada viaja a la nube de esa cuenta (ver «4. Tu información en
+  la nube»).
 </p>
 
 <h2>La cuenta</h2>
@@ -86,7 +88,8 @@
       nunca sale del teléfono;</li>
   <li>la <strong>llave de tus datos, cifrada</strong> dos veces: una con tu contraseña y otra con tu
       código de recuperación. Sin una de las dos no se puede abrir: ni Google ni quien desarrolla
-      Flagrante pueden hacerlo.</li>
+      Flagrante pueden hacerlo;</li>
+  <li>tus <strong>registros, cifrados con esa llave</strong> (ver «4. Tu información en la nube»).</li>
 </ul>
 <p>
   Si olvidas la contraseña y no tienes el código de recuperación, lo que la cuenta tenga en la nube
@@ -117,56 +120,38 @@
   Nada de esto incluye datos de capturas ni de personas.
 </p>
 
-<h2>4. Copia de seguridad en tu propio Google Drive (opcional)</h2>
-<p class="destacado">
-  <strong>Esta función existe únicamente en la versión web</strong>, la que se abre desde el
-  navegador. La aplicación que se descarga de Google Play <strong>no la ofrece</strong>: Google no
-  admite su pantalla de permiso dentro de una aplicación envuelta, así que ahí la opción ni siquiera
-  aparece y <strong>ningún dato sale del teléfono por esta vía</strong>.
-</p>
+<h2>4. Tu información en la nube</h2>
 <p>
-  En la versión web, el usuario puede activar si lo desea la sincronización entre sus propios
-  equipos. Cuando la activa:
+  Con la sesión iniciada, las capturas, las personas, las firmas manuscritas y la configuración se
+  guardan también en la nube de la cuenta (Cloud Firestore, servidores en São Paulo, Brasil), para
+  que aparezcan en cualquier equipo donde el usuario inicie sesión. Así funciona:
 </p>
 <ul>
   <li>
-    La información se <strong>cifra en el dispositivo antes de salir</strong>, con una clave que
-    genera la propia aplicación.
+    Cada registro se <strong>cifra en el dispositivo antes de salir</strong> (AES-256-GCM) con la llave
+    de los datos de la cuenta, que solo se abre con la contraseña del usuario o con su código de
+    recuperación (ver «La cuenta»). Ni Google ni quien desarrolla la aplicación tienen esa llave.
   </li>
   <li>
-    Para poder recuperar los datos en un equipo nuevo, esa clave se guarda junto a la copia
-    <strong>dentro de otra caja cifrada</strong>, que solo abre una <strong>contraseña de
-    recuperación</strong> que elige el usuario. Esa contraseña <strong>no se envía ni se guarda
-    en ninguna parte</strong>: ni en el dispositivo, ni en la cuenta de Google. Se usa en el
-    momento de abrir la caja y se descarta.
+    Lo que queda a la vista del proveedor es solo lo necesario para guardar los registros: cuántos
+    hay, su tamaño, la hora en que cambiaron y si se borraron. El <strong>nombre de cada registro es
+    un código</strong> calculado con una llave del usuario: no dice si es una captura o una persona,
+    ni de quién.
   </li>
   <li>
-    Como alternativa, la aplicación entrega un <strong>código de 26 caracteres</strong> que el
-    usuario puede transportar a mano a sus otros equipos y guardar como respaldo.
+    La firma manuscrita viaja únicamente a los equipos del <strong>mismo usuario</strong>, cifrada
+    como lo demás. A otra persona no se envía nunca (tampoco en «Compartir con otro equipo»).
   </li>
   <li>
-    El archivo cifrado se guarda en una carpeta oculta y reservada a la aplicación
-    (<code>appDataFolder</code>) <strong>dentro de la cuenta de Google Drive del propio usuario</strong>.
-    No es una cuenta de quien desarrolla la aplicación.
-  </li>
-  <li>
-    Ni Google ni quien desarrolla la aplicación pueden leer ese contenido: para llegar a él hacen
-    falta <strong>dos cosas a la vez</strong> —el acceso a la cuenta de Google y la contraseña de
-    recuperación—, y la segunda no está en ningún servidor.
-  </li>
-  <li>
-    El único permiso que se solicita a Google es el acceso a esa carpeta reservada
-    (<code>drive.appdata</code>). La aplicación <strong>no</strong> accede al resto de los archivos
-    del Drive del usuario.
-  </li>
-  <li>
-    Esta función está <strong>desactivada por defecto</strong>. Si no se activa, ningún dato sale del
-    dispositivo por esta vía.
+    Solo el titular de la cuenta puede leer o modificar sus registros; las reglas del servidor lo
+    exigen. Con el plan vencido el usuario puede seguir trayendo lo suyo a un equipo para
+    exportarlo, pero no subir cambios.
   </li>
 </ul>
 <p>
-  El uso de Google Drive se rige además por la
-  <a href="https://policies.google.com/privacy" rel="noopener">política de privacidad de Google</a>.
+  Sin cuenta, o sin la sesión iniciada, nada sale del dispositivo por esta vía. El uso de Firebase se
+  rige además por la
+  <a href="https://firebase.google.com/support/privacy" rel="noopener">información de privacidad de Firebase</a>.
 </p>
 
 <h2>5. Compartir con otro equipo (opcional)</h2>
@@ -220,8 +205,8 @@
   <tbody>
     <tr>
       <td>Internet y estado de la red</td>
-      <td>Cargar la aplicación y, en la versión web y solo si el usuario la activa, la copia de
-          seguridad en su Drive. No se usa para enviar datos de trabajo.</td>
+      <td>La cuenta, la prueba gratuita y la copia cifrada en la nube de la cuenta (ver «4. Tu
+          información en la nube»). Los datos de trabajo solo salen cifrados.</td>
     </tr>
     <tr>
       <td>Cámara</td>
@@ -236,16 +221,15 @@
   <li>No recopila ni comparte datos de las capturas con quien la desarrolla ni con terceros.</li>
   <li>No utiliza servicios de analítica, publicidad ni rastreo, ni identificadores publicitarios.</li>
   <li>No accede a la ubicación, a los contactos ni al micrófono.</li>
-  <li>No consulta ni modifica ningún otro archivo del Google Drive del usuario.</li>
   <li>No vende información a nadie, bajo ninguna circunstancia.</li>
 </ul>
 
 <h2>11. Retención y eliminación</h2>
 <p>
   Los datos permanecen en el dispositivo hasta que el usuario los elimina desde la propia aplicación,
-  la desinstala o borra sus datos. Si activó la copia de seguridad, puede eliminarla borrando los
-  datos de la aplicación desde su cuenta de Google. El control total sobre la conservación y la
-  eliminación corresponde al usuario.
+  la desinstala o borra sus datos; y en la nube de la cuenta, hasta que los borra desde cualquiera de
+  sus equipos (un registro borrado en uno se borra en todos) o elimina la cuenta. El control total
+  sobre la conservación y la eliminación corresponde al usuario.
 </p>
 <p>
   La cuenta se elimina desde la propia aplicación, en <strong>Ajustes → Cuenta → Eliminar mi
@@ -264,10 +248,10 @@
   compartir el dispositivo y mantener activo su bloqueo de pantalla.
 </p>
 <p>
-  La contraseña de recuperación —y el código de 26 caracteres que hace de respaldo— los custodia el
-  usuario. Si olvida la primera y pierde el segundo, el contenido cifrado queda ilegible de forma
-  definitiva: ni Google ni quien desarrolla la aplicación pueden recuperarlo. Es la contrapartida de
-  que nadie más pueda leerlo.
+  La contraseña de la cuenta —y el código de recuperación de 24 caracteres que hace de respaldo— los
+  custodia el usuario. Si olvida la primera y pierde el segundo, lo que la cuenta tenga en la nube
+  queda ilegible de forma definitiva: ni Google ni quien desarrolla la aplicación pueden
+  recuperarlo. Es la contrapartida de que nadie más pueda leerlo.
 </p>
 
 <h2>13. Menores de edad</h2>

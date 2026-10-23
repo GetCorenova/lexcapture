@@ -12,7 +12,7 @@ rules_version = '2';
 // F3 (derecho de uso): entitlements/{uid}. Solo lo escriben las funciones del
 // servidor (el SDK de administración no pasa por estas reglas): el teléfono lo
 // lee y nunca lo escribe — si pudiera, se regalaría la prueba.
-// F4 añadirá los registros (reg/*).
+// F4 (nube): users/{uid}/reg/{id}, un registro por documento.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -25,6 +25,16 @@ service cloud.firestore {
       return v is string && v.size() > 20 && v.size() < 400;
     }
 
+    // ¿La cuenta tiene derecho de uso vigente? Lo dice entitlements/{uid}, que
+    // solo escribe el servidor. El plan pagado tiene los mismos 3 días de gracia
+    // que da la app (cubren el retraso de la renovación).
+    function vigente(uid) {
+      let ruta = /databases/$(database)/documents/entitlements/$(uid);
+      return exists(ruta) && (
+        get(ruta).data.vence > request.time ||
+        (get(ruta).data.plan == 'pagado' && get(ruta).data.vence + duration.value(3, 'd') > request.time));
+    }
+
     match /users/{uid}/llaves/{id} {
       allow read, delete: if esDueno(uid) && id == 'main';
       allow create, update: if esDueno(uid) && id == 'main'
@@ -33,6 +43,39 @@ service cloud.firestore {
         && sobre(request.resource.data.dekClave)
         && sobre(request.resource.data.dekRec)
         && (!('dekClaveNueva' in request.resource.data) || sobre(request.resource.data.dekClaveNueva));
+    }
+
+    // ── LOS REGISTROS (F4) ────────────────────────────────────────────────
+    // Uno por captura, persona, firma y la configuración. El nombre del
+    // documento es un HMAC que calcula el teléfono: no dice qué es ni de quién.
+    // Lo único legible es el número de versión, la hora del servidor y si es un
+    // borrado; el contenido (y el tipo, y el identificador real) va dentro de
+    // `ct`, cifrado con la DEK.
+    //
+    // · Leer y borrar: siempre el dueño. Leer aunque el plan haya vencido, para
+    //   que pueda bajar y exportar lo suyo (es su información). Borrar lo usa
+    //   «empezar de cero» sin código: lo de antes ya no lo abre nadie.
+    // · Escribir: el dueño CON derecho de uso vigente, y con la versión
+    //   siguiente a la que hay (1 si no existe). Es un «comparar y cambiar»:
+    //   dos equipos que escriben la misma versión no se pisan; el segundo es
+    //   rechazado, baja lo del primero, lo funde y vuelve a subir.
+    function registro() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['v', 'rev', 'updatedAt', 'borrado', 'ct'])
+        && d.keys().hasAll(['v', 'rev', 'updatedAt', 'borrado', 'ct'])
+        && d.v == 1
+        && d.rev is int
+        && d.borrado is bool
+        && d.updatedAt == request.time
+        && d.ct is string && d.ct.size() > 20 && d.ct.size() < 1000000;
+    }
+
+    match /users/{uid}/reg/{id} {
+      allow read, delete: if esDueno(uid);
+      allow create: if esDueno(uid) && id.matches('^r[A-Za-z0-9_-]{27}$') && vigente(uid)
+        && registro() && request.resource.data.rev == 1;
+      allow update: if esDueno(uid) && vigente(uid)
+        && registro() && request.resource.data.rev == resource.data.rev + 1;
     }
 
     match /entitlements/{uid} {

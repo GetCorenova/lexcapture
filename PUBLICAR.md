@@ -23,7 +23,7 @@ En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 | 3 | Pegar la ficha de `store-listing.md` y subir los gráficos | **[USUARIO]** |
 | 4 | **Promover a prueba cerrada e inscribir a los 12 probadores el mismo día** | **[USUARIO]** |
 | 5 | Pasar al chat la **huella SHA-1 de Google** (Play Console → Prueba y lanza → Integridad de la app) | **[USUARIO]** |
-| 6 | ~~Añadirla al cliente OAuth de Android~~ → **aplazado a la Fase 2**: la copia en Drive quedó apagada en la app de Play por la bandera `syncNativo` (Fase 0) | — |
+| 6 | ~~Añadirla al cliente OAuth de Android~~ → **ya no hace falta**: la copia en Drive se retiró en la F4 (la información viaja con la cuenta) | — |
 | 7 | Corregir lo que salga en las pruebas · ⚠️ **desde la Fase 0 cada corrección es un paquete nuevo** (`npm run build:android`, `versionCode` +1): el código ya no se descarga de GitHub | asistente |
 | 8 | Cerrados los 14 días con los 12 dentro, **pedir el acceso a producción** | **[USUARIO]** |
 
@@ -97,6 +97,23 @@ Lo que hace falta, además de lo de la cuenta:
 o producción): un APK de depuración, un emulador o un teléfono con root reciben «no».
 Para probarla en un teléfono real hay que instalarla desde la pista de prueba.
 
+### La nube (F4, rama `f4-nube`, construida ENCIMA de `f3-derecho`)
+
+Capturas, personas, firmas y ajustes viajan registro por registro a Firestore
+(`users/{uid}/reg/*`), cifrados con la llave de la cuenta. Probado contra los emuladores
+(`verify_nube.mjs`). **La copia en Drive se retiró** (código, pantalla, menú, script de
+Google y la puerta de retorno del manifiesto de Android). No hace falta ninguna tarea
+nueva de consola: las reglas de los registros van en `firebase/firestore.rules` y se
+suben con el mismo `npx firebase deploy --only firestore:rules` de la cuenta.
+- ⚠️ **Lo que sobra en Google Cloud tras retirar Drive** (opcional, no rompe nada si se
+  deja): la **Drive API** y los dos **clientes OAuth** (web y Android) del proyecto
+  `Flagrante`. La app ya no los usa.
+- ⚠️ **App Check** se dejó para la F6: hace falta registrar la app con la huella SHA-256
+  de Play Console y una clave de reCAPTCHA Enterprise para la web.
+- La versión nativa **cambió de complementos**: salen `@capacitor/browser` y
+  `@capacitor/app` (solo los usaba Drive). Va en el mismo **versionCode 6** de la F3,
+  que todavía no se ha subido.
+
 ---
 
 ## 1. Estado real, medido (no supuesto)
@@ -111,13 +128,12 @@ Para probarla en un teléfono real hay que instalarla desde la pista de prueba.
 | Origen del WebView | `server.hostname = getcorenova.github.io` **a propósito**: es el origen de la versión de carga remota, así un teléfono que actualiza desde el 3 conserva sus datos (medido en el emulador) |
 | Consola de depuración en el `.aab` | ✅ **NO viaja** — comprobado extrayendo `base/assets/capacitor.config.json` del paquete |
 | Permisos del manifiesto fusionado | `INTERNET` · `ACCESS_NETWORK_STATE` · `CAMERA` (hardware **opcional**) · `DUMP`. **Sin `BILLING`** |
-| Plugins nativos | filesystem · share · status-bar · browser · app |
+| Plugins nativos | filesystem · share · status-bar · device (F3) — `browser` y `app` salieron en la F4 con la copia en Drive |
 | Ícono dentro del `.aab` | ✅ comprobado extrayéndolo: la F ámbar en el visor cian |
 | Nombre en Android | ✅ `Flagrante` (`strings.xml`) |
 | Código web publicado | ⏳ **build 132** en la rama `fase-0`, **sin publicar** hasta que se apruebe la Fase 0 · en vivo sigue el **131** |
-| Sincronización con Drive | ✅ versión web, solo con el botón «Sincronizar ahora» y fusión a tres vías (Fase 0). **Apagada en la app de Play** (bandera `syncNativo`) hasta la Fase 2 |
-| Recuperación de la copia | ✅ correo + contraseña de recuperación (build 128) |
-| Google Cloud | ✅ proyecto `Flagrante`, Drive API, consentimiento **En producción**, `drive.appdata` (no sensible) |
+| Sincronización con Drive | ⛔ **retirada en la F4** (rama `f4-nube`): la información viaja con la cuenta, registro por registro y cifrada (§0, «La nube») |
+| Google Cloud | proyecto `Flagrante`: la Drive API y los clientes OAuth quedan **sin uso** desde la F4 |
 | Ficha de tienda | ✅ `store-listing.md` — nombre **Flagrante** |
 | Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html · HTTP 200 |
 | Ícono 512×512 de la ficha | ✅ `icon-store-512.png` (a sangre, sin transparencia) |
@@ -169,7 +185,7 @@ técnicos, ninguno visible para el usuario. **No «corregirlos»:**
 | `getcorenova.github.io/lexcapture/` (URL) | Es la **versión web**. El `.aab` ya no carga de ahí desde el versionCode 4, pero los versionCode 1-3 instalados sí: no moverla mientras quede alguno |
 | `server.hostname = getcorenova.github.io` (envoltorio) | Es el **origen** del almacenamiento del WebView: cambiarlo deja a cada teléfono con un almacenamiento **vacío** (las capturas siguen ahí, pero la app ya no las ve) |
 | `LexCapture_v8.html` | Lo referencian ~40 suites de regresión y el `sw.js` |
-| `lexcapture-sync-v1` (HKDF) · `lexcapture-sync.bin` · `PT_MARCA` · canal WebRTC | **Deja ilegible lo sincronizado en el Drive del usuario** y rompe el vínculo entre dos teléfonos |
+| `PT_MARCA` · canal WebRTC (`lexcapture`) | Rompe el vínculo entre dos teléfonos con versiones distintas (Modo compartir). Los dos de Drive (`lexcapture-sync-v1`, `lexcapture-sync.bin`) ya no existen: se fueron con la copia en Drive en la F4 |
 | alias del keystore | El keystore es **irremplazable** |
 
 ### Decisiones irreversibles
@@ -259,7 +275,7 @@ Con dos equipos: uno con barra de tres botones y otro con gestos.
 1. Las zonas seguras. El navegador no lo reproduce.
 2. ~~El primer arranque necesita señal~~ — **resuelto en la Fase 0**: el código va
    en el paquete y la app arranca en modo avión desde el primer uso (medido).
-3. La sincronización con Drive, apagada en la app de Play hasta la Fase 2.
+3. La nube de la cuenta (F4) entre el teléfono y la versión web.
 4. Compartir el documento de Word por el camino nativo.
 5. El diálogo del permiso de cámara.
 6. El botón atrás de Android · el teclado tapando campos · un System WebView viejo

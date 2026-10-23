@@ -197,7 +197,7 @@ await A.page.evaluate(() => go('ajustes'));
 await A.page.click('text=Cerrar sesión');
 await A.page.click('.mc >> button.bp');
 await pant(A.page, 'bienvenida');
-const c3 = await A.page.evaluate(() => ({ s: _cuenta.sesion, dek: _cuenta.dek, n: (DB.getCases() || []).length, raw: !!localStorage.getItem('lc_cases') }));
+const c3 = await A.page.evaluate(async () => ({ s: _cuenta.sesion, dek: _cuenta.dek, n: (DB.getCases() || []).length, raw: !!(await lcIdbGet('lc_cases')) }));
 log(c3.s === false && !c3.dek && c3.n === 1 && c3.raw, '[C3] cerrar sesión deja la información en el equipo, sin la llave de la nube');
 
 await A.page.click('text=Ya tengo cuenta'); await pant(A.page, 'entrar');

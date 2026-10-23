@@ -41,9 +41,9 @@ const conexiones = (dir['connect-src'] || []).filter(x => x !== "'self'");
    cloudfunctions.net. El comodín no abre más que firestore.googleapis.com, que
    ya es de todos los proyectos de Firebase: la protección real es que el código
    de la app solo habla con el proyecto de `CU_FB`. */
-log(conexiones.every(u => /^https:\/\/([a-z0-9]+\.)?(googleapis\.com|accounts\.google\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))
+log(conexiones.every(u => /^https:\/\/([a-z0-9]+\.)?(googleapis\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))
                        || u === 'https://*.cloudfunctions.net'),
-    '[C5] las únicas conexiones fuera de la app son las de Google (cuenta, funciones del servidor y copia en Drive)', conexiones.join(' '));
+    '[C5] las únicas conexiones fuera de la app son las de Firebase (cuenta, nube y funciones del servidor)', conexiones.join(' '));
 log(!/frame-ancestors/.test(csp), '[C6] no pide en <meta> lo que el navegador ignora ahí (frame-ancestors)');
 /* Que la <meta> vaya ANTES de cualquier script: una política declarada después
    no protege lo que ya corrió. */
@@ -73,7 +73,7 @@ const rec = await page.evaluate(async () => {
   const hechos = [];
   const c = SIM.genFlagrancia ? SIM.genFlagrancia() : null;
   if (c) { await DB.saveCase(c); hechos.push('flagrancia'); }
-  for (const s of ['capturas', 'personas', 'estadisticas', 'despachos', 'ajustes', 'perfil', 'compartir', 'sync']) {
+  for (const s of ['capturas', 'personas', 'estadisticas', 'despachos', 'ajustes', 'perfil', 'compartir']) {
     try { go(s); hechos.push(s); } catch (e) {}
     await new Promise(r => setTimeout(r, 150));
   }

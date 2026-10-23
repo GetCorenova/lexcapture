@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- ⚠️ POLÍTICA DE SEGURIDAD DE CONTENIDO (Fase 0, 2026-09-25).
      Qué CIERRA: que la página cargue código de cualquier otro sitio, que se
-     conecte a cualquier servidor que no sea Google (la copia en Drive), que
+     conecte a cualquier servidor que no sea Firebase (la cuenta y la nube), que
      acepte <object>/<embed> o que un <base> desvíe las rutas relativas.
      Qué NO cierra, y por qué: 'unsafe-inline' en script-src. La app es UN solo
      HTML con su JavaScript en línea y ~375 manejadores onclick="…" generados
@@ -12,8 +12,11 @@
      app con un nonce por petición, o sea un servidor propio (Fase 6.5).
      frame-ancestors y el resto de cabeceras (HSTS, nosniff…) NO se pueden poner
      en una <meta>: el navegador las ignora ahí. Van en las cabeceras HTTP del
-     hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/ https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self' https://accounts.google.com/gsi/; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+     hosting propio (Fase 6.5); GitHub Pages no deja fijar cabeceras.
+     F4: `img-src` admite UNA imagen de Google (cleardot.gif): con la que el
+     canal de Firestore comprueba si hay red cuando la conexión se corta. Sin
+     ella, cada corte de señal llena la consola de avisos de la política. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com/images/cleardot.gif; font-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2187,14 +2190,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>
     Modo compartir
   </div>
-  <!-- ⚠️ Aparte de Modo compartir a propósito: aquello le pasa registros
-       escogidos a OTRA persona; esto mantiene al día los equipos del MISMO
-       funcionario. Confundirlos lleva a entregarle a un compañero la llave de
-       todo en vez de los dos casos que necesitaba. -->
-  <div class="sb-item" id="nav-sync" data-screen="sync" onclick="syAbrir()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg>
-    Sincronización
-  </div>
   <div class="sb-sec">Análisis</div>
 
   <div class="sb-item" data-screen="estadisticas" onclick="go('estadisticas')">
@@ -2736,15 +2731,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <div class="pane stack" id="cp-pane"></div>
   </section>
 
-  <section id="screen-sync" class="screen">
-    <header class="topbar">
-      <div class="ttl">
-        <h1>Sincronización</h1>
-        <span class="sub">Tus capturas, en todos tus equipos</span>
-      </div>
-    </header>
-    <div class="pane stack" id="sy-pane"></div>
-  </section>
 </main>
 
 <!-- ====== RED / OFFLINE BADGE ====== -->
@@ -2811,10 +2797,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="sheet-item" onclick="closeSheet();ptAbrirCompartir()">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
     <div class="body"><div class="ti">Modo compartir</div><div class="de">Pasarle personas y capturas al compañero</div></div>
-  </button>
-  <button class="sheet-item" id="mas-sync" onclick="closeSheet();syAbrir()">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9 9 9 0 0 1-7.6-4.2"/><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 7.6 4.2"/><path d="M20 3v4.5h-4.5"/><path d="M4 21v-4.5h4.5"/></svg></div>
-    <div class="body"><div class="ti">Sincronización</div><div class="de">Tus capturas en todos tus equipos</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -2934,7 +2916,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir','sync'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2954,7 +2936,6 @@ function go(name) {
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
   if (name === 'compartir') renderCompartir();
-  if (name === 'sync') renderSync();
   if (name === 'ajustes') { loadAjustesFields(); renderAjCuenta(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -3155,35 +3136,8 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 139;
+var _BUILD = 140;
 
-/* ── BANDERAS DE FUNCIONALIDAD (Fase 0, 2026-09-25) ───────────────────────
-   Lo que se apaga por seguridad y lo que se enciende por etapas pasa por aquí,
-   en UN solo sitio, para que ninguna pantalla decida por su cuenta.
-   ⚠️ LÍMITE HONESTO: sin servidor, una bandera solo cambia con un despliegue
-   (en la web, `npm run deploy:web`; en la app de Play, una versión nueva,
-   porque el código viaja dentro del paquete). Apagar algo «sin publicar una
-   versión» exige configuración remota, y eso llega con la cuenta (Fase 2).
-   La anulación local (`lc_flags`) existe para las pruebas: no protege nada, y
-   por eso ninguna bandera de esta lista abre un agujero si alguien la enciende. */
-var LC_FLAGS = {
-  /* 0.1 — La copia sincronizada corría SOLA 2,5 s después de cada desbloqueo y
-     revertía correcciones. Con la fusión a tres vías ya no las revierte, pero
-     una sincronización que nadie pidió sigue siendo la peor forma de descubrir
-     un fallo: queda en el botón manual. */
-  syncAutoDesbloqueo: false,
-  /* 0.2 — La copia dentro de la app de Play. Apagada hasta la Fase 2: sin la
-     huella de firma de Play el permiso de Google falla, y la política de
-     privacidad dice que la copia en Drive es solo de la versión web. */
-  syncNativo: false
-};
-function lcFlag(n) {
-  try {
-    var o = JSON.parse(localStorage.getItem('lc_flags') || 'null');
-    if (o && typeof o[n] === 'boolean') return o[n];
-  } catch (e) {}
-  return !!LC_FLAGS[n];
-}
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
 // por qué falla el adjunto en un teléfono concreto sin tenerlo delante.
@@ -3716,8 +3670,29 @@ function lcPedirExport(kind, nombreDoc, cb){
    La usan las suites de regresión para no adivinar cuánto tarda el arranque. */
 var _lcListo = false;
 var LC_LLAVE_EQUIPO = 'llave_equipo';
-/* Lo que va cifrado en localStorage con la llave de la sesión. */
-var LC_CLAVES_CIFRADAS = ['lc_cases', 'lc_persons', 'lc_draft', 'lc_firmas', 'lc_cfg', 'lc_sync', 'lc_cuenta'];
+/* Lo que va cifrado con la llave de la sesión. */
+var LC_CLAVES_CIFRADAS = ['lc_cases', 'lc_persons', 'lc_draft', 'lc_firmas', 'lc_cfg', 'lc_cuenta'];
+/* ⚠️ F4 (2026-10-23): las capturas, las personas y las firmas viven en IndexedDB
+   y no en localStorage. localStorage da unos 5 MB por origen y con la nube cada
+   equipo junta lo de TODOS los equipos del usuario: ese era el techo. El formato
+   no cambió (el mismo blob cifrado); solo el sitio. Un equipo anterior las tiene
+   en localStorage: se leen de ahí y el primer guardado las pasa a IndexedDB y
+   retira la copia vieja (ver `_lcEncSave`). La configuración, el borrador y la
+   cuenta se quedan en localStorage: son pequeños. */
+var LC_EN_IDB = { lc_cases: 1, lc_persons: 1, lc_firmas: 1 };
+/* Lo guardado bajo una clave, esté donde esté: {raw, idb}. Si está en los dos
+   sitios (un paso a IndexedDB que se cortó antes de retirar la copia vieja), manda
+   IndexedDB, que es lo que se escribió después. */
+async function _lcLeerGuardado(k) {
+  if (LC_EN_IDB[k]) {
+    var v = null;
+    try { v = await lcIdbGet(k); } catch (e) {}
+    if (v !== undefined && v !== null) return { raw: v, idb: true };
+  }
+  var raw = null;
+  try { raw = localStorage.getItem(k); } catch (e) {}
+  return { raw: raw, idb: false };
+}
 
 function _lcEsClaro(raw) { return !!raw && (raw.charAt(0) === '[' || raw.charAt(0) === '{'); }
 
@@ -3741,8 +3716,7 @@ async function lcLlaveEquipo() {
 async function _lcIlegibles() {
   var malas = [];
   for (var i = 0; i < LC_CLAVES_CIFRADAS.length; i++) {
-    var raw = null;
-    try { raw = localStorage.getItem(LC_CLAVES_CIFRADAS[i]); } catch (e) {}
+    var raw = (await _lcLeerGuardado(LC_CLAVES_CIFRADAS[i])).raw;
     if (!raw || _lcEsClaro(raw)) continue;
     try { await _lcDecrypt(raw); } catch (e) { malas.push(LC_CLAVES_CIFRADAS[i]); }
   }
@@ -3773,9 +3747,7 @@ function _lcTrasAbrir() {
   /* Una vez al año: el NUNC de los despachos ya entró al año en curso en la
      lectura de la configuración; aquí se persiste y se anuncia. */
   lcNuncAvisoAno();
-  syPintarNav();
   lcBarraSistema();
-  if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
   /* La cuenta decide si se ve la app o la bienvenida (ver «CUENTA»). */
   cuArranque();
   _lcListo = true;
@@ -3882,7 +3854,7 @@ async function doMigrarPin() {
     for (var k2 in claro) nuevo[k2]=await _lcEncrypt(claro[k2]);
     /* 3. Escribir. 4. Retirar la base de la sincronización. 5. La sal, lo último. */
     for (var k3 in nuevo) localStorage.setItem(k3, nuevo[k3]);
-    try { await lcIdbDel(SY_BASE_KEY); } catch(e) {}
+    try { await lcIdbDel('sync_base'); } catch(e) {}
     ['lc_key_check','lc_key_hash','lc_pin_intentos','lc_key_salt'].forEach(function(x){ try{ localStorage.removeItem(x); }catch(e){} });
     errEl.textContent='';
     await _lcLoadCaches();
@@ -3925,7 +3897,7 @@ async function _lcPinVerificar(pin, salt) {
   if (viejo) return (await _lcHashPin(pin, salt)) === viejo ? key : null;
   /* Sin verificador ni hash: vale lo que abra cualquiera de los datos cifrados.
      Si no hay ninguno, no hay nada que proteger con este PIN todavía. */
-  var claves = ['lc_cases', 'lc_persons', 'lc_firmas', 'lc_sync', 'lc_draft', 'lc_cfg'], hay = false;
+  var claves = ['lc_cases', 'lc_persons', 'lc_firmas', 'lc_draft', 'lc_cfg'], hay = false;
   for (var i = 0; i < claves.length; i++) {
     var enc = localStorage.getItem(claves[i]);
     if (!enc || enc[0] === '[' || enc[0] === '{') continue;
@@ -4014,7 +3986,13 @@ function _lcEncSave(key, val) {
   var result = prev.then(function(){
     return _lcEncrypt(JSON.stringify(val));
   }).then(function(enc){
-    localStorage.setItem('lc_'+key, enc);
+    var k = 'lc_'+key;
+    if (!LC_EN_IDB[k]) { localStorage.setItem(k, enc); return; }
+    /* Primero IndexedDB y, solo si salió bien, se retira la copia vieja. */
+    return lcIdbSet(k, enc).then(function(){ try { localStorage.removeItem(k); } catch(e) {} });
+  }).then(function(){
+    /* F4: la nube se entera de que algo cambió (ver «LA NUBE»). */
+    if (typeof nbAlGuardar === 'function') nbAlGuardar(key);
   });
   _lcWriteChain[key] = result.catch(function(e){console.error('[Flagrante] cifrado error',key,e);});
   return result;
@@ -4067,13 +4045,15 @@ async function _lcLoadCaches() {
   /* Un equipo anterior al cifrado (Fase E) tiene las capturas y las personas en
      CLARO: se leen y se cifran en este mismo arranque (lo hacía la creación del
      PIN, que ya no existe). */
-  enc = localStorage.getItem('lc_cases');
+  /* F4: las capturas y las personas se leen de IndexedDB; un equipo anterior
+     las tiene en localStorage, y se pasan en este mismo arranque. */
+  var g = await _lcLeerGuardado('lc_cases'); enc = g.raw;
   if (_lcEsClaro(enc)) { try { _casesCache = JSON.parse(enc) || []; } catch(e) { _casesCache = []; } _lcEncSave('cases', _casesCache).catch(function(){}); }
-  else if (enc) { try { _casesCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _casesCache = []; } }
+  else if (enc) { try { _casesCache = JSON.parse(await _lcDecrypt(enc)); if (!g.idb) _lcEncSave('cases', _casesCache).catch(function(){}); } catch(e) { _casesCache = []; } }
   else { _casesCache = []; }
-  enc = localStorage.getItem('lc_persons');
+  g = await _lcLeerGuardado('lc_persons'); enc = g.raw;
   if (_lcEsClaro(enc)) { try { _personsCache = JSON.parse(enc) || []; } catch(e) { _personsCache = []; } _lcEncSave('persons', _personsCache).catch(function(){}); }
-  else if (enc) { try { _personsCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _personsCache = []; } }
+  else if (enc) { try { _personsCache = JSON.parse(await _lcDecrypt(enc)); if (!g.idb) _lcEncSave('persons', _personsCache).catch(function(){}); } catch(e) { _personsCache = []; } }
   else { _personsCache = []; }
   // El borrador del wizard viaja cifrado igual que las capturas: contiene datos
   // de una persona (y en CESPA, de un menor) tanto como un caso guardado.
@@ -4082,15 +4062,13 @@ async function _lcLoadCaches() {
   else { _draftCache = null; }
   /* Las firmas manuscritas van CIFRADAS y en su propia clave, no en `lc_cfg`:
      una firma es un rasgo biométrico y con ella se suscriben documentos
-     judiciales. (Hasta la Fase 0, `lc_cfg` iba en claro; ahora también va
-     cifrada, pero la firma sigue aparte: la configuración se exporta y se
-     sincroniza, y la firma no viaja nunca.) */
-  enc = localStorage.getItem('lc_firmas');
-  if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
+     judiciales. La configuración se exporta en un .json y la firma no.
+     ⚠️ F4: con la cuenta, la firma SÍ viaja a los demás equipos del MISMO
+     usuario, cifrada de extremo a extremo como todo lo demás. A otra persona
+     (Modo compartir) sigue sin viajar nunca. */
+  g = await _lcLeerGuardado('lc_firmas'); enc = g.raw;
+  if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); if (!g.idb) _lcEncSave('firmas', _firmasCache).catch(function(){}); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
-  /* La clave de sincronización entre los equipos del usuario: cifrada y en su
-     propia clave, igual que las firmas. */
-  if (typeof syCargarEstado === 'function') await syCargarEstado();
   /* La cuenta de este equipo (correo, dueño de los datos y la llave de la nube):
      cifrada con la llave del equipo, igual que todo lo demás. Ver «CUENTA». */
   enc = localStorage.getItem('lc_cuenta');
@@ -4341,6 +4319,12 @@ function _lcPurgarPlantillas() {
      iba cifrada y ocupaba cuota en el mismo origen que las capturas. */
   try { if (localStorage.getItem('lc_ptcola') !== null) localStorage.removeItem('lc_ptcola'); }
   catch (e) {}
+  /* La copia en Drive se retiró en la F4: su estado (la clave de la copia,
+     cifrada) y la base de su fusión ya no los lee nadie. La información sigue
+     en el equipo; lo que se va es el vínculo con aquel archivo de Drive. */
+  try { if (localStorage.getItem('lc_sync') !== null) localStorage.removeItem('lc_sync'); }
+  catch (e) {}
+  try { lcIdbDel('sync_base').catch(function () {}); } catch (e) {}
 }
 /* Claves de formatos que la app ya no produce. Se retiran de la configuración
    para que dejen de viajar en cada guardado y en cada «Exportar config»: no las
@@ -16327,7 +16311,12 @@ function importarCapturas(ev) {
 }
 
 function limpiarDatos() {
-  if(!confirm('¿Eliminar TODOS los casos y personas? Esta acción no se puede deshacer.')) return;
+  var nube = typeof nbActiva === 'function' && nbActiva();
+  if(!confirm(nube ? '¿Eliminar TODOS los casos y personas, de este equipo Y DE TU CUENTA (todos tus equipos)? Esta acción no se puede deshacer.'
+                   : '¿Eliminar TODOS los casos y personas? Esta acción no se puede deshacer.')) return;
+  /* F4: es la única vez que un equipo sin capturas ni personas borra también las
+     de la nube (ver la guarda de `nbPendientes`). */
+  if (nube) nbPermitirBorrarTodo();
   DB.saveCases([]); DB.savePersons([]);
   renderCases(); toast('Datos eliminados');
 }
@@ -21126,7 +21115,6 @@ document.addEventListener('DOMContentLoaded', function() {
   applyTheme(getTheme());
   lcGradoPintarDatalist();
   _lcPurgarPlantillas();
-  syPintarNav();
   lcBarraSistema();
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);
@@ -24103,96 +24091,27 @@ _ptAlEstado = function () {
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SINCRONIZACIÓN ENTRE LOS EQUIPOS DEL USUARIO  ·  prefijo sy*
+   PIEZAS QUE SOBREVIVIERON A LA COPIA EN DRIVE (retirada en la F4, 2026-10-23)
 
-   Qué resuelve: que las capturas, las personas y la configuración estén en
-   todos los equipos del funcionario (su teléfono, el computador de la estación)
-   sin que nadie más pueda leerlas — ni Google, ni quien opera esta aplicación.
-
-   ⚠️ NO ES «MODO COMPARTIR», Y LA DISTINCIÓN IMPORTA.
-   Modo compartir (pt*) pasa registros ESCOGIDOS a OTRA persona, en el momento,
-   por un canal directo entre dos teléfonos. Esto pasa TODO lo del usuario entre
-   SUS PROPIOS equipos, de forma diferida, sin que los dos estén encendidos a la
-   vez. Una clave simétrica da acceso total y perpetuo a quien la tenga, así que
-   este camino NO sirve para compartirle casos a un compañero: eso sigue siendo
-   Modo compartir, que sí permite elegir qué mandar y no entrega el resto.
-
-   ⚠️ NO HAY SERVIDOR PROPIO, y es la razón de que el diseño sea este. Los datos
-   son procedimientos judiciales y, en CESPA, de menores (Ley 1581 de 2012):
-   operar un servidor que los almacene —aunque fuera cifrado— es una
-   responsabilidad que este proyecto lleva evitando desde el primer día. Lo que
-   sube a Google Drive es un bloque cifrado en el equipo, en la carpeta oculta
-   de la propia cuenta del usuario, y la clave NUNCA sale de sus dispositivos.
-   Para Google ese archivo es ruido.
-
-   ⚠️ LA CLAVE DE SINCRONIZACIÓN ES SEPARADA DEL PIN, y no por gusto: cada
-   equipo genera su PROPIA sal al configurar el PIN (`lc_key_salt`), así que dos
-   equipos con el MISMO PIN tecleado derivan claves AES DISTINTAS. Reusar
-   `_sessionKey` haría un blob que solo el equipo que lo subió puede abrir. La
-   clave de sync son bytes aleatorios que el usuario transporta una vez a cada
-   equipo; en reposo se guarda cifrada bajo el PIN local, igual que las firmas.
-
-   ⚠️ SI SE PIERDE LA CLAVE Y TODOS LOS EQUIPOS A LA VEZ, lo que está en Drive
-   queda ilegible para siempre. Es el precio exacto de que nadie más pueda
-   leerlo; no hay copia de la clave en ninguna parte. Por eso se puede volver a
-   mostrar desde Ajustes en cualquier momento, no solo al configurarla.
-
-   ⚠️ LAS FIRMAS MANUSCRITAS NO VIAJAN, misma política que Modo compartir: son
-   un rasgo biométrico y con ellas se suscriben documentos judiciales. Se dibuja
-   una por equipo. Ni siquiera hay que filtrarlas: viven en `lc_firmas`, fuera
-   de lo que arma el paquete.
+   La sincronización con el Drive del usuario (`sy*`, la pantalla «Sincronización»,
+   el script de Google y la caja con contraseña) se retiró entera: la información
+   viaja ahora con la CUENTA, registro por registro (ver «LA NUBE», al final).
+   De aquel módulo quedan dos piezas que se usan en otro sitio, con nombre neutro:
+   · el alfabeto del código de recuperación (lo usa la cuenta);
+   · la fusión a tres vías (la usa la nube).
 ═══════════════════════════════════════════════════════════════════════════ */
 
-var SY_MARCA   = 'LXSY1';                 // sobre del bloque que vive en Drive
-var SY_ARCHIVO = 'lexcapture-sync.bin';   // nombre dentro de appDataFolder
-var SY_SCOPE   = 'https://www.googleapis.com/auth/drive.appdata';
-/* ⚠️ Identificador público de la aplicación ante Google. NO es un secreto (un
-   Client ID de tipo «Web» se publica en el código del cliente por diseño), pero
-   sin él la sincronización no puede arrancar: se crea una vez en Google Cloud
-   Console, con la cuenta del proyecto, y se pega aquí. */
-var SY_CLIENT_ID = '837685454525-5ogfk3k294kme3bn8vt8th0mc14e79uh.apps.googleusercontent.com';
-/* Cliente de tipo Android, para pedir el permiso DENTRO del envoltorio.
-   Es otro identificador distinto del de arriba y no se puede reutilizar: aquel
-   es de tipo «web» y Google no admite en un cliente web la dirección de retorno
-   propia de una aplicación instalada.
-   ⚠️ Un cliente de Android se ata a la HUELLA del certificado que firma la app,
-   y con Play App Signing hay DOS: la del certificado de carga (el keystore
-   propio, con la que se prueba lo que se compila aquí) y la que Google genera al
-   recibir el primer paquete, con la que re-firma lo que baja de la tienda.
-   Ahora mismo solo está registrada la primera, así que la sincronización
-   funciona en un paquete instalado a mano y TODAVÍA NO en el que se descarga de
-   Play Store. La segunda se AÑADE al mismo cliente en Google Cloud —no exige
-   recompilar ni tocar este archivo— y el día que se añada hay que actualizar la
-   política de privacidad, que hoy dice que la copia en Drive existe solo en la
-   versión web (Play exige que la política y el formulario de seguridad de los
-   datos coincidan).
-   ⚠️ Mientras esté vacío, la sincronización se oculta dentro de la app —no se
-   ofrece un botón que no puede funcionar— y la versión web no se entera. */
-var SY_CLIENT_ID_NAT = '837685454525-4ksg3ujigo9cd8jukghn993f93dcbpj7.apps.googleusercontent.com';
-/* La puerta por la que Google devuelve el control a la aplicación. El esquema es
-   el nombre del paquete, que es lo que Android sabe enrutar y lo que hay que
-   declarar en su manifiesto. */
-var SY_REDIR_NAT = 'com.getcorenova.flagrante:/oauth2redirect';
-
-/* Claves de configuración que NO se sincronizan. ⚠️ Son marcas de migración: si
-   viajaran, un equipo que todavía no ha corrido su migración recibiría la marca
-   de «ya migrado» y se la saltaría para siempre, dejando sus datos a medio
-   convertir. No son preferencias del usuario, son bitácora interna. */
-var SY_CFG_LOCAL = ['despachosMigrados', 'dossierSeccionesV', 'nuncAno'];
-
-var _syTok = '', _syTokExp = 0, _syGisP = null, _syCorriendo = false, _syEstado = null;
+/* Claves de configuración que NO viajan entre equipos. ⚠️ Son marcas de
+   migración: si viajaran, un equipo que todavía no ha corrido su migración
+   recibiría la marca de «ya migrado» y se la saltaría para siempre, dejando sus
+   datos a medio convertir. No son preferencias del usuario, son bitácora interna. */
+var LC_CFG_LOCAL = ['despachosMigrados', 'dossierSeccionesV', 'nuncAno'];
 
 /* ── ALFABETO DEL CÓDIGO DE RECUPERACIÓN ──────────────────────────────────
    Crockford base32: sin I, L, O ni U. No es capricho — es el alfabeto pensado
    para que un humano transcriba sin equivocarse, y al leer trata I y L como 1
-   y O como 0, que son justo los errores que se cometen copiando a mano. Son
-   16 bytes (128 bits) en 26 caracteres: se teclea UNA vez por equipo.
-   ⚠️ Desde la cuenta (F2, 2026-10-23) el alfabeto lo usa también el código de
-   recuperación de la cuenta, así que vive con nombre neutro (`lcB32*`): la copia
-   en Drive se retira en la F4 y el código de la cuenta no puede irse con ella.
-   Los nombres `sy*` quedan como alias mientras exista la copia en Drive. */
+   y O como 0, que son justo los errores que se cometen copiando a mano. */
 var LC_B32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-var SY_B32 = LC_B32;
 function lcB32Enc(bytes) {
   var bits = 0, val = 0, out = '', i;
   for (i = 0; i < bytes.length; i++) {
@@ -24215,240 +24134,61 @@ function lcB32Dec(s) {
 }
 /* En grupos de cuatro para leerlo en voz alta y teclearlo sin perder el sitio. */
 function lcCodigoBonito(k) { return String(k || '').replace(/(.{4})(?=.)/g, '$1-'); }
-function syB32Enc(bytes) { return lcB32Enc(bytes); }
-function syB32Dec(s) { return lcB32Dec(s); }
-function syCodigoBonito(k) { return lcCodigoBonito(k); }
-
-/* ── LA CLAVE ─────────────────────────────────────────────────────────────
-   ⚠️ Los 16 bytes ya son aleatorios de verdad, así que NO se estiran con
-   PBKDF2 como sí hace el archivo .lexc: allá la entrada es una clave de seis
-   dígitos que hay que encarecer, aquí estirar no añadiría ni un bit. Se derivan
-   con HKDF, que es la primitiva correcta para expandir material que ya tiene
-   entropía completa. */
-function syClaveNueva() { return syB32Enc(_ptAzar(16)); }
-async function syClaveAES(bytes) {
-  var ikm = await crypto.subtle.importKey('raw', bytes, 'HKDF', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(0), info: new TextEncoder().encode('lexcapture-sync-v1') },
-    ikm, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-}
-
-/* ── LA CAJA DE LA LLAVE ──────────────────────────────────────────────────
-   El problema que resuelve, y es el que de verdad importa: con la llave viviendo
-   SOLO en los equipos, quien desinstala la aplicación del único equipo que la
-   tenía —o pierde el teléfono— deja lo que está en Drive cerrado para siempre.
-   O sea que la copia sobrevivía y la llave no, que es justo lo que había que
-   evitar.
-
-   Cómo se cierra ese hueco sin entregarle nada a nadie: la llave se guarda JUNTO
-   a la copia, en la misma carpeta oculta de la cuenta del usuario, pero dentro de
-   una caja que solo abre una contraseña que él elige. Es el patrón de las copias
-   cifradas de las aplicaciones de mensajería, y cumple los dos requisitos a la
-   vez: en un equipo nuevo bastan el correo y esa contraseña, y para cualquier otro
-   —Google incluido— el archivo sigue siendo ruido.
-
-   ⚠️ LA CONTRASEÑA NO SE GUARDA EN NINGUNA PARTE: ni en el equipo, ni en la
-   cuenta, ni cifrada. Se usa en el momento para abrir la caja y se suelta. Es lo
-   que hace que la promesa sea cierta, y también lo que hace que olvidarla no tenga
-   vuelta atrás: para eso se conserva el código de 26 caracteres como respaldo.
-
-   ⚠️ SON DOS BARRERAS, NO UNA. Para llegar a los datos hay que entrar a la cuenta
-   de Google Y saber la contraseña. Por eso esta contraseña NO puede ser el PIN de
-   cuatro dígitos: diez mil combinaciones se prueban en un momento contra un
-   archivo que ya se tiene en la mano, y ahí el estirado no alcanza a salvarla.
-
-   ⚠️ SE ESTIRA CON PBKDF2, al contrario que la llave: aquí la entrada la escribe
-   una persona y no tiene entropía completa, así que cada intento tiene que costar.
-   Mismas vueltas que el archivo cifrado de Modo compartir.
-
-   ⚠️ NO SE DISTINGUE «contraseña mal tecleada» de «archivo alterado», igual que
-   en el archivo cifrado: decirle a quien prueba contraseñas cuál de las dos cosas
-   pasa le está diciendo cuándo va bien.
-═══════════════════════════════════════════════════════════════════════════ */
-
-var SY_LLAVE     = 'lexcapture-key.bin';   // la caja, junto a la copia
-var SY_MARCA_LL  = 'LXKY1';
-var SY_FRASE_MIN = 8;
-
-/* ⚠️ La regla es corta a propósito y se explica en una línea al usuario. Lo que
-   descarta son las dos contraseñas que la gente pone cuando nadie se lo impide:
-   una demasiado corta, y una que son solo números —el PIN repetido, una fecha—. */
-function syFraseFloja(f) {
-  f = String(f || '');
-  if (f.length < SY_FRASE_MIN) return 'La contraseña debe tener al menos ' + SY_FRASE_MIN + ' caracteres.';
-  if (!/\D/.test(f)) return 'No uses solo números: mezcla letras para que no se pueda adivinar.';
-  return '';
-}
-
-async function _syClaveFrase(frase, salt) {
-  var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(frase), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt: salt, iterations: 250000, hash: 'SHA-256' },
-    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
-}
-
-/* Sobre de la caja: marca (5) + sal (16) + vector (12) + la llave cifrada. La
-   marca va en claro para poder decir «esto no lo generó la aplicación» sin pedirle
-   antes ninguna contraseña a nadie. */
-async function syCajaCifrar(bytes, frase) {
-  var salt = _ptAzar(16), iv = _ptAzar(12);
-  var k = await _syClaveFrase(frase, salt);
-  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, k, bytes));
-  var out = new Uint8Array(5 + 16 + 12 + ct.length), i;
-  for (i = 0; i < 5; i++) out[i] = SY_MARCA_LL.charCodeAt(i);
-  out.set(salt, 5); out.set(iv, 21); out.set(ct, 33);
-  return out;
-}
-async function syCajaAbrir(buf, frase) {
-  var u = new Uint8Array(buf), i;
-  if (u.length < 34) return { ok: false, motivo: 'La caja de tu contraseña está incompleta.' };
-  for (i = 0; i < 5; i++) if (u[i] !== SY_MARCA_LL.charCodeAt(i))
-    return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
-  try {
-    var k = await _syClaveFrase(frase, u.slice(5, 21));
-    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(21, 33) }, k, u.slice(33));
-    var b = new Uint8Array(claro);
-    if (b.length !== 16) return { ok: false, motivo: 'La caja de tu contraseña no tiene la forma esperada.' };
-    return { ok: true, k: syB32Enc(b) };
-  } catch (e) {
-    return { ok: false, motivo: 'Esa contraseña no abre tu copia. Revísala y vuelve a intentarlo.' };
-  }
-}
-
-/* ── ESTADO LOCAL ─────────────────────────────────────────────────────────
-   `{k, fileId, ts}` en `lc_sync`, CIFRADO bajo el PIN de este equipo (mismo
-   patrón que `lc_firmas`): quien tenga el teléfono sigue necesitando el PIN
-   para llegar a la clave de sincronización. */
-function syEstado() { return _syEstado || { k: '', fileId: '', ts: 0 }; }
-function syVinculado() { return !!syEstado().k; }
-function syGuardarEstado(e) { _syEstado = e; return _lcEncSave('sync', e); }
-async function syCargarEstado() {
-  var enc = localStorage.getItem('lc_sync');
-  if (!enc) { _syEstado = null; return; }
-  try { _syEstado = JSON.parse(await _lcDecrypt(enc)); } catch (e) { _syEstado = null; }
-}
-async function syDesvincular() {
-  _syEstado = null; _syTok = ''; _syTokExp = 0;
-  try { localStorage.removeItem('lc_sync'); } catch (e) {}
-  /* La base es de ESTE vínculo: con otro, haría creer que se borró lo que no
-     está en ella. */
-  await syBaseBorrar();
-}
-
-/* ── EL SOBRE QUE VIVE EN DRIVE ───────────────────────────────────────────
-   marca (5) + vector (12) + contenido cifrado. Sin sal, porque sin PBKDF2 no
-   hay nada que salar. La marca va en claro para poder decir «esto no lo generó
-   la aplicación» sin intentar descifrar nada. */
-async function syCifrar(paquete, key) {
-  var iv = _ptAzar(12);
-  var datos = new TextEncoder().encode(JSON.stringify(paquete));
-  var ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, datos));
-  var out = new Uint8Array(5 + 12 + ct.length), i;
-  for (i = 0; i < 5; i++) out[i] = SY_MARCA.charCodeAt(i);
-  out.set(iv, 5); out.set(ct, 17);
-  return out;
-}
-async function syDescifrar(buf, key) {
-  var u = new Uint8Array(buf), i;
-  if (u.length < 18) return { ok: false, motivo: 'El archivo de sincronización está incompleto.' };
-  for (i = 0; i < 5; i++) if (u[i] !== SY_MARCA.charCodeAt(i))
-    return { ok: false, motivo: 'Ese archivo no lo generó esta aplicación.' };
-  try {
-    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.slice(5, 17) }, key, u.slice(17));
-    return { ok: true, o: JSON.parse(new TextDecoder().decode(new Uint8Array(claro))) };
-  } catch (e) {
-    /* La clave de este equipo no abre lo que hay allá. Son DOS causas y desde
-       aquí no se distinguen: o se tecleó mal el código al vincular, o la clave
-       se cambió en otro equipo y este se quedó con la vieja. El aviso nombra
-       las dos, porque la salida es la misma: volver a vincular. */
-    return { ok: false, motivo: 'La clave de este equipo no abre lo que hay en Drive. Si la cambiaste en otro equipo, vuelve a vincular.' };
-  }
-}
-
-/* ── QUÉ VIAJA ────────────────────────────────────────────────────────────
-   Se reutiliza `ptPaquete` TAL CUAL —el mismo sobre, la misma validación, el
-   mismo motor de fusión que Modo compartir— y se le añade la configuración,
-   que Modo compartir no manda a propósito (allá pisaría la unidad del
-   compañero; aquí es el mismo funcionario en otro equipo).
-   ⚠️ `cfg` se agrega FUERA de `ptPaquete` para no cambiar lo que manda Modo
-   compartir. Un lector viejo que reciba este sobre simplemente ignora la clave
-   que no conoce: por eso no hay que subir `schemaVersion`. */
-function syCfgParaEnviar() {
-  var raw = lcCfgCrudo();
-  SY_CFG_LOCAL.forEach(function (k) { delete raw[k]; });
-  return raw;
-}
-function sySnapshot() {
-  var p = ptPaquete(DB.getPersons(), DB.getCases());
-  p.cfg = syCfgParaEnviar();
-  return p;
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FUSIÓN A TRES VÍAS PARA LA COPIA PROPIA (Fase 0, 2026-09-25)
+   FUSIÓN A TRES VÍAS (Fase 0, 2026-09-25 · por registro desde la F4)
 
-   ⚠️ EL FALLO QUE ESTO CORRIGE ESTABA VIVO EN PRODUCCIÓN. La copia con Drive se
-   fundía con `ptFundir` —«lo que llega con dato gana, lo vacío no pisa nada,
-   nada se borra»—, que es la regla correcta para RECIBIR de un compañero y la
-   equivocada para sincronizarse con una copia PROPIA: la copia de Drive trae el
-   valor viejo de todo lo que se corrigió aquí, y ese valor viejo «llega con
-   dato». Resultado medido: toda corrección de un dato ya sincronizado volvía al
-   valor anterior en todos los equipos, los borrados resucitaban, vaciar un
-   campo no se propagaba y los Ajustes se revertían.
+   ⚠️ NACIÓ DE UN FALLO VIVO EN PRODUCCIÓN. La copia con Drive se fundía con
+   `ptFundir` —«lo que llega con dato gana, lo vacío no pisa nada, nada se
+   borra»—, que es la regla correcta para RECIBIR de un compañero y la
+   equivocada para sincronizarse con una copia PROPIA: toda corrección de un
+   dato ya sincronizado volvía al valor anterior en todos los equipos, los
+   borrados resucitaban y vaciar un campo no se propagaba.
 
    Con dos copias no se puede saber QUIÉN cambió un dato; con tres, sí. La
-   tercera es la BASE: lo que quedó en Drive la última vez que ESTE equipo
-   sincronizó. Para cada dato:
+   tercera es la BASE: lo último que este equipo vio en la nube de ese registro.
+   Para cada dato:
      · local = remoto            → no hay nada que decidir
      · local = base              → aquí no se tocó: manda el otro equipo
      · remoto = base             → allá no se tocó: manda este equipo
      · los dos distintos de base → CONFLICTO: se conserva el de este equipo y el
                                    del otro queda anotado (nada se pierde en
-                                   silencio; la Fase 3 lo enseñará para elegir).
-   Lo mismo con registros enteros: borrado aquí y sin tocar allá → sigue
-   borrado; borrado allá y sin tocar aquí → se borra aquí.
+                                   silencio).
+   ⚠️ SIN BASE —la primera vez que un equipo ve ese registro— no hay forma de
+   saber quién cambió qué, y se hace lo único que no revierte nada de este
+   equipo: lo de aquí manda, lo que falta aquí se trae, nada se borra.
 
    ⚠️ `ptFundir` queda EXCLUSIVAMENTE para Modo compartir. Esta fusión no la usa.
-
-   ⚠️ SIN BASE —la primera vez que un equipo sincroniza, o la primera después de
-   esta versión— no hay forma de saber quién cambió qué, y se hace lo único que
-   no revierte nada de este equipo: lo de aquí manda, lo que falta aquí se trae,
-   ningún registro se borra, y cada diferencia se anota como conflicto. La
-   próxima vuelta ya tiene base.
-
-   La base vive en IndexedDB y no en localStorage: es tan grande como los datos,
-   y duplicarlos en localStorage (≈5 MB) sería llenarlo a la mitad del camino.
-   Va CIFRADA con la llave del PIN, igual que las capturas.
 ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Dos valores «vacíos» (undefined, null, '', [], {}) son el mismo dato: si no,
    que un equipo guarde el campo vacío y otro no lo tenga sería un conflicto. */
-function syEq(a, b) {
+function lcEq(a, b) {
   if (ptVacio(a) && ptVacio(b)) return true;
   if (a === b) return true;
   if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
   try { return JSON.stringify(ptCanon(a)) === JSON.stringify(ptCanon(b)); } catch (e) { return false; }
 }
-function syEsObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+function lcEsObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
 /* Una lista se funde elemento a elemento solo si TODOS sus elementos traen un
    identificador propio y distinto. Si no, es un valor único (las conductas, los
    artículos, los vehículos): fundirla a medias sería peor que tratarla entera. */
-function syListaConId(v) {
+function lcListaConId(v) {
   if (!Array.isArray(v)) return false;
   var vistos = {};
   for (var i = 0; i < v.length; i++) {
     var e = v[i];
-    if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return false;
+    if (!lcEsObj(e) || e.id === undefined || e.id === null || e.id === '') return false;
     if (vistos[String(e.id)]) return false;
     vistos[String(e.id)] = 1;
   }
   return true;
 }
-function syConPropias(res, local) {
+function lcConPropias(res, local) {
   /* Las claves que empiezan por «_» son estado local de ESTE equipo (la marca de
-     Modo compartir, los conflictos anotados): no viajan, así que si el
-     resultado sale del otro equipo hay que devolvérselas. */
-  if (!syEsObj(res) || !syEsObj(local) || res === local) return res;
+     Modo compartir): no viajan, así que si el resultado sale del otro equipo hay
+     que devolvérselas. */
+  if (!lcEsObj(res) || !lcEsObj(local) || res === local) return res;
   var out = null;
   Object.keys(local).forEach(function (k) {
     if (k.charAt(0) !== '_') return;
@@ -24457,38 +24197,37 @@ function syConPropias(res, local) {
   });
   return out || res;
 }
-function syFundir3(b, l, r, ruta, conf) {
-  if (syEq(l, r)) return l;
-  if (syEq(l, b)) return syConPropias(r, l);
-  if (syEq(r, b)) return l;
-  var bObj = (b === undefined || b === null || syEsObj(b));
-  if (syEsObj(l) && syEsObj(r) && bObj) {
-    var bo = syEsObj(b) ? b : {}, out = {}, ks = {}, k, v;
+function lcFundir3(b, l, r, ruta, conf) {
+  if (lcEq(l, r)) return l;
+  if (lcEq(l, b)) return lcConPropias(r, l);
+  if (lcEq(r, b)) return l;
+  var bObj = (b === undefined || b === null || lcEsObj(b));
+  if (lcEsObj(l) && lcEsObj(r) && bObj) {
+    var bo = lcEsObj(b) ? b : {}, out = {}, ks = {}, k, v;
     Object.keys(l).forEach(function (x) { ks[x] = 1; });
     Object.keys(r).forEach(function (x) { ks[x] = 1; });
     Object.keys(bo).forEach(function (x) { ks[x] = 1; });
     for (k in ks) {
       if (k.charAt(0) === '_') { if (k in l) out[k] = l[k]; continue; }
-      v = syFundir3(bo[k], l[k], r[k], ruta + '/' + k, conf);
+      v = lcFundir3(bo[k], l[k], r[k], ruta + '/' + k, conf);
       if (v !== undefined) out[k] = v;
     }
     return out;
   }
-  var bLista = (b === undefined || b === null || syListaConId(b));
-  if (syListaConId(l) && syListaConId(r) && bLista)
-    return syFundirLista(Array.isArray(b) ? b : [], l, r, ruta, conf);
+  var bLista = (b === undefined || b === null || lcListaConId(b));
+  if (lcListaConId(l) && lcListaConId(r) && bLista)
+    return lcFundirLista(Array.isArray(b) ? b : [], l, r, ruta, conf);
   conf.push({ ruta: ruta, local: l, remoto: r });
   return l;
 }
-/* Fusión de una lista por identificador. Conserva el orden de ESTE equipo —en
-   Personas la posición es el orden de registro— y añade detrás lo nuevo que
-   llegue. Lo que no trae identificador (no debería pasar en los registros de
-   primer nivel) se conserva tal cual: nunca se descarta un registro local. */
-function syFundirLista(b, l, r, ruta, conf) {
+/* Fusión de una lista por identificador. Conserva el orden de ESTE equipo y
+   añade detrás lo nuevo que llegue. Lo que no trae identificador se conserva tal
+   cual: nunca se descarta un elemento local. */
+function lcFundirLista(b, l, r, ruta, conf) {
   function indice(a) {
     var o = {};
     (a || []).forEach(function (e) {
-      if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
+      if (!lcEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
       if (!(String(e.id) in o)) o[String(e.id)] = e;
     });
     return o;
@@ -24496,709 +24235,41 @@ function syFundirLista(b, l, r, ruta, conf) {
   var ib = indice(b), il = indice(l), ir = indice(r), out = [], vistos = {};
   function uno(id) {
     var eb = ib[id], el = il[id], er = ir[id], rr = ruta + '/#' + id;
-    if (el && er) return syFundir3(eb, el, er, rr, conf);
+    if (el && er) return lcFundir3(eb, el, er, rr, conf);
     if (el) {
       if (!eb) return el;                          // nuevo aquí
-      if (syEq(el, eb)) return undefined;          // retirado allá, sin tocar aquí
+      if (lcEq(el, eb)) return undefined;          // retirado allá, sin tocar aquí
       conf.push({ ruta: rr, local: el, remoto: null, nota: 'retirado en el otro equipo y cambiado en este: se conserva' });
       return el;
     }
     if (er) {
       if (!eb) return er;                          // nuevo allá
-      if (syEq(er, eb)) return undefined;          // retirado aquí, sin tocar allá
+      if (lcEq(er, eb)) return undefined;          // retirado aquí, sin tocar allá
       conf.push({ ruta: rr, local: null, remoto: er, nota: 'retirado en este equipo y cambiado en el otro: se recupera' });
       return er;
     }
     return undefined;
   }
   (l || []).forEach(function (e) {
-    var id = syEsObj(e) && e.id !== undefined && e.id !== null && e.id !== '' ? String(e.id) : null;
+    var id = lcEsObj(e) && e.id !== undefined && e.id !== null && e.id !== '' ? String(e.id) : null;
     if (id === null || vistos[id]) { out.push(e); return; }
     vistos[id] = 1;
     var v = uno(id);
     if (v !== undefined) out.push(v);
   });
   (r || []).forEach(function (e) {
-    if (!syEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
+    if (!lcEsObj(e) || e.id === undefined || e.id === null || e.id === '') return;
     var id = String(e.id);
     if (vistos[id]) return;
     vistos[id] = 1;
     var v = uno(id);
     if (v !== undefined) out.push(v);
   });
-  /* Lo que estaba en la base y ya no está en ninguno de los dos: se retiró en
-     los dos equipos. No se vuelve a añadir (no hace falta recorrerlo). */
   return out;
 }
-function syFundirEstado(base, local, remoto) {
-  var conf = [], b = base || null;
-  var estado = {
-    personas: syFundirLista(b ? (b.personas || []) : [], local.personas || [], remoto.personas || [], 'personas', conf),
-    casos: syFundirLista(b ? (b.casos || []) : [], local.casos || [], remoto.casos || [], 'casos', conf),
-    cfg: syFundir3(b ? (b.cfg || {}) : undefined, local.cfg || {}, remoto.cfg || {}, 'cfg', conf)
-  };
-  if (!syEsObj(estado.cfg)) estado.cfg = local.cfg || {};
-  return { estado: estado, conflictos: conf };
-}
 
-/* Lo que viaja, abierto y validado. Pasa por el MISMO validador que Modo
-   compartir (`ptAbrirPaquete`), así una copia dañada se descarta igual. */
-function syEstadoDe(o) {
-  var ab = ptAbrirPaquete(o);
-  if (!ab.ok) return { ok: false, motivo: ab.motivo };
-  var cfg = syEsObj(o.cfg) ? ptCanon(o.cfg) : {};
-  SY_CFG_LOCAL.forEach(function (k) { delete cfg[k]; });
-  return { ok: true, estado: { personas: ab.personas || [], casos: ab.casos || [], cfg: cfg },
-           rechazados: ab.rechazados || [] };
-}
-function syEstadoLocal() {
-  return { personas: DB.getPersons(), casos: DB.getCases(), cfg: syCfgParaEnviar() };
-}
-/* La base se guarda en forma canónica: sin marcas locales y con las claves en
-   orden, que es exactamente lo que se sube a Drive. */
-function syEstadoCanon(e) {
-  return { personas: (e.personas || []).map(ptParaEnviar).filter(Boolean),
-           casos: (e.casos || []).map(ptParaEnviar).filter(Boolean),
-           cfg: ptCanon(e.cfg || {}) };
-}
-function syContar(antes, despues, etiqueta) {
-  var ia = {}, id = {}, r = { nuevos: 0, actualizados: 0, borrados: 0, nombres: [] };
-  (antes || []).forEach(function (x) { if (x && x.id !== undefined) ia[String(x.id)] = x; });
-  (despues || []).forEach(function (x) {
-    if (!x || x.id === undefined) return;
-    id[String(x.id)] = 1;
-    var a = ia[String(x.id)];
-    if (!a) { r.nuevos++; r.nombres.push(etiqueta(x)); }
-    else if (!syEq(a, x)) { r.actualizados++; r.nombres.push(etiqueta(x)); }
-  });
-  Object.keys(ia).forEach(function (k) { if (!id[k]) r.borrados++; });
-  return r;
-}
-
-/* Aplica la fusión en ESTE equipo. Entra entera o no entra: si el guardado de
-   las capturas falla después del de las personas, se devuelve todo a como
-   estaba, igual que `ptAplicarPaquete`. */
-async function syAplicarEstado(base, remoto) {
-  var local = syEstadoLocal();
-  var f = syFundirEstado(base, local, remoto);
-  var p = syContar(local.personas, f.estado.personas, ptNombreDe);
-  var c = syContar(local.casos, f.estado.casos, ptEtiquetaCaso);
-  var personasAntes = DB.getPersons().slice(), casosAntes = DB.getCases().slice();
-  try {
-    if (p.nuevos || p.actualizados || p.borrados) await DB.savePersons(f.estado.personas);
-    if (c.nuevos || c.actualizados || c.borrados) await DB.saveCases(f.estado.casos);
-  } catch (e) {
-    try { await DB.savePersons(personasAntes); await DB.saveCases(casosAntes); } catch (e2) {}
-    return { ok: false, motivo: 'No se pudo guardar lo que llegó. Nada cambió en este equipo.' };
-  }
-  var cfgCambio = 0;
-  if (!syEq(local.cfg, f.estado.cfg)) {
-    /* Se conservan las marcas de migración de ESTE equipo, que no viajan. */
-    var crudo = lcCfgCrudo(), nueva = JSON.parse(JSON.stringify(f.estado.cfg));
-    SY_CFG_LOCAL.forEach(function (k) { if (k in crudo) nueva[k] = crudo[k]; });
-    DB.saveConfig(nueva);
-    cfgCambio = 1;
-  }
-  return { ok: true, p: p, c: c, cfg: cfgCambio, conflictos: f.conflictos };
-}
-
-/* Entrada con un paquete ya descifrado. Sin `base` es la fusión sin base (lo de
-   aquí manda, lo que falta se trae, nada se borra). */
-async function syAplicar(o, base) {
-  var e = syEstadoDe(o);
-  if (!e.ok) return { ok: false, motivo: e.motivo };
-  var r = await syAplicarEstado(base || null, e.estado);
-  if (r.ok) r.rechazados = e.rechazados;
-  return r;
-}
-
-/* ── LA BASE ──────────────────────────────────────────────────────────────
-   Atada a la GENERACIÓN del vínculo (`st.gen`), no a la clave: cambiar la clave
-   no cambia lo que hay en Drive, pero vincular este equipo a otra copia sí, y
-   una base de otra copia haría borrar lo que no está en ella. */
-var SY_BASE_KEY = 'sync_base';
-function syGenNueva() {
-  var b = crypto.getRandomValues(new Uint8Array(8)), s = '';
-  for (var i = 0; i < b.length; i++) s += ('0' + b[i].toString(16)).slice(-2);
-  return s;
-}
-async function syBaseLeer(st) {
-  if (!st || !st.gen || !_sessionKey) return null;
-  try {
-    var enc = await lcIdbGet(SY_BASE_KEY);
-    if (!enc) return null;
-    var o = JSON.parse(await _lcDecrypt(enc));
-    return (o && o.gen === st.gen && o.estado) ? o.estado : null;
-  } catch (e) { return null; }
-}
-async function syBaseGuardar(st, estado) {
-  if (!st || !st.gen || !_sessionKey) return false;
-  try {
-    await lcIdbSet(SY_BASE_KEY, await _lcEncrypt(JSON.stringify({ gen: st.gen, ts: Date.now(), estado: estado })));
-    return true;
-  } catch (e) { console.warn('[Flagrante] no se pudo guardar la base de la sincronización', e); return false; }
-}
-async function syBaseBorrar() { try { await lcIdbDel(SY_BASE_KEY); } catch (e) {} }
-/* Los conflictos se anotan en el estado cifrado de la sincronización (lc_sync),
-   los 50 más recientes: nada de lo que el otro equipo tenía se pierde sin rastro. */
-var SY_MAX_CONFLICTOS = 50;
-function syAnotarConflictos(st, lista) {
-  if (!lista || !lista.length) return;
-  var ts = Date.now();
-  var nuevos = lista.map(function (x) { return { ts: ts, ruta: x.ruta, local: x.local, remoto: x.remoto, nota: x.nota || '' }; });
-  st.conflictos = nuevos.concat(st.conflictos || []).slice(0, SY_MAX_CONFLICTOS);
-}
-
-/* ── GOOGLE ───────────────────────────────────────────────────────────────
-   ⚠️ El script de Google se carga PEREZOSAMENTE, solo al entrar a esta
-   pantalla o al sincronizar. Es la primera dependencia de red que tiene la
-   aplicación, y el resto —diligenciar una captura, producir un documento—
-   tiene que seguir arrancando sin red, que es como se usa en campo. */
-function syCargarGIS() {
-  if (window.google && google.accounts && google.accounts.oauth2) return Promise.resolve();
-  if (_syGisP) return _syGisP;
-  _syGisP = new Promise(function (res, rej) {
-    var s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client';
-    s.async = true; s.defer = true;
-    s.onload = function () { res(); };
-    s.onerror = function () { _syGisP = null; rej(new Error('No se pudo contactar a Google. ¿Hay conexión?')); };
-    document.head.appendChild(s);
-  });
-  return _syGisP;
-}
-/* ⚠️ Este flujo NO entrega un token de refresco —para eso haría falta un
-   servidor con un secreto, que es justo lo que no hay— así que el token dura
-   una hora y se vuelve a pedir. La renovación silenciosa (`prompt:''`) puede
-   fallar por el endurecimiento de cookies de terceros de los navegadores; por
-   eso el fallo NO es un error de la aplicación sino un estado con salida:
-   «Reconectar con Google», que sí es un gesto del usuario y siempre funciona. */
-function syToken(interactivo) {
-  if (_syTok && _syTokExp > Date.now() + 60000) return Promise.resolve(_syTok);
-  if (_capNative()) {
-    if (!syDisponible()) return Promise.reject(new Error('La copia en tu cuenta está disponible en la versión web.'));
-    return syTokenNat(interactivo);
-  }
-  if (!SY_CLIENT_ID) return Promise.reject(new Error('Falta configurar el identificador de Google de la aplicación.'));
-  return syCargarGIS().then(function () {
-    return new Promise(function (res, rej) {
-      var tc = google.accounts.oauth2.initTokenClient({
-        client_id: SY_CLIENT_ID, scope: SY_SCOPE,
-        callback: function (r) {
-          if (r && r.access_token) {
-            _syTok = r.access_token; _syTokExp = Date.now() + ((r.expires_in || 3600) * 1000);
-            res(_syTok);
-          } else rej(new Error('Google no entregó el permiso.'));
-        },
-        error_callback: function () { rej(new Error('reconectar')); }
-      });
-      tc.requestAccessToken({ prompt: interactivo ? 'consent' : '' });
-    });
-  });
-}
-
-/* ── EL PERMISO DE GOOGLE DENTRO DEL ENVOLTORIO ───────────────────────────
-   ⚠️ Google BLOQUEA su pantalla de consentimiento dentro de una vista web
-   embebida (responde «disallowed_useragent»), así que el flujo de arriba —que
-   funciona en el navegador— ahí solo enseña un error. La salida que Google sí
-   admite es abrir esa pantalla en el NAVEGADOR DEL SISTEMA y que vuelva a la
-   aplicación por una dirección propia: es el patrón estándar de las
-   aplicaciones instaladas.
-   ⚠️ NO hay secreto de cliente, y no es un descuido: una aplicación que se
-   distribuye no puede guardar uno —cualquiera lo saca del paquete—. Lo que
-   prueba que quien pide el permiso es esta aplicación son dos cosas: el reto
-   criptográfico de un solo uso que se manda al empezar y que solo esta sesión
-   puede resolver, y la huella del certificado con que se firma la app,
-   registrada en el identificador.
-   ⚠️ A cambio, este flujo entrega algo que el de la web NO tiene: permiso de
-   larga duración. El token de una hora se renueva solo, sin volver a
-   preguntarle nada al usuario. Se guarda dentro del estado de sincronización,
-   que ya va cifrado bajo el PIN de este equipo. */
-
-/* Reto criptográfico de un solo uso (PKCE). El verificador se queda aquí y el
-   reto es su huella: quien intercepte la vuelta de Google no puede canjear el
-   código sin el verificador, que nunca sale del equipo. */
-function _syB64url(b) {
-  var s = '', a = new Uint8Array(b);
-  for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]);
-  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-async function _syReto() {
-  var v = _syB64url(_ptAzar(32));
-  var h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
-  return { v: v, reto: _syB64url(h) };
-}
-
-/* La vuelta de Google llega como una apertura de la aplicación por enlace. El
-   oyente se registra UNA vez y deja la respuesta en la espera pendiente.
-   ⚠️ También se escucha el cierre de la pestaña: si el usuario la cierra sin dar
-   el permiso no va a volver nadie, y sin esto la espera se quedaría colgada para
-   siempre con la pantalla diciendo que está conectando. */
-var _syEsperaAuth = null, _syOyentes = false;
-function _syMontarOyentes() {
-  if (_syOyentes) return;
-  var P = window.Capacitor && window.Capacitor.Plugins;
-  if (!P || !P.App) return;
-  _syOyentes = true;
-  P.App.addListener('appUrlOpen', function (ev) {
-    var u = (ev && ev.url) || '';
-    if (u.indexOf(SY_REDIR_NAT) !== 0 || !_syEsperaAuth) return;
-    var q = {};
-    (u.split('?')[1] || '').split('&').forEach(function (p) {
-      var kv = p.split('=');
-      if (kv[0]) q[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || '');
-    });
-    try { if (P.Browser) P.Browser.close(); } catch (e) {}
-    var esp = _syEsperaAuth; _syEsperaAuth = null;
-    if (q.code) esp.ok(q.code);
-    else esp.mal(new Error(q.error === 'access_denied' ? 'Se canceló el permiso.' : 'Google no entregó el permiso.'));
-  });
-  if (P.Browser) P.Browser.addListener('browserFinished', function () {
-    if (!_syEsperaAuth) return;
-    /* Se da un respiro: al volver por el enlace, Android cierra la pestaña y este
-       aviso puede llegar ANTES que la apertura — cancelaría un permiso que sí se
-       concedió. */
-    setTimeout(function () {
-      if (!_syEsperaAuth) return;
-      var esp = _syEsperaAuth; _syEsperaAuth = null;
-      esp.mal(new Error('Se cerró la ventana de Google sin dar el permiso.'));
-    }, 700);
-  });
-}
-
-function _syPedirCodigo(reto) {
-  var P = window.Capacitor && window.Capacitor.Plugins;
-  if (!P || !P.Browser) return Promise.reject(new Error('No se pudo abrir el navegador del sistema.'));
-  _syMontarOyentes();
-  var url = 'https://accounts.google.com/o/oauth2/v2/auth' +
-    '?client_id=' + encodeURIComponent(SY_CLIENT_ID_NAT) +
-    '&redirect_uri=' + encodeURIComponent(SY_REDIR_NAT) +
-    '&response_type=code' +
-    '&scope=' + encodeURIComponent(SY_SCOPE) +
-    '&code_challenge=' + reto.reto + '&code_challenge_method=S256' +
-    '&access_type=offline&prompt=consent';
-  return new Promise(function (ok, mal) {
-    _syEsperaAuth = { ok: ok, mal: mal };
-    P.Browser.open({ url: url }).catch(function (e) { _syEsperaAuth = null; mal(e); });
-  });
-}
-
-/* Canje del código por el token. Sin secreto: el verificador ocupa su lugar. */
-function _syCanjear(campos) {
-  campos.client_id = SY_CLIENT_ID_NAT;
-  var cuerpo = Object.keys(campos).map(function (k) {
-    return encodeURIComponent(k) + '=' + encodeURIComponent(campos[k]);
-  }).join('&');
-  return fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: cuerpo
-  }).then(function (r) { return r.json(); });
-}
-
-async function syTokenNat(interactivo) {
-  if (!SY_CLIENT_ID_NAT) throw new Error('Falta configurar el identificador de Google de la aplicación.');
-  var est = syEstado();
-  /* Con permiso de larga duración guardado no se le pregunta nada al usuario: se
-     renueva y ya. Solo se vuelve a pedir si él lo pide o si Google lo revocó. */
-  if (est.rt && !interactivo) {
-    var r = await _syCanjear({ grant_type: 'refresh_token', refresh_token: est.rt });
-    if (r && r.access_token) {
-      _syTok = r.access_token; _syTokExp = Date.now() + ((r.expires_in || 3600) * 1000);
-      return _syTok;
-    }
-    /* Revocado o caducado: se olvida y se vuelve a pedir desde cero. */
-    est.rt = ''; await syGuardarEstado(est);
-  }
-  var reto = await _syReto();
-  var code = await _syPedirCodigo(reto);
-  var tk = await _syCanjear({
-    grant_type: 'authorization_code', code: code,
-    redirect_uri: SY_REDIR_NAT, code_verifier: reto.v
-  });
-  if (!tk || !tk.access_token) throw new Error('Google no entregó el permiso.');
-  _syTok = tk.access_token; _syTokExp = Date.now() + ((tk.expires_in || 3600) * 1000);
-  if (tk.refresh_token) { est.rt = tk.refresh_token; await syGuardarEstado(est); }
-  return _syTok;
-}
-
-/* ── DRIVE ────────────────────────────────────────────────────────────────
-   Todo vive en `appDataFolder`: una carpeta oculta, propia de esta aplicación,
-   que no aparece en el Drive del usuario ni la ven otras aplicaciones. */
-function syDrive(url, opts) {
-  opts = opts || {};
-  opts.headers = Object.assign({ Authorization: 'Bearer ' + _syTok }, opts.headers || {});
-  return fetch(url, opts).then(function (r) {
-    if (r.status === 401) { _syTok = ''; _syTokExp = 0; throw new Error('reconectar'); }
-    return r;
-  });
-}
-/* ⚠️ Drive NO impide dos archivos con el mismo nombre, ni siquiera aquí. Si dos
-   equipos activan la sincronización a la vez, los dos pueden hacer «buscar → no
-   existe → crear» antes de ver el del otro: cada uno se queda anclado al suyo y
-   a partir de ahí se sincroniza CONSIGO MISMO para siempre, sin un solo error a
-   la vista. Por eso se listan siempre todos y, si hay más de uno, se funden
-   todos y se conserva el más antiguo —criterio determinista, para que los dos
-   equipos elijan el MISMO superviviente. */
-/* ⚠️ El nombre es un parámetro y no una constante metida dentro porque en la
-   carpeta oculta viven DOS archivos: la copia y la caja de la llave. Un solo
-   camino para los dos, para que no acaben divergiendo. */
-async function syListar(nombre) {
-  nombre = nombre || SY_ARCHIVO;
-  var q = encodeURIComponent("name='" + nombre + "' and trashed=false");
-  var r = await syDrive('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=' + q +
-                        '&fields=files(id,createdTime)&orderBy=createdTime');
-  if (!r.ok) throw new Error('No se pudo consultar Drive.');
-  var j = await r.json();
-  return (j.files || []);
-}
-async function syCrear(nombre) {
-  nombre = nombre || SY_ARCHIVO;
-  var r = await syDrive('https://www.googleapis.com/drive/v3/files', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: nombre, parents: ['appDataFolder'] })
-  });
-  if (!r.ok) throw new Error('No se pudo crear el archivo en Drive.');
-  return (await r.json()).id;
-}
-async function syBajarBytes(id) {
-  var r = await syDrive('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '?alt=media');
-  if (r.status === 404) return null;
-  if (!r.ok) throw new Error('No se pudo descargar de Drive.');
-  return await r.arrayBuffer();
-}
-async function syDescargar(id, key) {
-  var buf = await syBajarBytes(id);
-  if (!buf || buf.byteLength < 18) return null;   // recién creado, todavía vacío
-  return await syDescifrar(buf, key);
-}
-
-/* ── LA CAJA, EN DRIVE ────────────────────────────────────────────────────
-   ⚠️ La caja vive en un archivo APARTE de la copia, y no dentro de ella: si
-   viajara dentro, para leer la llave habría que abrir antes el archivo que esa
-   llave cifra. Y separada se puede volver a sellar con otra contraseña sin tocar
-   los datos. */
-async function syLlaveGuardar(claveB32, frase) {
-  var ll = await syListar(SY_LLAVE);
-  var id = ll.length ? ll[0].id : await syCrear(SY_LLAVE);
-  await sySubirBytes(id, await syCajaCifrar(syB32Dec(claveB32), frase));
-  /* Si hubo bifurcación, la caja sobrante se retira: con dos cajas, un equipo
-     nuevo podría abrir la que ya no corresponde y quedarse con una llave vieja. */
-  for (var i = 1; i < ll.length; i++) await syBorrar(ll[i].id);
-  return id;
-}
-async function syLlaveHay() { return (await syListar(SY_LLAVE)).length > 0; }
-async function syLlaveLeer(frase) {
-  var ll = await syListar(SY_LLAVE);
-  var buf = ll.length ? await syBajarBytes(ll[0].id) : null;
-  if (!buf || buf.byteLength < 34) return { ok: false, vacia: true,
-    motivo: 'Esta cuenta todavía no tiene contraseña de recuperación.' };
-  return await syCajaAbrir(buf, frase);
-}
-async function sySubirBytes(id, bytes) {
-  var r = await syDrive('https://www.googleapis.com/upload/drive/v3/files/' + encodeURIComponent(id) + '?uploadType=media', {
-    method: 'PATCH', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes
-  });
-  if (!r.ok) throw new Error('No se pudo subir a Drive.');
-}
-function syBorrar(id) {
-  return syDrive('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id), { method: 'DELETE' })
-    .catch(function () { /* si no se pudo borrar el sobrante, la próxima vuelta lo intenta otra vez */ });
-}
-
-/* ── UNA VUELTA DE SINCRONIZACIÓN ─────────────────────────────────────────
-   Bajar todo lo que haya → fundirlo en este equipo → subir el resultado ya
-   fundido. Drive queda como punto de encuentro, no como autoridad: lo que sube
-   es la UNIÓN de los dos lados, así que el siguiente equipo que baje recibe
-   también lo que trajo este.
-
-   ⚠️ Se sube el snapshot COMPLETO, no diferencias. No es pereza: este proyecto
-   ya construyó la vía sofisticada —reloj lógico híbrido y marcas de versión por
-   campo, en «Modo patrulla»— y la retiró entera por complejidad frente al valor
-   que daba. Una captura completa son unos 6 KB; el snapshot entero cabe de
-   sobra, y volver a fundir lo que no cambió no hace nada (`ptFundir` compara
-   antes de escribir).
-
-   ⚠️ NO se sincroniza con el formulario abierto. El wizard trabaja sobre una
-   COPIA del caso y al guardar reemplaza el original: si una fusión entrara por
-   debajo mientras está abierto, `wizSave` la borraría al terminar. */
-async function sySincronizar(interactivo) {
-  /* ⚠️ Segunda guarda, detrás del menú oculto: en la app de Play NINGÚN dato sale
-     del teléfono por esta vía, llegue quien llegue a llamarla. */
-  if (!syDisponible()) return { ok: false, motivo: 'La copia en tu cuenta está disponible en la versión web.' };
-  if (!_sessionKey) return { ok: false, motivo: 'La aplicación todavía se está abriendo.' };
-  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
-  if (typeof wc !== 'undefined' && wc) return { ok: false, motivo: 'Hay una captura abierta. Ciérrala y vuelve a sincronizar.' };
-  if (!navigator.onLine) return { ok: false, motivo: 'Sin conexión. Se sincroniza cuando vuelva la señal.' };
-  if (_syCorriendo) return { ok: false, motivo: 'Ya hay una sincronización en curso.' };
-  _syCorriendo = true;
-  try {
-    var st = syEstado();
-    /* Un vínculo anterior a la Fase 0 no tiene generación: se le da una, y su
-       primera vuelta es la fusión sin base (no revierte nada de este equipo). */
-    if (!st.gen) st.gen = syGenNueva();
-    await syToken(interactivo);
-    var key = await syClaveAES(syB32Dec(st.k));
-    var base = await syBaseLeer(st);
-
-    var archivos = await syListar();
-    var res = null, i, bajado, legibles = [], ilegibles = 0, remoto = null, rechazados = [];
-    if (!archivos.length) {
-      st.fileId = await syCrear();
-    } else {
-      /* Se funde lo de TODOS los archivos que aparezcan, no solo el elegido:
-         si hubo bifurcación, lo del sobrante no se pierde antes de borrarlo.
-
-         ⚠️ SOLO SE TOCA LO QUE SE PUDO ABRIR, y esto es lo que evita una pérdida
-         callada. Antes se conservaba `archivos[0]` y se borraba el resto sin mirar:
-         si el sobrante venía de un equipo con OTRA clave —dos equipos con la misma
-         cuenta que nunca se pasaron el código—, se borraban sus datos por no
-         poderlos leer, que es la peor razón posible. Y si el que no se podía abrir
-         era el primero, encima se le escribía encima. Ahora: el superviviente sale
-         de entre los legibles, lo ilegible ni se borra ni se pisa, y se dice.
-
-         ⚠️ Un archivo VACÍO cuenta como legible: es uno que acabamos de crear y
-         todavía no tiene nada, no uno que no se puede leer. */
-      for (i = 0; i < archivos.length; i++) {
-        bajado = await syDescargar(archivos[i].id, key);
-        if (bajado === null) { legibles.push(archivos[i]); continue; }
-        if (bajado.ok) {
-          var e = syEstadoDe(bajado.o);
-          if (!e.ok) { ilegibles++; continue; }
-          legibles.push(archivos[i]);
-          rechazados = rechazados.concat(e.rechazados);
-          /* Si hubo bifurcación, las copias se juntan entre ellas sin base (ninguna
-             borra nada de la otra) y el resultado es «lo remoto» de la fusión. */
-          remoto = remoto ? syFundirEstado(null, remoto, e.estado).estado : e.estado;
-        } else ilegibles++;
-      }
-      if (!legibles.length) return { ok: false, motivo: bajado ? bajado.motivo :
-        'La clave de este equipo no abre lo que hay en Drive.' };
-      st.fileId = legibles[0].id;
-    }
-
-    /* ⚠️ LA FUSIÓN ES A TRES VÍAS: base (lo que quedó en Drive la última vez que
-       este equipo sincronizó) · local · remoto. Ver «FUSIÓN A TRES VÍAS». */
-    if (remoto) {
-      res = await syAplicarEstado(base, remoto);
-      if (!res.ok) return res;
-      res.rechazados = rechazados;
-      syAnotarConflictos(st, res.conflictos);
-    }
-
-    var subir = sySnapshot();
-    await sySubirBytes(st.fileId, await syCifrar(subir, key));
-    /* La base es EXACTAMENTE lo que acaba de quedar en Drive, y se guarda solo
-       después de subirlo: si la subida falla, la base sigue siendo la anterior y
-       la próxima vuelta decide bien. */
-    await syBaseGuardar(st, syEstadoCanon({ personas: subir.personas, casos: subir.casos, cfg: subir.cfg }));
-    for (i = 1; i < legibles.length; i++) await syBorrar(legibles[i].id);
-
-    /* Una sola vez, y solo mientras falte: saber si la cuenta ya tiene caja de
-       recuperación cuesta una consulta, y preguntarlo en cada vuelta sería pagarla
-       para siempre por un dato que no vuelve a cambiar. */
-    if (!st.caja) { try { st.caja = await syLlaveHay(); } catch (e) {} }
-
-    st.ts = Date.now();
-    await syGuardarEstado(st);
-    return { ok: true, r: res, duplicados: Math.max(0, legibles.length - 1), ilegibles: ilegibles };
-  } catch (e) {
-    var m = (e && e.message) || 'error';
-    if (m === 'reconectar') return { ok: false, motivo: 'Google pidió volver a autorizar. Toca «Sincronizar ahora».', reconectar: true };
-    return { ok: false, motivo: m };
-  } finally { _syCorriendo = false; }
-}
-
-/* ── VINCULAR ─────────────────────────────────────────────────────────────
-   ⚠️ Vincular un equipo que YA tenía capturas propias NO reemplaza nada: baja
-   lo de Drive, lo FUNDE con lo de aquí y vuelve a subir la unión. El caso real
-   es un funcionario que usó semanas el computador de la estación antes de
-   configurar la sincronización; tratar la primera vez como un caso especial que
-   «trae» los datos le borraría su trabajo. */
-async function syVincular(codigo) {
-  var bytes = syB32Dec(codigo);
-  if (!bytes || bytes.length !== 16) return { ok: false, motivo: 'Ese código no tiene la forma de una clave de sincronización.' };
-  await syBaseBorrar();
-  await syGuardarEstado({ k: syB32Enc(bytes), fileId: '', ts: 0, gen: syGenNueva() });
-  var r = await sySincronizar(true);
-  if (!r.ok) { await syDesvincular(); return r; }
-  return r;
-}
-/* ⚠️ El ORDEN importa: primero se suben los datos y solo después se sella la caja.
-   Al revés, una caja en Drive apuntando a una llave con la que todavía no hay nada
-   cifrado deja una recuperación que promete algo que no existe.
-   ⚠️ Y si la caja falla, esto NO devuelve error: los datos SÍ quedaron a salvo, que
-   es lo principal. Lo que falta es la vía de recuperación, y se dice con todas sus
-   letras para que el funcionario anote el código mientras tanto. */
-async function syActivarNuevo(frase) {
-  var mal = syFraseFloja(frase);
-  if (mal) return { ok: false, motivo: mal };
-  await syBaseBorrar();
-  await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0, caja: false, gen: syGenNueva() });
-  var r = await sySincronizar(true);
-  if (!r.ok) return r;
-  try {
-    await syLlaveGuardar(syEstado().k, frase);
-    var st = syEstado(); st.caja = true; await syGuardarEstado(st);
-  } catch (e) {
-    return { ok: true, sinCaja: true, r: r.r,
-             motivo: 'Tus datos ya están en tu cuenta, pero no se pudo guardar la contraseña de recuperación. Anota el código y vuelve a intentarlo desde Sincronización.' };
-  }
-  return r;
-}
-
-/* ── RECUPERAR EN UN EQUIPO NUEVO ─────────────────────────────────────────
-   El camino corriente: correo y contraseña, y vuelve todo. No hace falta tener a
-   mano el equipo anterior, que es justamente el caso que el código de 26 caracteres
-   no cubre.
-   ⚠️ Si la contraseña no abre, se DESVINCULA: quedarse con una llave que no sirve
-   haría que la siguiente vuelta automática fallara en silencio para siempre. */
-async function syRecuperar(frase) {
-  if (!frase) return { ok: false, motivo: 'Escribe tu contraseña de recuperación.' };
-  var caja;
-  try {
-    await syToken(true);
-    caja = await syLlaveLeer(frase);
-  } catch (e) {
-    var m = (e && e.message) || 'error';
-    return { ok: false, motivo: m === 'reconectar' ? 'Google no entregó el permiso. Vuelve a intentarlo.' : m };
-  }
-  if (!caja.ok) return caja;
-  await syBaseBorrar();
-  await syGuardarEstado({ k: caja.k, fileId: '', ts: 0, caja: true, gen: syGenNueva() });
-  var r = await sySincronizar(true);
-  if (!r.ok) { await syDesvincular(); return r; }
-  return r;
-}
-
-/* Crear la contraseña por primera vez, o cambiarla. Es la MISMA operación: se
-   vuelve a sellar la caja con la llave que este equipo ya tiene. La llave no cambia,
-   así que los demás equipos siguen sincronizando sin enterarse —lo que cambia es con
-   qué se recupera, no con qué se cifra—. */
-async function syGuardarFrase(frase) {
-  var mal = syFraseFloja(frase);
-  if (mal) return { ok: false, motivo: mal };
-  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
-  try {
-    await syToken(true);
-    await syLlaveGuardar(syEstado().k, frase);
-    var st = syEstado(); st.caja = true; await syGuardarEstado(st);
-    return { ok: true };
-  } catch (e) {
-    var m = (e && e.message) || 'error';
-    return { ok: false, motivo: m === 'reconectar' ? 'Google pidió volver a autorizar. Vuelve a intentarlo.' : m };
-  }
-}
-
-/* ── CAMBIAR LA CLAVE ─────────────────────────────────────────────────────
-   Hace falta el día que un equipo se pierda desbloqueado, o que alguien
-   fotografíe el código por encima del hombro: sin esto, esa clave sirve para
-   siempre y no hay forma de revocarla. Es el complemento obligatorio de haber
-   elegido una clave simétrica que el usuario transporta a mano.
-
-   ⚠️ SE SINCRONIZA PRIMERO, CON LA CLAVE VIEJA, Y ES LO QUE HACE QUE ESTO NO
-   BORRE NADA. Lo que otro equipo haya subido y este todavía no haya fundido
-   está cifrado con la clave que se va a jubilar: si se sube el snapshot de aquí
-   con la clave nueva sin bajar antes, eso queda ilegible PARA SIEMPRE, y el
-   funcionario no vería ningún error —vería una captura que ya no está—. Esa
-   vuelta previa deja además UN solo archivo en Drive (funde y borra los
-   duplicados), así que no puede quedarse un sobrante con la clave vieja.
-
-   ⚠️ EL ORDEN DE LOS DOS ÚLTIMOS PASOS NO ES INTERCAMBIABLE: primero se sube
-   con la clave nueva y solo después se guarda aquí. Al revés, si la subida
-   falla, este equipo se queda con una clave que no abre lo que hay en Drive y
-   se cierra la puerta a sí mismo. Con este orden, una subida fallida deja todo
-   exactamente como estaba y la clave vieja sigue sirviendo.
-
-   ⚠️ LOS DEMÁS EQUIPOS QUEDAN FUERA, y eso NO es un efecto colateral: es
-   justamente lo que se pidió. Hay que volver a vincularlos con el código nuevo,
-   y la pantalla lo dice antes de empezar, no después. */
-async function syRotarClave(frase) {
-  if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
-  /* ⚠️ Con caja, la contraseña es OBLIGATORIA y se comprueba ANTES de tocar nada:
-     la caja guarda la llave VIEJA, así que si la clave se cambiara sin volver a
-     sellarla, la recuperación seguiría entregando una llave que ya no abre nada —y
-     eso no se descubre hasta el día que de verdad hace falta recuperar. */
-  if (syEstado().caja && !frase)
-    return { ok: false, motivo: 'Escribe tu contraseña de recuperación para volver a sellar la caja.' };
-
-  var previo = await sySincronizar(true);
-  if (!previo.ok) return previo;
-
-  if (_syCorriendo) return { ok: false, motivo: 'Ya hay una sincronización en curso.' };
-  _syCorriendo = true;
-  try {
-    var st = syEstado();
-    if (!st.fileId) return { ok: false, motivo: 'No se encontró el archivo en Drive. Sincroniza y vuelve a intentarlo.' };
-    await syToken(true);
-
-    var nueva = syClaveNueva();
-    await sySubirBytes(st.fileId, await syCifrar(sySnapshot(), await syClaveAES(syB32Dec(nueva))));
-
-    st.k = nueva; st.ts = Date.now();
-    try { await syGuardarEstado(st); }
-    catch (e) {
-      /* Drive ya está con la clave nueva y este equipo no la pudo guardar. La
-         tiene en memoria, así que la sesión sigue funcionando; lo que no puede
-         es perderse sin que el funcionario la vea. */
-      return { ok: false, clave: nueva,
-               motivo: 'La clave nueva quedó en Drive pero no se pudo guardar aquí. Anótala ya: ' + syCodigoBonito(nueva) };
-    }
-    /* La caja se vuelve a sellar con la llave nueva. Va al FINAL, cuando los datos
-       ya están cifrados con ella: si se hiciera antes y la subida fallara, la caja
-       entregaría una llave que no abre lo que hay. */
-    if (st.caja) {
-      try { await syLlaveGuardar(nueva, frase); }
-      catch (e2) {
-        return { ok: true, clave: nueva, cajaMal: true,
-                 motivo: 'La clave se cambió, pero no se pudo actualizar tu contraseña de recuperación. Anota el código nuevo y vuelve a guardar la contraseña desde Sincronización.' };
-      }
-    }
-    return { ok: true, clave: nueva };
-  } catch (e) {
-    var m = (e && e.message) || 'error';
-    if (m === 'reconectar') return { ok: false, motivo: 'Google pidió volver a autorizar. Vuelve a intentarlo.' };
-    return { ok: false, motivo: m };
-  } finally { _syCorriendo = false; }
-}
-
-/* ── PANTALLA ─────────────────────────────────────────────────────────────
-   ⚠️ Ni una palabra técnica: nada de «token», «OAuth», «blob» ni «appData». El
-   funcionario ve sus equipos, su código y cuándo fue la última vez. */
-var _syOcupado = false, _syUltimo = '';
-
-/* ⚠️ Google BLOQUEA su pantalla de consentimiento dentro de un WebView embebido
-   (`disallowed_useragent`), y el envoltorio de Capacitor es justo eso. O sea que
-   dentro de la app de la tienda esta función NO PUEDE arrancar: ofrecerla sería
-   un callejón sin salida, y un botón que no funciona es motivo de rechazo.
-   Desbloquearlo es la Fase 2 (autorización nativa de Android), que obliga a
-   recompilar el paquete — hasta entonces, la sincronización es de la versión web.
-   Punto ÚNICO: lo consultan el menú y la propia pantalla, que no pueden discrepar. */
-/* ⚠️ FASE 0 (2026-09-25): dentro de la app de Play la copia vuelve a quedar
-   OCULTA aunque `SY_CLIENT_ID_NAT` esté puesto. Sin la huella de firma de Play
-   registrada el permiso de Google falla, y `privacy.html` dice que la copia en
-   Drive existe solo en la versión web: Play exige que la política y la app
-   coincidan. La bandera `syncNativo` la devuelve en la Fase 2. */
-function syDisponible() { return _capNative() ? (lcFlag('syncNativo') && !!SY_CLIENT_ID_NAT) : true; }
-
-/* ⚠️ Se oculta con `display`, NO con el atributo `hidden`: una regla de autor
-   (`.sb-item{display:flex}`) gana sobre el `display:none` del navegador y el
-   ítem seguiría ocupando su renglón. Es la misma trampa de los `<details>`
-   plegables de la Ola 3 y del control de orden de las listas.
-   ⚠️ Se llama DOS veces —al arrancar y al desbloquear— porque con carga remota
-   el puente de Capacitor puede inyectarse después de que la página se pinte:
-   al desbloquear han pasado ya varios segundos y `_capNative()` dice la verdad. */
-function syPintarNav() {
-  var ver = syDisponible();
-  ['nav-sync', 'mas-sync'].forEach(function (id) {
-    var e = document.getElementById(id);
-    if (e) e.style.display = ver ? '' : 'none';
-  });
-}
-
-function syAbrir() { go('sync'); }
-
-function syFecha(ts) {
+/* La hora de algo, dicha como la diría una persona. */
+function lcHace(ts) {
   if (!ts) return 'nunca';
   var d = new Date(ts), h = Date.now() - ts;
   if (h < 60000) return 'hace un momento';
@@ -25208,307 +24279,13 @@ function syFecha(ts) {
          ' a las ' + ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
 }
 
-function renderSync() {
-  var el = document.getElementById('sy-pane');
-  if (!el) return;
-  var st = syEstado(), h = '';
-
-  /* Guarda por si se llega aquí por el hash: el menú ya no la ofrece en el
-     envoltorio nativo, pero decirlo es mejor que enseñar un botón que fallaría. */
-  if (!syDisponible()) {
-    el.innerHTML = '<div class="card"><div class="st">Disponible en la versión web</div>' +
-      '<p class="oj-hint">Abre Flagrante en el navegador para sincronizar tus capturas en tu propio Google Drive.</p></div>';
-    return;
-  }
-
-  if (!SY_CLIENT_ID) {
-    el.innerHTML = '<div class="card"><div class="st">Falta un paso de instalación</div>' +
-      '<p class="oj-hint">Esta copia todavía no tiene configurado el acceso a Google Drive.</p></div>';
-    return;
-  }
-
-  if (!syVinculado()) {
-    h += '<div class="card"><div class="st">Tus capturas en todos tus equipos</div>' +
-         '<p class="oj-hint">Lo que registres en un equipo aparece en el otro, cifrado en tu propio ' +
-         'Google Drive: ni Google puede leerlo.</p>' +
-         '<button class="btn bp" onclick="syUiRecuperarPedir()">Ya lo uso en otro equipo</button>' +
-         '<button class="btn bs" onclick="syUiActivar()">Activar por primera vez</button>' +
-         '<button class="btn bs" onclick="syUiVincularPedir()">Tengo el código de 26 caracteres</button>' +
-         '</div>';
-  } else {
-    h += '<div class="card"><div class="st">Sincronización activa</div>' +
-         '<div class="oj-auto">Última vez: ' + escHtml(syFecha(st.ts)) + '</div>' +
-         (_syUltimo ? '<div class="oj-auto">' + escHtml(_syUltimo) + '</div>' : '') +
-         '<button class="btn bp" onclick="syUiSincronizar()"' + (_syOcupado ? ' disabled' : '') + '>' +
-         (_syOcupado ? 'Sincronizando…' : 'Sincronizar ahora') + '</button>' +
-         '</div>';
-    /* ⚠️ Un equipo vinculado antes de que existiera la caja no tiene contraseña, y
-       eso no es un detalle: es la diferencia entre poder recuperar y no poder. Se
-       dice en su propia tarjeta, no en una línea de ayuda. */
-    h += (st.caja
-      ? '<div class="card"><div class="st">Contraseña de recuperación</div>' +
-        '<p class="oj-hint">Con tu correo y esta contraseña recuperas todo en un equipo nuevo, ' +
-        'aunque no te quede ninguno.</p>' +
-        '<button class="btn bs" onclick="syUiFrasePedir(1)">Cambiar la contraseña</button></div>'
-      : '<div class="card"><div class="st">Te falta la contraseña de recuperación</div>' +
-        '<p class="oj-hint">Sin ella, si pierdes todos tus equipos solo el código de 26 ' +
-        'caracteres abre tu copia.</p>' +
-        '<button class="btn bp" onclick="syUiFrasePedir(0)">Crear la contraseña</button></div>');
-    h += '<div class="card"><div class="st">Agregar otro equipo</div>' +
-         '<p class="oj-hint">En el otro equipo, entra con el mismo correo y tu contraseña de ' +
-         'recuperación.</p>' +
-         '<button class="btn bs" onclick="syUiVerCodigo()">Ver el código de este equipo</button>' +
-         '<div id="sy-codigo"></div></div>';
-    h += '<div class="card"><div class="st">Cambiar la clave</div>' +
-         '<p class="oj-hint">Si perdiste un equipo o alguien vio tu código, cámbiala: el código viejo ' +
-         'deja de servir.</p>' +
-         '<p class="oj-hint">Los demás equipos dejan de sincronizar hasta que los vincules con el ' +
-         'código nuevo.</p>' +
-         '<button class="btn bs" onclick="syUiRotar()"' + (_syOcupado ? ' disabled' : '') + '>' +
-         'Cambiar la clave de sincronización</button></div>';
-    h += '<div class="card"><div class="st">Dejar de sincronizar</div>' +
-         '<p class="oj-hint">Este equipo deja de subir y de bajar. Lo que ya está guardado aquí se queda.</p>' +
-         '<button class="btn bs" onclick="syUiDesvincular()">Desvincular este equipo</button></div>';
-  }
-  el.innerHTML = h;
-}
-
-/* ⚠️ El código se muestra bajo demanda y NO de entrada: es la llave de todo lo
-   del usuario, y dejarla pintada en una pantalla que se abre por error —o que
-   alguien mira por encima del hombro— es regalarla. */
-function syUiVerCodigo() {
-  var c = document.getElementById('sy-codigo'), st = syEstado();
-  if (!c || !st.k) return;
-  var bytes = syB32Dec(st.k);
-  c.innerHTML = '<p class="oj-hint">Escanéalo desde el otro equipo, o tecléalo tal cual.</p>' +
-    '<div class="pt-qr">' + ptQrSvg(bytes, 300) + '</div>' +
-    '<div class="sy-code">' + escHtml(syCodigoBonito(st.k)) + '</div>' +
-    '<p class="oj-hint">⚠️ Es el respaldo por si olvidas tu contraseña. Si pierdes los dos, ' +
-    'nadie recupera tu copia.</p>';
-}
-
-/* ── LA CONTRASEÑA, EN UN SOLO SITIO ──────────────────────────────────────
-   Los tres flujos que la piden —activar, recuperar y cambiarla— comparten modal,
-   validación y manejo del resultado. Tres copias de esto acabarían pidiendo cosas
-   distintas en cada pantalla.
-   ⚠️ El valor se lee ANTES de cerrar el modal: `closeModal` vacía el contenedor. */
-var _syFraseCfg = null;
-function syUiFraseModal(o) {
-  _syFraseCfg = o;
-  var h = '<div class="st">' + escHtml(o.titulo) + '</div>' +
-          '<p class="oj-hint">' + escHtml(o.hint) + '</p>' +
-          '<div class="fg"><label class="fl" for="sy-f1">Contraseña de recuperación</label>' +
-          '<input class="fi" id="sy-f1" type="password" autocomplete="' +
-          (o.repetir ? 'new-password' : 'current-password') + '"></div>' +
-          (o.repetir ? '<div class="fg"><label class="fl" for="sy-f2">Repítela</label>' +
-            '<input class="fi" id="sy-f2" type="password" autocomplete="new-password"></div>' +
-            '<p class="oj-hint">Mínimo ' + SY_FRASE_MIN + ' caracteres, con letras. No uses el PIN.</p>' : '') +
-          '<button class="btn bp" onclick="syUiFraseIr()">' + escHtml(o.boton) + '</button>';
-  openModal(h);
-  setTimeout(function () { var e = document.getElementById('sy-f1'); if (e) e.focus(); }, 120);
-}
-async function syUiFraseIr() {
-  var o = _syFraseCfg; if (!o) return;
-  var f = (document.getElementById('sy-f1') || {}).value || '';
-  var g = (document.getElementById('sy-f2') || {}).value || '';
-  if (o.repetir) {
-    var mal = syFraseFloja(f);
-    if (mal) { toast(mal); return; }
-    if (f !== g) { toast('Las contraseñas no coinciden.'); return; }
-  } else if (!f) { toast('Escribe tu contraseña de recuperación.'); return; }
-  closeModal();
-  _syOcupado = true; renderSync();
-  var r = await o.accion(f);
-  _syOcupado = false;
-  if (!r.ok) {
-    if (o.desvincularSiFalla) await syDesvincular();
-    toast(r.motivo, 6000); renderSync(); return;
-  }
-  if (o.resumen) _syUltimo = syResumen(r);
-  renderSync();
-  if (_on('capturas')) renderCases();
-  if (o.verCodigo) syUiVerCodigo();
-  /* Un aviso que va con todas sus letras cuando algo quedó a medias: los datos
-     están, pero la vía de recuperación no. */
-  toast((r.sinCaja || r.cajaMal) ? r.motivo : o.ok, (r.sinCaja || r.cajaMal) ? 9000 : 3000);
-}
-
-function syUiActivar() {
-  syUiFraseModal({
-    titulo: 'Activar en este equipo',
-    hint: 'Con tu correo y esta contraseña recuperas tus capturas en cualquier equipo. No se guarda en ninguna parte: si la olvidas, nadie puede recuperarla.',
-    repetir: true,
-    boton: 'Activar y conectar con Google',
-    accion: function (f) { return syActivarNuevo(f); },
-    ok: 'Sincronización activada ✓',
-    resumen: false, verCodigo: true, desvincularSiFalla: true
-  });
-}
-
-function syUiRecuperarPedir() {
-  syUiFraseModal({
-    titulo: 'Traer mis datos',
-    hint: 'Entra con el mismo correo que usaste en el otro equipo y escribe tu contraseña de recuperación.',
-    repetir: false,
-    boton: 'Continuar con Google',
-    accion: function (f) { return syRecuperar(f); },
-    ok: 'Este equipo quedó sincronizado ✓',
-    resumen: true
-  });
-}
-
-function syUiFrasePedir(cambiar) {
-  syUiFraseModal({
-    titulo: cambiar ? 'Cambiar la contraseña de recuperación' : 'Crear tu contraseña de recuperación',
-    hint: cambiar ? 'La anterior deja de servir. La llave de cifrado no cambia, así que tus otros equipos siguen sincronizando igual.' : 'Con tu correo y esta contraseña recuperas todo en un equipo nuevo, sin necesitar el código de 26 caracteres.',
-    repetir: true,
-    boton: 'Guardar la contraseña',
-    accion: function (f) { return syGuardarFrase(f); },
-    ok: 'Contraseña de recuperación guardada ✓'
-  });
-}
-
-function syUiVincularPedir() {
-  var h = '<div class="st">Agregar este equipo</div>' +
-          '<p class="oj-hint">Escanea el código del otro equipo, o tecléalo si este no tiene cámara.</p>' +
-          '<button class="btn bp" onclick="syUiEscanear()">Escanear el código</button>' +
-          '<div class="fg"><label class="fl" for="sy-cod">O tecléalo aquí</label>' +
-          '<input class="fi" id="sy-cod" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-…"></div>' +
-          '<button class="btn bs" onclick="syUiVincularCodigo()">Vincular este equipo</button>';
-  openModal(h);
-}
-function syUiEscanear() {
-  closeModal();
-  ptScanAbrir('Apunta al código del otro equipo', async function (bytes) {
-    if (!bytes || bytes.length !== 16) { toast('Ese código no es de sincronización.'); return false; }
-    await syUiVincularCon(syB32Enc(bytes));
-    return true;
-  });
-}
-function syUiVincularCodigo() {
-  var v = (document.getElementById('sy-cod') || {}).value || '';
-  closeModal();
-  syUiVincularCon(v);
-}
-async function syUiVincularCon(codigo) {
-  _syOcupado = true; renderSync();
-  var r = await syVincular(codigo);
-  _syOcupado = false;
-  if (!r.ok) { toast(r.motivo); renderSync(); return; }
-  _syUltimo = syResumen(r);
-  renderSync();
-  if (_on('capturas')) renderCases();
-  toast('Este equipo quedó sincronizado ✓');
-}
-
-function syResumen(r) {
-  if (!r || !r.r) return 'No había nada nuevo que traer.';
-  var p = r.r.p || {}, c = r.r.c || {}, t = [];
-  if (c.nuevos) t.push(c.nuevos + ' captura' + (c.nuevos === 1 ? '' : 's'));
-  if (p.nuevos) t.push(p.nuevos + ' persona' + (p.nuevos === 1 ? '' : 's'));
-  if (c.actualizados) t.push(c.actualizados + ' captura' + (c.actualizados === 1 ? ' actualizada' : 's actualizadas'));
-  if (p.actualizados) t.push(p.actualizados + ' persona' + (p.actualizados === 1 ? ' actualizada' : 's actualizadas'));
-  if (c.borrados || p.borrados) t.push('se retiró lo que borraste en otro equipo');
-  if (r.r.cfg) t.push('ajustes de tu unidad');
-  if (r.duplicados) t.push('(se unieron ' + r.duplicados + ' copias que se habían separado)');
-  var s = t.length ? 'Llegó: ' + t.join(', ') + '.' : 'No había nada nuevo que traer.';
-  /* ⚠️ Un dato que cambió en los dos equipos se resolvió a favor de ESTE y el
-     otro valor quedó anotado. Decirlo es lo que hace que no sea silencioso. */
-  var n = (r.r.conflictos || []).length;
-  if (n) s += ' ' + n + (n === 1 ? ' dato había cambiado' : ' datos habían cambiado') +
-              ' en los dos equipos: se conservó el de este y el otro quedó anotado.';
-  return s;
-}
-
-async function syUiSincronizar() {
-  _syOcupado = true; renderSync();
-  var r = await sySincronizar(true);
-  _syOcupado = false;
-  _syUltimo = r.ok ? syResumen(r) : '';
-  renderSync();
-  if (!r.ok) { toast(r.motivo); return; }
-  if (_on('capturas')) renderCases();
-  toast('Sincronizado ✓');
-}
-
-/* ⚠️ La confirmación nombra la consecuencia ANTES, no después: cambiar la clave
-   deja fuera a los demás equipos del funcionario, y enterarse de eso cuando ya
-   no se puede deshacer es la peor forma de descubrirlo. */
-async function syUiRotar() {
-  var st = syEstado();
-  if (!confirm('Se va a crear una clave de sincronización nueva.\n\n' +
-               'El código actual dejará de servir, y cada uno de tus otros equipos tendrá que ' +
-               'volver a vincularse.\n\n' +
-               'Antes se bajará todo lo que haya en Drive, así que no se pierde nada.')) return;
-  if (st.caja) {
-    syUiFraseModal({
-      titulo: 'Cambiar la clave de sincronización',
-      hint: 'Escribe tu contraseña de recuperación: hace falta para volver a sellar tu copia con la clave nueva.',
-      repetir: false,
-      boton: 'Cambiar la clave',
-      accion: function (f) { return syRotarClave(f); },
-      ok: 'Clave cambiada ✓',
-      verCodigo: true
-    });
-    return;
-  }
-  _syOcupado = true; renderSync();
-  var r = await syRotarClave('');
-  _syOcupado = false;
-  if (!r.ok) { toast(r.motivo); renderSync(); return; }
-  _syUltimo = 'La clave se cambió. Vuelve a vincular tus otros equipos.';
-  renderSync(); syUiVerCodigo();
-  toast('Clave cambiada ✓');
-}
-
-async function syUiDesvincular() {
-  if (!confirm('Este equipo dejará de sincronizarse.\n\nLo que ya está guardado aquí no se borra, y ' +
-               'lo que está en Drive tampoco. Puedes volver a vincularlo con el mismo código.')) return;
-  await syDesvincular();
-  _syUltimo = '';
-  renderSync();
-  toast('Este equipo ya no se sincroniza');
-}
-
-/* ── EL ARRANQUE GUIADO de la copia en Drive se retiró (F1, 2026-10-23) ──────
-   Se ofrecía justo después de crear el PIN, y el PIN ya no existe. Llevaba
-   apagado por bandera desde la Fase 0; la copia en Drive entera se retira en la
-   F4, cuando la sustituya la cuenta. */
-
-/* La cola del subtítulo de Capturas. ⚠️ Solo cuando este equipo sincroniza: a quien
-   no lo tiene activado no se le habla de copias que no existen. Y va en el subtítulo
-   —no en una tarjeta— porque el dato importa todos los días pero no todos los días
-   pasa algo con él: lo que hay que poder ver de un vistazo es si lleva días sin subir.
-   ⚠️ Con guarda de tipo: esta función la llama `renderCases`, que existe con o sin el
-   módulo de sincronización delante. */
+/* Lo que se le añade al subtítulo de Capturas: si hay cambios que todavía no
+   están en la nube, o cuándo fue la última vez. ⚠️ Con guarda de tipo: la llama
+   `renderCases`, que existe con o sin la nube delante. */
 function lcColaCopia() {
-  try {
-    if (typeof syVinculado !== 'function' || !syVinculado()) return '';
-    var ts = syEstado().ts;
-    return ts ? ' · copia ' + syFecha(ts) : ' · sin copia todavía';
-  } catch (e) { return ''; }
+  try { return typeof nbCola === 'function' ? nbCola() : ''; } catch (e) { return ''; }
 }
 
-/* Al desbloquear. ⚠️ Diferido y en silencio: si falla no se le dice nada al
-   funcionario —no pidió sincronizar, está entrando a trabajar— y el estado real
-   queda a la vista cuando abra la pantalla de Sincronización. */
-function syAlDesbloquear() {
-  /* ⚠️ FASE 0 (2026-09-25): APAGADA. Corría sola en cada desbloqueo y era la vía
-     por la que la regla vieja de la fusión («lo que llega con dato gana»)
-     devolvía las correcciones al valor de la copia de Drive en TODOS los
-     equipos. La fusión ya es a tres vías, pero una sincronización que nadie
-     pidió no vuelve hasta la Fase 3: queda el botón «Sincronizar ahora». */
-  if (!lcFlag('syncAutoDesbloqueo')) return;
-  if (!syVinculado() || !SY_CLIENT_ID) return;
-  setTimeout(async function () {
-    var r = await sySincronizar(false);
-    if (r.ok) {
-      _syUltimo = syResumen(r);
-      if (_on('capturas')) renderCases();
-      if (_on('sync')) renderSync();
-    }
-  }, 2500);
-}
 
 // ====== SERVICE WORKER (Fase G) ======
 /* ═══ CUENTA (F2 del plan de cuenta, 2026-10-23) ═══════════════════════════
@@ -25538,7 +24315,7 @@ function syAlDesbloquear() {
 
    ⚠️ DÓNDE NO HAY CUENTA: sin configuración de Firebase (`CU_FB` vacío) la cuenta
    está «pendiente de instalación» y la app funciona como antes, sin bienvenida —
-   mismo patrón que `SY_CLIENT_ID`. Y en `localhost` (las suites de regresión y
+   como la copia en Drive que había antes. Y en `localhost` (las suites de regresión y
    `npm run serve:web`) tampoco, salvo que `lc_flags.cuentaEmulador` apunte a los
    emuladores de Firebase: así la prueba de la cuenta la ejerce entera y las demás
    suites no tienen que crear una cuenta para medir un documento. En localhost no
@@ -25760,6 +24537,9 @@ async function _cuAbrirSesion(user, correo, dek, codigo) {
   /* F3: el plan de la cuenta se pide al entrar (hay red, se acaba de usar).
      Si falla, la pantalla que sigue lo dice y deja reintentarlo. */
   try { await drActualizar(); } catch (e) {}
+  /* F4: con la sesión abierta empieza a bajar lo de la cuenta, aunque la
+     pantalla que sigue sea «verifica tu correo» o la del plan. */
+  nbArrancar();
 }
 
 /* Con el código de recuperación: abre la DEK, la vuelve a guardar con la
@@ -25779,13 +24559,16 @@ async function cuUsarCodigo(codigo) {
 }
 
 /* Sin código: llaves nuevas. Lo que estuviera en la nube cifrado con las
-   anteriores ya no lo abre nadie; lo de este equipo no se toca.
-   (F4: aquí se borran también los registros de la nube.) */
+   anteriores ya no lo abre nadie, así que se borra; lo de este equipo no se toca
+   y se vuelve a subir con la llave nueva (F4). */
 async function cuEmpezarDeCero() {
   var p = _cuPend; if (!p) throw _cuErr('cu/sin-pendiente');
   var dek = _ptAzar(32);
   var n = await _cuLlavesNuevas(p.uid, p.env, dek);
   await FB.setDoc(_cuRef(p.uid), n.datos);
+  /* Si el borrado falla, lo viejo se queda como ruido que nadie abre: no se
+     detiene la cuenta por eso. */
+  try { await nbBorrarNube(p.uid); } catch (e) { console.warn('[Flagrante] no se pudo borrar lo anterior de la nube', e); }
   await _cuAbrirSesion(_cuFB.auth.currentUser, p.correo, dek, n.codigo);
   _cuPend = null;
   return n.codigo;
@@ -25852,6 +24635,7 @@ async function cuNuevoCodigo(clave) {
 /* Cerrar sesión. Sin `borrar`, la información se queda en el equipo detrás de
    la bienvenida y solo la vuelve a abrir esta cuenta. */
 async function cuCerrarSesion(borrar) {
+  nbDetener();
   try { var fb = await cuSdk(); await FB.signOut(fb.auth); } catch (e) {}
   _cuNube = '';
   if (borrar) { await _cuBorrarEquipo(); return; }
@@ -25863,10 +24647,13 @@ async function cuCerrarSesion(borrar) {
 
 /* Eliminar la cuenta: llaves de la nube, el usuario de Firebase y lo de este
    equipo. Las llaves van primero: sin usuario ya no habría permiso para borrarlas.
-   (F4: aquí se borran también los registros de la nube.) */
+   Los registros de la nube los borra el servidor al eliminarse el usuario
+   (`alBorrarUsuario`), también si este teléfono se corta a la mitad; sin las
+   llaves, además, ya no los abre nadie. */
 async function cuEliminarCuenta(clave) {
   var k = await cuDerivar(_cuenta.correo, clave);
   var user = await _cuUsuarioVivo(k);
+  nbDetener();
   await FB.deleteDoc(_cuRef(user.uid));
   await FB.deleteUser(user);
   await _cuBorrarEquipo();
@@ -25983,6 +24770,9 @@ function cuArranque() {
 function cuContinuar() {
   if (_cuAccion) { _cuAccion = null; _cuLimpiarUrl(); }
   if (!cuSesion()) { cuMostrar('bienvenida'); return; }
+  /* F4: la nube arranca con la sesión, con o sin plan vigente: bajar lo suyo
+     siempre se puede; subir, solo con el plan activo (ver «LA NUBE»). */
+  nbArrancar();
   if (_cuenta.codigoPend) { cuMostrar('codigo', { codigo: _cuenta.codigoPend }); return; }
   /* F3: sin derecho de uso vigente no se ve la app (ver «DERECHO DE USO»). */
   var der = lcDerecho();
@@ -26381,6 +25171,7 @@ function renderAjCuenta() {
           ' <span class="badge ' + (ver ? 'b-cu-ok' : 'b-test') + '">' + (ver ? 'Verificado' : 'Sin verificar') + '</span></div></div>' +
         (ver ? '' : '<button type="button" class="btn bs bsm cu-aj-btn" onclick="cuAjReenviar()">Reenviar el correo de verificación</button>') +
         drPlanFila() +
+        nbFila() +
         (_cuNube === 'vencida' ? '<div class="cu-aj-alerta">' + CU_IC.alerta + '<span>La sesión en la nube se cerró (¿cambiaste la contraseña en otro equipo?).</span>' +
           '<button type="button" class="btn bp bsm" onclick="cuAjReentrar()">Volver a entrar</button></div>' : '') +
         '<div class="cu-aj-acc">' +
@@ -26469,11 +25260,12 @@ function cuAjCerrar() {
     '<p class="cu-p">Tu información se queda en este equipo y solo se vuelve a abrir con tu cuenta.</p>' +
     '<button type="button" class="btn bp bbl" onclick="cuAjCerrarOk(false)">Cerrar sesión</button>' +
     '<div class="cu-sep"></div>' +
-    '<p class="cu-p">¿Vas a entregar el teléfono? Borra también la información. Aún no está en la nube: se perdería.</p>' +
+    '<p class="cu-p">¿Vas a entregar el teléfono? Borra también la información de este equipo. Lo que ya subió sigue en tu cuenta.</p>' +
+    (_nbEstado.pendientes ? '<p class="cu-p"><b>' + nbN(_nbEstado.pendientes, 'cambio todavía no está en la nube</b> y se perdería.', 'cambios todavía no están en la nube</b> y se perderían.') + ' Sincroniza antes.</p>' : '') +
     '<button type="button" class="btn bd bbl" onclick="cuAjCerrarOk(true)">Cerrar sesión y borrar este equipo</button>');
 }
 function cuAjCerrarOk(borrar) {
-  if (borrar && !confirm('Se BORRARÁ toda la información de este equipo y NO está en la nube.\n\nNo se puede deshacer. ¿Continuar?')) return;
+  if (borrar && !confirm('Se BORRARÁ la información de este equipo.' + (_nbEstado.pendientes ? '\n\n' + nbN(_nbEstado.pendientes, 'cambio todavía NO está en la nube y se perderá.', 'cambios todavía NO están en la nube y se perderán.') : ' Lo que ya está en la nube sigue en tu cuenta.') + '\n\nNo se puede deshacer. ¿Continuar?')) return;
   closeModal();
   cuCerrarSesion(!!borrar);
 }
@@ -26749,6 +25541,588 @@ document.addEventListener('visibilitychange', function () {
   if (navigator.onLine && (!d || Date.now() - (d.loc || 0) > 6 * 3600000))
     drActualizar().then(function (ok) { if (ok) drTrasActualizar(); }, function () {});
 });
+
+/* ═══ LA NUBE (F4 del plan de cuenta, 2026-10-23) ═══════════════════════════
+   Toda la información de la cuenta —capturas, personas, firmas y ajustes— está
+   en cualquier equipo donde se inicie sesión, y nadie más la puede leer.
+
+   CÓMO VIAJA: un documento de Firestore por registro, `users/{uid}/reg/{id}`:
+     { v:1, rev, updatedAt (hora del servidor), borrado, ct }
+   · `ct` es el registro cifrado con una llave que sale de la DEK de la cuenta
+     (AES-256-GCM). Dentro van también su tipo y su identificador real.
+   · El NOMBRE del documento es un HMAC del tipo y el identificador con otra
+     llave de la DEK: para Firebase no dice si es una captura o una persona, ni
+     de qué fecha. Lo único que ve es la versión, la hora y el tamaño.
+   · El dato adicional autenticado ata cada sobre a su cuenta, a su documento y a
+     su versión: un sobre copiado a otro documento, a otra cuenta o devuelto a
+     una versión anterior no abre.
+   · Un borrado es una LÁPIDA (`borrado` y el contenido cifrado que lo dice), no
+     un documento que desaparece: un equipo que estuvo días sin señal tiene que
+     enterarse de que algo se borró, y de un documento que ya no existe no se
+     entera nadie.
+
+   CUÁNDO: se sube 2,5 s después de guardar algo y al volver la señal; se baja al
+   abrir la app y en vivo mientras está abierta (una escucha de Firestore que
+   solo pide lo que cambió desde la última vez).
+
+   LA COLA DE SALIDA NO ES UNA LISTA, ES UNA COMPARACIÓN. Lo pendiente de subir
+   es lo que difiere de la BASE —lo último que este equipo vio en la nube de cada
+   registro—. Así no hay una cola que se pueda perder o desincronizar: si la app
+   se cierra sin señal, al abrir vuelve a comparar y sube lo que falte. La base
+   vive en IndexedDB, cifrada con la llave del equipo, una por cuenta.
+
+   LA FUSIÓN es la de tres vías (`lcFundir3`), registro por registro: si dos
+   equipos tocaron el mismo dato, se conserva el de este equipo y el del otro
+   queda anotado; nada se pierde en silencio.
+
+   CONCURRENCIA: las reglas solo dejan escribir la versión SIGUIENTE a la que hay
+   (comparar y cambiar). Si dos equipos suben a la vez, el segundo es rechazado,
+   baja lo del primero, lo funde y vuelve a subir.
+
+   ⚠️ LA CAPTURA ABIERTA EN EL FORMULARIO NO SE TOCA. El formulario trabaja sobre
+   una COPIA y al guardar reemplaza la captura entera: lo que llegara por debajo
+   mientras tanto se perdería. Lo que llega de esa captura espera a que se cierre
+   el formulario y entonces se funde a tres vías con lo que se guardó.
+
+   ⚠️ SUBIR exige derecho de uso vigente (lo comprueban también las reglas).
+   BAJAR no: con el plan vencido el usuario puede seguir trayendo lo suyo a un
+   equipo para exportarlo. Es su información.
+═══════════════════════════════════════════════════════════════════════════ */
+var NB_TIPOS = { c: 'captura', p: 'persona', g: 'ajustes', f: 'firma' };
+var NB_ESPERA = 2500;             // tras guardar
+var NB_ARRANQUE = 1500;           // tras abrir la app
+var NB_PARALELO = 8;              // escrituras a la vez
+var NB_MARGEN = 10 * 60000;       // la escucha relee 10 min antes del último visto
+var NB_MAX_CT = 900000;           // Firestore admite ~1 MB por documento
+var NB_TIEMPO = 30000;            // una escritura que no responde en 30 s cuenta como «sin señal»
+var NB_MAX_CONFLICTOS = 50;
+var NB_VUELTAS = 4;               // reintentos de una misma ronda tras un choque de versiones
+
+var _nb = null;                   // {uid, dek, k:{dat,ids}, huella, base, meta, ids}
+var _nbUnsub = null, _nbProg = null, _nbCorriendo = false, _nbOtraVez = false;
+var _nbArrancado = false, _nbEntrantes = [], _nbEspera = {}, _nbVigia = null, _nbBorrarTodo = false;
+var _nbEstado = { fase: '', pendientes: 0, ilegibles: 0, error: '' };
+var _nbGuardando = Promise.resolve(), _nbPrepP = null;
+/* Sube cada vez que se para (cerrar sesión, otra cuenta): una ronda que empezó
+   antes no puede seguir escribiendo después. */
+var _nbGen = 0;
+/* Cuándo rechazaron las reglas la última subida (plan vencido). Mientras no haya
+   un cambio nuevo, no se vuelve a intentar antes de un minuto: cada intento
+   rechazado hace que el SDK deshaga la escritura, la escucha lo vea y se pida
+   otra ronda — en bucle, si nada lo corta. */
+var _nbNegado = 0, NB_NEGADO_ESPERA = 60000;
+
+function nbActiva() { return cuActiva() && cuSesion(); }
+function nbAad(d, rev) { return 'flagrante|reg|' + _nb.uid + '|' + d + '|' + rev; }
+function nbCanon(o) { return JSON.stringify(ptCanon(o)); }
+function nbClaveBase(uid) { return 'nb|' + uid; }
+
+/* Dos llaves que salen de la DEK y no se parecen entre sí: una cifra, la otra
+   pone nombre a los documentos. */
+async function nbLlaves(dekB64) {
+  var hk = await crypto.subtle.importKey('raw', _cuDeB64(dekB64), 'HKDF', false, ['deriveKey']);
+  var sal = _cuTE('flagrante|nube');
+  var dat = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: sal, info: _cuTE('flagrante|nube|datos') }, hk,
+    { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  var ids = await crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: sal, info: _cuTE('flagrante|nube|ids') }, hk,
+    { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign']);
+  return { dat: dat, ids: ids };
+}
+async function nbDocId(t, id, n) {
+  n = n || _nb;
+  var key = t + '|' + id;
+  if (n.ids[key]) return n.ids[key];
+  var mac = new Uint8Array(await crypto.subtle.sign('HMAC', n.k.ids, _cuTE(key)));
+  var d = 'r' + _cuB64u(mac).slice(0, 27);
+  n.ids[key] = d;
+  return d;
+}
+async function nbCifrar(d, rev, carga) {
+  return cuEnvolver(_nb.k.dat, _cuTE(JSON.stringify(carga)), nbAad(d, rev));
+}
+async function nbDescifrar(d, rev, ct) {
+  if (typeof ct !== 'string') return null;
+  var b = await cuDesenvolver(_nb.k.dat, ct, nbAad(d, rev));
+  if (!b) return null;
+  try { return JSON.parse(new TextDecoder().decode(b)); } catch (e) { return null; }
+}
+
+/* ── La base ─────────────────────────────────────────────────────────────
+   Una por cuenta, con la HUELLA de su DEK: si la llave cambió (empezar de cero
+   sin código), lo que dice la base ya no corresponde a lo que hay en la nube y
+   se descarta — sin base no se borra nada. */
+function nbPreparar() {
+  if (!nbActiva() || _casesCache === null || _personsCache === null) return Promise.resolve(false);
+  if (_nb && _nb.uid === _cuenta.uid && _nb.dek === _cuenta.dek) return Promise.resolve(true);
+  /* Una sola preparación a la vez: la escucha y la primera ronda arrancan juntas. */
+  if (_nbPrepP) return _nbPrepP;
+  var uid = _cuenta.uid, dek = _cuenta.dek, gen = _nbGen;
+  _nbPrepP = (async function () {
+    var n = { uid: uid, dek: dek, k: await nbLlaves(dek), ids: {}, base: {}, meta: { cursor: 0, ultima: 0, conflictos: [] } };
+    n.huella = await nbDocId('g', 'huella', n);
+    try {
+      var enc = await lcIdbGet(nbClaveBase(uid));
+      if (enc) {
+        var o = JSON.parse(await _lcDecrypt(enc));
+        if (o && o.uid === uid && o.huella === n.huella && o.base) { n.base = o.base; n.meta = Object.assign(n.meta, o.meta || {}); }
+      }
+    } catch (e) { console.warn('[Flagrante] la base de la nube no abrió; se empieza sin base', e); }
+    if (gen !== _nbGen || !nbActiva() || _cuenta.uid !== uid || _cuenta.dek !== dek) return false;
+    _nb = n;
+    return true;
+  })().finally(function () { _nbPrepP = null; });
+  return _nbPrepP;
+}
+function nbGuardarBase() {
+  var n = _nb; if (!n) return Promise.resolve();
+  _nbGuardando = _nbGuardando.then(async function () {
+    if (_nb !== n) return;
+    var txt = JSON.stringify({ v: 1, uid: n.uid, huella: n.huella, base: n.base, meta: n.meta });
+    await lcIdbSet(nbClaveBase(n.uid), await _lcEncrypt(txt));
+  }).catch(function (e) { console.warn('[Flagrante] no se pudo guardar la base de la nube', e); });
+  return _nbGuardando;
+}
+function nbOlvidarBase(uid) {
+  if (_nb && _nb.uid === uid) _nb = null;
+  return lcIdbDel(nbClaveBase(uid)).catch(function () {});
+}
+
+/* ── Lo que hay en este equipo, registro por registro ──────────────────── */
+function nbCfgLocal() {
+  var raw = lcCfgCrudo();
+  LC_CFG_LOCAL.forEach(function (k) { delete raw[k]; });
+  return raw;
+}
+async function nbLocales() {
+  var lst = [], out = {};
+  DB.getCases().forEach(function (c) { if (c && c.id !== undefined && c.id !== '') lst.push(['c', String(c.id), c]); });
+  DB.getPersons().forEach(function (p) { if (p && p.id !== undefined && p.id !== '') lst.push(['p', String(p.id), p]); });
+  var g = nbCfgLocal(); if (!ptVacio(g)) lst.push(['g', 'main', g]);
+  var f = _firmasCache || {};
+  Object.keys(f).forEach(function (k) { if (f[k] && f[k].b64) lst.push(['f', k, f[k]]); });
+  for (var i = 0; i < lst.length; i++) {
+    var d = await nbDocId(lst[i][0], lst[i][1]);
+    out[d] = { t: lst[i][0], id: lst[i][1], o: lst[i][2], s: nbCanon(lst[i][2]) };
+  }
+  return out;
+}
+/* La captura abierta en el formulario (ver el aviso de arriba). */
+function nbBloqueado(t, id) {
+  return t === 'c' && !!(typeof wc !== 'undefined' && wc && wc.id !== undefined && String(wc.id) === String(id));
+}
+/* Lo que hay que subir: lo que difiere de la base. ⚠️ Una guarda: si este equipo
+   no tiene NINGUNA captura ni persona y la base sí, no se suben borrados — eso
+   huele a un almacén que no abrió, no a alguien que borró todo uno por uno. El
+   «eliminar todos los datos» de Ajustes lo autoriza a propósito. */
+function nbPendientes(loc) {
+  var p = [], d, b, vivos = 0, locales = 0;
+  for (d in loc) {
+    if (nbBloqueado(loc[d].t, loc[d].id)) continue;
+    if (loc[d].t === 'c' || loc[d].t === 'p') locales++;
+    b = _nb.base[d];
+    if (!b || b.s !== loc[d].s) p.push(d);
+  }
+  var borrar = [];
+  for (d in _nb.base) {
+    b = _nb.base[d];
+    if (b.s === null || loc[d] || b.t === 'g' || nbBloqueado(b.t, b.id)) continue;
+    if (b.t === 'c' || b.t === 'p') vivos++;
+    borrar.push(d);
+  }
+  if (borrar.length && !locales && vivos && !_nbBorrarTodo) {
+    console.warn('[Flagrante] nube: este equipo no tiene capturas ni personas; no se suben ' + borrar.length + ' borrados');
+    borrar = borrar.filter(function (x) { var t = _nb.base[x].t; return t !== 'c' && t !== 'p'; });
+  }
+  return p.concat(borrar);
+}
+
+/* ── Subir ───────────────────────────────────────────────────────────────── */
+function nbConTiempo(p, ms) {
+  return Promise.race([p, new Promise(function (res, rej) {
+    setTimeout(function () { var e = new Error('nb/tiempo'); e.code = 'deadline-exceeded'; rej(e); }, ms);
+  })]);
+}
+function nbRef(d) { return FB.doc(_cuFB.db, 'users', _nb.uid, 'reg', d); }
+/* 'ok' · 'choque' (otra versión llegó antes) · 'grande'. Lanza si no hay permiso
+   o no hay señal. */
+async function nbEscribir(d, L) {
+  var b = _nb.base[d], rev = (b ? b.rev : 0) + 1;
+  var t = L ? L.t : b.t, id = L ? L.id : b.id;
+  var ct = await nbCifrar(d, rev, L ? { t: t, id: id, b: 0, o: ptCanon(L.o) } : { t: t, id: id, b: 1 });
+  if (ct.length > NB_MAX_CT) return 'grande';
+  try {
+    await nbConTiempo(FB.setDoc(nbRef(d), { v: 1, rev: rev, updatedAt: FB.serverTimestamp(), borrado: !L, ct: ct }), NB_TIEMPO);
+  } catch (e) {
+    if (e && e.code === 'permission-denied') {
+      /* ¿Otra versión llegó antes, o de verdad no hay permiso? Se mira. */
+      var snap = await nbConTiempo(FB.getDocFromServer(nbRef(d)), NB_TIEMPO);
+      var hay = snap.exists() ? Number(snap.data().rev) || 0 : 0;
+      if (hay !== rev - 1) return 'choque';
+    }
+    throw e;
+  }
+  _nb.base[d] = { rev: rev, t: t, id: id, s: L ? L.s : null };
+  return 'ok';
+}
+async function nbSubir() {
+  var loc = await nbLocales();
+  var pend = nbPendientes(loc);
+  _nbEstado.pendientes = pend.length;
+  if (!pend.length) { _nbBorrarTodo = false; return 'ok'; }
+  var u = await _cuUsuarioListo();
+  if (!u || u.uid !== _nb.uid) return 'sinNube';
+  var choques = [], grandes = 0, error = null, i = 0;
+  var gen = _nbGen;
+  async function obrero() {
+    while (i < pend.length && !error && gen === _nbGen) {
+      var d = pend[i++];
+      try {
+        var r = await nbEscribir(d, loc[d]);
+        if (r === 'choque') choques.push(d);
+        else if (r === 'grande') grandes++;
+      } catch (e) { error = e; }
+    }
+  }
+  var obreros = [];
+  for (var k = 0; k < Math.min(NB_PARALELO, pend.length); k++) obreros.push(obrero());
+  await Promise.all(obreros);
+  await nbGuardarBase();
+  if (grandes) console.warn('[Flagrante] nube: ' + grandes + ' registro(s) demasiado grandes para subirlos');
+  if (error) throw error;
+  if (choques.length) {
+    /* Otro equipo subió antes: se baja lo suyo, se funde y se vuelve a subir. */
+    var docs = [];
+    for (var j = 0; j < choques.length; j++) {
+      var s = await nbConTiempo(FB.getDocFromServer(nbRef(choques[j])), NB_TIEMPO);
+      if (s.exists()) docs.push({ id: s.id, data: s.data() });
+    }
+    var ileg = {};
+    await nbAplicarRemotos(docs, ileg);
+    if (!_nb) return 'ok';
+    /* Lo que no se pudo ABRIR con esta llave no puede bloquear ese registro para
+       siempre: se toma su versión y la próxima subida lo reemplaza con lo de
+       este equipo, que sí se puede leer. ⚠️ Solo lo ilegible: lo que no se
+       aplicó por otro motivo (no se pudo guardar, espera al formulario) se
+       vuelve a fundir la próxima vez; adoptarlo pisaría el cambio del otro. */
+    docs.forEach(function (x) {
+      var b = _nb.base[x.id], L = loc[x.id], rv = Number(x.data.rev) || 0;
+      if (!ileg[x.id]) return;
+      if (b && rv > b.rev) b.rev = rv;
+      else if (!b && L) _nb.base[x.id] = { rev: rv, t: L.t, id: L.id, s: null };
+    });
+    return 'otraVez';
+  }
+  loc = await nbLocales();
+  _nbEstado.pendientes = nbPendientes(loc).length;
+  if (!_nbEstado.pendientes) _nbBorrarTodo = false;
+  _nb.meta.ultima = Date.now();
+  await nbGuardarBase();
+  return 'ok';
+}
+
+/* ── Bajar ───────────────────────────────────────────────────────────────── */
+function nbValido(t, o) {
+  if (t === 'c') return !ptValidarRegistro(o, 'c');
+  if (t === 'p') return !ptValidarRegistro(o, 'p');
+  if (t === 'g') return lcEsObj(o);
+  if (t === 'f') return lcEsObj(o) && typeof o.b64 === 'string';
+  return false;
+}
+/* Funde un registro. B: undefined (sin base), null (la base dice borrado) u
+   objeto. L: undefined (no está aquí) u objeto. R: null (borrado allá) u objeto.
+   Devuelve el registro que queda aquí, o undefined si queda borrado. */
+function nbFundirUno(B, L, R, ruta, conf) {
+  if (R === null) {
+    if (L === undefined) return undefined;
+    if (B === undefined) { conf.push({ ruta: ruta, local: L, remoto: null, nota: 'borrado en otro equipo; este no sabía si lo había cambiado: se conserva' }); return L; }
+    if (B === null) return L;
+    if (lcEq(L, B)) return undefined;
+    conf.push({ ruta: ruta, local: L, remoto: null, nota: 'borrado en otro equipo y cambiado en este: se conserva' });
+    return L;
+  }
+  if (L === undefined) {
+    if (B === undefined || B === null) return R;
+    if (lcEq(R, B)) return undefined;
+    conf.push({ ruta: ruta, local: null, remoto: R, nota: 'borrado en este equipo y cambiado en otro: se recupera' });
+    return R;
+  }
+  return lcFundir3(B === null ? undefined : B, L, R, ruta, conf);
+}
+/* `ilegibles` (opcional) recoge los documentos que NO abrieron con la llave. */
+async function nbAplicarRemotos(docs, ilegibles) {
+  var n = _nb, gen = _nbGen, abiertos = [], cursor = n.meta.cursor || 0;
+  /* Dos versiones del mismo registro en el mismo lote (llegaron en dos avisos
+     seguidos): basta la más nueva. */
+  var ult = {};
+  docs.forEach(function (x) {
+    if (!x || !x.data) return;
+    var p = ult[x.id];
+    if (!p || (Number(x.data.rev) || 0) >= (Number(p.data.rev) || 0)) ult[x.id] = x;
+  });
+  docs = Object.keys(ult).map(function (k) { return ult[k]; });
+  for (var i = 0; i < docs.length; i++) {
+    var d = docs[i].id, x = docs[i].data, b = _nb.base[d];
+    if (!x || typeof x.rev !== 'number') continue;
+    if (x.updatedAt && x.updatedAt.toMillis) cursor = Math.max(cursor, x.updatedAt.toMillis());
+    if (b && x.rev <= b.rev) continue;
+    var c = await nbDescifrar(d, x.rev, x.ct);
+    if (!c || !NB_TIPOS[c.t] || typeof c.id !== 'string' || (await nbDocId(c.t, c.id)) !== d || (!c.b && !nbValido(c.t, c.o))) {
+      _nbEstado.ilegibles++;
+      if (ilegibles) ilegibles[d] = 1;
+      continue;
+    }
+    if (nbBloqueado(c.t, c.id)) { _nbEspera[d] = docs[i]; nbVigilarFormulario(); continue; }
+    delete _nbEspera[d];
+    abiertos.push({ d: d, rev: x.rev, t: c.t, id: c.id, o: c.b ? null : c.o });
+  }
+  if (gen !== _nbGen || _nb !== n) return 0;
+  n.meta.cursor = cursor;
+  if (!abiertos.length) { await nbGuardarBase(); return 0; }
+
+  /* ⚠️ Desde aquí hasta llamar a los guardados NO hay ningún `await`: se lee lo
+     de este equipo, se funde y se entrega a los guardados (que actualizan su
+     caché al instante) en un solo tramo. Si hubiera una espera en medio, lo que
+     el funcionario guardara en ese hueco se perdería. */
+  var casos = DB.getCases().slice(), personas = DB.getPersons().slice();
+  var cfgCrudo = lcCfgCrudo(), cfg = nbCfgLocal(), firmas = Object.assign({}, _firmasCache || {});
+  var cambia = { c: 0, p: 0, g: 0, f: 0 }, conf = [], nuevaBase = {};
+  function pos(lista, id) { for (var k = 0; k < lista.length; k++) if (lista[k] && String(lista[k].id) === id) return k; return -1; }
+  abiertos.forEach(function (a) {
+    var b = _nb.base[a.d];
+    var B = b ? (b.s === null ? null : JSON.parse(b.s)) : undefined;
+    var L, k = -1;
+    if (a.t === 'c') { k = pos(casos, a.id); L = k >= 0 ? casos[k] : undefined; }
+    else if (a.t === 'p') { k = pos(personas, a.id); L = k >= 0 ? personas[k] : undefined; }
+    else if (a.t === 'g') L = ptVacio(cfg) ? undefined : cfg;
+    else L = firmas[a.id];
+    var res = nbFundirUno(B, L, a.o, NB_TIPOS[a.t] + '/' + a.id, conf);
+    nuevaBase[a.d] = { rev: a.rev, t: a.t, id: a.id, s: a.o ? nbCanon(a.o) : null };
+    if (res === L) return;
+    cambia[a.t] = 1;
+    if (a.t === 'c' || a.t === 'p') {
+      var lista = a.t === 'c' ? casos : personas;
+      if (res === undefined) { if (k >= 0) lista.splice(k, 1); }
+      else if (k >= 0) lista[k] = res;
+      else lista.push(res);
+    } else if (a.t === 'g') cfg = res || {};
+    else { if (res === undefined) delete firmas[a.id]; else firmas[a.id] = res; }
+  });
+  var ps = [];
+  if (cambia.c) ps.push(DB.saveCases(casos));
+  if (cambia.p) ps.push(DB.savePersons(personas));
+  if (cambia.g) {
+    /* Las marcas de migración de ESTE equipo no viajan: se conservan. */
+    var nueva = JSON.parse(JSON.stringify(cfg));
+    LC_CFG_LOCAL.forEach(function (k) { if (k in cfgCrudo) nueva[k] = cfgCrudo[k]; });
+    ps.push(DB.saveConfig(nueva));
+  }
+  if (cambia.f) { _firmasCache = firmas; ps.push(_lcEncSave('firmas', firmas)); }
+  try { await Promise.all(ps); }
+  catch (e) {
+    /* No se actualiza la base: la próxima vez se vuelve a fundir lo mismo. */
+    console.warn('[Flagrante] nube: no se pudo guardar lo que llegó', e);
+    _nbEstado.error = 'guardar';
+    return 0;
+  }
+  Object.assign(_nb.base, nuevaBase);
+  if (conf.length) {
+    var ts = Date.now();
+    _nb.meta.conflictos = conf.map(function (x) { return { ts: ts, ruta: x.ruta, local: x.local, remoto: x.remoto, nota: x.nota || '' }; })
+      .concat(_nb.meta.conflictos || []).slice(0, NB_MAX_CONFLICTOS);
+  }
+  await nbGuardarBase();
+  nbRepintar(cambia);
+  return abiertos.length;
+}
+/* Lo que esperaba al formulario: cuando se cierre, se funde. */
+function nbVigilarFormulario() {
+  if (_nbVigia) return;
+  _nbVigia = setInterval(function () {
+    if (typeof wc !== 'undefined' && wc) return;
+    clearInterval(_nbVigia); _nbVigia = null;
+    nbRonda();
+  }, 2000);
+}
+function nbRepintar(cambia) {
+  try {
+    if ((cambia.c || cambia.p) && _on('capturas')) renderCases();
+    if (cambia.p && _on('personas')) renderPersonas();
+  } catch (e) {}
+}
+
+/* ── La ronda: lo que llegó, lo que esperaba y lo que hay que subir ─────── */
+async function nbRonda() {
+  if (_nbCorriendo) { _nbOtraVez = true; return; }
+  _nbCorriendo = true;
+  var vueltas = 0, gen = _nbGen;
+  try {
+    do {
+      _nbOtraVez = false;
+      if (gen !== _nbGen || !(await nbPreparar())) return;
+      var llegaron = _nbEntrantes.splice(0);
+      Object.keys(_nbEspera).forEach(function (d) { llegaron.push(_nbEspera[d]); });
+      if (llegaron.length) await nbAplicarRemotos(llegaron);
+      if (!navigator.onLine) { _nbEstado.fase = 'sinRed'; await nbContarPendientes(); break; }
+      if (lcDerecho() !== 'activo') { _nbEstado.fase = 'sinDerecho'; await nbContarPendientes(); break; }
+      if (_nbNegado && Date.now() - _nbNegado < NB_NEGADO_ESPERA) { _nbEstado.fase = 'sinDerecho'; await nbContarPendientes(); break; }
+      _nbEstado.fase = 'subiendo';
+      nbPintar();
+      try {
+        var r = await nbSubir();
+        if (r === 'sinNube') { _nbEstado.fase = 'sinNube'; break; }
+        if (r === 'otraVez' && ++vueltas < NB_VUELTAS) _nbOtraVez = true;
+        _nbEstado.fase = 'ok'; _nbEstado.error = ''; _nbNegado = 0;
+      } catch (e) {
+        var c = (e && e.code) || '';
+        _nbEstado.fase = c === 'permission-denied' ? 'sinDerecho'
+                       : /unavailable|deadline|network|tiempo/.test(c + (e && e.message)) ? 'sinRed' : 'error';
+        _nbEstado.error = c || String(e && e.message || e);
+        if (c === 'permission-denied') _nbNegado = Date.now();
+        console.warn('[Flagrante] nube: no se pudo subir', c || e);
+        /* Una ronda que falla no se repite sola: la próxima la pide un cambio,
+           la señal que vuelve o el botón. */
+        break;
+      }
+    } while (_nbOtraVez);
+  } catch (e) {
+    _nbEstado.fase = 'error'; _nbEstado.error = String(e && e.message || e);
+    console.warn('[Flagrante] nube', e);
+  } finally {
+    _nbCorriendo = false;
+    nbPintar();
+  }
+}
+async function nbContarPendientes() {
+  try { _nbEstado.pendientes = nbPendientes(await nbLocales()).length; } catch (e) {}
+}
+/* Después de guardar: una ronda dentro de un momento (varios guardados seguidos
+   —el acta se guarda también al cerrar el modal— son una sola subida). */
+function nbProgramar(ms) {
+  if (!nbActiva()) return;
+  clearTimeout(_nbProg);
+  _nbProg = setTimeout(function () { _nbProg = null; nbRonda(); }, ms === undefined ? NB_ESPERA : ms);
+}
+function nbAlGuardar(key) {
+  if (key === 'cases' || key === 'persons' || key === 'cfg' || key === 'firmas') { _nbNegado = 0; nbProgramar(); }
+}
+
+/* ── Escuchar en vivo ────────────────────────────────────────────────────── */
+async function nbEscuchar() {
+  if (_nbUnsub || !navigator.onLine || !(await nbPreparar())) return;
+  var u = null;
+  try { await cuSdk(); u = await _cuUsuarioListo(); } catch (e) {}
+  if (!u || u.uid !== _nb.uid || _nbUnsub) { if (!u) _nbEstado.fase = 'sinNube'; nbPintar(); return; }
+  var desde = Math.max(0, (_nb.meta.cursor || 0) - NB_MARGEN);
+  var q = FB.query(FB.collection(_cuFB.db, 'users', _nb.uid, 'reg'), FB.where('updatedAt', '>', FB.Timestamp.fromMillis(desde)));
+  var uid = _nb.uid;
+  _nbUnsub = FB.onSnapshot(q, function (snap) {
+    if (!_nb || _nb.uid !== uid) return;
+    var docs = [];
+    snap.docChanges().forEach(function (ch) {
+      if (ch.type === 'removed' || ch.doc.metadata.hasPendingWrites) return;
+      /* Lo que ya está en la base (el eco de lo que este equipo acaba de subir,
+         o una escritura rechazada que el SDK deshizo) no pide ronda. */
+      var x = ch.doc.data(), b = _nb.base[ch.doc.id];
+      if (b && x && typeof x.rev === 'number' && x.rev <= b.rev) return;
+      docs.push({ id: ch.doc.id, data: x });
+    });
+    if (!docs.length) return;
+    _nbEntrantes = _nbEntrantes.concat(docs);
+    nbRonda();
+  }, function (e) {
+    _nbUnsub = null;
+    console.warn('[Flagrante] nube: la escucha se cortó', e);
+    _nbEstado.fase = (e && e.code === 'permission-denied') ? 'sinNube' : 'sinRed';
+    nbPintar();
+  });
+}
+
+/* ── Arrancar y parar ────────────────────────────────────────────────────── */
+function nbArrancar() {
+  if (!nbActiva()) return;
+  /* Ya arrancada: pasar otra vez por aquí es que algo cambió (el plan, la
+     sesión): se reintenta aunque la última subida se hubiera rechazado. */
+  if (_nbArrancado) { _nbNegado = 0; nbEscuchar(); nbProgramar(800); return; }
+  _nbArrancado = true;
+  setTimeout(function () { if (!nbActiva()) return; nbEscuchar(); nbRonda(); }, NB_ARRANQUE);
+}
+function nbDetener() {
+  if (_nbUnsub) { try { _nbUnsub(); } catch (e) {} }
+  _nbUnsub = null;
+  clearTimeout(_nbProg); _nbProg = null;
+  if (_nbVigia) { clearInterval(_nbVigia); _nbVigia = null; }
+  _nbArrancado = false; _nbEntrantes = []; _nbEspera = {}; _nb = null; _nbGen++;
+  _nbEstado = { fase: '', pendientes: 0, ilegibles: 0, error: '' };
+}
+window.addEventListener('online', function () { if (_nbArrancado && nbActiva()) { _nbNegado = 0; nbEscuchar(); nbProgramar(500); } });
+window.addEventListener('offline', function () { if (_nbArrancado) { _nbEstado.fase = 'sinRed'; nbPintar(); } });
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && _nbArrancado && nbActiva()) { nbEscuchar(); nbProgramar(800); }
+});
+
+/* «Eliminar todos los datos» en Ajustes: es la única vez que este equipo, sin
+   capturas ni personas, puede borrarlas también de la nube (ver la guarda en
+   `nbPendientes`). */
+function nbPermitirBorrarTodo() { _nbBorrarTodo = true; }
+
+/* «Empezar de cero» sin código: lo que hay en la nube ya no lo abre nadie (la
+   llave era otra). Se borra, y la base con ello: todo lo de este equipo se vuelve
+   a subir con la llave nueva. */
+async function nbBorrarNube(uid) {
+  var fb = await cuSdk();
+  var snap = await FB.getDocsFromServer(FB.collection(fb.db, 'users', uid, 'reg'));
+  var docs = snap.docs, i, lote;
+  for (i = 0; i < docs.length; i += 400) {
+    lote = FB.writeBatch(fb.db);
+    docs.slice(i, i + 400).forEach(function (x) { lote.delete(x.ref); });
+    await lote.commit();
+  }
+  await nbOlvidarBase(uid);
+  return docs.length;
+}
+
+/* ── Lo que se ve ────────────────────────────────────────────────────────── */
+/* En el subtítulo de Capturas. */
+function nbCola() {
+  if (!nbActiva() || !_nb) return '';
+  if (_nbEstado.pendientes) return ' · ' + _nbEstado.pendientes + ' sin subir';
+  return _nb.meta.ultima ? ' · nube ' + lcHace(_nb.meta.ultima) : '';
+}
+function nbPintar() {
+  try {
+    /* Solo el subtítulo: repintar la lista entera en cada ronda movería lo que
+       el funcionario esté mirando. */
+    var sub = document.getElementById('cap-sub');
+    if (sub && _sessionKey) sub.textContent = sub.textContent.replace(/ · .*$/, '') + lcColaCopia();
+    if (_cuAjVisible()) { var el = document.getElementById('nb-fila'); if (el) el.outerHTML = nbFila(); }
+  } catch (e) {}
+}
+/* La fila de Ajustes → Cuenta. */
+function nbN(n, uno, varios) { return n + ' ' + (n === 1 ? uno : varios); }
+function nbFila() {
+  if (!nbActiva()) return '';
+  var e = _nbEstado, m = _nb ? _nb.meta : { ultima: 0, conflictos: [] }, t, b, s;
+  if (e.fase === 'subiendo') { t = 'Sincronizando…'; b = 'b-cu-ok'; s = e.pendientes ? nbN(e.pendientes, 'cambio subiendo.', 'cambios subiendo.') : ''; }
+  else if (e.fase === 'sinRed') { t = e.pendientes ? nbN(e.pendientes, 'cambio sin subir', 'cambios sin subir') : 'Sin señal'; b = 'b-test'; s = 'Se suben solos cuando vuelva la señal.'; }
+  else if (e.fase === 'sinDerecho') { t = e.pendientes ? nbN(e.pendientes, 'cambio sin subir', 'cambios sin subir') : 'En pausa'; b = 'b-test'; s = 'Tus cambios se guardan en este equipo y se suben cuando tu plan esté activo.'; }
+  else if (e.fase === 'sinNube') { t = 'En pausa'; b = 'b-test'; s = 'La sesión en la nube se cerró: vuelve a entrar para sincronizar.'; }
+  else if (e.fase === 'error') { t = 'No se pudo sincronizar'; b = 'b-test'; s = 'Se vuelve a intentar sola. Nada de este equipo se perdió.'; }
+  else if (e.pendientes) { t = nbN(e.pendientes, 'cambio sin subir', 'cambios sin subir'); b = 'b-test'; s = ''; }
+  else { t = 'Al día'; b = 'b-cu-ok'; s = m.ultima ? 'Última sincronización: ' + lcHace(m.ultima) + '.' : 'Tu información está cifrada: solo tú la puedes leer.'; }
+  var extra = '';
+  if (e.ilegibles) extra += '<div class="cu-pista">' + nbN(e.ilegibles, 'registro de la nube no abrió con tu llave y se dejó como estaba.', 'registros de la nube no abrieron con tu llave y se dejaron como estaban.') + '</div>';
+  if (m.conflictos && m.conflictos.length) extra += '<div class="cu-pista">' + nbN(m.conflictos.length, 'diferencia entre equipos se resolvió conservando lo de este.', 'diferencias entre equipos se resolvieron conservando lo de este.') + '</div>';
+  var insignia = e.fase === 'subiendo' ? '' : ' <span class="badge ' + b + '">' + (b === 'b-cu-ok' ? 'Cifrada' : 'Pendiente') + '</span>';
+  return '<div class="cu-aj-fila" id="nb-fila"><div class="cu-aj-k">Nube</div><div class="cu-aj-v">' + escHtml(t) + insignia + '</div>' +
+    (s ? '<div class="cu-pista">' + escHtml(s) + '</div>' : '') + extra +
+    '<button type="button" class="btn bs bsm cu-aj-btn" onclick="nbAjSincronizar()">Sincronizar ahora</button></div>';
+}
+function nbAjSincronizar() {
+  if (!navigator.onLine) { toast('Sin señal: se sincroniza sola cuando vuelva.', 3500); return; }
+  _nbNegado = 0;
+  nbEscuchar();
+  nbRonda();
+}
 
 // NOTA: el SW solo funciona en HTTPS o localhost.
 // Para deploy: subir todos los archivos a GitHub Pages u otro hosting HTTPS.

@@ -61,7 +61,7 @@ const t7=await page.evaluate(async()=>{
   const base=SIM.genFlagrancia('URI'); const arr=[]; let ok=0;
   for(let i=0;i<200;i++){ const c=JSON.parse(JSON.stringify(base)); c.id='c'+i; arr.push(c);
     try{ await DB.saveCases(arr.slice()); ok=i+1; }catch(e){ break; } }
-  return {ok, bytes:(localStorage.getItem('lc_cases')||'').length};
+  return {ok, bytes:String((await lcIdbGet('lc_cases'))||'').length};
 });
 log(t7.ok>=200, '[7] Guarda 200 capturas (antes fallaba entre la 23 y la 27)', t7.ok+' · '+(t7.bytes/1024|0)+' KB en disco');
 
