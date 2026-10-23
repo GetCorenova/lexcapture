@@ -22,3 +22,5 @@ export {
   initializeFirestore, memoryLocalCache, connectFirestoreEmulator,
   doc, getDocFromServer, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp
 } from 'firebase/firestore';
+/* F3: las funciones del servidor (la prueba gratuita y el derecho de uso). */
+export { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';

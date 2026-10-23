@@ -74,9 +74,42 @@ if (!existsSync(props)) {
 }
 
 // ── El JDK ─────────────────────────────────────────────────────────────────
-const jdk = process.env.JAVA_HOME;
+/* ⚠️ Android Studio actualizó su JDK (\jbr) a Java 25 y Gradle 8.14 no lo
+   soporta: falla al evaluar settings.gradle con «Unsupported class file major
+   version 69», antes de compilar nada. Si JAVA_HOME es demasiado nuevo, se busca
+   un JDK 17-21 instalado y SOLO Gradle usa ese (no se toca el sistema). */
+function javaMayor(home) {
+  try {
+    const bin = join(home, 'bin', process.platform === 'win32' ? 'java.exe' : 'java');
+    const r = spawnSync(bin, ['-version'], { encoding: 'utf8' });
+    const m = String(r.stderr || r.stdout).match(/version "(\d+)/);
+    return m ? Number(m[1]) : 0;
+  } catch (e) { return 0; }
+}
+function jdkCompatible() {
+  const raices = process.platform === 'win32'
+    ? ['C:/Program Files/Microsoft', 'C:/Program Files/Eclipse Adoptium', 'C:/Program Files/Java', 'C:/Program Files/Zulu']
+    : ['/usr/lib/jvm', '/Library/Java/JavaVirtualMachines'];
+  for (const r of raices) {
+    if (!existsSync(r)) continue;
+    for (const d of readdirSync(r).sort().reverse()) {
+      const h = existsSync(join(r, d, 'Contents', 'Home')) ? join(r, d, 'Contents', 'Home') : join(r, d);
+      const v = javaMayor(h);
+      if (v >= 17 && v <= 21) return h;
+    }
+  }
+  return null;
+}
+let jdk = process.env.JAVA_HOME;
 if (!jdk || !existsSync(jdk)) err('JAVA_HOME no apunta a un JDK (Android Studio trae uno en \jbr)');
-else ok(`JAVA_HOME: ${jdk}`);
+else {
+  const v = javaMayor(jdk);
+  if (v > 24) {
+    const alt = jdkCompatible();
+    if (alt) { avi(`JAVA_HOME es Java ${v} y Gradle 8 no lo soporta: se compila con ${alt}`); jdk = alt; }
+    else err(`JAVA_HOME es Java ${v} y Gradle 8 no lo soporta — instala un JDK 21 (p. ej. Microsoft Build of OpenJDK)`);
+  } else ok(`JAVA_HOME: ${jdk} (Java ${v || '?'})`);
+}
 if (!process.env.ANDROID_HOME && !process.env.ANDROID_SDK_ROOT) avi('ANDROID_HOME sin definir — Gradle puede no encontrar el SDK');
 else ok(`SDK: ${process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT}`);
 
@@ -146,7 +179,7 @@ console.log('\nCompilando App Bundle release (puede tardar varios minutos)…\n'
 const gradlew = process.platform === 'win32'
   ? '"' + join(ANDROID, 'gradlew.bat') + '" ' + TAREA
   : './gradlew ' + TAREA;
-const r = spawnSync(gradlew, [], { cwd: ANDROID, stdio: 'inherit', shell: true });
+const r = spawnSync(gradlew, [], { cwd: ANDROID, stdio: 'inherit', shell: true, env: Object.assign({}, process.env, { JAVA_HOME: jdk }) });
 if (r.status !== 0) { console.error('\nBUILD FALLIDO — Gradle devolvió ' + r.status + '\n'); process.exit(r.status || 1); }
 
 if (debug) {

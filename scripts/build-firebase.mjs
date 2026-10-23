@@ -16,6 +16,7 @@
  */
 import { existsSync, readFileSync, mkdirSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -24,7 +25,13 @@ const ENTRADA = join(RAIZ, 'scripts', 'firebase-entry.mjs');
 
 const pkg = JSON.parse(readFileSync(join(RAIZ, 'package.json'), 'utf8'));
 const pedida = (pkg.devDependencies || {}).firebase || (pkg.dependencies || {}).firebase || '';
-const MARCA = v => `/* Flagrante · paquete local de Firebase JS SDK ${v} — generado por scripts/build-firebase.mjs. No editar a mano. */`;
+/* ⚠️ La cabecera lleva también la huella de firebase-entry.mjs: con solo la
+   versión, añadir una exportación (p. ej. las funciones del servidor) dejaba el
+   paquete viejo dando por bueno el --check, y la app fallaba al llamarla. */
+/* Sin los CR: git entrega el archivo con CRLF en Windows y con LF fuera, y la
+   huella tiene que ser la misma en los dos. */
+const huellaEntrada = () => createHash('sha256').update(readFileSync(ENTRADA, 'utf8').replace(/\r/g, '')).digest('hex').slice(0, 12);
+const MARCA = v => `/* Flagrante · paquete local de Firebase JS SDK ${v} — entrada ${huellaEntrada()} — generado por scripts/build-firebase.mjs. No editar a mano. */`;
 
 export function versionEmpaquetada() {
   if (!existsSync(SALIDA)) return null;
@@ -39,6 +46,7 @@ export function comprobar() {
   if (!pedida) fallos.push('package.json no fija la versión de firebase');
   else if (!v) fallos.push('falta vendor/firebase.js — ejecuta: npm run build:web');
   else if (v !== pedida) fallos.push(`vendor/firebase.js es de la versión ${v} y package.json pide ${pedida} — ejecuta: npm run build:web`);
+  else if (!readFileSync(SALIDA, 'utf8').slice(0, 300).includes('entrada ' + huellaEntrada())) fallos.push('vendor/firebase.js no corresponde a scripts/firebase-entry.mjs — ejecuta: npm run build:web');
   return { ok: !fallos.length, fallos, version: v, kb: v ? Math.round(statSync(SALIDA).size / 1024) : 0 };
 }
 

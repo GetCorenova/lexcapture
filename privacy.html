@@ -98,6 +98,25 @@
   que, al cambiar de teléfono o reinstalar la aplicación, Android no los restaura por su cuenta.
 </p>
 
+<h2>La prueba gratuita</h2>
+<p>
+  Cada persona tiene una prueba gratuita de 14 días, que se inicia desde la aplicación de Android.
+  Para que no se pueda repetir creando cuentas nuevas en el mismo teléfono, al pedirla se usan,
+  <strong>únicamente con fines antifraude</strong>:
+</p>
+<ul>
+  <li>la verificación de <strong>Google Play Integrity</strong>, que confirma que la aplicación es
+      la de Google Play y que el teléfono no está alterado, y permite anotar en los servidores de
+      Google que ese teléfono ya usó su prueba («Device Recall»);</li>
+  <li>el <strong>identificador del dispositivo</strong> (ANDROID_ID), que no se guarda tal cual: se
+      transforma con una clave secreta del servidor en un código del que no se puede recuperar el
+      identificador, y que no se asocia a la cuenta ni a la persona.</li>
+</ul>
+<p>
+  Del derecho de uso de la cuenta se guarda solo el plan (prueba o suscripción) y su fecha de fin.
+  Nada de esto incluye datos de capturas ni de personas.
+</p>
+
 <h2>4. Copia de seguridad en tu propio Google Drive (opcional)</h2>
 <p class="destacado">
   <strong>Esta función existe únicamente en la versión web</strong>, la que se abre desde el
@@ -230,8 +249,10 @@
 </p>
 <p>
   La cuenta se elimina desde la propia aplicación, en <strong>Ajustes → Cuenta → Eliminar mi
-  cuenta</strong>: se borran la cuenta de Firebase, lo que tenga en la nube y la información del
-  teléfono. Cerrar sesión, en cambio, no borra nada salvo que se pida.
+  cuenta</strong>: se borran la cuenta de Firebase, lo que tenga en la nube, su derecho de uso y la
+  información del teléfono. Cerrar sesión, en cambio, no borra nada salvo que se pida. El código
+  antifraude del teléfono (sin relación con la cuenta) se conserva, para que eliminar la cuenta no
+  sirva para repetir la prueba.
 </p>
 
 <h2>12. Seguridad</h2>
