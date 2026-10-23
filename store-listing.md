@@ -79,6 +79,13 @@ existe es motivo de rechazo, y las de julio mostraban hasta un error en rojo.
 
 ## Formulario «Seguridad de los datos» — cómo responderlo
 
+> ⚠️ **(2026-10-23) LA CUENTA, LA PRUEBA Y LA NUBE (F2-F4) CAMBIAN ESTAS RESPUESTAS.**
+> Con la cuenta se recopila el correo; con la prueba, un identificador del dispositivo
+> (solo antifraude); con la nube, los registros salen del teléfono **cifrados de extremo
+> a extremo**. La copia en Drive ya no existe. Este formulario se reescribe entero en la
+> **F6**, antes de publicar cualquiera de esas fases — no subir un paquete de la F2 en
+> adelante con las respuestas de abajo.
+
 > ⚠️ **PARA EL PRIMER PAQUETE (build de 2026-09-22) NO SE DECLARA NADA DE ESTO.**
 > Ese `.aab` **no lleva facturación** —se retiró el plugin, el manifiesto no tiene
 > `com.android.vending.BILLING` y el `.dex` tiene 0 referencias— así que **no hay

@@ -20,7 +20,9 @@ export {
 } from 'firebase/auth';
 export {
   initializeFirestore, memoryLocalCache, connectFirestoreEmulator,
-  doc, getDocFromServer, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp
+  doc, getDocFromServer, setDoc, updateDoc, deleteDoc, deleteField, serverTimestamp,
+  /* F4: los registros de la nube (uno por documento) y su escucha en vivo. */
+  collection, query, where, onSnapshot, getDocsFromServer, writeBatch, Timestamp
 } from 'firebase/firestore';
 /* F3: las funciones del servidor (la prueba gratuita y el derecho de uso). */
 export { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';

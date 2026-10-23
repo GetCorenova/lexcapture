@@ -54,7 +54,7 @@ const n1 = await page.evaluate(async () => {
   const k = await lcIdbGet('llave_equipo');
   let exporta = true;
   try { await crypto.subtle.exportKey('raw', k); } catch (e) { exporta = false; }
-  const raw = localStorage.getItem('lc_cases');
+  const raw = String((await lcIdbGet('lc_cases')) || '');
   return { ov: document.getElementById('pin-ov').classList.contains('on'), sesion: !!_sessionKey,
            salt: localStorage.getItem('lc_key_salt'), check: localStorage.getItem('lc_key_check'),
            ext: k && k.extractable, exporta, enClaro: /ANA/.test(raw) || raw.charAt(0) === '[' };
@@ -89,7 +89,7 @@ async function sembrarLegado(pin, opt = {}) {
     localStorage.setItem('lc_cfg', await _lcEncrypt(JSON.stringify({ nombreEstacion: 'ESTACION MIGRADA' })));
     localStorage.setItem('lc_firmas', await _lcEncrypt(JSON.stringify({ p1: { b64: 'AAAA', w: 10, h: 5 } })));
     localStorage.setItem('lc_draft', await _lcEncrypt(JSON.stringify({ caso: { id: 'd1', tipo: 'URI' }, paso: 2 })));
-    await lcIdbSet(SY_BASE_KEY, 'base-cifrada-con-el-pin');
+    await lcIdbSet('sync_base', 'base-cifrada-con-el-pin');
     if (parcial) {   // una migración que se cortó tras re-cifrar solo las capturas
       const r = await lcLlaveEquipo(); _sessionKey = r.key;
       localStorage.setItem('lc_cases', await _lcEncrypt(JSON.stringify(casos)));
@@ -128,7 +128,9 @@ const ok = await intentar('4826');
 await listo();
 const m2 = await page.evaluate(async (saltB64) => {
   const c = DB.getCase('m1'), cfg = DB.getConfig();
-  const raw = localStorage.getItem('lc_cases');
+  /* F4: tras la migración las capturas quedan en IndexedDB. */
+  await new Promise(r => setTimeout(r, 300));
+  const raw = (await lcIdbGet('lc_cases')) || localStorage.getItem('lc_cases');
   /* ¿Lo nuevo todavía abre con la llave del PIN? No debería. */
   const vieja = await _lcDeriveKey('4826', Uint8Array.from(atob(saltB64), x => x.charCodeAt(0)));
   let abreConPin = true;
@@ -138,7 +140,7 @@ const m2 = await page.evaluate(async (saltB64) => {
     caso: c && c.capturados[0].priNom, persona: (DB.getPerson('q1') || {}).priNom,
     cfg: cfg.nombreEstacion, firma: !!DB.getFirma('p1'), draft: !!(DB.getDraft() || {}).caso,
     restos: ['lc_key_salt', 'lc_key_check', 'lc_key_hash', 'lc_pin_intentos'].filter(k => localStorage.getItem(k) !== null),
-    base: await lcIdbGet(SY_BASE_KEY), enClaro: /ROSA/.test(raw), abreConPin
+    base: await lcIdbGet('sync_base'), enClaro: /ROSA/.test(raw), abreConPin
   };
 }, salt);
 log(ok.sesion && !m2.ov, '[M12] con el PIN correcto la sesión abre y la pantalla se va');
@@ -179,16 +181,18 @@ const antes = await page.evaluate(async () => {
   const enc = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, otra, new TextEncoder().encode('[{"id":"ajeno"}]'));
   const buf = new Uint8Array(12 + enc.byteLength); buf.set(iv); buf.set(new Uint8Array(enc), 12);
   const b64 = _b64FromBytes(buf);
-  localStorage.setItem('lc_cases', b64);
+  /* F4: las capturas viven en IndexedDB, que es lo que se lee primero. */
+  await lcIdbSet('lc_cases', b64);
+  localStorage.removeItem('lc_cases');
   return b64;
 });
 const nErr = errs.length;
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(1200);
-const il = await page.evaluate(() => ({
+const il = await page.evaluate(async () => ({
   ov: document.getElementById('pin-ov').classList.contains('on'),
   txt: (document.getElementById('pin-box') || {}).innerText || '', sesion: !!_sessionKey, listo: window._lcListo,
-  disco: localStorage.getItem('lc_cases')
+  disco: await lcIdbGet('lc_cases')
 }));
 errs.splice(nErr);   // el aviso en consola de esta sección es provocado a propósito
 log(il.ov && /no se pudieron abrir/i.test(il.txt) && !il.sesion && !il.listo,

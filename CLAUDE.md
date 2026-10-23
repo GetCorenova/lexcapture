@@ -11,11 +11,12 @@
 > F2 cuenta Firebase + jerarquía de llaves · F3 derecho de uso (prueba sin tarjeta anclada al
 > teléfono con Play Integrity Device Recall / pagado / vencido) · F4 sincronización por registro con
 > Firestore (retira la copia en Drive) · F5 compras (RevenueCat + Play Billing, solo Android) ·
-> F6 cumplimiento. Detalle en «Sin PIN (F1)», «La cuenta (F2)» y «El derecho de uso (F3)», al
-> final. **F1 y F2 fusionadas en `main` el 2026-10-23 (sin publicar). F3 hecha en la rama
-> `f3-derecho`, sin fusionar ni publicar — y NO se publica antes que la F5 (cierra la app al día 15
-> y todavía no se puede pagar). La cuenta queda dormida hasta pegar la configuración de Firebase
-> (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
+> F6 cumplimiento. Detalle en «Sin PIN (F1)», «La cuenta (F2)», «El derecho de uso (F3)» y «La nube (F4)», al
+> final. **F1 y F2 fusionadas en `main` el 2026-10-23 (sin publicar). F3 aprobada pero SIN
+> fusionar (el sistema de permisos bloqueó la fusión en `main`; queda para el usuario). F4 hecha en
+> la rama `f4-nube`, construida ENCIMA de `f3-derecho`, sin fusionar ni publicar. Ninguna de las
+> dos se publica antes que la F5 (la F3 cierra la app al día 15 y todavía no se puede pagar).
+> La cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
 > la CSP, y `lexcapture-android/` sin git.
@@ -7730,3 +7731,132 @@ antes que la F5**: cierra la app al día 15 y la compra todavía no existe. Veri
   `registerPlugin` en `MainActivity`, la dependencia de Play Integrity y `versionCode 6` en
   `app/build.gradle`, `@capacitor/device` en `package.json`) quedan descritos aquí y no tienen commit.
   El `.aab` de la F3 no se compiló a propósito: no se sube hasta la F5.
+
+## La nube (F4 del plan de cuenta, 2026-10-23)
+Cuarta fase del plan vigente. Rama `f4-nube`, **construida ENCIMA de `f3-derecho`** (la
+fusión de la F3 en `main` la bloqueó el sistema de permisos y queda para el usuario), **sin
+fusionar ni publicar**. Verificado con `verify_nube.mjs` (**39 checks**, nuevo) contra los
+emuladores de Firebase (Auth + Firestore), que la suite arranca y apaga: dos contextos de
+navegador = dos teléfonos de la misma cuenta, más un tercero de otra cuenta.
+
+### Cómo viaja
+- **Un documento por registro**: `users/{uid}/reg/{id}` = `{v:1, rev, updatedAt (hora del
+  servidor), borrado, ct}`. Tipos: captura `c`, persona `p`, ajustes `g` (uno solo) y firma
+  `f` (una por perfil).
+- **`ct`** = el registro cifrado (AES-256-GCM) con una llave que sale de la DEK por HKDF
+  (`flagrante|nube|datos`); dentro van también el tipo y el identificador real. El **dato
+  adicional autenticado** es `flagrante|reg|uid|docId|rev`: un sobre movido a otro documento,
+  a otra cuenta o a otra versión no abre (`verify_nube` [R5]).
+- ⚠️ **El NOMBRE del documento es un HMAC** del tipo y el id con otra llave de la DEK
+  (`flagrante|nube|ids`), `r` + 27 caracteres base64url. Es una mejora sobre el plan (que
+  decía `{tipo_id}`): Firebase no sabe si es una captura o una persona, ni el id (que en
+  muchos casos lleva la fecha). Lo único legible es versión, hora, tamaño y si es un borrado.
+- **Un borrado es una LÁPIDA** (`borrado` + el contenido cifrado que lo confirma), no un
+  documento que desaparece: un equipo que estuvo días sin señal tiene que enterarse.
+
+### Cuándo
+- **Subir**: 2,5 s después de guardar (`_lcEncSave` avisa con `nbAlGuardar` para
+  cases/persons/cfg/firmas), al volver la señal, al volver a la app y con «Sincronizar ahora».
+- **Bajar**: una escucha de Firestore (`onSnapshot`) que solo pide `updatedAt > cursor − 10 min`;
+  la primera respuesta es la puesta al día y las siguientes llegan en vivo.
+- ⚠️ **LA COLA DE SALIDA NO ES UNA LISTA, ES UNA COMPARACIÓN** con la BASE (lo último que
+  este equipo vio en la nube de cada registro). Así no hay una cola que se pierda: si la app
+  se cierra sin señal, al abrir vuelve a comparar y sube lo que falte ([C4]). Se desvía del
+  plan («cola de salida en IndexedDB») a propósito: este proyecto ya retiró una cola por
+  desincronizarse (Modo patrulla).
+- La base vive en IndexedDB (`nb|<uid>`), cifrada con la llave del equipo, con la **huella
+  de la DEK**: si la llave cambia (empezar de cero sin código), la base se descarta sola.
+
+### La fusión
+Es la de tres vías de la Fase 0, ahora **por registro** (`lcFundir3`/`lcFundirLista`/
+`lcConPropias`, antes `sy*`; `nbFundirUno` añade los borrados). Si dos equipos tocaron el
+mismo dato, se conserva el de este equipo y el del otro queda en `meta.conflictos` (los 50
+últimos; Ajustes → Cuenta dice cuántos). Cambios en campos distintos se juntan ([C2]);
+correcciones y campos vaciados no se revierten ([B6], [B7]); los borrados no resucitan ([B8]).
+- **Concurrencia**: las reglas solo dejan escribir `rev == anterior + 1` (o `1` si no existe).
+  El segundo de dos equipos es rechazado, baja lo del primero, lo funde y vuelve a subir.
+- ⚠️ **Un documento que no abre con la llave no bloquea su registro para siempre**: tras un
+  choque, si lo que hay en la nube no se puede descifrar, se adopta su versión y la siguiente
+  subida lo reemplaza con lo de este equipo.
+- ⚠️ **LA CAPTURA ABIERTA EN EL FORMULARIO NO SE TOCA** (`nbBloqueado`, mira `wc.id`): el
+  formulario trabaja sobre una copia y al guardar reemplaza la captura entera. Lo que llega
+  de esa captura espera en `_nbEspera` y, al cerrar el formulario, se funde a tres vías con lo
+  guardado ([D1], [D2]). ⚠️ Límite aceptado: un **borrador** retomado días después reemplaza
+  igual lo que llegó entretanto (se documenta en vez de bloquear la sincronización de esa
+  captura hasta que alguien resuelva el borrador).
+- ⚠️ **Guarda contra un almacén vacío**: si este equipo no tiene NINGUNA captura ni persona
+  y la base sí, no se suben borrados — huele a un almacén que no abrió ([E1]). «Eliminar
+  todos los datos» de Ajustes lo autoriza (`nbPermitirBorrarTodo`) y su confirmación dice
+  ahora que borra también de la cuenta.
+- ⚠️ **Desde la llamada a los guardados no hay ningún `await`** en `nbAplicarRemotos`: se lee,
+  se funde y se entrega a `DB.save*` (que actualizan su caché al instante) en un solo tramo.
+  Con una espera en medio, lo que el funcionario guardara en ese hueco se perdería.
+
+### Derecho de uso, eco y rechazos
+- **Subir exige derecho vigente** (lo comprueban la app y las reglas, con los mismos 3 días de
+  gracia del plan pagado). **Bajar, no**: con el plan vencido el usuario puede traer lo suyo a
+  un equipo para exportarlo ([R3], [R4]). ⚠️ Desvío consciente del plan, que pedía exigir el
+  derecho también para leer.
+- ⚠️ **Un rechazo de las reglas se volvía un bucle**: el SDK deshace la escritura rechazada, la
+  escucha lo ve y pide otra ronda, que vuelve a ser rechazada. Ahora la escucha ignora lo que
+  ya está en la base, una ronda con error no se repite sola y tras un rechazo no se reintenta
+  en 60 s salvo que haya un cambio nuevo, vuelva la señal o se pulse el botón ([R3b]).
+- La nube arranca con la sesión (`_cuAbrirSesion` y `cuContinuar` → `nbArrancar`), aunque la
+  pantalla que siga sea «verifica tu correo»; se para al cerrar sesión o eliminar la cuenta
+  (`nbDetener`, que sube `_nbGen` para que una ronda vieja no escriba después).
+
+### La cuenta y la nube
+- **Empezar de cero sin código** borra los registros de la nube (ya no los abre nadie) y lo de
+  este equipo se vuelve a subir con la llave nueva (`nbBorrarNube`; las reglas dejan borrar al
+  dueño) ([E3]).
+- **Eliminar la cuenta**: los registros los borra el servidor (`alBorrarUsuario` hace
+  `recursiveDelete` de `users/{uid}`).
+- **Cerrar sesión y borrar este equipo** dice ahora cuántos cambios no han subido.
+- ⚠️ **LA FIRMA MANUSCRITA SÍ VIAJA** a los equipos del MISMO usuario, cifrada (decisión del
+  plan). A otra persona (Modo compartir) sigue sin viajar nunca.
+- Los ajustes viajan sin las marcas de migración (`LC_CFG_LOCAL`, antes `SY_CFG_LOCAL`).
+
+### El almacén local pasó a IndexedDB
+Era el desvío anotado en la F1. `lc_cases`, `lc_persons` y `lc_firmas` viven ahora en IndexedDB
+(`LC_EN_IDB`, mismo blob cifrado): con la nube cada equipo junta lo de TODOS los equipos y
+localStorage da unos 5 MB. `_lcLeerGuardado` lee de IndexedDB y, si no hay, de localStorage
+(un equipo anterior); el primer guardado lo pasa a IndexedDB y SOLO ENTONCES retira la copia
+vieja. Configuración, borrador y cuenta se quedan en localStorage (pequeños). ([S1]-[S3])
+
+### Lo que se retiró: la copia en Drive, entera
+El módulo `sy*` (≈1 400 líneas), la pantalla «Sincronización», sus dos entradas de menú,
+`SY_CLIENT_ID*`, el script de Google, `LC_FLAGS`/`lcFlag` (sus dos banderas eran de Drive),
+`lc_sync` y `sync_base` (se purgan al abrir), la CSP de Google (`accounts.google.com`,
+`www.googleapis.com`, `oauth2…`) y, en el envoltorio Android, la puerta de retorno del permiso
+de Google (`intent-filter` con el esquema del paquete) y los complementos `@capacitor/browser`
+y `@capacitor/app`. `verify_sync.mjs` (120 checks) se retiró con el módulo; sus escenarios de
+fusión los mide ahora `verify_nube` de punta a punta.
+- Sobreviven, con nombre neutro: el alfabeto del código de recuperación (`lcB32Enc/Dec`,
+  `lcCodigoBonito`) y la fusión a tres vías (`lcFundir3`…).
+- ⚠️ **CSP**: `img-src` admite UNA imagen de Google (`cleardot.gif`): con ella el canal de
+  Firestore comprueba la red cuando la conexión se corta. Sin ella cada corte de señal llenaba
+  la consola de avisos ([S10] lo atrapó).
+
+### Lo que se ve
+Ajustes → Cuenta gana la fila **Nube** (`nbFila`): al día / sincronizando / N cambios sin subir
+(sin señal, o con el plan inactivo) / la sesión de la nube se cerró, más cuántos registros no
+abrieron y cuántas diferencias se resolvieron, y «Sincronizar ahora». El subtítulo de
+Capturas añade «· nube hace X» o «· N sin subir» (`lcColaCopia` → `nbCola`).
+
+### Verificación
+- `verify_nube.mjs` **39/39**. ⚠️ **Comprobado que muerde**: saboteando a la vez la fusión
+  (gana siempre lo remoto), el candado del formulario y la guarda del almacén vacío fallan
+  **5** (C2, C3, D1, D2, E1).
+- Suites adaptadas sin bajar su cuenta, porque leían las capturas/firmas de localStorage y
+  ahora pasarían en vacío: `verify_firma` (62), `verify_migracion_pin` (23), `verify_almacen`
+  (13), `verify_compartir` (57, la firma del otro teléfono se mira en IndexedDB),
+  `verify_cuenta` (55) y `verify_csp` (11, ya sin Drive en la lista de conexiones permitidas).
+- ⚠️ **App Check NO se activó**: necesita registrar la app (SHA-256 de Play Console) y una
+  clave de reCAPTCHA Enterprise; pasa a la F6.
+- Regresión completa (`node scripts/verify.mjs --todas`): **45/49 en verde**; las 4 en rojo son las
+  preexistentes ya documentadas (`dossier_historico` [20][21], `ds`, `jerarquia`, `mejora6b` [47][53]).
+  El envoltorio Android compila (`build:android --debug`) y su manifiesto fusionado ya no tiene la
+  puerta de retorno de Google. Anti-caché `?v=140` / `cache-v140`, `_BUILD=140`.
+- ⚠️ `lexcapture-android/` sigue **sin git**: el `intent-filter` retirado del manifiesto y los
+  dos complementos desinstalados quedan descritos aquí. Van en el mismo **versionCode 6** de la
+  F3, que no se ha subido.

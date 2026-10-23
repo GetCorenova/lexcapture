@@ -189,13 +189,16 @@ const trasReinicio = await page.evaluate(() => {
 log(trasReinicio.len === antes && trasReinicio.len > 0,
   'La firma se carga sola al reiniciar la aplicación (no hay que volver a firmar)');
 
-const cifrado = await page.evaluate(() => {
+const cifrado = await page.evaluate(async () => {
   // Comprobación precisa: la firma REAL de este perfil no puede aparecer en
   // claro en ninguna clave. (Un patrón genérico de PNG daría falso positivo:
   // lc_templates guarda los .docx integrados, que llevan imágenes dentro.)
+  // F4: las firmas viven en IndexedDB; se mira también ahí.
   const mia = DB.getFirma('p1').b64.slice(0, 64);
   const donde = Object.keys(localStorage).filter(k => (localStorage.getItem(k) || '').indexOf(mia) >= 0);
-  return { donde, cifrada: !!localStorage.getItem('lc_firmas'), enCfg: /firmaB64/.test(localStorage.getItem('lc_cfg') || '') };
+  const idb = String((await lcIdbGet('lc_firmas')) || '');
+  if (idb.indexOf(mia) >= 0) donde.push('idb:lc_firmas');
+  return { donde, cifrada: !!idb, enCfg: /firmaB64/.test(localStorage.getItem('lc_cfg') || '') };
 });
 log(cifrado.donde.length === 0 && cifrado.cifrada === true,
   'La firma vive CIFRADA en lc_firmas: sus bytes no aparecen en claro en ninguna clave',
@@ -504,9 +507,9 @@ log(bytes.length > 20000, 'Se genera el .docx completo para revisarlo en Word',
    rasgo biométrico y con ella se suscriben documentos judiciales, así que NO
    puede estar en `lc_cfg` —que se guarda en claro— sino en `lc_firmas`, cifrada
    con AES-GCM igual que las capturas. Eso no estaba medido. */
-const firmaCifrada = await page.evaluate(() => {
+const firmaCifrada = await page.evaluate(async () => {
   const f = DB.getFirma('p1');
-  const crudo = localStorage.getItem('lc_firmas') || '';
+  const crudo = String((await lcIdbGet('lc_firmas')) || '');
   const cfgCrudo = localStorage.getItem('lc_cfg') || '';
   const trozo = f && f.b64 ? f.b64.slice(0, 48) : null;
   return {

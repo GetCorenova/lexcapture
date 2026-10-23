@@ -442,7 +442,7 @@ const c8 = await page.evaluate(async (id) => {
   const t = JSON.stringify(c) + JSON.stringify(p);
   return { enElCaso: /iVBORw0KGgo|firmaB64|_firma/.test(t), guardada: !!DB.getFirma('perfil-1') };
 }, casoId);
-const c8B = await pageB.evaluate(() => localStorage.getItem('lc_firmas'));
+const c8B = await pageB.evaluate(async () => !!(await lcIdbGet('lc_firmas')) || Object.keys(_firmasCache || {}).length > 0);
 log(!c8.enElCaso && c8.guardada && !c8B,
   '[C8] La firma manuscrita no viaja: se queda cifrada en el teléfono de su dueño');
 
