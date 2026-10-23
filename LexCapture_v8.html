@@ -3101,8 +3101,6 @@ var LC_FLAGS = {
      una sincronización que nadie pidió sigue siendo la peor forma de descubrir
      un fallo: queda en el botón manual. */
   syncAutoDesbloqueo: false,
-  /* 0.1 — El ofrecimiento de la copia justo después de crear el PIN. */
-  syncOnboarding: false,
   /* 0.2 — La copia dentro de la app de Play. Apagada hasta la Fase 2: sin la
      huella de firma de Play el permiso de Google falla, y la política de
      privacidad dice que la copia en Drive es solo de la versión web. */
@@ -3425,7 +3423,7 @@ function closeModal() {
   if (mc) mc.innerHTML = '';
 }
 
-/* ═══ FASE E — CIFRADO AES-GCM + PIN ═══ */
+/* ═══ CIFRADO AES-GCM (llave del equipo desde la F1; antes, del PIN) ═══ */
 var _sessionKey = null;
 var _casesCache = null;
 var _personsCache = null;
@@ -3622,158 +3620,218 @@ function lcPedirExport(kind, nombreDoc, cb){
    propósito: la regresión comprueba que no quedan BUSCÁNDOLOS en el archivo
    (verify_almacen [11]), igual que con el idiom del techo de cifrado. */
 
-/* ═══ PIN FLOW ═══ */
+/* ═══ ARRANQUE SIN PIN (F1 de la cuenta, 2026-10-23) ═══════════════════════
+   El PIN desapareció por decisión del usuario: la aplicación abre directo. Los
+   datos SIGUEN CIFRADOS en reposo (AES-GCM), pero con una LLAVE DEL EQUIPO en vez
+   de una llave derivada del PIN:
+
+   · Se genera una sola vez con WebCrypto, NO EXTRAÍBLE (`extractable:false`): el
+     código de la propia app no puede leer sus bytes, solo pedirle que cifre y
+     descifre. Se guarda en IndexedDB, que conserva el objeto CryptoKey tal cual.
+   · Protege contra una COPIA del almacenamiento (los blobs de localStorage, por
+     sí solos, no se abren) y no contra quien tenga el teléfono desbloqueado en la
+     mano: esa es la contrapartida aceptada de no pedir nada al abrir.
+   · El formato de lo guardado no cambió (IV de 12 bytes + AES-GCM, base64), así
+     que `_lcEncrypt`/`_lcDecrypt`/`_lcEncSave` y todo `DB.*` siguen igual: lo
+     único que cambió es de dónde sale `_sessionKey`.
+
+   ⚠️ NUNCA se escribe encima de datos que no se pudieron abrir. Antes, un fallo
+   de descifrado dejaba la caché vacía y el siguiente guardado pisaba lo que
+   había en disco. Ahora, si algo cifrado no abre con la llave del equipo, la app
+   NO arranca la sesión: lo dice y ofrece reintentar o empezar de cero.
+
+   `_lcListo` es la señal de «la sesión ya abrió y las cachés están cargadas».
+   La usan las suites de regresión para no adivinar cuánto tarda el arranque. */
+var _lcListo = false;
+var LC_LLAVE_EQUIPO = 'llave_equipo';
+/* Lo que va cifrado en localStorage con la llave de la sesión. */
+var LC_CLAVES_CIFRADAS = ['lc_cases', 'lc_persons', 'lc_draft', 'lc_firmas', 'lc_cfg', 'lc_sync'];
+
+function _lcEsClaro(raw) { return !!raw && (raw.charAt(0) === '[' || raw.charAt(0) === '{'); }
+
+/* La llave del equipo: la que hay, o una nueva si es el primer arranque.
+   Devuelve {key, nueva}. Rechaza si el navegador no deja guardarla. */
+async function lcLlaveEquipo() {
+  var k = await lcIdbGet(LC_LLAVE_EQUIPO);
+  if (k && k.type === 'secret' && k.algorithm && k.algorithm.name === 'AES-GCM') return { key: k, nueva: false };
+  k = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  await lcIdbSet(LC_LLAVE_EQUIPO, k);
+  /* Se relee: si el navegador no la conservó, mejor saberlo ahora que después de
+     haber cifrado datos con una llave que no va a volver. */
+  var k2 = await lcIdbGet(LC_LLAVE_EQUIPO);
+  if (!k2) throw new Error('El navegador no conservó la llave del equipo.');
+  return { key: k2, nueva: true };
+}
+
+/* Qué datos cifrados de este equipo NO abren con la llave que hay en `_sessionKey`.
+   Lo que está en claro (equipos de antes del cifrado) no cuenta: se lee y se
+   cifra en `_lcLoadCaches`. */
+async function _lcIlegibles() {
+  var malas = [];
+  for (var i = 0; i < LC_CLAVES_CIFRADAS.length; i++) {
+    var raw = null;
+    try { raw = localStorage.getItem(LC_CLAVES_CIFRADAS[i]); } catch (e) {}
+    if (!raw || _lcEsClaro(raw)) continue;
+    try { await _lcDecrypt(raw); } catch (e) { malas.push(LC_CLAVES_CIFRADAS[i]); }
+  }
+  return malas;
+}
+
+/* El arranque normal. */
+async function lcAbrirEquipo() {
+  var r;
+  try { r = await lcLlaveEquipo(); }
+  catch (e) { console.error('[Flagrante] llave del equipo', e); _lcErrorAlmacen('sinLlave'); return; }
+  _sessionKey = r.key;
+  var malas = await _lcIlegibles();
+  if (malas.length) {
+    _sessionKey = null;
+    console.error('[Flagrante] datos que no abren con la llave del equipo:', malas);
+    _lcErrorAlmacen('ilegibles');
+    return;
+  }
+  await _lcLoadCaches();
+  _lcTrasAbrir();
+}
+
+/* Lo que corre una vez abierta la sesión, venga del arranque normal o de la
+   migración del PIN. */
+function _lcTrasAbrir() {
+  renderCases();
+  /* Una vez al año: el NUNC de los despachos ya entró al año en curso en la
+     lectura de la configuración; aquí se persiste y se anuncia. */
+  lcNuncAvisoAno();
+  syPintarNav();
+  lcBarraSistema();
+  if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
+  _lcListo = true;
+}
+
+/* El almacén no se pudo abrir. Se dice, y no se arranca la sesión: arrancar con
+   cachés vacías dejaría que el primer guardado pisara lo que hay en disco. */
+function _lcErrorAlmacen(motivo) {
+  var txt = motivo === 'sinLlave'
+    ? 'Este navegador no deja guardar la información de forma segura (puede ser una ventana privada). Abre la aplicación en una ventana normal.'
+    : 'Los datos guardados en este equipo no se pudieron abrir. No se borró nada.';
+  _pinOv(
+    '<div class="pin-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>' +
+    '<div class="pin-title">No se pudo abrir</div>' +
+    '<div class="pin-sub">' + txt + '</div>' +
+    '<button class="pin-btn" onclick="location.reload()">Reintentar</button>' +
+    (motivo === 'ilegibles' ? '<div class="pin-forget" onclick="lcEmpezarDeCero()">Borrar todo y empezar de cero</div>' : '')
+  );
+}
+
+/* Borra TODO lo de este equipo. Lo usan el «Olvidé mi PIN» de la migración y el
+   «empezar de cero» de un almacén que no abre. */
+function lcEmpezarDeCero() {
+  if (!confirm('Se BORRARÁN TODOS los datos de este equipo: capturas, personas y configuración.\n\nEsta acción NO se puede deshacer.')) return;
+  if (!confirm('Confirmación final: se eliminarán TODOS los datos de Flagrante en este equipo. ¿Continuar?')) return;
+  localStorage.clear();
+  /* La llave del equipo y la base de la sincronización viven en IndexedDB:
+     «borrar TODO» es también eso. */
+  lcIdbBorrarTodo().then(function () { location.reload(); });
+}
+
+/* El overlay del antiguo PIN se conserva como superficie de pantalla completa
+   para la migración y para los errores del almacén. */
 function _pinOv(html) {
   var el = document.getElementById('pin-box'); if (el) el.innerHTML = html;
   document.getElementById('pin-ov').classList.add('on');
 }
 function _pinHide() { document.getElementById('pin-ov').classList.remove('on'); }
 
-function showPinSetup() {
-  _pinOv(
-    '<div class="pin-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'+
-    '<div class="pin-title">Configurar seguridad</div>'+
-    '<div class="pin-sub">Crea un PIN para proteger los datos de capturas y personas.<br>4 dígitos.</div>'+
-    '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-a" placeholder="Nuevo PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')document.getElementById(\'pin-b\').focus()">'+
-    '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-b" placeholder="Confirmar PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doSetPin()">'+
-    '<div class="pin-err" id="pin-err"></div>'+
-    '<button class="pin-btn" onclick="doSetPin()">Crear PIN</button>'
-  );
-  setTimeout(function(){ var el=document.getElementById('pin-a'); if(el) el.focus(); }, 120);
-}
+/* ═══ MIGRACIÓN DE UN EQUIPO CON PIN ═══════════════════════════════════════
+   Un equipo de una versión anterior tiene sus datos cifrados con la llave del
+   PIN (`lc_key_salt` + PBKDF2). Esa llave no se puede obtener sin el PIN, así
+   que se pide UNA ÚLTIMA VEZ: se descifra todo, se vuelve a cifrar con la llave
+   del equipo y se borran sal, verificador, hash e intentos.
 
-function showPinEntry() {
+   ⚠️ El orden protege contra un cierre a mitad de camino: primero se calcula
+   TODO lo nuevo en memoria, después se escribe (localStorage es síncrono), y la
+   sal del PIN se borra lo ÚLTIMO. Si la app se cierra antes, el siguiente
+   arranque vuelve a pedir el PIN; lo que ya estuviera re-cifrado no abre con la
+   llave del PIN y se deja tal cual, porque ya está en el formato nuevo.
+   ⚠️ La base de la sincronización (IndexedDB) iba cifrada con la llave del PIN:
+   no se re-cifra, se BORRA. Sin base, la próxima sincronización hace lo único
+   que no revierte nada de este equipo (ver «Fase 0 de seguridad», 0.1).
+
+   Esta sección y las funciones de verificación del PIN que la sostienen se
+   retiran cuando ya no queden equipos con PIN. */
+function showPinMigracion() {
   _pinOv(
-    '<div class="pin-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'+
-    '<div class="pin-title">Flagrante</div>'+
-    '<div class="pin-sub">Ingresa tu PIN para acceder a los datos.</div>'+
-    '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-e" placeholder="PIN" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doUnlockPin()">'+
-    '<div class="pin-err" id="pin-err"></div>'+
-    '<button class="pin-btn" onclick="doUnlockPin()">Ingresar</button>'+
-    '<div class="pin-forget" onclick="forgotPin()">Olvidé mi PIN</div>'
+    '<div class="pin-logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
+    '<div class="pin-title">Ya no hará falta el PIN</div>' +
+    '<div class="pin-sub">Escríbelo por última vez para pasar tus datos a la nueva protección.</div>' +
+    '<input class="pin-in" type="password" inputmode="numeric" pattern="[0-9]*" id="pin-e" placeholder="PIN" maxlength="6" oninput="this.value=this.value.replace(/\\D/g,\'\')" onkeydown="if(event.key===\'Enter\')doMigrarPin()">' +
+    '<div class="pin-err" id="pin-err"></div>' +
+    '<button class="pin-btn" onclick="doMigrarPin()">Continuar</button>' +
+    '<div class="pin-forget" onclick="lcEmpezarDeCero()">Olvidé mi PIN</div>'
   );
   setTimeout(function(){ var el=document.getElementById('pin-e'); if(el) el.focus(); }, 120);
 }
 
-async function doSetPin() {
-  var a=(document.getElementById('pin-a')||{}).value||'';
-  var b=(document.getElementById('pin-b')||{}).value||'';
-  var errEl=document.getElementById('pin-err');
-  if (a.length!==4) { errEl.textContent='El PIN debe tener exactamente 4 dígitos'; return; }
-  if (a!==b) { errEl.textContent='Los PINes no coinciden'; return; }
-  errEl.textContent='Configurando...';
-  try {
-    var salt=crypto.getRandomValues(new Uint8Array(16));
-    _sessionKey=await _lcDeriveKey(a, salt);
-    localStorage.setItem('lc_key_salt', _b64FromBytes(salt));
-    /* ⚠️ FASE 0: ya NO se guarda un hash del PIN. Se guarda un VERIFICADOR: una
-       constante cifrada con la llave que sale del PIN. Ver _lcPinVerificador. */
-    await _lcPinVerificadorCrear();
-    try { localStorage.removeItem('lc_key_hash'); } catch(e) {}
-    _lcPinIntentosLimpiar();
-    var rawC=localStorage.getItem('lc_cases'), rawP=localStorage.getItem('lc_persons');
-    _casesCache=(rawC&&(rawC[0]==='['||rawC[0]==='{'))?(JSON.parse(rawC)||[]):[];
-    _personsCache=(rawP&&(rawP[0]==='['||rawP[0]==='{'))?(JSON.parse(rawP)||[]):[];
-    _syncPersonsFromCases();
-    _firmasCache = {};
-    /* Una configuración anterior al PIN estaba en claro: se cifra ya. */
-    await _lcCargarCfg();
-    _lcEncSave('cases', _casesCache);
-    _lcEncSave('persons', _personsCache);
-    _pinHide();
-    toast('PIN configurado — datos protegidos con AES-256 ✓', 4000);
-    renderCases();
-    /* Primer arranque, y el ÚNICO momento en que se puede ofrecer esto sin
-       interrumpir a nadie: quien acaba de crear el PIN todavía no tiene nada que
-       perder de vista. ⚠️ Se puede saltar —la aplicación se usa sin señal y un
-       arranque que EXIJA cuenta dejaría a un funcionario sin poder trabajar. */
-    if (typeof syOnboardTrasPin === 'function') syOnboardTrasPin();
-  } catch(e) { errEl.textContent='Error interno. Recarga la app.'; console.error(e); }
-}
-
-async function doUnlockPin() {
+async function doMigrarPin() {
   var pin=(document.getElementById('pin-e')||{}).value||'';
   var errEl=document.getElementById('pin-err');
-  if (!pin) { errEl.textContent='Ingresa tu PIN'; return; }
+  if (!pin) { errEl.textContent='Escribe tu PIN'; return; }
   var espera=_lcPinEspera();
   if (espera>0) { errEl.textContent='Demasiados intentos. Espera '+_lcPinTexto(espera)+'.'; return; }
   if (_pinVerificando) return;
   _pinVerificando=true;
   errEl.textContent='Verificando...';
   try {
-    var saltB64=localStorage.getItem('lc_key_salt');
-    var salt=Uint8Array.from(atob(saltB64), function(c){return c.charCodeAt(0);});
-    /* ⚠️ El intento se CUENTA ANTES de verificar y se guarda en disco: si se
-       cierra la app a mitad de la verificación, el intento ya quedó contado.
-       Antes el contador vivía en memoria y se reiniciaba al recargar, o sea que
-       probar PINES era ilimitado recargando la página. */
+    var salt=Uint8Array.from(atob(localStorage.getItem('lc_key_salt')), function(c){return c.charCodeAt(0);});
+    /* ⚠️ El intento se cuenta ANTES de verificar y en disco: cerrar la app a
+       mitad de la verificación no lo devuelve. */
     var n=_lcPinIntentoContar();
-    var key=await _lcPinVerificar(pin, salt);
-    if (!key) {
+    var vieja=await _lcPinVerificar(pin, salt);
+    if (!vieja) {
       var e2=_lcPinFallo(n);
       if (e2>0) errEl.textContent='PIN incorrecto. Demasiados intentos: espera '+_lcPinTexto(e2)+'.';
       else { var q=LC_PIN_LIBRES-n; errEl.textContent='PIN incorrecto ('+q+' intento'+(q===1?'':'s')+' antes de tener que esperar)'; }
       return;
     }
-    _lcPinIntentosLimpiar();
+    errEl.textContent='Pasando tus datos…';
+    /* 1. Descifrar con la llave del PIN. Lo que no abre se deja en paz. */
+    _sessionKey=vieja;
+    var claro={};
+    for (var i=0;i<LC_CLAVES_CIFRADAS.length;i++) {
+      var k=LC_CLAVES_CIFRADAS[i], raw=localStorage.getItem(k);
+      if (!raw || _lcEsClaro(raw)) continue;
+      try { claro[k]=await _lcDecrypt(raw); } catch(e) {}
+    }
+    /* 2. Cifrar con la llave del equipo, todo en memoria. */
+    var r=await lcLlaveEquipo();
+    _sessionKey=r.key;
+    var nuevo={};
+    for (var k2 in claro) nuevo[k2]=await _lcEncrypt(claro[k2]);
+    /* 3. Escribir. 4. Retirar la base de la sincronización. 5. La sal, lo último. */
+    for (var k3 in nuevo) localStorage.setItem(k3, nuevo[k3]);
+    try { await lcIdbDel(SY_BASE_KEY); } catch(e) {}
+    ['lc_key_check','lc_key_hash','lc_pin_intentos','lc_key_salt'].forEach(function(x){ try{ localStorage.removeItem(x); }catch(e){} });
     errEl.textContent='';
-    _sessionKey=key;
-    /* Migración transparente: un equipo con el hash rápido de antes gana su
-       verificador y pierde el hash en el primer desbloqueo que sale bien. */
-    if (!localStorage.getItem('lc_key_check')) await _lcPinVerificadorCrear();
-    try { localStorage.removeItem('lc_key_hash'); } catch(e) {}
     await _lcLoadCaches();
     _pinHide();
-    renderCases();
-    /* Una vez al año: el NUNC de los despachos ya entró al año en curso en la
-       lectura de la configuración; aquí se persiste y se anuncia. Un número que
-       cambia solo tiene que verse cambiar. */
-    lcNuncAvisoAno();
-    /* Sincronización oportunista al abrir sesión: es el momento en que el
-       funcionario llega a otro equipo y espera encontrar lo que hizo en el
-       anterior. Va DIFERIDA y sin esperarla — si no hay red, o Google pide
-       volver a autorizar, no pasa nada: la aplicación es offline-first y esto
-       es una mejora encima, nunca un requisito para trabajar. */
-    syPintarNav();
-    lcBarraSistema();
-    if (typeof syAlDesbloquear === 'function') syAlDesbloquear();
-  } catch(e) { errEl.textContent='Error al verificar el PIN'; console.error(e); }
+    toast('Listo: la aplicación ya no te pedirá PIN. Tus datos siguen cifrados ✓', 5000);
+    _lcTrasAbrir();
+  } catch(e) { _sessionKey=null; errEl.textContent='No se pudo completar. Vuelve a intentarlo.'; console.error(e); }
   finally { _pinVerificando=false; }
 }
 
-function forgotPin() {
-  if (!confirm('¿Olvidaste tu PIN?\n\nSe BORRARÁN TODOS los datos: capturas, personas y configuración.\n\nEsta acción NO se puede deshacer.')) return;
-  if (!confirm('Confirmación final: se eliminarán TODOS los datos de Flagrante. ¿Continuar?')) return;
-  localStorage.clear();
-  /* La base de la sincronización vive en IndexedDB: «borrar TODO» es también eso. */
-  lcIdbBorrarTodo().then(function(){ location.reload(); });
-}
-
-/* ═══ VERIFICACIÓN DEL PIN (Fase 0, 2026-09-25) ═══════════════════════════
-   ⚠️ LO QUE HABÍA: `lc_key_hash` = SHA-256(sal‖PIN) de UNA pasada. Con una copia
-   del almacenamiento se probaban los 10 000 PIN posibles en menos de un segundo
-   y, con el PIN, se derivaba la llave de todas las capturas.
-
-   LO QUE HAY: el PIN se verifica INTENTANDO DESCIFRAR. Se guarda una constante
-   cifrada (AES-GCM) con la llave que sale del PIN por PBKDF2 (100 000 vueltas);
-   si el PIN es otro, la etiqueta de autenticación no cuadra y el descifrado
-   falla. No queda ningún atajo más barato que derivar la llave.
-
-   ⚠️ LÍMITE HONESTO, para que nadie lo lea como más de lo que es: un PIN de
-   4 dígitos sigue siendo débil contra quien tenga una COPIA del almacenamiento y
-   una tarjeta gráfica (10 000 derivaciones son segundos). Lo que esto sí cierra
-   es el atajo instantáneo y los intentos ilimitados desde la propia app. La
-   protección de fondo es la Fase 2: llave envuelta por el Android Keystore y PIN
-   de 6 dígitos como mínimo. */
+/* ═══ VERIFICACIÓN DEL PIN — solo para la MIGRACIÓN ════════════════════════
+   El PIN ya no protege nada nuevo: esto queda para comprobar el de un equipo
+   anterior una última vez (`doMigrarPin`). Se verifica INTENTANDO DESCIFRAR el
+   verificador `lc_key_check` con la llave PBKDF2 del PIN (Fase 0); un equipo aún
+   más viejo trae el hash rápido `lc_key_hash` y se acepta una última vez. Los
+   intentos se siguen contando en disco y con espera creciente: la migración no
+   puede ser la puerta para probar los 10 000 PIN sin coste. */
 var LC_PIN_CHECK = 'flagrante-pin-v1';
 var LC_PIN_LIBRES = 5;              // intentos sin espera
 var LC_PIN_ESPERA_BASE = 30000;     // al quinto fallo, 30 s…
 var LC_PIN_ESPERA_MAX = 3600000;    // …doblando en cada fallo, hasta 1 hora
 var _pinVerificando = false;
 
-async function _lcPinVerificadorCrear() {
-  localStorage.setItem('lc_key_check', await _lcEncrypt(LC_PIN_CHECK));
-}
 async function _lcDescifrarCon(key, b64) {
   var buf = Uint8Array.from(atob(b64), function(c){return c.charCodeAt(0);});
   var dec = await crypto.subtle.decrypt({name:'AES-GCM', iv:buf.slice(0,12)}, key, buf.slice(12));
@@ -3909,7 +3967,7 @@ function _lcMsgGuardado(e, queCosa) {
            'Exporta y elimina capturas antiguas desde Ajustes.';
   }
   if (/Sin sesión activa/i.test(n)) {
-    return '⚠️ No se pudo guardar ' + queCosa + ': la sesión se cerró. Vuelve a ingresar el PIN.';
+    return '⚠️ No se pudo guardar ' + queCosa + ': la sesión no está abierta. Cierra y vuelve a abrir la aplicación.';
   }
   return '⚠️ No se pudo guardar ' + queCosa + '. No se perdió nada de lo diligenciado: vuelve a intentarlo.';
 }
@@ -3932,11 +3990,16 @@ async function _lcLoadCaches() {
   var enc;
   /* La configuración primero: lo que sigue (migraciones, sincronización) la lee. */
   await _lcCargarCfg();
+  /* Un equipo anterior al cifrado (Fase E) tiene las capturas y las personas en
+     CLARO: se leen y se cifran en este mismo arranque (lo hacía la creación del
+     PIN, que ya no existe). */
   enc = localStorage.getItem('lc_cases');
-  if (enc) { try { _casesCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _casesCache = []; } }
+  if (_lcEsClaro(enc)) { try { _casesCache = JSON.parse(enc) || []; } catch(e) { _casesCache = []; } _lcEncSave('cases', _casesCache).catch(function(){}); }
+  else if (enc) { try { _casesCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _casesCache = []; } }
   else { _casesCache = []; }
   enc = localStorage.getItem('lc_persons');
-  if (enc) { try { _personsCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _personsCache = []; } }
+  if (_lcEsClaro(enc)) { try { _personsCache = JSON.parse(enc) || []; } catch(e) { _personsCache = []; } _lcEncSave('persons', _personsCache).catch(function(){}); }
+  else if (enc) { try { _personsCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _personsCache = []; } }
   else { _personsCache = []; }
   // El borrador del wizard viaja cifrado igual que las capturas: contiene datos
   // de una persona (y en CESPA, de un menor) tanto como un caso guardado.
@@ -3952,8 +4015,7 @@ async function _lcLoadCaches() {
   if (enc) { try { _firmasCache = JSON.parse(await _lcDecrypt(enc)); } catch(e) { _firmasCache = {}; } }
   else { _firmasCache = {}; }
   /* La clave de sincronización entre los equipos del usuario: cifrada y en su
-     propia clave, igual que las firmas. Con el PIN de ESTE equipo se llega a
-     ella; sin PIN no hay sincronización posible. */
+     propia clave, igual que las firmas. */
   if (typeof syCargarEstado === 'function') await syCargarEstado();
   /* ⚠️ Migración de la abreviatura de carrera, al LEER y sobre la caché en
      memoria: una captura guardada con «KR» tiene que imprimir «CR» aunque nadie
@@ -3998,7 +4060,7 @@ var _draftCache = null;
    tarjeta del perfil y el motor del documento la leen sin esperar. */
 var _firmasCache = null;
 /* La configuración tal como se guardó (sin valores por defecto), descifrada en
-   memoria mientras la sesión está abierta. null = todavía bajo PIN. */
+   memoria mientras la sesión está abierta. null = la sesión aún no abrió. */
 var _cfgCache = null;
 var DB = {
   getDraft: function() { return _draftCache; },
@@ -4076,7 +4138,7 @@ var DB = {
    modificarla no toca nada. */
 function lcCfgCrudo() {
   if (_cfgCache) { try { return JSON.parse(JSON.stringify(_cfgCache)); } catch (e) { return {}; } }
-  /* Antes del PIN no hay llave: si lo guardado está cifrado, no hay nada que
+  /* Antes de abrir la sesión no hay llave: si lo guardado está cifrado, no hay nada que
      leer todavía (salen los valores por defecto). Solo un equipo que aún no se
      ha migrado tiene la configuración en claro, y esa se puede leer. */
   var raw = null;
@@ -4141,7 +4203,7 @@ function _lcIdbTx(modo, fn) {
 function lcIdbGet(k)    { return _lcIdbTx('readonly',  function (s) { return s.get(k); }); }
 function lcIdbSet(k, v) { return _lcIdbTx('readwrite', function (s) { return s.put(v, k); }); }
 function lcIdbDel(k)    { return _lcIdbTx('readwrite', function (s) { return s.delete(k); }); }
-/* Borra la base entera. Lo usa «Olvidé mi PIN», que promete borrarlo TODO. */
+/* Borra la base entera (con la llave del equipo). Lo usa «empezar de cero», que promete borrarlo TODO. */
 function lcIdbBorrarTodo() {
   return new Promise(function (res) {
     var fin = function () { res(); };
@@ -4563,10 +4625,12 @@ function lcAplicarOrden(arg) {
 
 function renderCases() {
   var el = document.getElementById('cl');
-  if (!_sessionKey && localStorage.getItem('lc_key_salt')) {
-    renderOrdenBtn('capturas', 0);   // con la lista bajo PIN no hay nada que ordenar
-    if (el) el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div><h3>Datos protegidos</h3><p>Ingresa tu PIN para acceder a las capturas.</p><button class="cta" onclick="showPinEntry()">Ingresar PIN</button></div>';
-    var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = 'Datos protegidos';
+  if (!_sessionKey) {
+    /* La sesión todavía se está abriendo (o el almacén no abrió y lo dice su
+       propio aviso). Pintar «Sin capturas aún» aquí sería mentir un instante. */
+    renderOrdenBtn('capturas', 0);
+    if (el) el.innerHTML = '';
+    var sub2 = document.getElementById('cap-sub'); if (sub2) sub2.textContent = '';
     return;
   }
   renderDraftSlot();          // captura sin terminar, si la hay
@@ -20985,12 +21049,10 @@ document.addEventListener('DOMContentLoaded', function() {
   var hash = location.hash.slice(1);
   if (hash && screens.indexOf(hash) >= 0) go(hash);
   else go('capturas');
-  console.log('[Flagrante] Fase E OK — AES-GCM + PIN PBKDF2');
-  if (!localStorage.getItem('lc_key_salt')) {
-    showPinSetup();
-  } else {
-    showPinEntry();
-  }
+  /* Sin PIN: abre directo con la llave del equipo. Un equipo de una versión con
+     PIN pasa una sola vez por la migración. */
+  if (localStorage.getItem('lc_key_salt')) showPinMigracion();
+  else lcAbrirEquipo();
   initNetBadge();
   initPwaPrompt();
 });
@@ -24770,7 +24832,7 @@ async function sySincronizar(interactivo) {
   /* ⚠️ Segunda guarda, detrás del menú oculto: en la app de Play NINGÚN dato sale
      del teléfono por esta vía, llegue quien llegue a llamarla. */
   if (!syDisponible()) return { ok: false, motivo: 'La copia en tu cuenta está disponible en la versión web.' };
-  if (!_sessionKey) return { ok: false, motivo: 'Desbloquea con tu PIN antes de sincronizar.' };
+  if (!_sessionKey) return { ok: false, motivo: 'La aplicación todavía se está abriendo.' };
   if (!syVinculado()) return { ok: false, motivo: 'Este equipo todavía no está vinculado.' };
   if (typeof wc !== 'undefined' && wc) return { ok: false, motivo: 'Hay una captura abierta. Ciérrala y vuelve a sincronizar.' };
   if (!navigator.onLine) return { ok: false, motivo: 'Sin conexión. Se sincroniza cuando vuelva la señal.' };
@@ -25314,108 +25376,10 @@ async function syUiDesvincular() {
   toast('Este equipo ya no se sincroniza');
 }
 
-/* ── EL ARRANQUE GUIADO ───────────────────────────────────────────────────
-   El motor de sincronización llevaba tiempo funcionando y casi nadie lo activaba,
-   porque no había una sola pantalla que lo ofreciera: había que saber que existía y
-   entrar a buscarlo. Aquí se ofrece UNA vez, justo después de crear el PIN, que es
-   el único momento del primer arranque en que el funcionario no está a mitad de un
-   procedimiento.
-
-   ⚠️ SE PUEDE SALTAR, y no es negociable: esta aplicación se usa en la calle y sin
-   señal. Un arranque que EXIJA una cuenta deja a un funcionario sin poder registrar
-   una captura en el sitio, que es justo para lo que existe. Por eso «Ahora no» está
-   a la vista y no escondido.
-
-   ⚠️ Y solo aparece donde puede funcionar: dentro del envoltorio de la tienda,
-   Google no deja pedir el permiso, así que `syDisponible()` lo apaga entero. Un paso
-   de instalación que termina en un error de Google es peor que no tener el paso.
-
-   ⚠️ El PIN va PRIMERO aunque la contraseña se pida después: el vínculo se guarda
-   cifrado bajo el PIN, así que antes de que exista no hay dónde escribirlo. */
-function syOnboardTrasPin() {
-  /* ⚠️ FASE 0: apagado. Invitaba a activar una copia cuya regla de fusión
-     revertía correcciones; la cuenta de la Fase 2 lo sustituye entero. */
-  if (!lcFlag('syncOnboarding')) return false;
-  if (typeof syDisponible !== 'function' || !syDisponible() || !SY_CLIENT_ID) return false;
-  if (syVinculado()) return false;
-  /* ⚠️ NO se adelanta aquí la carga del script de Google, aunque ahorraría una espera
-     al tocar el botón: esta pantalla sale en el PRIMER arranque, que puede ser en la
-     calle y sin señal, y la aplicación tiene que abrirse sin contactar a nadie. El
-     script se carga cuando se pide el permiso, que es cuando hace falta de verdad. */
-  syOnboard1();
-  return true;
-}
-
-function syOnboard1() {
-  _pinOv(
-    '<div class="pin-logo">' + "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M17.5 19H7a4.5 4.5 0 0 1-.9-8.9A6 6 0 0 1 17.8 9.6 4.2 4.2 0 0 1 17.5 19z\"/><path d=\"M12 11v6m0 0 2.2-2.2M12 17l-2.2-2.2\"/></svg>" + '</div>' +
-    '<div class="pin-title">Que no se pierda nada</div>' +
-    '<div class="pin-sub">Tus capturas quedan guardadas en tu propio Google Drive, cifradas. ' +
-    'Si cambias de teléfono o reinstalas la app, las recuperas.</div>' +
-    '<button class="pin-btn" onclick="syOnboard2(1)">Ya la uso en otro equipo</button>' +
-    '<button class="pin-btn sec" onclick="syOnboard2(0)">Es la primera vez</button>' +
-    '<div class="pin-forget" onclick="syOnboardSalir()">Ahora no</div>'
-  );
-}
-
-function syOnboard2(traer) {
-  var h = traer
-    ? '<div class="pin-title">Traer mis datos</div>' +
-      '<div class="pin-sub">Entra con el mismo correo del otro equipo y escribe tu contraseña ' +
-      'de recuperación.</div>' +
-      '<input class="pin-in txt" type="password" id="sy-ob-f" placeholder="Contraseña de recuperación" ' +
-      'autocomplete="current-password">'
-    : '<div class="pin-title">Elige tu contraseña</div>' +
-      '<div class="pin-sub">Es lo que te devuelve tus capturas si pierdes el teléfono. ' +
-      'No se guarda en ninguna parte: si la olvidas, nadie puede recuperarla.</div>' +
-      '<input class="pin-in txt" type="password" id="sy-ob-f" placeholder="Contraseña de recuperación" ' +
-      'autocomplete="new-password">' +
-      '<input class="pin-in txt" type="password" id="sy-ob-g" placeholder="Repite la contraseña" ' +
-      'autocomplete="new-password">';
-  _pinOv(h +
-    '<div class="pin-err" id="sy-ob-err"></div>' +
-    '<button class="pin-btn" id="sy-ob-btn" onclick="syOnboardIr(' + (traer ? 1 : 0) + ')">' +
-    'Continuar con Google</button>' +
-    '<div class="pin-forget" onclick="syOnboard1()">Volver</div>'
-  );
-  setTimeout(function () { var e = document.getElementById('sy-ob-f'); if (e) e.focus(); }, 120);
-}
-
-async function syOnboardIr(traer) {
-  var f = (document.getElementById('sy-ob-f') || {}).value || '';
-  var err = document.getElementById('sy-ob-err');
-  var btn = document.getElementById('sy-ob-btn');
-  var di = function (m) { if (err) err.textContent = m; };
-  if (traer) {
-    if (!f) { di('Escribe tu contraseña de recuperación.'); return; }
-  } else {
-    var g = (document.getElementById('sy-ob-g') || {}).value || '';
-    var mal = syFraseFloja(f);
-    if (mal) { di(mal); return; }
-    if (f !== g) { di('Las contraseñas no coinciden.'); return; }
-  }
-  di('Conectando con Google…');
-  if (btn) btn.disabled = true;
-  var r = traer ? await syRecuperar(f) : await syActivarNuevo(f);
-  if (btn) btn.disabled = false;
-  if (!r.ok) {
-    /* La cuenta existe pero se vinculó antes de que hubiera contraseña. No es un
-       error del funcionario y se le dice por dónde salir, no solo que falló. */
-    di(r.vacia ? 'Esta cuenta no tiene contraseña de recuperación todavía. Entra a Sincronización y usa el código de 26 caracteres del otro equipo.' : r.motivo);
-    return;
-  }
-  _pinHide();
-  _syUltimo = traer ? syResumen(r) : 'Se subieron tus datos por primera vez.';
-  renderCases();
-  if (r.sinCaja) { toast(r.motivo, 9000); return; }
-  toast(traer ? 'Listo — ' + syResumen(r) : 'Tus capturas quedan a salvo en tu cuenta ✓', 6000);
-}
-
-function syOnboardSalir() {
-  _pinHide();
-  renderCases();
-  toast('Puedes activarlo cuando quieras en Sincronización', 5000);
-}
+/* ── EL ARRANQUE GUIADO de la copia en Drive se retiró (F1, 2026-10-23) ──────
+   Se ofrecía justo después de crear el PIN, y el PIN ya no existe. Llevaba
+   apagado por bandera desde la Fase 0; la copia en Drive entera se retira en la
+   F4, cuando la sustituya la cuenta. */
 
 /* La cola del subtítulo de Capturas. ⚠️ Solo cuando este equipo sincroniza: a quien
    no lo tiene activado no se le habla de copias que no existen. Y va en el subtítulo

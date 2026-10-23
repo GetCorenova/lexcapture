@@ -41,15 +41,7 @@ async function abrirEquipo(pin, tag) {
   await pg.evaluate(() => localStorage.clear());
   await pg.reload({ waitUntil: 'load' });
   await pg.waitForTimeout(400);
-  await pg.fill('#pin-a', pin); await pg.fill('#pin-b', pin);
-  await pg.click('button[onclick="doSetPin()"]');
-  /* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-     pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-     la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-     verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-     cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-  await pg.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-    .then(() => pg.evaluate(() => syOnboardSalir())).catch(() => {});
+  await pg.waitForFunction(() => window._lcListo === true);
   await pg.waitForTimeout(800);
   return pg;
 }
@@ -196,7 +188,12 @@ const snapA = await A.evaluate(() => JSON.stringify(sySnapshot()));
 await B.evaluate(async () => {
   await DB.savePersons([{ id: 'p9', priNom: 'CARLOS', priApe: 'MEJIA', numDoc: '999', tipoDoc: 'CC' }]);
   await DB.saveCases([{ id: 'c9', tipo: 'CESPA', created: Date.now(), capturados: [{ id: 'y9', priNom: 'PEDRO' }] }]);
-  const cfg = DB.getConfig(); cfg.ojUnidad = 'UNIDAD DE B'; DB.saveConfig(cfg);
+  const cfg = DB.getConfig(); cfg.ojUnidad = 'UNIDAD DE B';
+  /* Desde la F1 el aviso anual del NUNC corre en CADA apertura (antes, solo al
+     desbloquear con el PIN), así que B ya trae su propia marca. Se le quita para
+     tener lo que mide [D6]: un equipo que todavía no corrió su migración. */
+  delete cfg.nuncAno;
+  await DB.saveConfig(cfg);
 });
 const d1 = await B.evaluate(async (s) => {
   const r = await syAplicar(JSON.parse(s));
@@ -269,7 +266,7 @@ const e1 = await A.evaluate(async () => {
   _sessionKey = antes;
   return { ok: r.ok, motivo: r.motivo };
 });
-log(!e1.ok && /PIN/i.test(e1.motivo), '[E1] sin sesión abierta no se sincroniza', e1.motivo);
+log(!e1.ok && /abriendo/i.test(e1.motivo), '[E1] sin sesión abierta no se sincroniza', e1.motivo);
 
 const e2 = await A.evaluate(async () => {
   await syGuardarEstado({ k: syClaveNueva(), fileId: '', ts: 0 });
@@ -751,51 +748,30 @@ log(j11.ok && j11.sigue && j11.intacto,
     '[J11] un archivo que no se puede abrir NO se borra ni se pisa', JSON.stringify(j11));
 log(j11.ilegibles === 1, '[J12] y se cuenta, para poder decirlo', j11.ilegibles);
 
-/* EL ARRANQUE GUIADO. Un tercer equipo, recién instalado: es lo que hace que
-   alguien llegue a activar esto, que es lo que llevaba tiempo sin pasar. */
-/* ⚠️ Este equipo NO pasa por `abrirEquipo`, que cierra el arranque guiado a
-   propósito para dejar la aplicación como la ve quien ya la tenía. Aquí hace falta
-   lo contrario: ver lo que sale SOLO al crear el PIN, que es el disparo que de
-   verdad importa —llamar a la función a mano probaría la función, no el camino—. */
+/* EL ARRANQUE GUIADO SE RETIRÓ (F1, 2026-10-23): colgaba de la creación del PIN,
+   que ya no existe, y la copia en Drive la sustituye la cuenta (F4). Un equipo
+   recién instalado tiene que abrir DIRECTO, sin ofrecer nada y sin tocar la red. */
 const Cctx = await browser.newContext({ viewport: { width: 384, height: 800 } });
 const C = await Cctx.newPage();
 C.on('pageerror', e => errs.push('C: ' + String(e.message).slice(0, 90)));
 C.on('console', m => { if (m.type() === 'error') errs.push('C: ' + m.text().slice(0, 90)); });
 await C.goto('http://localhost:8137/LexCapture_v8.html', { waitUntil: 'load' });
-/* ⚠️ FASE 0: el arranque guiado quedó apagado (bandera `syncOnboarding`). Lo que
-   se mide aquí es que, el día que se encienda, siga funcionando igual; que por
-   defecto NO salga lo mide [K0]. */
-await C.evaluate(() => { localStorage.clear(); localStorage.setItem('lc_flags', JSON.stringify({ syncOnboarding: true })); });
+await C.evaluate(() => localStorage.clear());
 await C.reload({ waitUntil: 'load' });
-await C.waitForTimeout(400);
-await C.fill('#pin-a', '4321'); await C.fill('#pin-b', '4321');
-await C.click('button[onclick="doSetPin()"]');
-/* ⚠️ Este equipo NO cierra el arranque guiado: es justo lo que se va a medir. */
+await C.waitForFunction(() => window._lcListo === true);
 await C.waitForTimeout(700);
-
-const j13 = await C.evaluate(() => {
-  const ov = document.getElementById('pin-ov');
-  const box = document.getElementById('pin-box');
-  const r = box ? box.getBoundingClientRect() : { width: 0, height: 0 };
-  return { visible: !!ov && ov.classList.contains('on'), alto: Math.round(r.height),
-           ancho: Math.round(r.width), texto: (box || {}).innerText || '',
-           saltar: !!document.querySelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]') };
-});
-log(j13.visible && j13.alto > 80 && j13.ancho > 200,
-    '[J13] al crear el PIN por primera vez se ofrece, y SE VE', JSON.stringify({ alto: j13.alto, ancho: j13.ancho }));
-log(j13.saltar,
-    '[J14] y se puede saltar: sin señal, exigir cuenta dejaría al funcionario sin poder trabajar');
-log(j13.texto.length > 0 && !/token|OAuth|appData|AES|blob|Drive API/i.test(j13.texto),
-    '[J15] ni una palabra técnica en pantalla', j13.texto.replace(/\n/g, ' · ').slice(0, 90));
-
-const j16 = await C.evaluate(() => {
-  syOnboardSalir();
-  return { cerrado: !document.getElementById('pin-ov').classList.contains('on'),
-           gis: !!document.querySelector('script[src*="accounts.google.com"]') };
-});
-log(j16.cerrado, '[J16] «Ahora no» devuelve la aplicación sin activar nada');
-log(!j16.gis,
-    '[J17] y por el camino no se contactó a Google: el primer arranque no depende de la red');
+const j13 = await C.evaluate(() => ({
+  ov: document.getElementById('pin-ov').classList.contains('on'),
+  fns: ['syOnboardTrasPin','syOnboard1','syOnboard2','syOnboardIr','syOnboardSalir'].filter(n => typeof window[n] !== 'undefined'),
+  flag: typeof LC_FLAGS.syncOnboarding,
+  gis: !!document.querySelector('script[src*="accounts.google.com"]'),
+  sesion: !!_sessionKey
+}));
+log(!j13.ov, '[J13] un equipo recién instalado abre directo: no hay PIN ni ofrecimiento delante');
+log(j13.fns.length === 0, '[J14] el arranque guiado no quedó como código sin puerta', JSON.stringify(j13.fns));
+log(j13.flag === 'undefined', '[J15] y su bandera tampoco');
+log(!j13.gis, '[J16] el primer arranque no contacta a Google: no depende de la red');
+log(j13.sesion, '[J17] y la sesión queda abierta con la llave del equipo');
 
 /* La línea de la última copia, en el subtítulo de Capturas. */
 const j18 = await A.evaluate(async () => {
@@ -882,11 +858,10 @@ const K1 = await abrirEquipo('2468', 'K1');
 const K2 = await abrirEquipo('1357', 'K2');
 await kConDrive(K1); await kConDrive(K2);
 
-/* El ofrecimiento tras el PIN quedó apagado: estos dos equipos se abrieron sin
-   cerrarlo a mano (abrirEquipo lo intenta y no lo encuentra). */
+/* Sin PIN y sin arranque guiado (F1): estos dos equipos abrieron directo. */
 const k0 = await K1.evaluate(() => ({ ov: document.getElementById('pin-ov').classList.contains('on'),
-                                      flag: lcFlag('syncOnboarding') }));
-log(!k0.ov && k0.flag === false, '[K0] al crear el PIN ya no se ofrece la copia (bandera apagada)', JSON.stringify(k0));
+                                      sinOnboard: typeof syOnboardTrasPin === 'undefined' }));
+log(!k0.ov && k0.sinOnboard, '[K0] al abrir no se ofrece la copia (el arranque guiado se retiró)', JSON.stringify(k0));
 
 /* K1 tiene su trabajo y activa la copia; K2 se vincula con el código. */
 const kc = await K1.evaluate(async () => {

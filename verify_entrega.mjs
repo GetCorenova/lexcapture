@@ -119,16 +119,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
-await page.fill('#pin-a', '7788');
-await page.fill('#pin-b', '7788');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(400);
 
 /* Una descripción larga a propósito: es la que obliga a que el elemento ocupe
@@ -876,8 +867,7 @@ log(guardado.obs === 'Observación de prueba' && guardado.forma === 'P' && guard
   JSON.stringify(guardado));
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
-await page.fill('#pin-e', '7788');
-await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(500);
 log(await page.evaluate(() => (DB.getCase('fe-uri').entrega || {}).obs === 'Observación de prueba'),
   'Y sobrevive a recargar la app');

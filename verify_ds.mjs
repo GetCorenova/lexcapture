@@ -36,21 +36,11 @@ await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
 
-// 1. PIN setup
-log(await page.$eval('#pin-ov', el => el.classList.contains('on')).catch(() => false), 'PIN overlay visible en primer arranque');
-await page.screenshot({ path: OUT('01_pin_dark') });
-await page.fill('#pin-a', '135790');
-await page.fill('#pin-b', '135790');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+// 1. Arranque sin PIN (F1): abre directo, sin ninguna pantalla delante
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(500);
-log(await page.$eval('#pin-ov', el => !el.classList.contains('on')), 'PIN configurado, overlay cerrado');
+log(await page.$eval('#pin-ov', el => !el.classList.contains('on')), 'Arranca directo, sin pantalla de PIN');
+await page.screenshot({ path: OUT('01_arranque_dark') });
 
 // 2. Capturas vacío
 await page.screenshot({ path: OUT('02_capturas_vacio_dark') });
@@ -161,13 +151,9 @@ const pageD = await ctxD.newPage();
 pageD.on('pageerror', e => errors.push('desktop pageerror: ' + e.message));
 await pageD.goto('http://localhost:8091/LexCapture_v8.html', { waitUntil: 'load' });
 await pageD.waitForTimeout(500);
-// desbloquear con el PIN ya creado
-const pinVisible = await pageD.$eval('#pin-ov', el => el.classList.contains('on')).catch(() => false);
-if (pinVisible) {
-  await pageD.fill('.pin-in', '135790').catch(() => {});
-  await pageD.click('.pin-btn').catch(() => {});
-  await pageD.waitForTimeout(600);
-}
+// sin PIN: basta con esperar a que la sesión abra
+await pageD.waitForFunction(() => window._lcListo === true);
+await pageD.waitForTimeout(300);
 await pageD.screenshot({ path: OUT('19_desktop_capturas_dark') });
 await pageD.evaluate(() => go('estadisticas'));
 await pageD.waitForTimeout(400);

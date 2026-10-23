@@ -17,15 +17,7 @@ const errs=[]; page.on('pageerror',e=>errs.push(String(e.message).slice(0,80)));
 page.on('console',m=>{if(m.type()==='error')errs.push(m.text().slice(0,80));});
 await page.goto('http://localhost:8120/LexCapture_v8.html',{waitUntil:'load'});
 await page.evaluate(()=>localStorage.clear()); await page.reload({waitUntil:'load'}); await page.waitForTimeout(400);
-await page.fill('#pin-a','135790'); await page.fill('#pin-b','135790');
-await page.click('button[onclick="doSetPin()"]'); await page.waitForTimeout(800);
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true); await page.waitForTimeout(800);
 
 log(await page.evaluate(()=>!!_sessionKey), '[1] El PIN se configura y hay sesión activa');
 
@@ -75,7 +67,7 @@ log(t7.ok>=200, '[7] Guarda 200 capturas (antes fallaba entre la 23 y la 27)', t
 
 // [8] sobreviven a recargar
 await page.reload({waitUntil:'load'}); await page.waitForTimeout(500);
-await page.fill('#pin-e','135790'); await page.click('button[onclick="doUnlockPin()"]'); await page.waitForTimeout(1400);
+await page.waitForFunction(() => window._lcListo === true); await page.waitForTimeout(1400);
 log(await page.evaluate(()=>DB.getCases().length)===200, '[8] Las 200 se releen tras recargar y desbloquear');
 
 // [9] REVERSIÓN DE CACHÉ: una escritura que falla no deja la captura en la lista
@@ -97,8 +89,8 @@ const t10=await page.evaluate(()=>({
   cuota: _lcMsgGuardado({name:'QuotaExceededError'},'la captura'),
   sesion: _lcMsgGuardado(new Error('Sin sesión activa — no se guardó'),'la captura')
 }));
-log(/memoria del equipo está llena/.test(t10.cuota) && /sesión se cerró/.test(t10.sesion) && !/PIN pudo bloquearse/.test(t10.cuota),
-    '[10] El aviso nombra la causa real, ya no culpa siempre al PIN');
+log(/memoria del equipo está llena/.test(t10.cuota) && /sesión no está abierta/.test(t10.sesion) && !/PIN/.test(t10.cuota + t10.sesion),
+    '[10] El aviso nombra la causa real, y ya no habla de un PIN que no existe');
 console.log('     cuota  →', t10.cuota);
 console.log('     sesión →', t10.sesion);
 

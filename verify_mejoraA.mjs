@@ -36,11 +36,7 @@ await page.goto('http://localhost:8131/LexCapture_v8.html', { waitUntil: 'load' 
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
-await page.fill('#pin-a', '135790');
-await page.fill('#pin-b', '135790');
-await page.click('button[onclick="doSetPin()"]');
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(800);
 
 /* ═══ 1 y 4 · zona segura ═══ */

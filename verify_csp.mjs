@@ -60,8 +60,7 @@ await page.goto('http://localhost:8163/LexCapture_v8.html', { waitUntil: 'load' 
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(300);
-await page.fill('#pin-a', '3579'); await page.fill('#pin-b', '3579');
-await page.click('button[onclick="doSetPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(1200);
 
 /* Lo que más recursos toca: los seis documentos, la vista de impresión, el QR. */

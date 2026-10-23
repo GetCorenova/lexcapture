@@ -44,16 +44,7 @@ await page.goto(BASE, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
-await page.fill('#pin-a', '246813');
-await page.fill('#pin-b', '246813');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(400);
 
 await page.evaluate(() => {
@@ -200,8 +191,7 @@ log(/CARLOS/.test(trasEscribir || ''),
 /* ─────────── 5. Sobrevive a que el sistema mate la app ─────────── */
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(300);
-await page.fill('#pin-e', '246813');
-await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(600);
 
 const tarjeta = await page.evaluate(() => {
@@ -352,8 +342,7 @@ log(trasNuevo.enWizard === true && trasNuevo.numero === '',
 await page.evaluate(() => { wc = null; DB.clearDraft(); });
 await page.reload({ waitUntil: 'networkidle' });
 await page.waitForTimeout(400);
-await page.fill('#pin-e', '246813');
-await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(700);
 /* ⚠️ Se mide el DELTA, no el total: a esta altura de la suite ya hay una captura
    guardada (la del punto 11, que sí terminó). Lo que se comprueba es que el

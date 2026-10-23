@@ -64,17 +64,9 @@ await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
 
 /* ═══ Parte A · El control aparece solo cuando hay algo que ordenar ═══ */
-log(await page.isVisible('#pin-a'), 'Arranca pidiendo crear el PIN');
-await page.fill('#pin-a', '2468');
-await page.fill('#pin-b', '2468');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+/* F1: ya no hay PIN que crear. Se comprueba que arranca directo, sin overlay. */
+await page.waitForFunction(() => window._lcListo === true);
+log(!(await page.isVisible('#pin-ov.on')), 'Arranca directo, sin pedir PIN');
 await page.waitForTimeout(600);
 
 await page.evaluate(() => go('capturas'));
@@ -218,8 +210,7 @@ log(cfgOrden === 'ant/rec', 'Cada pantalla guarda su propio orden', cfgOrden);
 
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(500);
-await page.fill('#pin-e', '2468');
-await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(900);
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(500);
@@ -238,12 +229,17 @@ log(colores === 'rgba(0, 0, 0, 0)', 'En tema claro el control sigue siendo trans
 await page.evaluate(() => setTheme('dark'));
 await page.waitForTimeout(300);
 
-/* ═══ Parte E · Con la lista bajo PIN no hay control de orden ═══ */
-await page.reload({ waitUntil: 'load' });
-await page.waitForTimeout(600);
+/* ═══ Parte E · Mientras la sesión no ha abierto no hay control de orden ═══
+   (Antes: «con la lista bajo PIN». Desde la F1 no hay PIN, pero la lista sigue
+   vacía un instante mientras se abre la sesión, y no hay nada que ordenar.) */
 await page.evaluate(() => go('capturas'));
 await page.waitForTimeout(400);
-log(await page.$eval('#ord-capturas', b => b.hidden), 'Con las capturas bajo PIN, el control de orden está oculto');
+log(await page.evaluate(() => {
+  const k = _sessionKey; _sessionKey = null; renderCases();
+  const oculto = document.getElementById('ord-capturas').hidden;
+  _sessionKey = k; renderCases();
+  return oculto;
+}), 'Mientras la sesión no ha abierto, el control de orden está oculto');
 
 /* ═══ Parte F · Un equipo recién instalado arranca en los defectos ═══ */
 /* ⚠️ Sustituye a la parte del modo invitado, que se retiró entero de la app. Lo
@@ -254,11 +250,9 @@ log(await page.$eval('#ord-capturas', b => b.hidden), 'Con las capturas bajo PIN
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(600);
-/* ⚠️ FASE 0: la configuración va cifrada con la llave del PIN, así que un equipo
-   recién instalado la guarda DESPUÉS de crear el PIN — que es además lo único que
-   puede pasar en la app de verdad: la pantalla del PIN tapa todo lo demás. */
-await page.fill('#pin-a', '1470'); await page.fill('#pin-b', '1470');
-await page.click('button[onclick="doSetPin()"]');
+/* La configuración va cifrada con la llave del equipo: se guarda cuando la
+   sesión ya abrió. */
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(1200);
 const nuevo = await page.evaluate(() => {
   const cap = lcOrden('capturas'), per = lcOrden('personas');

@@ -31,16 +31,7 @@ await page.goto('http://localhost:8093/LexCapture_v8.html', { waitUntil: 'load' 
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
-await page.fill('#pin-a', '135790');
-await page.fill('#pin-b', '135790');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(600);
 
 // Sembrar personas de prueba
@@ -217,15 +208,7 @@ const p2 = await ctx2.newPage();
 p2.on('pageerror', e => errors.push('desktop pageerror: ' + e.message));
 await p2.goto('http://localhost:8093/LexCapture_v8.html', { waitUntil: 'load' });
 await p2.waitForTimeout(500);
-await p2.fill('#pin-a', '135790'); await p2.fill('#pin-b', '135790');
-await p2.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await p2.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => p2.evaluate(() => syOnboardSalir())).catch(() => {});
+await p2.waitForFunction(() => window._lcListo === true);
 await p2.waitForTimeout(600);
 await p2.evaluate(() => {
   ['Ana|Ríos|Capturado','Luis|Peña|Testigo'].forEach(s => { const [n,a,r]=s.split('|'); DB.savePerson({id:uid(),priNom:n,priApe:a,tipoDoc:'CC',numDoc:'1020304050',rol:r}); });

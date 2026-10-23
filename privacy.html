@@ -31,7 +31,7 @@
 </head>
 <body>
 <h1>Política de Privacidad — Flagrante</h1>
-<p class="updated">Última actualización: 25 de septiembre de 2026</p>
+<p class="updated">Última actualización: 23 de octubre de 2026</p>
 
 <p>
   Flagrante es una aplicación de uso profesional para el registro de procedimientos de captura y la
@@ -67,8 +67,8 @@
 <h2>3. Dónde se almacena</h2>
 <p>
   Los datos se guardan en el <strong>almacenamiento local del propio dispositivo</strong>
-  (<code>localStorage</code>), <strong>cifrados con AES-GCM</strong> y protegidos por un PIN que
-  define el usuario. También va cifrada la configuración, que incluye los datos del funcionario y
+  (<code>localStorage</code>), <strong>cifrados con AES-GCM</strong> con una llave propia del equipo que
+  la aplicación genera al instalarse y que no se puede extraer ni copiar. También va cifrada la configuración, que incluye los datos del funcionario y
   de su compañero de patrulla. La aplicación no cuenta con servidor ni con base de datos propia: no
   hay ningún lugar al que quien la desarrolla pueda ir a consultar esa información.
 </p>
@@ -211,10 +211,11 @@
 
 <h2>12. Seguridad</h2>
 <p>
-  La información se almacena cifrada (AES-GCM) y protegida por PIN, y todo lo que sale del
-  dispositivo va cifrado. No obstante, la seguridad depende también del cuidado del equipo por parte
-  del usuario (bloqueo de pantalla, custodia del dispositivo y del PIN). Se recomienda no compartir
-  el dispositivo ni el PIN.
+  La información se almacena cifrada (AES-GCM) con una llave propia del equipo, y todo lo que sale
+  del dispositivo va cifrado. La aplicación no pide PIN al abrirse: quien tenga el teléfono
+  desbloqueado en la mano puede ver la información, así que la seguridad depende también del cuidado
+  del equipo por parte del usuario (bloqueo de pantalla y custodia del dispositivo). Se recomienda no
+  compartir el dispositivo y mantener activo su bloqueo de pantalla.
 </p>
 <p>
   La contraseña de recuperación —y el código de 26 caracteres que hace de respaldo— los custodia el

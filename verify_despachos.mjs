@@ -77,16 +77,7 @@ await page.goto(BASE, { waitUntil: 'load' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
-await page.fill('#pin-a', '2468');
-await page.fill('#pin-b', '2468');
-await page.click('button[onclick="doSetPin()"]');
-/* ⚠️ El arranque guiado sale justo aquí, al crear el PIN por primera vez, y tapa la
-   pantalla hasta que se responda. Se cierra para seguir midiendo la aplicación como
-   la ve quien ya la tenía instalada; que aparezca y se pueda saltar lo comprueba
-   verify_sync (sección J). Se ESPERA a que salga en vez de adivinar lo que tarda el
-   cifrado del PIN: con un tiempo fijo, aparecería después de cerrarlo. */
-await page.waitForSelector('#pin-box .pin-forget[onclick="syOnboardSalir()"]', { timeout: 2500 })
-  .then(() => page.evaluate(() => syOnboardSalir())).catch(() => {});
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(700);
 
 /* ═══ Parte B · Equipo recién instalado: la pantalla arranca VACÍA ══════════ */
@@ -178,8 +169,7 @@ log(l.length === 2 && l.some(d => /Sede Caribe/.test(d.nombre)),
 
 await page.reload({ waitUntil: 'load' });
 await page.waitForTimeout(400);
-await page.fill('#pin-e', '2468');
-await page.click('button[onclick="doUnlockPin()"]');
+await page.waitForFunction(() => window._lcListo === true);
 await page.waitForTimeout(700);
 await page.evaluate(() => go('despachos'));
 await page.waitForTimeout(400);
