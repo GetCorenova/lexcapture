@@ -12,10 +12,9 @@
 > teléfono con Play Integrity Device Recall / pagado / vencido) · F4 sincronización por registro con
 > Firestore (retira la copia en Drive) · F5 compras (RevenueCat + Play Billing, solo Android) ·
 > F6 cumplimiento. Detalle en «Sin PIN (F1)», «La cuenta (F2)», «El derecho de uso (F3)» y «La nube (F4)», al
-> final. **F1 y F2 fusionadas en `main` el 2026-10-23 (sin publicar). F3 aprobada pero SIN
-> fusionar (el sistema de permisos bloqueó la fusión en `main`; queda para el usuario). F4 hecha en
-> la rama `f4-nube`, construida ENCIMA de `f3-derecho`, sin fusionar ni publicar. Ninguna de las
-> dos se publica antes que la F5 (la F3 cierra la app al día 15 y todavía no se puede pagar).
+> final. **F1, F2, F3 y F4 fusionadas en `main` el 2026-10-23, cada una con su commit de merge
+> (sin publicar: `main` no se ha subido a `origin`). Ni la F3 ni la F4 se publican antes que la F5
+> (la F3 cierra la app al día 15 y todavía no se puede pagar).
 > La cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
