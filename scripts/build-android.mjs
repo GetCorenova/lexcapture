@@ -123,6 +123,9 @@ mkdirSync(WWW, { recursive: true });
 copyFileSync(join(RAIZ, 'LexCapture_v8.html'), join(WWW, 'index.html'));
 for (const f of ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon.svg'])
   copyFileSync(join(RAIZ, f), join(WWW, f));
+// El SDK de Firebase de la cuenta: la app lo carga de 'vendor/firebase.js'.
+mkdirSync(join(WWW, 'vendor'), { recursive: true });
+copyFileSync(join(RAIZ, 'vendor', 'firebase.js'), join(WWW, 'vendor', 'firebase.js'));
 ok(`www/ listo (build ${buildWeb})`);
 const cap = spawnSync('npx cap copy android', [], { cwd: WRAP, stdio: 'inherit', shell: true });
 if (cap.status !== 0) { console.error('\nBUILD FALLIDO — «npx cap copy android» devolvió ' + cap.status + '\n'); process.exit(1); }

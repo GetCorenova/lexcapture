@@ -25,6 +25,9 @@
   ],
   "license": "UNLICENSED",
   "devDependencies": {
+    "esbuild": "0.28.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.32.1",
     "playwright": "^1.61.0"
   }
 }

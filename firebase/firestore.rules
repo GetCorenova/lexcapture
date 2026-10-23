@@ -1,0 +1,40 @@
+rules_version = '2';
+
+// Reglas de Firestore de FLAGRANTE.
+//
+// Firestore solo guarda SOBRES CIFRADOS: la llave de los datos (DEK) se cifra
+// en el teléfono antes de salir, con una llave que sale de la contraseña del
+// usuario (que Firebase nunca recibe) o con su código de recuperación. Estas
+// reglas deciden QUIÉN puede leer y escribir esos sobres; lo que contienen no
+// lo puede leer nadie más que el dueño, aunque las reglas fallaran.
+//
+// F2 (cuenta): solo existe users/{uid}/llaves/main.
+// F3 añadirá el derecho de uso (entitlements) y F4 los registros (reg/*).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function esDueno(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Un sobre cifrado en base64: texto, y nunca enorme.
+    function sobre(v) {
+      return v is string && v.size() > 20 && v.size() < 400;
+    }
+
+    match /users/{uid}/llaves/{id} {
+      allow read, delete: if esDueno(uid) && id == 'main';
+      allow create, update: if esDueno(uid) && id == 'main'
+        && request.resource.data.keys().hasOnly(['v', 'kdf', 'dekClave', 'dekRec', 'dekClaveNueva', 'act'])
+        && request.resource.data.keys().hasAll(['v', 'dekClave', 'dekRec'])
+        && sobre(request.resource.data.dekClave)
+        && sobre(request.resource.data.dekRec)
+        && (!('dekClaveNueva' in request.resource.data) || sobre(request.resource.data.dekClaveNueva));
+    }
+
+    // Todo lo demás, cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

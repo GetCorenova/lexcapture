@@ -7,6 +7,9 @@ const ASSETS = [
   './icon-512.png',
   './icon-maskable-512.png',
   './icon.svg',
+  // El SDK de Firebase (la cuenta): se carga solo cuando hace falta, pero tiene
+  // que estar aquí para poder cerrar sesión o abrir la cuenta sin señal.
+  './vendor/firebase.js',
 ]
 
 self.addEventListener('install', e => {

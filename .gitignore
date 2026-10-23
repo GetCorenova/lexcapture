@@ -33,6 +33,11 @@ mejora1_*.png
 sincro_*.png
 ola*.png
 
+# Registros que dejan los emuladores de Firebase (verify_cuenta.mjs)
+firebase/*.log
+firebase-debug.log
+firestore-debug.log
+
 # Respaldos que deja la reparacion de un .docx
 *.docx.bak
 

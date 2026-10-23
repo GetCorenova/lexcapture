@@ -17,7 +17,12 @@
     // misma copia sirva para GitHub Pages, para un servidor local y para el
     // envoltorio nativo. El resto del proyecto (sw.js, manifest, el registro
     // del Service Worker) ya era relativo.
-    window.location.replace('./LexCapture_v8.html?v=138');
+    //
+    // ⚠️ Se conservan los parámetros y el ancla: los enlaces del correo de la
+    // cuenta (verificar el correo, restablecer la contraseña) llegan aquí con
+    // ?mode=…&oobCode=…, y perderlos en la redirección deja el enlace sin efecto.
+    var _q = location.search ? '&' + location.search.slice(1) : '';
+    window.location.replace('./LexCapture_v8.html?v=138' + _q + location.hash);
   </script>
 </head>
 <body>
