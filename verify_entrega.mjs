@@ -876,8 +876,9 @@ log(await page.evaluate(() => (DB.getCase('fe-uri').entrega || {}).actosUrgentes
 
 /* El perfil pide el teléfono y el correo del compañero: es el campo que pidió
    el usuario («un espacio dentro del perfil del usuario para colocar el correo
-   del compañero de patrulla»). */
-await page.evaluate(() => openPerfilForm('pf-1'));
+   del compañero de patrulla»). Desde el 2026-10-24 vive en la tarjeta propia
+   del compañero, con los mismos ids. */
+await page.evaluate(() => openCompaneroForm());
 await page.waitForTimeout(300);
 log(await page.$('#pfm-ccorreo') !== null && await page.$('#pfm-ctel') !== null,
   '⚠️ El perfil tiene ya el correo (y el teléfono) del compañero de patrulla');

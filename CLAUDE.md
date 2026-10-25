@@ -8109,3 +8109,49 @@ sobraban. **Retirados del código, no desactivados.** Verificado con `verify_com
   custodia 111 · incautación 141 · entrega 111 · fpj6 140 · firma 62. Siguen los preexistentes:
   `verify_ds` 8/9 («favorito con estrella SVG») y `verify_jerarquia` 65/66 (aviso de Ajustes).
   Anti-caché `?v=147` / `cache-v147`, `_BUILD=147`.
+
+## Perfil en tres tarjetas (2026-10-24) — el compañero de patrulla con código QR
+Pedido del usuario con un pantallazo de Perfil marcado en tres recuadros: **1** el perfil (sin
+cambios) · **2** el compañero de patrulla en tarjeta propia, llenable con un escaneo o a mano · **3**
+«Mi jurisdicción», con la regla de que el CAI siempre sale «CAI <nombre>». Verificado con
+`verify_companero_patrulla.mjs` (**33 checks**, nuevo, dos teléfonos) y mirando la pantalla en los
+dos temas.
+- **El dato no se movió**: sigue en `cfg.perfiles[i].companero` del perfil ACTIVO, que es de donde lo
+  leen la cadena de custodia, el rótulo y las actas (`ccCompanero`). Solo cambió dónde se pide:
+  `lcCompRender` (tarjeta `#perfil-comp`) · `openCompaneroForm`/`saveCompaneroForm` (mismos ids
+  `pfm-c…` y la misma `pfmCampos`) · `lcCompGuardar` (fusiona: no borra claves que no pinta) ·
+  `lcCompQuitar`. Con varios perfiles dice de cuál es el compañero.
+- ⚠️ **`savePerfilForm` ya NO escribe `p.companero`**: sus campos salieron de ese formulario y `v()`
+  devolvería '' para cada uno — editar el perfil le habría borrado el compañero. Misma trampa que
+  `entidad`. Un perfil nuevo nace con `companero:{}`.
+- **El código de patrulla** (`lcCompCodigo`/`lcCompLeer`, «FLP1» + seis campos con largo de 1 byte, en
+  el orden de `LC_COMP_CAMPOS`, cada uno acotado): medido, 108 B = versión 7; con los seis campos
+  al tope, 245 B = versión 11. «Mostrar mi código» (`lcCompMostrar`) enseña el del perfil activo; «Escanear»
+  (`lcCompEscanear`) usa el lector de siempre (`ptScanAbrir`) y llena los seis datos de un golpe.
+- ⚠️ **NO es el código de Modo compartir, a propósito** (era lo que el usuario pidió evaluar). Aquel
+  vincula dos CUENTAS: exige cuenta, señal y un secreto de un solo uso que caduca a los 5 minutos.
+  Este lleva solo los seis datos que el funcionario enseña en su propia pantalla y tiene que servir
+  en la calle, sin señal y sin cuenta (incluso a quien no la ha creado). Atarlos haría que llenar el
+  compañero dependiera de la cobertura. Si le enseñan el de Modo compartir, el lector lo reconoce y
+  dice cuál pedir. El propio código y uno ajeno no tocan nada.
+- ⚠️ Con un código equivocado el lector **se cierra** tras avisar: devolviendo `false` se volvería a
+  leer en el fotograma siguiente y el aviso se repetiría sin fin.
+- **Las dos tarjetas nuevas** son `.pf-sec` (mismo canto, radio y sombra que `.pf-card`) con su
+  acordeón dentro; vacías nacen abiertas y, llenas, dicen quién/qué hay sin abrirlas.
+- **CAI**: `lcCaiLabel` antepone «CAI» a lo que se escriba en el campo CAI, reescribe «cai»/«C.A.I.»
+  como «CAI» y **no toca** lo que ya trae otro tipo de unidad (`OJ_RE_TIPO_DEP`: estación, cuadrante…).
+  Se aplica al salir del campo (visible), al guardar, en `patrullaLabel` y en `dosPatrullaFmt` (lo
+  guardado antes y las fotos del dossier también salen con CAI).
+- ⚠️ **Defecto PREEXISTENTE corregido de paso**: `ojNuevoCaso` (unidad de la diligencia) y
+  `SIM.gUnidad` sumaban `patrullaUnidad` a `patrullaLabel`, que ya la incluye: el CAI salía **dos
+  veces** («PATRULLA 32 CAI X CAI X»).
+- Suites adaptadas sin bajar su cuenta (el compañero ya no está en el formulario del perfil):
+  `verify_mejora7` [A17]–[A24] (67), `verify_custodia` (111), `verify_entrega` (111) y
+  `verify_grados` (31).
+- ⚠️ `lcCompMostrar`/`lcCompEscanear` viven **junto al buzón de compañeros** (tras el módulo de Modo
+  compartir) y no junto a su tarjeta: usan el códec y el lector (`ptQrSvg`, `ptScanAbrir`), y
+  `verify_compartir` [E3] y `verify_sincro` [B2] exigen que nada antes del módulo lo llame.
+- Regresión completa: en verde todo salvo los cuatro preexistentes ya documentados (`dossier_historico`
+  [20][21], `ds`, `jerarquia`, `mejora6b` [47][53]). En verde, entre otras: companero_patrulla 33 ·
+  compartir 57 · sincro 32 · companeros 34 · envío por buzón 36 · nube 39 · prueba 71 · compras 30 ·
+  mejora7 67 · custodia 111 · entrega 111 · grados 31. Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.

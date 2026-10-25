@@ -1530,6 +1530,11 @@ body.cu-on{overflow:hidden}
   padding:4px 6px;display:inline-block;max-width:100%;
 }
 .pf-firma img{display:block;height:30px;width:auto;max-width:100%;object-fit:contain}
+/* Perfil en tres tarjetas (2026-10-24): el compañero de patrulla y Mi jurisdicción
+   son tarjetas como la del perfil, con su acordeón dentro. */
+.pf-sec{background:var(--surface-1);border:1px solid var(--card-bd);border-radius:12px;padding:0 14px;margin-bottom:10px;box-shadow:var(--sh-1)}
+.pf-sec .lc-acc-hdr{border-bottom:0}
+.pf-sec .lc-acc-body{padding-bottom:14px}
 
 /* ═══ FIRMA DIGITAL (perfil) ═══ */
 .fw-pad{
@@ -14569,7 +14574,8 @@ function openPerfilForm(id) {
    hacen estando juntos, pero no son la misma: atarlas haría que llenar el
    compañero dependiera de la cobertura. El lector avisa si le enseñan el otro.
    Formato: «FLP1» + seis campos (largo de 1 byte + UTF-8), en el orden de
-   LC_COMP_CAMPOS. Unos 150 bytes: un código de versión 8-10. */
+   LC_COMP_CAMPOS. Unos 110 bytes (versión 7); con los seis campos al tope,
+   245 bytes (versión 11). */
 var LC_COMP_MAGIA=[70,76,80,49];  // «FLP1»
 var LC_COMP_CAMPOS=[['nombre',60,'Nombres y apellidos'],['grado',30,'Grado'],['cedula',15,'Cédula'],
                     ['cargo',50,'Cargo'],['telefono',20,'Teléfono'],['correo',60,'Correo institucional']];
@@ -14643,10 +14649,10 @@ function lcCompRender(cfg){
     }).join('')+'</div>';
   }
   cuerpo+='<div class="pt-paso" style="margin-top:'+(tiene?'14px':'0')+'">'+
-    '<button class="pt-op" onclick="lcCompEscanear()"><div class="lic">'+PT_IC.escanear+'</div>'+
+    '<button class="pt-op" onclick="lcCompEscanear()"><div class="lic">'+LC_IC_ESCANEAR+'</div>'+
       '<div><div class="ti">'+(tiene?'Escanear otro compañero':'Escanear el código de mi compañero')+'</div>'+
       '<div class="de">Sus datos quedan llenos con un solo escaneo</div></div></button>'+
-    '<button class="pt-op" onclick="lcCompMostrar()"><div class="lic">'+PT_IC.mostrar+'</div>'+
+    '<button class="pt-op" onclick="lcCompMostrar()"><div class="lic">'+LC_IC_QR+'</div>'+
       '<div><div class="ti">Mostrar mi código</div>'+
       '<div class="de">Para que él registre mis datos en su teléfono</div></div></button>'+
     '<button class="pt-op" onclick="openCompaneroForm()"><div class="lic">'+LC_IC_MANO+'</div>'+
@@ -14656,9 +14662,9 @@ function lcCompRender(cfg){
   (tiene?'<button class="btn bs bbl" style="margin-top:12px;color:var(--err)" onclick="lcCompQuitar()">Quitar compañero</button>':'');
   var res=tiene?escHtml([co.grado?(lcAbrevGrado(co.grado)||co.grado):'',co.nombre].filter(Boolean).join(' '))
                :'Sin registrar — se usa en la cadena de custodia, el rótulo y las actas';
-  box.innerHTML=lcAccHtml('pf-comp',
+  box.innerHTML='<div class="pf-sec">'+lcAccHtml('pf-comp',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.4 2.9-6 6.5-6s6.5 2.6 6.5 6"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.1c3 .3 5 2.6 5 5.4"/></svg>Compañero de patrulla',
-    res, cuerpo, !tiene);
+    res, cuerpo, !tiene)+'</div>';
 }
 
 function openCompaneroForm(datos){
@@ -14689,43 +14695,6 @@ function lcCompQuitar(){
   if(!confirm('¿Quitar el compañero de patrulla de este perfil?')) return;
   var vacio={}; LC_COMP_CAMPOS.forEach(function(c){vacio[c[0]]='';});
   lcCompGuardar(vacio); renderPerfilScreen(); toast('Compañero quitado');
-}
-
-function lcCompMostrar(){
-  var p=ccPerfilActivo();
-  if(!p||!String(p.nombre||'').trim()){toast('Primero diligencia tu perfil: es lo que lleva el código.',3500);return;}
-  var svg=ptQrSvg(lcCompCodigo(p),300);
-  openModal(
-    '<div class="mh"><h2>Mi código de patrulla</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
-    '<div class="cp-code">'+
-      '<div class="cc-hd"><div class="cc-ti">'+escHtml([p.grado?(lcAbrevGrado(p.grado)||p.grado):'',p.nombre].filter(Boolean).join(' '))+'</div>'+
-      '<div class="cc-de">Tu compañero abre Perfil → Compañero de patrulla → «Escanear el código de mi compañero».</div></div>'+
-      '<div class="pt-qr">'+(svg||'<div class="cc-mal">No se pudo dibujar el código: acorta el cargo o el correo del perfil.</div>')+'</div>'+
-      '<div class="cc-pie">Lleva tu nombre, grado, cédula, cargo, teléfono y correo. Funciona sin señal.</div>'+
-    '</div>'+
-    '<button class="btn bs bbl" style="margin-top:12px" onclick="closeModal()">Listo</button>'
-  );
-}
-function lcCompEscanear(){
-  if(!ccPerfilActivo()){toast('Primero registra tu perfil');return;}
-  ptScanAbrir('Apunta al código de patrulla de tu compañero', function(bytes){
-    var d=lcCompLeer(bytes);
-    if(!d){
-      if(typeof bzLeerCodigo==='function'&&bzLeerCodigo(bytes))
-        toast('Ese es el código de Modo compartir. En su teléfono: Perfil → Compañero de patrulla → «Mostrar mi código».',5000);
-      else toast('Ese código no es el de un compañero de Flagrante.');
-      /* Se cierra el lector: devolviendo false se volvería a leer el mismo
-         código en el fotograma siguiente y el aviso se repetiría sin fin. */
-      return true;
-    }
-    var yo=ccPerfilActivo()||{};
-    if(d.cedula&&d.cedula===sinPuntos(yo.cedula||'')){toast('Ese es tu propio código: escanea el de tu compañero.',3500);return true;}
-    _ptScanEstado('Registrando al compañero…');
-    if(!lcCompGuardar(d)){toast('Primero registra tu perfil');return true;}
-    renderPerfilScreen();
-    toast((d.nombre||'El compañero')+' quedó registrado como compañero de patrulla ✓',3500);
-    return true;
-  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -14789,10 +14758,10 @@ function lcJurisRender(cfg) {
       )
     )+
     '<button class="btn bp bbl" style="margin-top:16px" onclick="lcJurisGuardar()">Guardar mi jurisdicción</button>';
-  box.innerHTML=lcAccHtml('pf-juris',
+  box.innerHTML='<div class="pf-sec">'+lcAccHtml('pf-juris',
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Mi jurisdicción',
     escHtml(res||'Sin diligenciar — patrulla, CAI y valores por defecto del lugar'),
-    cuerpo, abierto);
+    cuerpo, abierto)+'</div>';
 }
 
 function lcJurisGuardar() {
@@ -25363,6 +25332,46 @@ function nbAjSincronizar() {
   _nbNegado = 0;
   nbEscuchar();
   nbRonda();
+}
+
+/* El código de patrulla (Perfil → Compañero de patrulla) dibuja y lee con el
+   códec y el lector de Modo compartir, como el buzón de compañeros de abajo:
+   por eso viven aquí y no junto a su tarjeta, que no conoce el módulo. */
+function lcCompMostrar(){
+  var p=ccPerfilActivo();
+  if(!p||!String(p.nombre||'').trim()){toast('Primero diligencia tu perfil: es lo que lleva el código.',3500);return;}
+  var svg=ptQrSvg(lcCompCodigo(p),300);
+  openModal(
+    '<div class="mh"><h2>Mi código de patrulla</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
+    '<div class="cp-code">'+
+      '<div class="cc-hd"><div class="cc-ti">'+escHtml([p.grado?(lcAbrevGrado(p.grado)||p.grado):'',p.nombre].filter(Boolean).join(' '))+'</div>'+
+      '<div class="cc-de">Tu compañero abre Perfil → Compañero de patrulla → «Escanear el código de mi compañero».</div></div>'+
+      '<div class="pt-qr">'+(svg||'<div class="cc-mal">No se pudo dibujar el código: acorta el cargo o el correo del perfil.</div>')+'</div>'+
+      '<div class="cc-pie">Lleva tu nombre, grado, cédula, cargo, teléfono y correo. Funciona sin señal.</div>'+
+    '</div>'+
+    '<button class="btn bs bbl" style="margin-top:12px" onclick="closeModal()">Listo</button>'
+  );
+}
+function lcCompEscanear(){
+  if(!ccPerfilActivo()){toast('Primero registra tu perfil');return;}
+  ptScanAbrir('Apunta al código de patrulla de tu compañero', function(bytes){
+    var d=lcCompLeer(bytes);
+    if(!d){
+      if(typeof bzLeerCodigo==='function'&&bzLeerCodigo(bytes))
+        toast('Ese es el código de Modo compartir. En su teléfono: Perfil → Compañero de patrulla → «Mostrar mi código».',5000);
+      else toast('Ese código no es el de un compañero de Flagrante.');
+      /* Se cierra el lector: devolviendo false se volvería a leer el mismo
+         código en el fotograma siguiente y el aviso se repetiría sin fin. */
+      return true;
+    }
+    var yo=ccPerfilActivo()||{};
+    if(d.cedula&&d.cedula===sinPuntos(yo.cedula||'')){toast('Ese es tu propio código: escanea el de tu compañero.',3500);return true;}
+    _ptScanEstado('Registrando al compañero…');
+    if(!lcCompGuardar(d)){toast('Primero registra tu perfil');return true;}
+    renderPerfilScreen();
+    toast((d.nombre||'El compañero')+' quedó registrado como compañero de patrulla ✓',3500);
+    return true;
+  });
 }
 
 /* ═══ COMPAÑEROS Y BUZÓN (compartir entre cuentas · paso 1, 2026-10-24) ═══════
