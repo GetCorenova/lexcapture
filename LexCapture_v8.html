@@ -3137,7 +3137,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 147;
+var _BUILD = 148;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -23333,7 +23333,14 @@ function cuConfig() {
   return CU_FB;
 }
 function cuInstalada() { return !!cuConfig().apiKey; }
-function cuActiva() { return cuInstalada() && (!cuEsLocal() || !!cuEmulador()); }
+/* Decisión del usuario (2026-10-25): la versión web de GitHub Pages abre SIN
+   cuenta, para poder entrar y ver la app sin crear una. Solo en *.github.io y
+   fuera del envoltorio: la app de Android sirve desde ese mismo origen y ahí la
+   cuenta sigue. Con la cuenta apagada no hay prueba, ni nube, ni buzón: la app
+   funciona como antes de la F2 y los datos se quedan en el equipo. */
+var CU_WEB_SIN_CUENTA = true;
+function cuWebSinCuenta() { return CU_WEB_SIN_CUENTA && /\.github\.io$/.test(location.hostname) && !_lcEnEnvoltorio(); }
+function cuActiva() { return cuInstalada() && !cuWebSinCuenta() && (!cuEsLocal() || !!cuEmulador()); }
 function cuSesion() { return !!(_cuenta && _cuenta.sesion && _cuenta.dek); }
 
 /* ── El SDK, solo cuando hace falta ─────────────────────────────────────── */

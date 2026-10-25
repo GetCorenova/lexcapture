@@ -8155,3 +8155,15 @@ dos temas.
   [20][21], `ds`, `jerarquia`, `mejora6b` [47][53]). En verde, entre otras: companero_patrulla 33 ·
   compartir 57 · sincro 32 · companeros 34 · envío por buzón 36 · nube 39 · prueba 71 · compras 30 ·
   mejora7 67 · custodia 111 · entrega 111 · grados 31. Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.
+
+## La web de GitHub Pages abre sin cuenta (2026-10-25)
+Decisión del usuario: «quita solamente de GitHub todo lo que tiene que ver con la cuenta, para poder
+entrar a la aplicación y ver su funcionamiento sin líos». `CU_WEB_SIN_CUENTA = true` +
+`cuWebSinCuenta()` hacen que `cuActiva()` sea falso en `*.github.io` **fuera del envoltorio**: sin
+pantalla de cuenta, sin prueba ni bloqueo, sin nube, sin buzón de compañeros y sin cargar Firebase.
+La app funciona como antes de la F2 y los datos se quedan en el equipo.
+- ⚠️ **La app de Android NO se ve afectada**: sirve desde el mismo origen (`server.hostname`) y por
+  eso la condición mira `_lcEnEnvoltorio()`. En localhost no cambia nada (las suites con emulador
+  siguen igual: cuenta 62 · expediente 13).
+- El código de la cuenta NO se retiró. Para volver a encenderla en la web: `CU_WEB_SIN_CUENTA = false`.
+- Anti-caché `?v=148` / `cache-v148`, `_BUILD=148`.
