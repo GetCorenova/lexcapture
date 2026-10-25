@@ -7979,3 +7979,36 @@ pasos, cada uno espera aprobación: **1 compañeros** · 2 envío · 3 devolucio
   la tarjeta se ve; sin cuenta no aparece. ⚠️ **Comprobado que muerde**: quitando la caducidad y el
   filtro de compañeros fallan [B9], [C9] y [C10].
 - Anti-caché `?v=144` / `cache-v144`, `_BUILD=144`. Sin `.aab` nuevo: el paso 1 viaja en el mismo paquete que la F5 cuando se apruebe todo.
+
+### Paso 2: el envío (2026-10-24)
+Se marcan personas y capturas en Modo compartir y se pulsa **«Enviar a X»** (un botón por compañero
+confirmado). Del otro lado queda **«Por revisar»** y nada se guarda hasta que lo acepte con la
+revisión de siempre. Mismo bloque `bz*`, a continuación del paso 1. Verificado con
+`verify_envio_buzon.mjs` (**36 checks**, nuevo, contra los emuladores, con dos equipos por cuenta).
+- **Un solo formato para las tres vías**: el sobre es `ptPaquete` y se abre con `ptAbrirPaquete`,
+  igual que el vínculo por wifi y el archivo `.lexc`; se acepta con `ptConfirmarImportacion` (gana un
+  4.º parámetro: el botón de cancelar dice «Ahora no» y lo deja por revisar) y se guarda con
+  `ptAplicarPaquete` sin compañero de wifi (`dev` vacío).
+- **Partido en pedazos** de 384 KB (`BZ_PARTE`; cifrado y en base64 queda en ~700 KB, por debajo del
+  tope de las reglas). Cada pedazo es un mensaje `env` cifrado aparte con el envío, su número y el
+  total DENTRO de lo cifrado. Del otro lado se juntan en memoria y solo con todos se abre el sobre.
+- ⚠️ **La bandeja ES el propio buzón**: los pedazos se quedan ahí hasta aceptar o descartar, así un
+  teléfono que se apaga a mitad los vuelve a juntar al abrir y todos los equipos de la cuenta lo
+  ven; cuando uno lo atiende y borra, desaparece de los demás (`_bzOlvidarMid`). Este equipo recuerda
+  lo ya atendido (`bzh|uid`, 30 días) por si el borrado no alcanzó a salir: un pedazo que reaparece
+  se borra sin volver a pedir revisión. Un envío al que nunca le llegan todos los pedazos se ve como
+  «Llegando… n de m» y se descarta a la semana.
+- ⚠️ **Cola de salida en el equipo** (`bzo|uid`, IndexedDB, cifrada con la llave del equipo, ya
+  cifrada para el compañero). Sin señal el envío espera, sobrevive a cerrar la app y sale solo al
+  volver (evento `online`, al volver a la app y cada minuto). Las reglas no dejan cambiar un mensaje:
+  si un pedazo que ya se había intentado vuelve con «permiso denegado», se da por entregado.
+- **Acuse**: al aceptar, descartar o no poder leer, se le devuelve al que envió (`acuse`, también por
+  la cola). Quien envió ve «Esperando que lo revise» y luego «X importó N registros» / «no lo
+  importó». Un acuse que no es de este equipo (lo envió otro de la misma cuenta) se deja para él.
+- **Contador** de lo que hay por revisar en el panel lateral, en «Más» y un punto sobre «Más» en la
+  barra inferior (`bzPintarAvisos`), más un aviso breve al llegar.
+- Lo de quien no es compañero se sigue borrando sin abrirse. Comprobado que la suite muerde:
+  quitando la memoria de lo atendido fallan 6, y haciendo que «Ahora no» descarte, aborta en [E10].
+- ⚠️ La revisión con resumen de cambios y la autorización de lo que el compañero diligencie después
+  es el paso 3; todavía no se guarda la versión base de lo compartido.
+- `verify_prueba` [E5] cuenta ahora DIEZ puertas del guardián (la nueva firma de `ptConfirmarImportacion` y `bzEnviarRegistros`); 71/71. En verde: compañeros 34 · compartir 57 · csp 11 · almacén 13 · nube 39 · cuenta 62 · compras 30 · tema 51 · sincro 32. Anti-caché `?v=145` / `cache-v145`, `_BUILD=145`.

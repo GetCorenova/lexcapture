@@ -582,6 +582,20 @@ body.nat::after{bottom:0;height:var(--sab)}
 .bz-nom{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
 .bz-de{font-size:12px;color:var(--text-3);margin-top:1px}
 .bz-de.mal{color:var(--err)}
+/* Paso 2: por revisar, enviados y el envío. */
+.bz-rec{flex-wrap:wrap;row-gap:8px}
+.bz-rec .bz-b{flex-basis:100%}
+.bz-acc{display:flex;gap:6px;flex-shrink:0}
+.bz-rec .bz-acc{width:100%;justify-content:flex-end}
+.bz-env{display:flex;flex-direction:column;gap:8px;margin:2px 0 14px}
+.bz-env .btn{margin:0}
+/* El contador de lo que hay por revisar. Toma el acento de donde esté: en el
+   panel lateral (cromo de marca) sale blanco con texto azul. */
+.bz-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:auto;
+  border-radius:999px;background:var(--acc);color:var(--acc-fg);font-size:11px;font-weight:700;line-height:1;vertical-align:middle}
+.sheet-item .ti .bz-cnt{margin-left:6px}
+#bottombar .bn-item{position:relative}
+.bz-punto{position:absolute;top:3px;left:calc(50% + 8px);width:10px;height:10px;border-radius:50%;background:var(--acc);border:2px solid var(--brand)}
 
 /* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
 #pt-scan{
@@ -2208,6 +2222,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div class="sb-item" data-screen="compartir" onclick="go('compartir')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>
     Modo compartir
+    <span class="bz-cnt" id="bz-cnt-nav" style="display:none" aria-label="Por revisar"></span>
   </div>
   <div class="sb-sec">Análisis</div>
 
@@ -2436,6 +2451,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
       <div id="perfil-list-wrap"></div>
+      <!-- Tarjeta propia del compañero de patrulla (2026-10-24): antes era un
+           panel dentro del formulario del perfil. Ver lcCompRender(). -->
+      <div id="perfil-comp"></div>
       <!-- ⚠️ MEJORA 7 — «Mi jurisdicción» llega desde Ajustes (punto 4 del
            requerimiento): la patrulla, su CAI y los valores por defecto del
            lugar son el contexto operativo del funcionario, no una configuración
@@ -2801,6 +2819,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </button>
   <button class="bn-item" onclick="openSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
+    <span class="bz-punto" id="bz-punto" style="display:none"></span>
     Más
   </button>
 </nav>
@@ -2815,7 +2834,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </button>
   <button class="sheet-item" onclick="closeSheet();ptAbrirCompartir()">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
-    <div class="body"><div class="ti">Modo compartir</div><div class="de">Pasarle personas y capturas al compañero</div></div>
+    <div class="body"><div class="ti">Modo compartir <span class="bz-cnt" id="bz-cnt-mas" style="display:none" aria-label="Por revisar"></span></div><div class="de">Pasarle personas y capturas al compañero</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -3155,7 +3174,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 144;
+var _BUILD = 145;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -7302,7 +7321,7 @@ var SIM={
       correo:s.correo||this.rCorreo(n,ap)};
   },
   gUnidad:function(cfg){
-    var u=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim();
+    var u=patrullaLabel(cfg).trim();  // ya incluye el CAI: sumarlo otra vez lo imprimía dos veces
     return u||cfg.nombreEstacion||'Estación de demostración';
   },
 
@@ -7998,9 +8017,26 @@ function getConocieronList(cfg) {
 /* "32" + "CAI Parque Bolívar" → "PATRULLA 32 CAI Parque Bolívar" */
 function patrullaLabel(cfg) {
   cfg=cfg||DB.getConfig();
-  var n=(cfg.patrullaNum||'').trim(), u=(cfg.patrullaUnidad||'').trim();
+  var n=(cfg.patrullaNum||'').trim(), u=lcCaiLabel(cfg.patrullaUnidad);
   var s=n?(/patrulla/i.test(n)?n:'PATRULLA '+n):'';
   return [s,u].filter(Boolean).join(' ');
+}
+
+/* «San Antonio» → «CAI San Antonio» (2026-10-24). El campo de Mi jurisdicción
+   pide el CAI, así que lo que se escriba ahí ES un CAI y así sale en todo
+   documento: «se entiende que cuando deba salir este dato debe decir CAI San
+   Antonio, no solo San Antonio». «cai», «C.A.I.» se reescriben «CAI».
+   ⚠️ Lo que ya trae otro tipo de unidad (estación, cuadrante, subestación…,
+   OJ_RE_TIPO_DEP) no se toca: anteponerle «CAI» lo estropearía. Mismo criterio
+   que ojEstacionLabel. Se aplica al escribir (visible) y al imprimir (para lo
+   guardado antes). */
+function lcCaiLabel(u) {
+  u=String(u||'').trim().replace(/\s+/g,' ');
+  if(!u) return '';
+  var m=/^c\.?\s?a\.?\s?i\.?(?=\s|$)\s*/i.exec(u);
+  if(m){ var r=u.slice(m[0].length).trim(); return r?'CAI '+r:'CAI'; }
+  if(OJ_RE_TIPO_DEP.test(u)) return u;
+  return 'CAI '+u;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -8058,7 +8094,7 @@ function dosPatrullaFmt(txt) {
   if(!s) return '';
   var m=/^patrulla\s+(\S+)\s*(.*)$/i.exec(s);
   if(!m) return s;
-  var num='Patrulla '+m[1], uni=(m[2]||'').trim();
+  var num='Patrulla '+m[1], uni=lcCaiLabel(m[2]);
   return [uni,num].filter(Boolean).join(', ');
 }
 
@@ -14500,6 +14536,7 @@ function resetSecDefault() {
 ═══════════════════════════════════════════ */
 function renderPerfilScreen() {
   var cfg=DB.getConfig(); var perfiles=cfg.perfiles||[]; var activo=cfg.perfilActivo;
+  lcCompRender(cfg);
   lcJurisRender(cfg);
   var wrap=document.getElementById('perfil-list-wrap'); if(!wrap) return;
   if(!perfiles.length) {
@@ -14582,8 +14619,6 @@ function pfmCampos(pre, d) {
 function openPerfilForm(id) {
   var cfg=DB.getConfig(); var perfiles=cfg.perfiles||[];
   var p={}; if(id) perfiles.forEach(function(x){if(x.id===id)p=x;});
-  var co=p.companero||{};
-  var coTiene=['grado','nombre','cedula','cargo','telefono','correo'].some(function(k){return (co[k]||'').trim();});
   /* ⚠️ FASE G — esta pantalla usa la primitiva común lcCampo/lcInput en vez de
      escribir el bloque a mano. Además de unificar el asterisco, la pista y el
      foco, corrige un defecto real: `pfm-nombre`, `pfm-cedula` y `pfm-tel`
@@ -14593,18 +14628,182 @@ function openPerfilForm(id) {
     '<div class="mh"><h2>'+(id?'Editar perfil':'Nuevo perfil')+'</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     lcAccHtml('pfm-mis','Mis datos','',
       pfmCampos('pfm-',p), true)+
-    /* Compañero de patrulla. Un procedimiento lo hace una patrulla de dos, y la
-       cadena de custodia pregunta cuál de los dos halló, recolectó y embaló el
-       elemento; el acta de entrega imprime además su teléfono y su correo. Se
-       registra UNA vez aquí y desde ahí se ofrece en cada procedimiento, en vez
-       de reescribirlo en cada formato.
-       ⚠️ Queda abierta la opción de escribir a cualquier otro funcionario en el
-       propio formulario del formato: la patrulla no siempre es la misma. */
-    lcAccHtml('pfm-comp','Compañero de patrulla',
-      coTiene?escHtml([co.grado,co.nombre].filter(Boolean).join(' ')):'Opcional — se ofrece en la cadena de custodia, el rótulo y las actas',
-      pfmCampos('pfm-c',co), coTiene)+
+    /* El compañero de patrulla ya no se pide aquí: tiene su propia tarjeta en
+       la pantalla de Perfil (lcCompRender), con escaneo de código. */
     '<button class="btn bp bbl" onclick="savePerfilForm(\''+  (id||'')+'\' )" style="margin-top:16px">Guardar perfil</button>'
   );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   COMPAÑERO DE PATRULLA — tarjeta propia (2026-10-24)
+   Antes era un panel dentro del formulario del perfil. Ahora es una tarjeta de
+   la pantalla de Perfil, con tres formas de llenarla: escanear el código que
+   muestra el teléfono del compañero, mostrar el propio para que él escanee, o
+   escribir los seis datos a mano (si no tiene la aplicación, o aún no la ha
+   diligenciado).
+   ⚠️ EL DATO NO SE MOVIÓ: sigue en `cfg.perfiles[i].companero` del perfil
+   ACTIVO, que es de donde lo leen la cadena de custodia, el rótulo y las actas
+   (ccCompanero). Solo cambió dónde se pide.
+   ⚠️ ESTE CÓDIGO NO ES EL DE «MODO COMPARTIR», a propósito. Aquel vincula dos
+   cuentas: exige cuenta, señal y un secreto de un solo uso que caduca. Este
+   lleva solo los seis datos que el propio funcionario muestra en su pantalla, y
+   tiene que funcionar en la calle, sin señal y sin cuenta. Las dos cosas se
+   hacen estando juntos, pero no son la misma: atarlas haría que llenar el
+   compañero dependiera de la cobertura. El lector avisa si le enseñan el otro.
+   Formato: «FLP1» + seis campos (largo de 1 byte + UTF-8), en el orden de
+   LC_COMP_CAMPOS. Unos 150 bytes: un código de versión 8-10. */
+var LC_COMP_MAGIA=[70,76,80,49];  // «FLP1»
+var LC_COMP_CAMPOS=[['nombre',60,'Nombres y apellidos'],['grado',30,'Grado'],['cedula',15,'Cédula'],
+                    ['cargo',50,'Cargo'],['telefono',20,'Teléfono'],['correo',60,'Correo institucional']];
+function lcCompTiene(co){
+  co=co||{};
+  return LC_COMP_CAMPOS.some(function(c){return String(co[c[0]]||'').trim();});
+}
+function lcCompCodigo(p){
+  var te=new TextEncoder(), partes=LC_COMP_CAMPOS.map(function(c){
+    var s=String(p[c[0]]||'').trim(); if(c[0]==='cedula') s=sinPuntos(s);
+    s=_bzRecortar(s,Math.min(c[1],255)); return te.encode(s);
+  });
+  var n=4; partes.forEach(function(b){n+=1+b.length;});
+  var out=new Uint8Array(n), o=0;
+  out.set(LC_COMP_MAGIA,o); o+=4;
+  partes.forEach(function(b){out[o++]=b.length; out.set(b,o); o+=b.length;});
+  return out;
+}
+function lcCompLeer(b){
+  try{
+    if(!b||b.length<4+LC_COMP_CAMPOS.length) return null;
+    for(var i=0;i<4;i++) if(b[i]!==LC_COMP_MAGIA[i]) return null;
+    var td=new TextDecoder('utf-8',{fatal:true}), o=4, r={};
+    for(var k=0;k<LC_COMP_CAMPOS.length;k++){
+      var l=b[o++]; if(o+l>b.length) return null;
+      r[LC_COMP_CAMPOS[k][0]]=td.decode(b.slice(o,o+l)).trim(); o+=l;
+    }
+    if(o!==b.length||!r.nombre) return null;
+    r.cedula=sinPuntos(r.cedula);
+    return r;
+  }catch(e){return null;}
+}
+function lcCompGuardar(datos){
+  var cfg=DB.getConfig(), p=null;
+  (cfg.perfiles||[]).forEach(function(x){if(x.id===cfg.perfilActivo)p=x;});
+  if(!p) p=(cfg.perfiles||[])[0];
+  if(!p) return false;
+  /* Se fusiona sobre lo que hubiera: el compañero puede llevar claves que esta
+     tarjeta no pinta, y quien no las pregunta no las borra. */
+  var co=Object.assign({},p.companero||{});
+  LC_COMP_CAMPOS.forEach(function(c){co[c[0]]=String(datos[c[0]]||'').trim();});
+  co.cedula=sinPuntos(co.cedula);
+  p.companero=co;
+  DB.saveConfig(cfg);
+  return true;
+}
+
+var LC_IC_MANO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+function lcCompRender(cfg){
+  var box=document.getElementById('perfil-comp'); if(!box) return;
+  cfg=cfg||DB.getConfig();
+  var perfiles=cfg.perfiles||[], p=null;
+  perfiles.forEach(function(x){if(x.id===cfg.perfilActivo)p=x;});
+  if(!p) p=perfiles[0];
+  /* Sin perfil no hay a quién colgarle el compañero: la pantalla ya ofrece
+     «Agregar perfil» y una tarjeta más solo distraería. */
+  if(!p){box.innerHTML='';return;}
+  var co=p.companero||{}, tiene=lcCompTiene(co);
+  var cuerpo='';
+  if(perfiles.length>1)
+    cuerpo+='<p class="txd txs" style="margin:0 0 8px">Compañero de '+escHtml(p.nombre||'el perfil activo')+'.</p>';
+  if(tiene){
+    cuerpo+='<div class="pfc-dl">'+LC_COMP_CAMPOS.map(function(c){
+      var v=String(co[c[0]]||'').trim();
+      if(c[0]==='grado'&&v&&lcAbrevGrado(v)) v+=' ('+lcAbrevGrado(v)+')';
+      return '<div class="exp-kv"><span class="k">'+c[2]+'</span><span class="v">'+(v?escHtml(v):'<span class="txd">—</span>')+'</span></div>';
+    }).join('')+'</div>';
+  }
+  cuerpo+='<div class="pt-paso" style="margin-top:'+(tiene?'14px':'0')+'">'+
+    '<button class="pt-op" onclick="lcCompEscanear()"><div class="lic">'+PT_IC.escanear+'</div>'+
+      '<div><div class="ti">'+(tiene?'Escanear otro compañero':'Escanear el código de mi compañero')+'</div>'+
+      '<div class="de">Sus datos quedan llenos con un solo escaneo</div></div></button>'+
+    '<button class="pt-op" onclick="lcCompMostrar()"><div class="lic">'+PT_IC.mostrar+'</div>'+
+      '<div><div class="ti">Mostrar mi código</div>'+
+      '<div class="de">Para que él registre mis datos en su teléfono</div></div></button>'+
+    '<button class="pt-op" onclick="openCompaneroForm()"><div class="lic">'+LC_IC_MANO+'</div>'+
+      '<div><div class="ti">'+(tiene?'Editar a mano':'Escribir a mano')+'</div>'+
+      '<div class="de">'+(tiene?'Corregir o completar algún dato':'Si no tiene la aplicación o no la ha diligenciado')+'</div></div></button>'+
+  '</div>'+
+  (tiene?'<button class="btn bs bbl" style="margin-top:12px;color:var(--err)" onclick="lcCompQuitar()">Quitar compañero</button>':'');
+  var res=tiene?escHtml([co.grado?(lcAbrevGrado(co.grado)||co.grado):'',co.nombre].filter(Boolean).join(' '))
+               :'Sin registrar — se usa en la cadena de custodia, el rótulo y las actas';
+  box.innerHTML=lcAccHtml('pf-comp',
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.4 2.9-6 6.5-6s6.5 2.6 6.5 6"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14.1c3 .3 5 2.6 5 5.4"/></svg>Compañero de patrulla',
+    res, cuerpo, !tiene);
+}
+
+function openCompaneroForm(datos){
+  var cfg=DB.getConfig(), p=null;
+  (cfg.perfiles||[]).forEach(function(x){if(x.id===cfg.perfilActivo)p=x;});
+  if(!p) p=(cfg.perfiles||[])[0];
+  if(!p){toast('Primero registra tu perfil');return;}
+  var co=datos||p.companero||{};
+  /* Mismos ids que tenía el panel dentro del formulario del perfil
+     (`pfm-c…`) y la misma primitiva pfmCampos: el orden de los campos es el que
+     fijó la Mejora 7 para los dos funcionarios. */
+  openModal(
+    '<div class="mh"><h2>Compañero de patrulla</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
+    pfmCampos('pfm-c',co)+
+    '<button class="btn bp bbl" onclick="saveCompaneroForm()" style="margin-top:16px">Guardar compañero</button>'
+  );
+}
+function saveCompaneroForm(){
+  function v(x){var el=document.getElementById('pfm-c'+x);return el?el.value.trim():null;}
+  var d={nombre:v('nombre'),grado:v('grado'),cedula:v('cedula'),cargo:v('cargo'),telefono:v('tel'),correo:v('correo')};
+  /* `null` = el formulario no está pintado: no se escribe nada. */
+  if(d.nombre===null) return;
+  if(!d.nombre){toast('El nombre del compañero es obligatorio');return;}
+  if(!lcCompGuardar(d)){toast('Primero registra tu perfil');return;}
+  closeModal(); renderPerfilScreen(); toast('Compañero guardado ✓');
+}
+function lcCompQuitar(){
+  if(!confirm('¿Quitar el compañero de patrulla de este perfil?')) return;
+  var vacio={}; LC_COMP_CAMPOS.forEach(function(c){vacio[c[0]]='';});
+  lcCompGuardar(vacio); renderPerfilScreen(); toast('Compañero quitado');
+}
+
+function lcCompMostrar(){
+  var p=ccPerfilActivo();
+  if(!p||!String(p.nombre||'').trim()){toast('Primero diligencia tu perfil: es lo que lleva el código.',3500);return;}
+  var svg=ptQrSvg(lcCompCodigo(p),300);
+  openModal(
+    '<div class="mh"><h2>Mi código de patrulla</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
+    '<div class="cp-code">'+
+      '<div class="cc-hd"><div class="cc-ti">'+escHtml([p.grado?(lcAbrevGrado(p.grado)||p.grado):'',p.nombre].filter(Boolean).join(' '))+'</div>'+
+      '<div class="cc-de">Tu compañero abre Perfil → Compañero de patrulla → «Escanear el código de mi compañero».</div></div>'+
+      '<div class="pt-qr">'+(svg||'<div class="cc-mal">No se pudo dibujar el código: acorta el cargo o el correo del perfil.</div>')+'</div>'+
+      '<div class="cc-pie">Lleva tu nombre, grado, cédula, cargo, teléfono y correo. Funciona sin señal.</div>'+
+    '</div>'+
+    '<button class="btn bs bbl" style="margin-top:12px" onclick="closeModal()">Listo</button>'
+  );
+}
+function lcCompEscanear(){
+  if(!ccPerfilActivo()){toast('Primero registra tu perfil');return;}
+  ptScanAbrir('Apunta al código de patrulla de tu compañero', function(bytes){
+    var d=lcCompLeer(bytes);
+    if(!d){
+      if(typeof bzLeerCodigo==='function'&&bzLeerCodigo(bytes))
+        toast('Ese es el código de Modo compartir. En su teléfono: Perfil → Compañero de patrulla → «Mostrar mi código».',5000);
+      else toast('Ese código no es el de un compañero de Flagrante.');
+      /* Se cierra el lector: devolviendo false se volvería a leer el mismo
+         código en el fotograma siguiente y el aviso se repetiría sin fin. */
+      return true;
+    }
+    var yo=ccPerfilActivo()||{};
+    if(d.cedula&&d.cedula===sinPuntos(yo.cedula||'')){toast('Ese es tu propio código: escanea el de tu compañero.',3500);return true;}
+    _ptScanEstado('Registrando al compañero…');
+    if(!lcCompGuardar(d)){toast('Primero registra tu perfil');return true;}
+    renderPerfilScreen();
+    toast((d.nombre||'El compañero')+' quedó registrado como compañero de patrulla ✓',3500);
+    return true;
+  });
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -14651,7 +14850,7 @@ function lcJurisRender(cfg) {
      defecto: es la señal de «sin diligenciar» que abre el panel. */
   var cuerpo=
     '<div class="fg"><label class="fl fl-p">Patrulla</label>'+lcInput('pj-patrulla',cfg.patrullaNum,'Ej.: 32')+'</div>'+
-    lcAtribs('<div class="fg"><label class="fl">CAI (si aplica)</label>'+lcInput('pj-cai',cfg.patrullaUnidad,'Ej.: CAI Parque Bolívar')+'</div>')+
+    lcAtribs('<div class="fg"><label class="fl">CAI (si aplica)</label>'+lcInput('pj-cai',lcCaiLabel(cfg.patrullaUnidad),'Ej.: CAI Parque Bolívar',{extra:' onblur="this.value=lcCaiLabel(this.value)"'})+'</div>')+
     lcEntidad(
       '<label class="fl fl-p" style="display:block;margin-bottom:6px">Lugar por defecto de mis capturas</label>'+
       lcAtribs(
@@ -14682,7 +14881,7 @@ function lcJurisGuardar() {
   var m=[['pj-vereda','veredaDefault'],['pj-zona','zonaDefault'],['pj-localidad','localidadDefault'],
          ['pj-patrulla','patrullaNum'],['pj-cai','patrullaUnidad']];
   var alguno=false;
-  m.forEach(function(x){ var val=v(x[0]); if(val!==null){ cfg[x[1]]=val; alguno=true; } });
+  m.forEach(function(x){ var val=v(x[0]); if(val!==null){ cfg[x[1]]=(x[0]==='pj-cai')?lcCaiLabel(val):val; alguno=true; } });
   if(!alguno) return;
   DB.saveConfig(cfg);
   lcJurisRender(cfg);
@@ -14693,18 +14892,19 @@ function savePerfilForm(id) {
   function v(x){var el=document.getElementById('pfm-'+x);return el?el.value.trim():'';}
   var nombre=v('nombre'); if(!nombre){toast('El nombre es obligatorio');return;}
   var cfg=DB.getConfig(); if(!cfg.perfiles) cfg.perfiles=[];
-  var comp={grado:v('cgrado'),nombre:v('cnombre'),cedula:sinPuntos(v('ccedula')),cargo:v('ccargo'),
-            telefono:v('ctel'),correo:v('ccorreo')};
+  /* ⚠️ `p.companero` ya NO se escribe desde aquí: sus campos salieron de este
+     formulario a la tarjeta del compañero, y `v()` devolvería '' para cada uno
+     —editar el perfil le borraría el compañero—. Misma trampa que `entidad`. */
   /* ⚠️ MEJORA 7 — `entidad` ya NO se escribe desde aquí: su campo se retiró
      (punto 5) y `v('entidad')` devolvería '', borrando la que el perfil tuviera
      guardada. La clave se conserva intacta y la sigue escribiendo el único sitio
      que la pregunta, `aiRecordarEntidad` (acta de incautación). Es la misma
      trampa de `v()` que ya costó un incidente en saveAjustes. */
   if(id) {
-    cfg.perfiles.forEach(function(p){if(p.id===id){p.grado=v('grado');p.nombre=nombre;p.cedula=sinPuntos(v('cedula'));p.telefono=v('tel');p.cargo=v('cargo');p.correo=v('correo');p.companero=comp;}});
+    cfg.perfiles.forEach(function(p){if(p.id===id){p.grado=v('grado');p.nombre=nombre;p.cedula=sinPuntos(v('cedula'));p.telefono=v('tel');p.cargo=v('cargo');p.correo=v('correo');}});
   } else {
     var newId=uid();
-    cfg.perfiles.push({id:newId,grado:v('grado'),nombre:nombre,cedula:sinPuntos(v('cedula')),telefono:v('tel'),cargo:v('cargo'),entidad:'',correo:v('correo'),companero:comp});
+    cfg.perfiles.push({id:newId,grado:v('grado'),nombre:nombre,cedula:sinPuntos(v('cedula')),telefono:v('tel'),cargo:v('cargo'),entidad:'',correo:v('correo'),companero:{}});
     if(!cfg.perfilActivo) cfg.perfilActivo=newId;
   }
   DB.saveConfig(cfg); closeModal(); renderPerfilScreen(); toast('Perfil guardado ✓');
@@ -17045,7 +17245,7 @@ function ojNuevoCaso(){
   c.oj.diligencia.lugarMunicipio=lcUnidadCiudad(cfg)||'';
   c.oj.diligencia.lugarDepartamento=c.oj.diligencia.lugarMunicipio
     ? (lcGeoDepto(c.oj.diligencia.lugarMunicipio)||'') : '';
-  c.oj.diligencia.unidad=[patrullaLabel(cfg),cfg.patrullaUnidad||''].filter(Boolean).join(' ').trim()||(cfg.nombreEstacion||'');
+  c.oj.diligencia.unidad=patrullaLabel(cfg).trim()||(cfg.nombreEstacion||'');  // patrullaLabel ya trae el CAI
   c.oj.diligencia.patrulla=cfg.patrullaNum||'';
   /* ⚠️ Mejora 3 (obs. 2) — la verificación de la orden y la lectura de derechos
      ya NO se preguntan: se DERIVAN de la diligencia (ojVerificacion / ojDerechos).
@@ -23402,7 +23602,11 @@ function renderCompartir() {
      ocupa la pantalla mientras se enseña. Sin cuenta no aparece nada. */
   var bz = (typeof bzActiva === 'function' && bzActiva());
   if (bz && _bzUi === 'codigo') { pane.innerHTML = bzUiCodigo(); return; }
-  pane.innerHTML = (bz && (_ptUiPaso === 'inicio' || _ptUiPaso === 'vinculado') ? bzUiCompaneros() : '') + (_ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
+  /* Paso 2: lo que llegó y lo enviado, y el envío. Vinculado por wifi, las listas
+     ya salen en su sitio y solo se añaden los botones (dentro de _ptUiVinculado). */
+  var arriba = (bz && (_ptUiPaso === 'inicio' || _ptUiPaso === 'vinculado'))
+    ? bzUiCompaneros() + bzUiPendientes() + bzUiEnviados() + (_ptUiPaso === 'inicio' ? bzUiEnvio(true) : '') : '';
+  pane.innerHTML = arriba + (_ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
     : _ptUiPaso === 'preparando' ? _ptUiPreparando()
     : _ptUiPaso === 'mostrando' ? _ptUiCodigo(true)
     : _ptUiPaso === 'respondiendo' ? _ptUiCodigo(false)
@@ -23512,6 +23716,7 @@ function _ptUiVinculado(e) {
   h += _ptUiRecibido(e);
   h += _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste');
   h += _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro');
+  if (typeof bzActiva === 'function' && bzActiva()) h += bzUiEnvio(false);
   h += '<button class="btn bp bbl" id="cp-enviar" onclick="ptUiEnviar()"' + (n && !e.enviando ? '' : ' disabled') + '>' +
        (e.enviando ? (e.entregado ? 'Esperando su decisión…' : 'Enviando…')
                    : (n ? ('Enviar al compañero (' + n + ')') : 'Enviar al compañero')) + '</button>';
@@ -23840,7 +24045,7 @@ var _ptConfCb = null;
 function _ptResumenLinea(n, sing, plur) {
   return n + ' ' + (n === 1 ? sing : plur);
 }
-function ptConfirmarImportacion(abierto, deQuien, cb) {
+function ptConfirmarImportacion(abierto, deQuien, cb, opts) {
   if (!lcGuardia()) { cb(false); return; }   // F3: nada entra sin derecho de uso
   var locP = DB.getPersons(), locC = DB.getCases();
   var cp = ptClasificar(abierto.personas, locP, 'p');
@@ -23891,7 +24096,7 @@ function ptConfirmarImportacion(abierto, deQuien, cb) {
   }
 
   h += '<div class="flx g8" style="flex-wrap:wrap;margin-top:14px">' +
-    '<button class="btn bs" onclick="ptConfCancelar()">No importar</button>' +
+    '<button class="btn bs" onclick="ptConfCancelar()">' + escHtml((opts && opts.no) || 'No importar') + '</button>' +
     '<button class="btn bp" onclick="ptConfAceptar()">Importar</button></div>';
   openModal(h);
 }
@@ -26433,7 +26638,7 @@ var BZ_GRACIA_MS = 2 * 60000;        // una solicitud que llega un poco después
 var BZ_INVIT_VIDA = 86400000;        // un código se recuerda un día (por si no había señal)
 var BZ_MAGIA = [70, 76, 71, 49];     // «FLG1»: distinto del código del vínculo por wifi
 var BZ_NOM_MAX = 40;                 // bytes del nombre dentro del código
-var BZ_TIPOS = ['contacto', 'hola']; // lo que esta versión sabe atender
+var BZ_TIPOS = ['contacto', 'hola', 'env', 'acuse']; // lo que esta versión sabe atender
 var _bzId = null;                    // {uid, dek, nube, priv, privB64, pubB64, pubRaw, huella}
 var _bzIdP = null;
 var _bzInvit = [];                   // [{tok, exp}]: los códigos enseñados que siguen vivos
@@ -26674,6 +26879,7 @@ async function bzEscuchar() {
   if (_bzUnsub || !navigator.onLine || !bzActiva()) return;
   var id = await bzIdentidad();
   if (!id || _bzUnsub) return;
+  await _bzCargarLocal();         // lo ya atendido, antes de mirar el buzón
   var u = null; try { u = await _cuUsuarioListo(); } catch (e) {}
   if (!u || u.uid !== id.uid || _bzUnsub) return;
   var gen = _bzGen;
@@ -26682,7 +26888,7 @@ async function bzEscuchar() {
     snap.docChanges().forEach(function (ch) {
       /* Al borrarse se olvida: un mensaje que se vuelva a crear con el mismo
          identificador es otro mensaje y hay que atenderlo. */
-      if (ch.type === 'removed') { delete _bzVistos[ch.doc.id]; return; }
+      if (ch.type === 'removed') { delete _bzVistos[ch.doc.id]; _bzOlvidarMid(ch.doc.id); return; }
       var mid = ch.doc.id, d = ch.doc.data();
       if (_bzVistos[mid]) return;
       _bzVistos[mid] = 1;
@@ -26690,6 +26896,12 @@ async function bzEscuchar() {
         .catch(function (e) { console.warn('[Flagrante] buzón: un mensaje no se pudo atender', e); });
     });
   }, function (e) { _bzUnsub = null; console.warn('[Flagrante] buzón: la escucha se cortó', e); });
+  /* Cada minuto: lo que se quedó a medias en la cola vuelve a intentarse (un
+     intento que se quedó esperando la señal no lo vuelve a disparar nadie más). */
+  if (!_bzLimpieza) _bzLimpieza = setInterval(function () {
+    _bzLimpiarPartes();
+    if (_bzSalida.some(function (x) { return x.estado === 'cola'; })) bzVaciarSalida();
+  }, 60000);
 }
 async function _bzProcesar(mid, d, gen) {
   if (gen !== _bzGen || !_bzId) return;
@@ -26708,6 +26920,8 @@ async function _bzProcesar(mid, d, gen) {
     bzRepintar();
     return borrar();
   }
+  if (d.t === 'env') return _bzEnvParte(mid, ts, con, carga, borrar);
+  if (d.t === 'acuse') return _bzAcuse(ts, con, carga, borrar);
   if (d.t === 'hola') {
     var nom = String(carga.nom || '').slice(0, 80);
     await _bzGuardarContacto(Object.assign({}, con, { confirmado: con.confirmado || Date.now(), roto: false, nom: nom || con.nom }));
@@ -26753,17 +26967,21 @@ async function _bzSolicitud(mid, d, ts, borrar) {
 /* ── Arrancar y parar (con la nube) ─────────────────────────────────────── */
 function bzArrancar() {
   if (!bzActiva()) return;
-  setTimeout(function () { if (bzActiva()) bzEscuchar(); }, 1200);
+  _bzCargarLocal().then(bzPintarAvisos);
+  setTimeout(function () { if (bzActiva()) { bzEscuchar(); bzVaciarSalida(); } }, 1200);
 }
 function bzDetener() {
   if (_bzUnsub) { try { _bzUnsub(); } catch (e) {} }
   _bzUnsub = null; _bzGen++; _bzId = null; _bzCanal = {}; _bzVistos = {}; _bzInvit = [];
   _bzUi = ''; _bzCodigo = null;
   if (_bzReloj) { clearInterval(_bzReloj); _bzReloj = null; }
+  if (_bzLimpieza) { clearInterval(_bzLimpieza); _bzLimpieza = null; }
+  _bzSalida = []; _bzBandeja = []; _bzPartes = {}; _bzHecho = {}; _bzLocalUid = '';
+  bzPintarAvisos();
 }
-window.addEventListener('online', function () { if (bzActiva()) bzEscuchar(); });
+window.addEventListener('online', function () { if (bzActiva()) { bzEscuchar(); bzVaciarSalida(); } });
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible' && bzActiva()) bzEscuchar();
+  if (document.visibilityState === 'visible' && bzActiva()) { bzEscuchar(); bzVaciarSalida(); }
 });
 
 /* ── Lo que se ve, en «Modo compartir» ──────────────────────────────────── */
@@ -26857,6 +27075,363 @@ async function bzUiQuitarSi(uid) {
   await bzQuitarContacto(uid);
   renderCompartir();
   toast('Compañero quitado');
+}
+
+/* ═══ COMPARTIR ENTRE CUENTAS · PASO 2: EL ENVÍO (2026-10-24) ═════════════════
+   Se marcan personas y capturas y se pulsa «Enviar a X». Viaja por el buzón,
+   cifrado con el canal de los dos compañeros, y del otro lado queda POR REVISAR:
+   nada se guarda hasta que él lo acepte con la revisión de siempre
+   (`ptConfirmarImportacion`, la misma del vínculo por wifi y del archivo).
+
+   EL SOBRE es `ptPaquete`, el mismo de las otras dos vías, y se abre con
+   `ptAbrirPaquete`: un solo formato y una sola validación para las tres.
+
+   ⚠️ PARTIDO EN PEDAZOS: un documento de Firestore admite menos de 1 MB y una
+   captura con fotos de muchos elementos o una lista larga de personas puede
+   pasarse. Cada pedazo es un mensaje propio, cifrado aparte, con el envío, su
+   número y el total DENTRO de lo cifrado. Del otro lado se juntan y solo cuando
+   están todos se abre el sobre. Los pedazos se quedan en el buzón hasta que el
+   envío se acepta o se descarta: así un teléfono que se apaga a mitad vuelve a
+   juntarlos al abrir, sin guardar nada a medias.
+
+   ⚠️ LA COLA DE SALIDA vive en este equipo (IndexedDB, cifrada con la llave del
+   equipo), ya cifrada para el compañero. Sin señal el envío espera y sale solo
+   cuando vuelve; cerrar la aplicación no lo pierde. Un pedazo que se escribió y
+   no confirmó (se acabó el tiempo) puede haber llegado: si al reintentar las
+   reglas lo rechazan por existir ya, se da por entregado.
+
+   ⚠️ LA BANDEJA ES EL PROPIO BUZÓN: lo que hay por revisar es lo que sigue en
+   él. Todos los equipos de la cuenta lo ven; cuando uno lo acepta o lo descarta
+   y borra los pedazos, desaparece de los demás. Este equipo recuerda además qué
+   envíos ya atendió (`bzh|uid`), por si el borrado no alcanzó a salir.
+
+   Al aceptar o descartar se le devuelve al que envió un ACUSE con lo que pasó:
+   «enviado» tiene que acabar significando «lo revisó y lo importó». */
+
+var BZ_PARTE = 384 * 1024;           // bytes de cada pedazo (cifrado y en base64 queda en ~700 KB)
+var BZ_PARTES_MAX = 32;
+var BZ_PARTE_VIDA = 7 * 86400000;    // lo que se espera a que lleguen todos los pedazos
+var BZ_HECHO_VIDA = 30 * 86400000;
+var _bzSalida = [];   // [{e, para, nom, ts, p, c, estado:'cola'|'enviado'|'fallo', motivo, oculto, partes:[{mid, t, ct, ok, int}]}]
+var _bzSalidaP = null, _bzSalidaOtra = false;
+var _bzPartes = {};   // 'de|e' → {de, e, n, ts, partes:{i: bytes}, mids:{mid:1}}
+var _bzBandeja = [];  // [{k, e, de, nom, ts, abierto, mids:[]}]
+var _bzHecho = {};    // 'de|e' → cuándo se aceptó o descartó aquí
+var _bzLocalUid = '', _bzLocalP = null, _bzEnviando = false, _bzLimpieza = null;
+
+function _bzResumen(p, c) {
+  var t = [];
+  if (p) t.push(p + ' persona' + (p === 1 ? '' : 's'));
+  if (c) t.push(c + ' captura' + (c === 1 ? '' : 's'));
+  return t.join(' y ') || 'nada legible';
+}
+function _bzHace(ts) {
+  var d = Math.max(0, Date.now() - (ts || 0));
+  if (d < 60000) return 'hace un momento';
+  if (d < 3600000) return 'hace ' + Math.round(d / 60000) + ' min';
+  if (d < 86400000) return 'hace ' + Math.round(d / 3600000) + ' h';
+  var n = Math.round(d / 86400000);
+  return 'hace ' + n + ' día' + (n === 1 ? '' : 's');
+}
+
+/* ── Lo que este equipo recuerda: la cola de salida y lo ya atendido ────── */
+function _bzCargarLocal() {
+  var uid = _cuenta && _cuenta.uid;
+  if (!uid || _bzLocalUid === uid) return Promise.resolve();
+  if (_bzLocalP) return _bzLocalP;
+  _bzLocalP = (async function () {
+    var s = [], h = {};
+    try { var a = await lcIdbGet('bzo|' + uid); if (a) s = JSON.parse(await _lcDecrypt(a)) || []; } catch (e) { s = []; }
+    try { var b = await lcIdbGet('bzh|' + uid); if (b) h = JSON.parse(await _lcDecrypt(b)) || {}; } catch (e) { h = {}; }
+    if (!_cuenta || _cuenta.uid !== uid) return;
+    var lim = Date.now() - BZ_HECHO_VIDA;
+    Object.keys(h).forEach(function (k) { if (!(h[k] > lim)) delete h[k]; });
+    _bzSalida = (Array.isArray(s) ? s : []).filter(function (x) { return x && (x.estado !== 'enviado' || x.ts > lim); });
+    _bzHecho = h; _bzLocalUid = uid;
+  })().finally(function () { _bzLocalP = null; });
+  return _bzLocalP;
+}
+async function _bzGuardarSalida() {
+  if (!_bzLocalUid) return;
+  try { await lcIdbSet('bzo|' + _bzLocalUid, await _lcEncrypt(JSON.stringify(_bzSalida))); }
+  catch (e) { console.warn('[Flagrante] compañeros: no se pudo guardar la cola de salida', e); }
+}
+async function _bzGuardarHecho() {
+  if (!_bzLocalUid) return;
+  try { await lcIdbSet('bzh|' + _bzLocalUid, await _lcEncrypt(JSON.stringify(_bzHecho))); } catch (e) {}
+}
+
+/* ── Enviar ─────────────────────────────────────────────────────────────────
+   Se cifra todo en el momento y entra en la cola; `bzVaciarSalida` lo escribe. */
+async function bzEnviarRegistros(uidPara, personas, casos) {
+  if (!lcGuardia()) return { ok: false, motivo: 'sin derecho de uso' };
+  var con = bzContacto(uidPara);
+  if (!con || !con.confirmado || con.roto) return { ok: false, motivo: 'ese compañero todavía no está confirmado.' };
+  personas = personas || []; casos = casos || [];
+  if (!personas.length && !casos.length) return { ok: false, motivo: 'marca al menos una persona o una captura.' };
+  var id = await bzIdentidad();
+  if (!id) return { ok: false, motivo: 'no se pudo preparar: revisa la señal e inténtalo de nuevo.' };
+  await _bzCargarLocal();
+  var paq = ptPaquete(personas, casos);
+  var bytes = _cuTE(JSON.stringify(paq));
+  if (bytes.length > PT_MAX_TOTAL_BYTES) return { ok: false, motivo: 'es demasiado grande: envíalo en dos veces.' };
+  var n = Math.max(1, Math.ceil(bytes.length / BZ_PARTE));
+  var e = _bzMid(), k = await bzCanal(con), partes = [], i, mid;
+  for (i = 0; i < n; i++) {
+    mid = _bzMid();
+    var carga = { e: e, i: i, n: n, d: _b64FromBytes(bytes.slice(i * BZ_PARTE, (i + 1) * BZ_PARTE)) };
+    partes.push({ mid: mid, t: 'env', ct: await cuEnvolver(k, _cuTE(JSON.stringify(carga)), _bzAad('env', id.uid, con.uid, mid)),
+                  ok: false, int: false });
+  }
+  _bzSalida.push({ e: e, para: con.uid, nom: con.nom || '', ts: Date.now(), p: paq.personas.length, c: paq.casos.length,
+                   estado: 'cola', motivo: '', partes: partes });
+  await _bzGuardarSalida();
+  bzVaciarSalida();
+  return { ok: true, e: e, partes: n };
+}
+/* Lo pequeño que también tiene que llegar aunque no haya señal (el acuse). */
+async function _bzEncolar(con, t, carga) {
+  var id = await bzIdentidad(); if (!id) return;
+  await _bzCargarLocal();
+  var mid = _bzMid();
+  _bzSalida.push({ e: _bzMid(), para: con.uid, nom: con.nom || '', ts: Date.now(), estado: 'cola', oculto: true,
+                   partes: [{ mid: mid, t: t, ct: await cuEnvolver(await bzCanal(con), _cuTE(JSON.stringify(carga)), _bzAad(t, id.uid, con.uid, mid)),
+                              ok: false, int: false }] });
+  await _bzGuardarSalida();
+  bzVaciarSalida();
+}
+
+function bzVaciarSalida() {
+  if (_bzSalidaP) { _bzSalidaOtra = true; return _bzSalidaP; }
+  _bzSalidaP = (async function () {
+    do { _bzSalidaOtra = false; await _bzVaciarUna(); } while (_bzSalidaOtra);
+  })().catch(function (e) { console.warn('[Flagrante] buzón: la cola de salida no avanzó', e); })
+    .finally(function () { _bzSalidaP = null; bzRepintar(); });
+  return _bzSalidaP;
+}
+async function _bzVaciarUna() {
+  if (!bzActiva() || !navigator.onLine) return;
+  await _bzCargarLocal();
+  if (!_bzSalida.some(function (x) { return x.estado === 'cola'; })) return;
+  try { await cuSdk(); var u = await _cuUsuarioListo(); if (!u || !_cuenta || u.uid !== _cuenta.uid) return; } catch (e) { return; }
+  var cambio = false;
+  for (var j = 0; j < _bzSalida.length; j++) {
+    var it = _bzSalida[j];
+    if (it.estado !== 'cola') continue;
+    for (var i = 0; i < it.partes.length; i++) {
+      var pa = it.partes[i]; if (pa.ok) continue;
+      var reint = pa.int;
+      pa.int = true;
+      try {
+        await nbConTiempo(_bzEscribir(it.para, { t: pa.t || 'env', ct: pa.ct }, pa.mid), 20000);
+        pa.ok = true; cambio = true; bzRepintar();
+      } catch (er) {
+        var code = (er && er.code) || '';
+        /* Las reglas no dejan cambiar un mensaje: si ya se había intentado, es que
+           el intento anterior sí llegó. */
+        if (code === 'permission-denied' && reint) { pa.ok = true; cambio = true; continue; }
+        if (code === 'permission-denied') { it.estado = 'fallo'; it.motivo = 'el servidor no lo aceptó'; cambio = true; break; }
+        await _bzGuardarSalida();
+        return;      // sin señal o tardó demasiado: se reintenta cuando vuelva
+      }
+    }
+    if (it.estado === 'cola' && it.partes.every(function (x) { return x.ok; })) {
+      it.estado = 'enviado'; it.enviado = Date.now();
+      it.partes = it.partes.map(function (x) { return { mid: x.mid, ok: true }; });   // ya no hace falta el contenido
+      cambio = true;
+    }
+  }
+  if (cambio) {
+    _bzSalida = _bzSalida.filter(function (x) { return !(x.oculto && x.estado === 'enviado'); });
+    await _bzGuardarSalida();
+  }
+}
+
+/* ── Recibir un pedazo ──────────────────────────────────────────────────── */
+async function _bzEnvParte(mid, ts, con, carga, borrar) {
+  if (!carga || typeof carga.e !== 'string' || !carga.e || carga.e.length > 40 ||
+      !(carga.n >= 1 && carga.n <= BZ_PARTES_MAX) || !(carga.i >= 0 && carga.i < carga.n) ||
+      Math.floor(carga.i) !== carga.i || typeof carga.d !== 'string') return borrar();
+  var k = con.uid + '|' + carga.e;
+  if (_bzHecho[k]) return borrar();                 // ya se aceptó o descartó aquí
+  var P = _bzPartes[k] || (_bzPartes[k] = { de: con.uid, e: carga.e, n: carga.n, ts: ts || Date.now(), partes: {}, mids: {} });
+  if (P.n !== carga.n) return borrar();
+  try { P.partes[carga.i] = _cuDeB64(carga.d); } catch (e) { return borrar(); }
+  P.mids[mid] = 1;
+  if (ts && ts < P.ts) P.ts = ts;
+  if (Object.keys(P.partes).length < P.n) { bzRepintar(); return; }
+  delete _bzPartes[k];
+  var mids = Object.keys(P.mids), tot = 0, i;
+  for (i = 0; i < P.n; i++) tot += P.partes[i].length;
+  var ab = { ok: false, motivo: 'llegó demasiado grande' };
+  if (tot <= PT_MAX_TOTAL_BYTES) {
+    var buf = new Uint8Array(tot), o = 0;
+    for (i = 0; i < P.n; i++) { buf.set(P.partes[i], o); o += P.partes[i].length; }
+    ab = ptAbrirPaquete(_bzTxt(buf));
+  }
+  var nom = con.nom || 'Tu compañero';
+  if (!ab.ok || !(ab.personas.length + ab.casos.length)) {
+    await _bzCerrar({ k: k, e: P.e, de: con.uid, mids: mids }, 'mal', 0);
+    toast('Te llegó algo de ' + nom + ' que este equipo no pudo leer. ' + (ab.ok ? '' : (ab.motivo || '')), 6000);
+    return;
+  }
+  _bzBandeja = _bzBandeja.filter(function (x) { return x.k !== k; });
+  _bzBandeja.push({ k: k, e: P.e, de: con.uid, nom: con.nom || '', ts: P.ts, abierto: ab, mids: mids });
+  bzPintarAvisos(); bzRepintar();
+  toast('Te llegó de ' + nom + ': ' + _bzResumen(ab.personas.length, ab.casos.length) + '. Revísalo en Modo compartir.', 6000);
+}
+/* El acuse de lo que se envió desde AQUÍ. Si no es de este equipo (lo envió otro
+   de la misma cuenta) se deja para él, una semana como mucho. */
+async function _bzAcuse(ts, con, carga, borrar) {
+  if (!carga || typeof carga.e !== 'string') return borrar();
+  await _bzCargarLocal();
+  var i = _bzSalida.findIndex(function (x) { return x.e === carga.e && x.para === con.uid && !x.oculto; });
+  if (i < 0) { if (!ts || Date.now() - ts > BZ_PARTE_VIDA) return borrar(); return; }
+  _bzSalida.splice(i, 1);
+  await _bzGuardarSalida();
+  await borrar();
+  bzRepintar();
+  var nom = con.nom || 'El compañero', n = carga.n | 0;
+  if (carga.r === 'ok') toast(n ? nom + ' importó ' + n + ' registro' + (n === 1 ? '' : 's') : nom + ' ya tenía todo lo que le enviaste', 5000);
+  else if (carga.r === 'no') toast(nom + ' no importó lo que le enviaste. Lo tuyo no cambió.', 5000);
+  else toast('A ' + nom + ' no le llegó bien lo que le enviaste. Vuelve a enviárselo.', 5000);
+}
+/* Aceptado, descartado o ilegible: se borran los pedazos, se recuerda y se
+   avisa al que lo envió. */
+async function _bzCerrar(it, r, n) {
+  _bzBandeja = _bzBandeja.filter(function (x) { return x.k !== it.k; });
+  _bzHecho[it.k] = Date.now();
+  await _bzGuardarHecho();
+  var yo = _bzId && _bzId.uid;
+  if (yo) it.mids.forEach(function (m) { FB.deleteDoc(FB.doc(_cuFB.db, 'buzon', yo, 'm', m)).catch(function () {}); });
+  var con = bzContacto(it.de);
+  if (con && !con.roto) { try { await _bzEncolar(con, 'acuse', { e: it.e, r: r, n: n | 0 }); } catch (e) {} }
+  bzPintarAvisos(); bzRepintar();
+}
+/* Otro equipo de la cuenta lo atendió y borró sus pedazos. */
+function _bzOlvidarMid(mid) {
+  var antes = _bzBandeja.length;
+  _bzBandeja = _bzBandeja.filter(function (x) { return x.mids.indexOf(mid) < 0; });
+  Object.keys(_bzPartes).forEach(function (k) { if (_bzPartes[k].mids[mid]) delete _bzPartes[k]; });
+  if (_bzBandeja.length !== antes) { bzPintarAvisos(); bzRepintar(); }
+}
+/* Un envío al que nunca le llegaron todos los pedazos se descarta a la semana. */
+function _bzLimpiarPartes() {
+  var lim = Date.now() - BZ_PARTE_VIDA, yo = _bzId && _bzId.uid;
+  Object.keys(_bzPartes).forEach(function (k) {
+    var P = _bzPartes[k];
+    if (P.ts > lim) return;
+    delete _bzPartes[k];
+    if (yo) Object.keys(P.mids).forEach(function (m) { FB.deleteDoc(FB.doc(_cuFB.db, 'buzon', yo, 'm', m)).catch(function () {}); });
+  });
+}
+
+/* ── Lo que se ve ───────────────────────────────────────────────────────── */
+function bzPintarAvisos() {
+  var n = (bzActiva() ? _bzBandeja.length : 0);
+  ['bz-cnt-nav', 'bz-cnt-mas'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) { el.textContent = n > 9 ? '9+' : String(n); el.style.display = n ? '' : 'none'; }
+  });
+  var p = document.getElementById('bz-punto'); if (p) p.style.display = n ? '' : 'none';
+}
+function bzUiPendientes() {
+  var llegando = Object.keys(_bzPartes).map(function (k) { return _bzPartes[k]; });
+  if (!_bzBandeja.length && !llegando.length) return '';
+  var h = '<div class="card" id="bz-pendientes"><div class="st">Por revisar</div>' +
+          '<p class="txd txs">Nada se guarda hasta que lo aceptes.</p><div class="bz-lista">';
+  _bzBandeja.slice().sort(function (a, b) { return b.ts - a.ts; }).forEach(function (x) {
+    h += '<div class="bz-it bz-rec"><div class="bz-b"><div class="bz-nom">De ' + escHtml(x.nom || 'tu compañero') + '</div>' +
+         '<div class="bz-de">' + escHtml(_bzResumen(x.abierto.personas.length, x.abierto.casos.length) + ' · ' + _bzHace(x.ts)) + '</div></div>' +
+         '<div class="bz-acc"><button class="btn bs cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiDescartar(this.dataset.k)">Descartar</button>' +
+         '<button class="btn bp cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiRevisar(this.dataset.k)">Revisar</button></div></div>';
+  });
+  llegando.forEach(function (P) {
+    var c = bzContacto(P.de);
+    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">De ' + escHtml((c && c.nom) || 'tu compañero') + '</div>' +
+         '<div class="bz-de">Llegando… ' + Object.keys(P.partes).length + ' de ' + P.n + '</div></div></div>';
+  });
+  return h + '</div></div>';
+}
+function bzUiEnviados() {
+  var l = _bzSalida.filter(function (x) { return !x.oculto; }).sort(function (a, b) { return b.ts - a.ts; }).slice(0, 6);
+  if (!l.length) return '';
+  var h = '<div class="card" id="bz-enviados"><div class="st">Enviados</div><div class="bz-lista">';
+  l.forEach(function (x) {
+    var est = x.estado === 'fallo' ? 'No se pudo enviar: ' + (x.motivo || 'inténtalo de nuevo')
+      : x.estado === 'enviado' ? 'Esperando que lo revise'
+      : (navigator.onLine ? 'Enviando…' : 'Sin señal: sale cuando vuelva');
+    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">A ' + escHtml(x.nom || 'tu compañero') + '</div>' +
+         '<div class="bz-de' + (x.estado === 'fallo' ? ' mal' : '') + '">' + escHtml(_bzResumen(x.p, x.c) + ' · ' + est) + '</div></div>' +
+         (x.estado !== 'cola' ? '<button class="btn bs cp-mini" data-e="' + escAttr(x.e) + '" onclick="bzUiQuitarEnviado(this.dataset.e)">Quitar</button>' : '') +
+         '</div>';
+  });
+  return h + '</div></div>';
+}
+/* El envío: los mismos grupos con casillas del vínculo por wifi y un botón por
+   compañero confirmado. `conGrupos` falso cuando los grupos ya están en pantalla. */
+function bzUiEnvio(conGrupos) {
+  var l = bzContactos().filter(function (c) { return c.confirmado && !c.roto; });
+  if (!l.length) return '';
+  var n = _ptContar('p') + _ptContar('c'), h = '';
+  if (conGrupos) h += _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste') +
+                      _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro');
+  h += '<div class="bz-env">';
+  l.forEach(function (c) {
+    var nom = escHtml(c.nom || 'el compañero');
+    h += '<button class="btn bp bbl" data-uid="' + escAttr(c.uid) + '" onclick="bzUiEnviar(this.dataset.uid)"' + (n && !_bzEnviando ? '' : ' disabled') + '>' +
+         'Enviar a ' + nom + (n ? ' (' + n + ')' : '') + '</button>';
+  });
+  return h + '</div>';
+}
+async function bzUiEnviar(uid) {
+  if (_bzEnviando) return;
+  var con = bzContacto(uid); if (!con) return;
+  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
+  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
+  _bzEnviando = true; renderCompartir();
+  var r;
+  try { r = await bzEnviarRegistros(uid, personas, casos); } finally { _bzEnviando = false; }
+  if (!r.ok) { renderCompartir(); toast('No se pudo enviar: ' + r.motivo, 4500); return; }
+  _ptSel = { p: {}, c: {} };
+  renderCompartir();
+  toast(navigator.onLine ? 'Enviando a ' + (con.nom || 'tu compañero') + '…'
+                         : 'Sin señal: se envía a ' + (con.nom || 'tu compañero') + ' cuando vuelva', 4000);
+}
+function bzUiRevisar(k) {
+  var it = _bzBandeja.find(function (x) { return x.k === k; });
+  if (!it) return;
+  ptConfirmarImportacion(it.abierto, it.nom || 'tu compañero', async function (si, decision) {
+    if (!si) return;                       // «Ahora no»: sigue por revisar
+    if (!_bzBandeja.some(function (x) { return x.k === k; })) { toast('Otro equipo tuyo ya lo atendió.', 4000); return; }
+    var r = await ptAplicarPaquete(it.abierto, decision, '');
+    if (!r.ok) { toast(r.motivo, 5000); return; }
+    var n = r.p.nuevos + r.p.actualizados + (r.p.fundidos || 0) + r.c.nuevos + r.c.actualizados;
+    await _bzCerrar(it, 'ok', n);
+    if (n) ptAlRecibir(r.p, r.c); else toast('Ya tenías todo lo que te envió ' + (it.nom || 'tu compañero') + '.', 4000);
+  }, { no: 'Ahora no' });
+}
+function bzUiDescartar(k) {
+  var it = _bzBandeja.find(function (x) { return x.k === k; });
+  if (!it) return;
+  openModal(
+    '<div class="mh"><h2>Descartar</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+    '<p class="txd txs">No se guarda nada de lo que te envió ' + escHtml(it.nom || 'tu compañero') + '. Se le avisa que no lo importaste.</p>' +
+    '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
+      '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
+      '<button class="btn bp" data-k="' + escAttr(k) + '" onclick="bzUiDescartarSi(this.dataset.k)">Descartar</button>' +
+    '</div>');
+}
+async function bzUiDescartarSi(k) {
+  closeModal();
+  var it = _bzBandeja.find(function (x) { return x.k === k; });
+  if (it) await _bzCerrar(it, 'no', 0);
+  toast('Descartado');
+}
+async function bzUiQuitarEnviado(e) {
+  _bzSalida = _bzSalida.filter(function (x) { return x.e !== e; });
+  await _bzGuardarSalida();
+  renderCompartir();
 }
 
 // NOTA: el SW solo funciona en HTTPS o localhost.

@@ -471,8 +471,9 @@ const reglas = readFileSync(join(ROOT, 'firebase/firestore.rules'), 'utf8');
 log(/match \/entitlements\/\{uid\}\s*\{\s*allow read: if esDueno\(uid\);\s*allow write: if false;/.test(reglas), '[E4] las reglas: el derecho de uso se lee, nunca se escribe desde el teléfono');
 const cuerpo = n => { const i = src.indexOf(n); return i < 0 ? '' : src.slice(i, i + 420); };
 const guard = ['function go(name)', 'function startWizard(tipo)', 'function editCase(id)', 'function lcSalida(kind, ctx, nombre)', 'async function lcProducirDoc(kind, ctx, sel)',
-  'function ptEnviarRegistros(personas, casos, cb)', 'async function ptExportarArchivo(personas, casos)', 'function ptImportarArchivo()', 'function ptConfirmarImportacion(abierto, deQuien, cb)'];
-log(guard.every(g => /lcGuardia\(\)/.test(cuerpo(g))), '[E5] un solo guardián en las nueve puertas');
+  'function ptEnviarRegistros(personas, casos, cb)', 'async function ptExportarArchivo(personas, casos)', 'function ptImportarArchivo()', 'function ptConfirmarImportacion(abierto, deQuien, cb, opts)',
+  'async function bzEnviarRegistros(uidPara, personas, casos)'];
+log(guard.every(g => /lcGuardia\(\)/.test(cuerpo(g))), '[E5] un solo guardián en las diez puertas (la décima: enviar a un compañero por el buzón)');
 const ws = src.indexOf('function wizSave');
 log(ws > 0 && !/lcGuardia/.test(src.slice(ws, src.indexOf('\nfunction ', ws + 20))), '[E6] guardar una captura que ya se estaba llenando no se bloquea (no se pierde trabajo)');
 log(/function drLibre\(\) \{\s*if \(!cuEsLocal\(\)\) return false;/.test(src), '[E7] el atajo de las pruebas (pruebaLibre) solo existe en localhost');
