@@ -15,7 +15,8 @@
 > final. **F1, F2, F3 y F4 fusionadas en `main` el 2026-10-23, cada una con su commit de merge
 > (sin publicar: `main` no se ha subido a `origin`). Ni la F3 ni la F4 se publican antes que la F5
 > (la F3 cierra la app al día 15 y todavía no se puede pagar).
-> La cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
+> `CU_FB` ya tiene el proyecto real (build 142).** **F5 hecha en la rama `f5-compras` (2026-10-24,
+> build 143, sin fusionar ni publicar)**: ver «La suscripción (F5)» al final. Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
 > la CSP, y `lexcapture-android/` sin git.
@@ -5571,6 +5572,9 @@ dos teléfonos se juntan en la misma red wifi (uno activa su zona wifi) y **no h
 datos**.
 
 ## Modo compartir (2026-09-07) — se comparten REGISTROS, no se diligencia un procedimiento entre dos
+⚠️ **EL VÍNCULO POR WIFI SE RETIRÓ EL 2026-10-25** (paso 4 de «Compartir entre cuentas», al final):
+hoy se comparte con la cuenta del compañero (buzón cifrado) o por archivo `.lexc`. Quedan el
+códec, el lector, el sobre, la revisión y la fusión al recibir.
 ⚠️ **ESTA SECCIÓN SUSTITUYE ENTERAS LAS DEL «MODO PATRULLA» (fases 1 a 5, 2026-09-04).** Aquello se
 retiró del código: no está desactivado, no está detrás de una bandera — no existe. Lo que sigue en
 pie es el transporte (el códec de códigos y el vínculo por WebRTC), que se conservó porque estaba
@@ -6136,6 +6140,8 @@ abren con la nueva ([I8]) y **no** con la vieja ([I9]).
 - Anti-caché `?v=108` / `cache-v108`, `_BUILD=108`.
 
 ## Las actas se ponen al día solas (2026-09-20)
+⚠️ **RETIRADO EL 2026-10-25** junto con el vínculo por wifi. Lo sustituye el paso 3 del buzón: los
+cambios del compañero vuelven, pero solo se aplican si se autorizan.
 Reportado como requerimiento: el reparto de la patrulla no termina cuando se manda la captura. El
 compañero se queda con ella y diligencia lo que viene después —acta de derechos, cadena de custodia,
 rótulo, acta de incautación y acta de entrega— y eso **se quedaba en su teléfono** salvo que volviera
@@ -6403,7 +6409,8 @@ Elegido por el usuario tras la retirada: **RevenueCat**, y **solo en Android** p
   una persona concreta**, más validación de recibos en su servidor sin montar ninguno. ⚠️ Solo recibe
   recibos de compra y un identificador de app: **no ve capturas, personas ni documentos**, que es lo
   que lo hace compatible con la regla de Habeas Data de este proyecto.
-- ⚠️ **La app solo pregunta «¿tiene el derecho `premium`?»**, nunca por un producto concreto: así
+- ⚠️ **La app solo pregunta «¿tiene el derecho `flagrante_pro`?»** (identificador real del
+  entitlement en RevenueCat, 2026-10-23; ver PUBLICAR.md §6), nunca por un producto concreto: así
   añadir mañana un plan trimestral no toca una línea de código.
 
 **Envoltorio Android: PREPARADO Y VERIFICADO** (`lexcapture-android`, que no es un repositorio git).
@@ -7619,6 +7626,17 @@ que la propia suite arranca y apaga: ninguna comprobación toca un proyecto real
   queda ilegible; lo del teléfono no se toca). ⚠️ **La URL de acción de Firebase TIENE que ser la
   app** (PUBLICAR.md, paso 4): en la página de Google se escribiría la contraseña real.
   `index.html` conserva ahora los parámetros y el ancla al redirigir.
+  ⚠️ **(2026-10-24, build 142) En el proyecto real NO se puede**: `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`
+  por consola y por API, también en Blaze; y `handleCodeInApp` + `continueUrl` no evitan la página
+  de Google (medido con un enlace generado por API, sin enviar correo). Salida: **contraseña
+  temporal** (`CU_ACCION_EN_APP = false`, pantalla `temporal`, `cuConTemporal`). En la página de
+  Google se escribe una temporal que Firebase conoce tal cual; la app entra con ella y en el acto
+  la cambia por la llave derivada de la nueva (que no puede ser la temporal), y la DEK pide el
+  código. ⚠️ Se prueba ANTES como contraseña normal (si alguien escribe ahí la de siempre, entra sin
+  que Firebase la vea), y **nunca** se intenta «en crudo» desde la pantalla de iniciar sesión: un
+  error de tecleo de la contraseña real le llegaría a Firebase. `auth.languageCode = 'es'` para que
+  el correo y la página salgan en español. `verify_cuenta` 62/62 (E9-E15 nuevos; E1-E8 fuerzan
+  `CU_ACCION_EN_APP = true`).
 - **Los datos del equipo tienen dueño** (`_cuenta.uid`): la primera cuenta que entra se queda con
   ellos (también lo que había antes de la cuenta). Otra cuenta no los ve: «Este equipo es de otra
   cuenta» → entrar con la dueña o borrarlos. Cerrar sesión **no borra** salvo que se pida (aviso: en
@@ -7859,3 +7877,281 @@ Capturas añade «· nube hace X» o «· N sin subir» (`lcColaCopia` → `nbCo
 - ⚠️ `lexcapture-android/` sigue **sin git**: el `intent-filter` retirado del manifiesto y los
   dos complementos desinstalados quedan descritos aquí. Van en el mismo **versionCode 6** de la
   F3, que no se ha subido.
+
+## La suscripción (F5 del plan de cuenta, 2026-10-24)
+Quinta fase del plan vigente. Rama `f5-compras`, **sin fusionar ni publicar**. Verificado con
+`verify_compras.mjs` (**30 checks**, nuevo) contra los emuladores (Auth + Firestore + Functions),
+con el complemento de RevenueCat simulado en el teléfono y RevenueCat simulado en el servidor.
+
+- **El servidor sigue siendo la única fuente del derecho de uso.** `miDerecho` pregunta a la API de
+  RevenueCat (`GET /v1/subscribers/{uid}`, clave secreta `REVENUECAT_SK` como secreto de Functions)
+  y traduce el entitlement **`flagrante_pro`** a `entitlements/{uid}` con `plan:'pagado'` y su
+  vencimiento. La lógica pura está en `firebase/functions/compras.js` (`estadoRC`, `debeConsultar`,
+  `cambioRC`): vencimiento = máximo entre el de la suscripción y el del período de gracia de Google
+  Play; sin vencimiento = para siempre; pagar en plena prueba la reemplaza y conserva `pruebaUsada`;
+  un reembolso baja el vencimiento y, si RevenueCat ya no conoce el entitlement, termina hoy.
+- ⚠️ **Sin webhook, a propósito**: el único que lee el plan es la app, y la app siempre pregunta a
+  `miDerecho` cuando tiene señal. Con un plan pagado de más de 2 días por delante no se consulta a
+  RevenueCat en cada apertura; `{forzar:true}` (tras comprar, «Ya pagué: revisar», «Restaurar») sí.
+  Si RevenueCat no responde se devuelve lo guardado: un fallo suyo no quita ni da el plan.
+- ⚠️ **En el emulador RevenueCat se simula con `_simRC/{uid}`**, dentro de un `if (EMULADOR)` —
+  la misma regla que la simulación de Play Integrity ([E3] de las dos suites). Las reglas cierran
+  `_simRC` y el teléfono sigue sin poder escribir `entitlements`.
+- `iniciarPrueba`: quien pagó sin haber usado la prueba y dejó vencer la suscripción todavía puede
+  pedirla (antes, cualquier `entitlements/{uid}` vencido decía «cuenta-ya-uso-prueba»).
+- **El teléfono (`cp*`, al final del módulo del derecho de uso)**: `@revenuecat/purchases-capacitor`
+  **13.7.3** (versión fija; las 13.7.5/6 tenían dos días), llamado por `Capacitor.Plugins.Purchases`
+  sin el envoltorio de JavaScript, así que los códigos de error se leen de `code`/`data.code`
+  (`cpCodigo`: 1 cancelado, 6 ya comprado → restaurar, 10 red, 20 pago pendiente). Clave PÚBLICA
+  `goog_…` en `CP_RC_KEY`; el usuario de RevenueCat es el uid (`configure`, y `logIn` si cambia la
+  cuenta). Pantalla **`planes`** con lo que da Google Play (nombre, precio, período, equivalente
+  mensual del anual), «Restaurar compras» y el texto de renovación/cancelación que exige Play. Tras
+  pagar, `cpConfirmar` pregunta al servidor hasta 4 veces. ⚠️ **Ningún precio ni producto escrito en
+  la app**; `CP_ENT` es el único sitio donde se nombra el entitlement.
+- «Suscribirme sin la prueba» en la pantalla de la prueba (es también la salida de un teléfono que
+  no pasa Play Integrity). Ajustes → Cuenta: «Ver planes» o, pagado, «Administrar en Google Play».
+  En la web «Suscribirme» dice dónde se compra; en una app de Android sin el complemento, que se
+  actualice.
+- `privacy.html` §8 reescrita (Google Play cobra; RevenueCat recibe el recibo y el uid, nunca datos
+  de trabajo) y fila de facturación en §9. La descripción de la ficha NO se tocó (la versión 5 está
+  en revisión): el cambio está preparado en `store-listing.md` («Cambios para el paquete de la F5»),
+  y corrige de paso la frase del PIN, falsa desde la F1.
+- **Envoltorio: versionCode 6** (el mismo de F3/F4, que no se ha subido), 5 complementos, manifiesto
+  con `com.android.vending.BILLING`, `.aab` de 7,45 MB, `jar verified.`, build 143 dentro.
+  ⚠️ No probado en un teléfono real: una compra solo se puede probar instalando desde una pista de
+  Play con un probador con licencia. Las tareas de consola están en `PUBLICAR.md` §6 «F5 — tareas».
+- `verify_prueba` [V9] adaptado (una app sin el complemento pide actualizar), sigue en 71/71.
+  En verde: compras 30 · prueba 71 · cuenta 62 · nube 39 · csp 11.
+  Anti-caché `?v=143` / `cache-v143`, `_BUILD=143`.
+
+## Compartir entre cuentas — paso 1: compañeros y buzón (2026-10-24)
+Sustituye, por etapas, al Modo compartir por wifi. El usuario pidió revisar su complejidad: lo que
+necesita es pasar personas y capturas cifradas a otro funcionario, que él siga diligenciando el
+expediente y que sus cambios VUELVAN a quien compartió, **sin aplicarse hasta que este los
+autorice**, con un aviso breve y un resumen de lo agregado o editado. El módulo actual (~2 900 líneas:
+códec QR, conexión directa WebRTC, misma wifi, actas que se actualizan solas) no cumplía tres de esos
+requisitos: los cambios solo volvían con los dos teléfonos abiertos y vinculados, se aplicaban solos y
+no había resumen. Se diseñó antes de que existiera la cuenta; con la cuenta y la nube (F2-F4) hay una
+vía más sencilla. Rama `compartir-cuentas` (sobre `f5-compras`), **sin fusionar ni publicar**. Cuatro
+pasos, cada uno espera aprobación: **1 compañeros** · 2 envío · 3 devoluciones con autorización ·
+4 retiro del vínculo por wifi y `privacy.html`.
+- **Decisiones del usuario (2026-10-24)**: (1) en los DOS sentidos — si el dueño corrige después, al
+  otro también le llega como pendiente; (2) si los dos cambiaron el mismo dato, el resumen lo marca y
+  por defecto se conserva el propio; (3) el archivo `.lexc` se queda como respaldo; (4) el buzón **no
+  exige plan vigente**, ni para enviar ni para recibir (con el plan vencido la app ya se cierra).
+
+### Lo que hay en el paso 1 (módulo `bz*`, tras la nube)
+- **Llave de identidad por CUENTA** (ECDH P-256): `users/{uid}/llaves/id` = `{v, pub, priv}` con la
+  privada cifrada con una llave que sale de la DEK (HKDF `flagrante|identidad`); en el equipo, en
+  IndexedDB (`bz|<uid>`) cifrada con la llave del equipo, y sirve sin señal. ⚠️ **Documento aparte de
+  `llaves/main`**: las operaciones de la cuenta (usar el código, empezar de cero) reescriben ese
+  documento entero con `setDoc`. ⚠️ Si la DEK cambia, la llave de identidad NO cambia: el equipo la
+  vuelve a cifrar con la DEK nueva y los compañeros no se pierden. Con señal manda la de la nube si
+  abre; todos los equipos de la cuenta tienen la misma.
+- **Agregar un compañero con UN escaneo**: A enseña un código (`FLG1` · uid · llave pública · secreto
+  de 16 bytes · nombre; ~130 B, QR versión 8, vale 5 min). B lo lee con el lector de siempre, guarda a
+  A y le deja en el buzón una solicitud cifrada con una llave efímera **más el secreto del código**:
+  solo la abre A y solo la pudo escribir quien vio el código. A guarda a B y responde «hola». ⚠️ Nadie
+  —tampoco el servidor— puede meter su llave en medio: la de A viaja en persona y la de B dentro de un
+  sobre que exige el secreto. El secreto es de **un solo uso** y caduca (una foto vieja no sirve).
+  ⚠️ B guarda a A **antes** de escribir la solicitud: el «hola» puede llegar en un instante y uno de
+  quien no es compañero se descarta. Si la solicitud no sale, se deshace.
+- **Código de seguridad** (`bzHuella`, 8 caracteres de la huella SHA-256 de la llave): los dos ven el
+  mismo en las dos pantallas.
+- **Compañeros en `cfg.contactos`** (`id` = uid): pasan solos a los demás equipos de la cuenta por la
+  nube, que funde las listas por identificador.
+- **El canal**: ECDH estático (mi privada × su pública) → HKDF → AES-GCM, con tipo, remitente,
+  destinatario e id del mensaje como dato adicional autenticado: un mensaje que abre ES de ese
+  compañero, y un sobre movido a otro mensaje o tipo no abre. ⚠️ Sin secreto hacia adelante, a
+  conciencia; los mensajes se borran al procesarse.
+- **El buzón**: `buzon/{para}/m/{mid}` = `{v, de, t, ct, eph?, ts}`. Escucha en vivo
+  (`bzEscuchar`) que arranca y para con la nube (`nbArrancar`/`nbDetener`). Lo de quien no es
+  compañero se borra sin abrirse. ⚠️ **Lo que no se sabe atender NO se borra**: un tipo de una
+  versión más nueva, o una solicitud para el código que enseñó OTRO equipo de la misma cuenta (solo
+  él tiene el secreto; se deja un día). Un mensaje de un compañero que no abre marca su tarjeta «las
+  llaves cambiaron: vuelvan a agregarse».
+- **Reglas**: la llave de identidad solo la lee y escribe su dueño; en el buzón cualquiera con sesión
+  puede DEJAR un mensaje con `de == su uid` (y `ts == request.time`, campos acotados), solo el dueño
+  lo lee y lo borra, y nadie lo cambia. `alBorrarUsuario` borra también `buzon/{uid}` (⚠️ hay que
+  volver a desplegar las funciones y las reglas).
+- **Pantalla**: tarjeta «Mis compañeros» arriba en Modo compartir (solo con cuenta y sesión), con
+  «Mostrar mi código» / «Escanear el del compañero», el código de seguridad y «Quitar». El vínculo por
+  wifi sigue debajo hasta el paso 4.
+- `verify_companeros.mjs` (**34 checks**, nuevo, contra los emuladores): identidad cifrada, sin señal,
+  repuesta con la misma llave, la misma en dos equipos; el código pasa por el lector QR de verdad;
+  los dos confirmados con el mismo código de seguridad; un solo uso; caducidad; reglas (leer ajeno,
+  suplantar, cambiar, campos sueltos); lo de quien no es compañero se borra; quitar y volver a agregar;
+  la tarjeta se ve; sin cuenta no aparece. ⚠️ **Comprobado que muerde**: quitando la caducidad y el
+  filtro de compañeros fallan [B9], [C9] y [C10].
+- Anti-caché `?v=144` / `cache-v144`, `_BUILD=144`. Sin `.aab` nuevo: el paso 1 viaja en el mismo paquete que la F5 cuando se apruebe todo.
+
+### Paso 2: el envío (2026-10-24)
+Se marcan personas y capturas en Modo compartir y se pulsa **«Enviar a X»** (un botón por compañero
+confirmado). Del otro lado queda **«Por revisar»** y nada se guarda hasta que lo acepte con la
+revisión de siempre. Mismo bloque `bz*`, a continuación del paso 1. Verificado con
+`verify_envio_buzon.mjs` (**36 checks**, nuevo, contra los emuladores, con dos equipos por cuenta).
+- **Un solo formato para las tres vías**: el sobre es `ptPaquete` y se abre con `ptAbrirPaquete`,
+  igual que el vínculo por wifi y el archivo `.lexc`; se acepta con `ptConfirmarImportacion` (gana un
+  4.º parámetro: el botón de cancelar dice «Ahora no» y lo deja por revisar) y se guarda con
+  `ptAplicarPaquete` sin compañero de wifi (`dev` vacío).
+- **Partido en pedazos** de 384 KB (`BZ_PARTE`; cifrado y en base64 queda en ~700 KB, por debajo del
+  tope de las reglas). Cada pedazo es un mensaje `env` cifrado aparte con el envío, su número y el
+  total DENTRO de lo cifrado. Del otro lado se juntan en memoria y solo con todos se abre el sobre.
+- ⚠️ **La bandeja ES el propio buzón**: los pedazos se quedan ahí hasta aceptar o descartar, así un
+  teléfono que se apaga a mitad los vuelve a juntar al abrir y todos los equipos de la cuenta lo
+  ven; cuando uno lo atiende y borra, desaparece de los demás (`_bzOlvidarMid`). Este equipo recuerda
+  lo ya atendido (`bzh|uid`, 30 días) por si el borrado no alcanzó a salir: un pedazo que reaparece
+  se borra sin volver a pedir revisión. Un envío al que nunca le llegan todos los pedazos se ve como
+  «Llegando… n de m» y se descarta a la semana.
+- ⚠️ **Cola de salida en el equipo** (`bzo|uid`, IndexedDB, cifrada con la llave del equipo, ya
+  cifrada para el compañero). Sin señal el envío espera, sobrevive a cerrar la app y sale solo al
+  volver (evento `online`, al volver a la app y cada minuto). Las reglas no dejan cambiar un mensaje:
+  si un pedazo que ya se había intentado vuelve con «permiso denegado», se da por entregado.
+- **Acuse**: al aceptar, descartar o no poder leer, se le devuelve al que envió (`acuse`, también por
+  la cola). Quien envió ve «Esperando que lo revise» y luego «X importó N registros» / «no lo
+  importó». Un acuse que no es de este equipo (lo envió otro de la misma cuenta) se deja para él.
+- **Contador** de lo que hay por revisar en el panel lateral, en «Más» y un punto sobre «Más» en la
+  barra inferior (`bzPintarAvisos`), más un aviso breve al llegar.
+- Lo de quien no es compañero se sigue borrando sin abrirse. Comprobado que la suite muerde:
+  quitando la memoria de lo atendido fallan 6, y haciendo que «Ahora no» descarte, aborta en [E10].
+- ⚠️ La revisión con resumen de cambios y la autorización de lo que el compañero diligencie después
+  es el paso 3; todavía no se guarda la versión base de lo compartido.
+- `verify_prueba` [E5] cuenta ahora DIEZ puertas del guardián (la nueva firma de `ptConfirmarImportacion` y `bzEnviarRegistros`); 71/71. En verde: compañeros 34 · compartir 57 · csp 11 · almacén 13 · nube 39 · cuenta 62 · compras 30 · tema 51 · sincro 32. Anti-caché `?v=145` / `cache-v145`, `_BUILD=145`.
+
+### Paso 3: los cambios vuelven, con autorización (2026-10-25)
+Una captura que se pasó por el buzón queda **compartida** entre las dos cuentas. Cuando cualquiera de
+los dos la guarda —formulario, acta, cadena de custodia, rótulo, dossier—, lo que cambió le llega al
+otro, y al otro **no se le aplica solo**: aviso breve + resumen («Agregó el testigo PEDRO RUIZ ·
+Editó el teléfono de la víctima MARÍA GÓMEZ») y decide **Aplicar / Descartar / Ahora no**. Mismo
+bloque `bz*`, a continuación del paso 2. Verificado con `verify_cambios_buzon.mjs` (**33 checks**,
+nuevo, contra los emuladores, dos cuentas).
+- **La base**: cada captura compartida guarda, por compañero, la última versión que los dos tienen
+  en común (`caso.bzc[uid] = {b, t}`): la que se envió, la que se aceptó o la que quedó tras aplicar.
+  Al guardar, si la captura ya no es esa base, sale un mensaje `upd` (mismo troceado y cola de salida
+  que el paso 2) con la base **y** la versión nueva. Quien recibe funde a **tres vías** (`lcFundir3`,
+  la de la nube): solo se le proponen los cambios que el otro HIZO, no las diferencias entre los dos.
+  ⚠️ `bzc` viaja por la NUBE (cifrado, como todo: cualquier equipo de la cuenta sabe qué está
+  compartido) y **nunca al compañero**: `ptParaEnviar` lo quita en las tres vías (buzón, wifi, `.lexc`).
+  ⚠️ `DB.saveCase` conserva el `bzc` guardado: el formulario trabaja sobre una copia de cuando se abrió
+  y no puede devolver unas bases viejas.
+- **El aviso sale de `DB.saveCase` y NO de `saveCases`** (`bzAlGuardarCaso`, con espera de 2,5 s):
+  por `saveCase` pasa lo que guarda el funcionario; por `saveCases`, lo que llega de fuera (la nube, lo
+  importado, lo autorizado). Así **lo recibido no vuelve en eco**, por construcción.
+  `bzRevisarCompartidas` serializa las rondas y repite si entró otro guardado entretanto.
+- **Si los dos cambiaron lo mismo** (decisión del usuario): el resumen lo marca con «Tuyo / Suyo» y
+  **por defecto se queda lo propio**. **En los dos sentidos** (decisión del usuario): el que compartió
+  también manda sus correcciones, y al otro le llegan igual, por revisar.
+- ⚠️ **Los sellos `updated`** (actas, custodia, orden) cambian en cada guardado: se quedan en los
+  datos pero no cuentan como cambio (`_bzEsSello`, `_bzSinSellos`). Sin eso, abrir y cerrar un acta
+  sin tocarla le mandaba al otro un «cambio» vacío.
+- ⚠️ **Quién suscribe no viaja** (`PT_SOLO_DUENO`: servidor, foto del dossier, firmante y membrete
+  del oficio; `_bzProteger`): cada uno firma con su funcionario. ⚠️ **Un cambio nunca crea una
+  captura**: si aquí no está, o no está compartida con quien lo manda, se descarta. ⚠️ **Con la
+  captura abierta en el formulario no se aplica** (`nbBloqueado`): el formulario la reemplazaría al
+  guardar. ⚠️ **No se propaga borrar la captura entera**: cada uno decide sobre la suya.
+- **Descartar** no cambia nada y deja la base como estaba: lo descartado no se vuelve a proponer
+  salvo que se edite otra vez. **Aplicar** guarda con `saveCases` y mueve la base.
+- **Lo que se ve**: insignia ámbar «Cambios por revisar» (o azul «Compartida») en la tarjeta de la
+  lista (`bzBadgeCaso`, vía `lcBadgeSync`), tarjeta de aviso encima de la lista de Capturas
+  (`bzAvisoCapturas`), renglón en el expediente con «Revisar los cambios» (`bzExpHtml`, vía
+  `lcExpSyncHtml`), y la entrada en «Por revisar» de Modo compartir. Todo con tokens (ámbar = espera
+  una decisión). Mirado en pantalla: `verify_cambios_buzon*.png`.
+- Regresiones en verde (sin otra sesión usando los emuladores): cambios 33 · envío 36 ·
+  compañeros 34 · nube 39 · cuenta 62 · prueba 71 · csp 11 · almacén 13 · expediente 13 ·
+  menú+expediente 16 · personas 25 · custodia 111 · firma 62 · tema 51.
+  ⚠️ `verify_compartir` [E3] y `verify_sincro` [B2] fallan por **código de «Perfil en tres
+  tarjetas»** (`lcComp*` llama a `ptQrSvg`/`ptScanAbrir` y esas suites miden el aislamiento del módulo
+  con una lista blanca): hay que añadirle esas funciones a la lista. No es de este paso.
+  Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.
+
+### Paso 4: se retira el vínculo por wifi (2026-10-25)
+Con el buzón de la cuenta (pasos 1-3) haciendo lo mismo sin que los dos teléfonos tengan que estar
+juntos ni en la misma red, el vínculo directo por wifi y las actas que se ponían al día solas
+sobraban. **Retirados del código, no desactivados.** Verificado con `verify_compartir.mjs`
+(**38 checks**, reescrita; antes 57 sobre el wifi) y las suites del buzón.
+- **Qué se fue**: el bloque «EL VÍNCULO» entero (WebRTC, código de invitación y respuesta,
+  descriptor comprimido, canal cifrado, latido, `ptEnviarRegistros`, `ptEstado`, `ptDesvincular`…),
+  «LO QUE SE DILIGENCIA DESPUÉS VIAJA SOLO» (`ptRecorte`, `ptAutoDoc`, `ptPonerseAlDia`,
+  `ptRecibirAuto`, la marca `c._sync`), el aviso neutro `lcDocGuardado`/`lcAlGuardarDoc` y sus cinco
+  llamadas (ya no lo escuchaba nadie: el paso 3 se engancha en `DB.saveCase`), la franja
+  `#pt-barra` con su CSS, `body.pt` y el token `--ok-band`, los estados de la pantalla
+  (inicio · preparando · mostrando · respondiendo · vinculado), la insignia «Sincroniza» y el renglón
+  del expediente del wifi (`lcBadgeSync`/`lcExpSyncHtml` solo consultan ya al buzón).
+  `ptRecibirCasos` y `ptAplicarPaquete` perdieron el parámetro del compañero de wifi.
+- **Qué se quedó**: el códec de códigos y el lector (`ptQr*`, `ptQrSvg`, `ptQrDeVideo`,
+  `ptScanAbrir`; los usan el código de compañero del buzón y el código de patrulla del Perfil), el
+  sobre y su validación (`ptPaquete`/`ptAbrirPaquete`), la revisión antes de importar, la fusión al
+  recibir, el **archivo `.lexc`** (decisión del usuario: se queda como respaldo), `ptMiNombre` y
+  `_ptAzar` (los usan la cuenta y el buzón).
+- **La pantalla**, de arriba abajo y sin estados: mis compañeros · por revisar · enviados · qué
+  marcar (personas, capturas) · «Enviar a …» · «Por archivo». Las casillas son las mismas para el
+  buzón y el archivo; sin nada marcado, el archivo dice «Marca arriba…». Sin cuenta solo queda el
+  archivo. ⚠️ La palabra «cifrado» no va en pantalla (`verify_envio_buzon` [I1]): el archivo se
+  describe «con clave».
+- ⚠️ **Lo que ya estaba guardado**: capturas con `c._sync` de antes conservan esa clave (empieza por
+  `_`, no viaja ni entra en la huella) y ya nada la lee. No se migra.
+- `privacy.html` §5 reescrita (compañeros, buzón cifrado en Firestore, cambios que se autorizan,
+  archivo), §7 y la fila de la cámara (agregar compañero + código de patrulla) y §11 (eliminar la
+  cuenta borra el buzón). `store-listing.md`: punto 4 del bloque de la F5 con el párrafo nuevo de
+  TRABAJO EN PAREJA (211 caracteres contra 246, no pasa de 4 000) y el punto 5 de Seguridad de los
+  datos. La descripción que está en revisión **no se tocó**.
+- `verify_sincro.mjs` (32, solo medía el wifi) se movió a `../Depuración/08-suites-obsoletas/`.
+  Adaptadas sin bajar lo que protegen: `verify_prueba` [V4]/[E5] (nueve puertas: la de wifi se fue),
+  `verify_tema` (la franja medida se sustituyó por el aviso ámbar de «cambios por revisar», AA en
+  los dos temas), y `_ptUiPaso` fuera de las tres suites del buzón.
+- ⚠️ `verify_compartir` [E3] admite `ptQrSvg`/`ptScanAbrir` antes del módulo: el código de patrulla
+  del Perfil (`lcComp*`) los usa, y es un consumidor del lector, no una llamada al envío.
+- ⚠️ **Defecto del paso 3 que destapó la medición nueva de `verify_tema`**: el «Ver» del aviso de
+  cambios iba en ámbar sobre el fondo ámbar claro y daba **3,98:1** (por debajo de AA). Pasa al
+  color del texto (12,9-13,0:1 en los dos temas).
+- Regresiones en verde: compartir 38 · compañeros 34 · envío 36 · cambios 33 · prueba 71 · tema 51 ·
+  csp 11 · nube 39 · cuenta 62 · almacén 13 · expediente 13 · menú+expediente 16 · personas 25 ·
+  custodia 111 · incautación 141 · entrega 111 · fpj6 140 · firma 62. Siguen los preexistentes:
+  `verify_ds` 8/9 («favorito con estrella SVG») y `verify_jerarquia` 65/66 (aviso de Ajustes).
+  Anti-caché `?v=147` / `cache-v147`, `_BUILD=147`.
+
+## Perfil en tres tarjetas (2026-10-24) — el compañero de patrulla con código QR
+Pedido del usuario con un pantallazo de Perfil marcado en tres recuadros: **1** el perfil (sin
+cambios) · **2** el compañero de patrulla en tarjeta propia, llenable con un escaneo o a mano · **3**
+«Mi jurisdicción», con la regla de que el CAI siempre sale «CAI <nombre>». Verificado con
+`verify_companero_patrulla.mjs` (**33 checks**, nuevo, dos teléfonos) y mirando la pantalla en los
+dos temas.
+- **El dato no se movió**: sigue en `cfg.perfiles[i].companero` del perfil ACTIVO, que es de donde lo
+  leen la cadena de custodia, el rótulo y las actas (`ccCompanero`). Solo cambió dónde se pide:
+  `lcCompRender` (tarjeta `#perfil-comp`) · `openCompaneroForm`/`saveCompaneroForm` (mismos ids
+  `pfm-c…` y la misma `pfmCampos`) · `lcCompGuardar` (fusiona: no borra claves que no pinta) ·
+  `lcCompQuitar`. Con varios perfiles dice de cuál es el compañero.
+- ⚠️ **`savePerfilForm` ya NO escribe `p.companero`**: sus campos salieron de ese formulario y `v()`
+  devolvería '' para cada uno — editar el perfil le habría borrado el compañero. Misma trampa que
+  `entidad`. Un perfil nuevo nace con `companero:{}`.
+- **El código de patrulla** (`lcCompCodigo`/`lcCompLeer`, «FLP1» + seis campos con largo de 1 byte, en
+  el orden de `LC_COMP_CAMPOS`, cada uno acotado): medido, 108 B = versión 7; con los seis campos
+  al tope, 245 B = versión 11. «Mostrar mi código» (`lcCompMostrar`) enseña el del perfil activo; «Escanear»
+  (`lcCompEscanear`) usa el lector de siempre (`ptScanAbrir`) y llena los seis datos de un golpe.
+- ⚠️ **NO es el código de Modo compartir, a propósito** (era lo que el usuario pidió evaluar). Aquel
+  vincula dos CUENTAS: exige cuenta, señal y un secreto de un solo uso que caduca a los 5 minutos.
+  Este lleva solo los seis datos que el funcionario enseña en su propia pantalla y tiene que servir
+  en la calle, sin señal y sin cuenta (incluso a quien no la ha creado). Atarlos haría que llenar el
+  compañero dependiera de la cobertura. Si le enseñan el de Modo compartir, el lector lo reconoce y
+  dice cuál pedir. El propio código y uno ajeno no tocan nada.
+- ⚠️ Con un código equivocado el lector **se cierra** tras avisar: devolviendo `false` se volvería a
+  leer en el fotograma siguiente y el aviso se repetiría sin fin.
+- **Las dos tarjetas nuevas** son `.pf-sec` (mismo canto, radio y sombra que `.pf-card`) con su
+  acordeón dentro; vacías nacen abiertas y, llenas, dicen quién/qué hay sin abrirlas.
+- **CAI**: `lcCaiLabel` antepone «CAI» a lo que se escriba en el campo CAI, reescribe «cai»/«C.A.I.»
+  como «CAI» y **no toca** lo que ya trae otro tipo de unidad (`OJ_RE_TIPO_DEP`: estación, cuadrante…).
+  Se aplica al salir del campo (visible), al guardar, en `patrullaLabel` y en `dosPatrullaFmt` (lo
+  guardado antes y las fotos del dossier también salen con CAI).
+- ⚠️ **Defecto PREEXISTENTE corregido de paso**: `ojNuevoCaso` (unidad de la diligencia) y
+  `SIM.gUnidad` sumaban `patrullaUnidad` a `patrullaLabel`, que ya la incluye: el CAI salía **dos
+  veces** («PATRULLA 32 CAI X CAI X»).
+- Suites adaptadas sin bajar su cuenta (el compañero ya no está en el formulario del perfil):
+  `verify_mejora7` [A17]–[A24] (67), `verify_custodia` (111), `verify_entrega` (111) y
+  `verify_grados` (31).
+- ⚠️ `lcCompMostrar`/`lcCompEscanear` viven **junto al buzón de compañeros** (tras el módulo de Modo
+  compartir) y no junto a su tarjeta: usan el códec y el lector (`ptQrSvg`, `ptScanAbrir`), y
+  `verify_compartir` [E3] y `verify_sincro` [B2] exigen que nada antes del módulo lo llame.
+- Regresión completa: en verde todo salvo los cuatro preexistentes ya documentados (`dossier_historico`
+  [20][21], `ds`, `jerarquia`, `mejora6b` [47][53]). En verde, entre otras: companero_patrulla 33 ·
+  compartir 57 · sincro 32 · companeros 34 · envío por buzón 36 · nube 39 · prueba 71 · compras 30 ·
+  mejora7 67 · custodia 111 · entrega 111 · grados 31. Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.

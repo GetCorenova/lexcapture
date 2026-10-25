@@ -244,7 +244,10 @@ log(pj.valores.patrulla === '32' && pj.valores.cai === 'CAI Parque Bolivar' &&
 log(/PATRULLA 32/.test(pj.resumen),
   '[A16] El panel dice lo que hay dentro sin abrirlo', pj.resumen.trim().slice(0, 60));
 
-/* El formulario del perfil: dos paneles, orden de la maqueta, sin «Entidad». */
+/* El formulario del perfil: orden de la maqueta, sin «Entidad».
+   ⚠️ Adaptado el 2026-10-24: el compañero de patrulla salió del formulario a su
+   propia tarjeta en la pantalla de Perfil. Se miden las mismas promesas —mismo
+   orden, no esconder lo diligenciado, no perder datos— donde ahora viven. */
 await page.evaluate(() => openPerfilForm('p1'));
 await page.waitForTimeout(350);
 const form = await page.evaluate(() => {
@@ -253,48 +256,58 @@ const form = await page.evaluate(() => {
     paneles: [...document.querySelectorAll('#modal-c .lc-acc-tit')].map(e => e.textContent.trim()),
     entidad: !!document.getElementById('pfm-entidad'),
     orden,
-    comp: [...document.querySelectorAll('#acc-body-pfm-comp .fl')].map(e => e.textContent.trim()),
-    compAbierto: (document.getElementById('acc-body-pfm-comp') || {}).style.display !== 'none',
-    // Plegar no es borrar: el campo del compañero sigue en el DOM.
-    compEnDom: !!document.getElementById('pfm-cnombre')
+    compEnForm: !!document.getElementById('pfm-cnombre')
   };
 });
-log(form.paneles.length === 2 && /Mis datos/i.test(form.paneles[0]) && /Compa/i.test(form.paneles[1]),
-  '[A17] El formulario se separa en «Mis datos» y «Compañero de patrulla»', form.paneles.join(' · '));
+await page.evaluate(() => { closeModal(); openCompaneroForm(); });
+await page.waitForTimeout(300);
+form.comp = await page.evaluate(() => [...document.querySelectorAll('#modal-c .fl')].map(e => e.textContent.trim()));
+await page.evaluate(() => { closeModal(); go('perfil'); });
+await page.waitForTimeout(300);
+const tarjeta = await page.evaluate(() => ({
+  sum: (document.getElementById('acc-sum-pf-comp') || {}).textContent || '',
+  dentro: (document.getElementById('perfil-comp') || {}).textContent || ''
+}));
+log(form.paneles.length === 1 && /Mis datos/i.test(form.paneles[0]) && !form.compEnForm,
+  '[A17] El formulario pide «Mis datos»; el compañero tiene su propia tarjeta', form.paneles.join(' · '));
 log(!form.entidad, '[A18] Punto 5: el campo «Entidad» ya no se pide en el perfil');
 log(/Nombres y apellidos/i.test(form.orden[0]) && /Correo/i.test(form.orden[1]) && /Tel/i.test(form.orden[2])
     && /C[eé]dula/i.test(form.orden[3]) && /Grado/i.test(form.orden[4]) && /Cargo/i.test(form.orden[5]),
   '[A19] En el orden que fijo la maqueta: nombre · correo · telefono · cedula · grado · cargo', form.orden.join(' · '));
 log(form.comp.length === form.orden.length && form.comp.every((t, i) => t === form.orden[i]),
   '[A20] «…y los datos del compañero en el mismo orden y con la misma logica»', form.comp.join(' · '));
-log(form.compAbierto && form.compEnDom,
-  '[A21] El panel del compañero se abre solo cuando ya trae datos (no esconde lo diligenciado)');
+log(/Juan Pablo Mejia/.test(tarjeta.sum) && /1098765432/.test(tarjeta.dentro),
+  '[A21] La tarjeta del compañero dice quién es sin abrirla (no esconde lo diligenciado)', tarjeta.sum);
 
-/* Un perfil NUEVO: el panel del compañero nace plegado, pero sus campos existen. */
-await page.evaluate(() => { closeModal(); openPerfilForm(''); });
+/* Un perfil NUEVO: el formulario solo pide sus datos y nace sin compañero. */
+await page.evaluate(() => openPerfilForm(''));
 await page.waitForTimeout(300);
 const nuevo = await page.evaluate(() => ({
-  plegado: (document.getElementById('acc-body-pfm-comp') || {}).style.display === 'none',
-  enDom: !!document.getElementById('pfm-cnombre'),
+  sinComp: !document.getElementById('pfm-cnombre'),
   misAbierto: (document.getElementById('acc-body-pfm-mis') || {}).style.display !== 'none'
 }));
-log(nuevo.plegado && nuevo.misAbierto,
-  '[A22] En un perfil nuevo el compañero nace plegado y «Mis datos» abierto');
-log(nuevo.enDom, '[A23] ⚠️ PLEGAR NO ES BORRAR: sus campos siguen en el DOM');
-
-/* Y se recolectan con el panel CERRADO. */
-const guardaPlegado = await page.evaluate(() => {
-  document.getElementById('pfm-nombre').value = 'PRUEBA PLEGADO';
-  document.getElementById('pfm-cnombre').value = 'COMPANERO OCULTO';
-  document.getElementById('pfm-ccedula').value = '99887766';
+log(nuevo.sinComp && nuevo.misAbierto,
+  '[A22] En un perfil nuevo «Mis datos» abierto y sin campos del compañero');
+const guardaNuevo = await page.evaluate(() => {
+  document.getElementById('pfm-nombre').value = 'PRUEBA NUEVO';
   savePerfilForm('');
-  const cfg = DB.getConfig();
-  const p = cfg.perfiles.find(x => x.nombre === 'PRUEBA PLEGADO');
-  return p ? { n: p.companero.nombre, c: p.companero.cedula, id: p.id } : null;
+  const p = DB.getConfig().perfiles.find(x => x.nombre === 'PRUEBA NUEVO');
+  return p ? { comp: p.companero, id: p.id } : null;
 });
-log(!!guardaPlegado && guardaPlegado.n === 'COMPANERO OCULTO' && guardaPlegado.c === '99887766',
-  '[A24] Guardar con el panel cerrado recoge igual sus campos', JSON.stringify(guardaPlegado));
-await page.evaluate(id => { const cfg = DB.getConfig(); cfg.perfiles = cfg.perfiles.filter(p => p.id !== id); cfg.perfilActivo = 'p1'; DB.saveConfig(cfg); }, guardaPlegado.id);
+log(!!guardaNuevo && guardaNuevo.comp && !Object.values(guardaNuevo.comp).some(v => String(v || '').trim()),
+  '[A23] El perfil nuevo nace con el compañero vacío', JSON.stringify(guardaNuevo && guardaNuevo.comp));
+
+/* ⚠️ Y editar el perfil NO borra al compañero: sus campos ya no están en ese
+   formulario y `v()` devolvería '' para cada uno. */
+const guardaPlegado = await page.evaluate(() => {
+  openPerfilForm('p1');
+  savePerfilForm('p1');
+  const p = DB.getConfig().perfiles.find(x => x.id === 'p1');
+  return { n: p.companero.nombre, c: p.companero.cedula, nom: p.nombre };
+});
+await page.evaluate(id => { const cfg = DB.getConfig(); cfg.perfiles = cfg.perfiles.filter(p => p.id !== id); cfg.perfilActivo = 'p1'; DB.saveConfig(cfg); }, guardaNuevo && guardaNuevo.id);
+log(guardaPlegado.n === 'Juan Pablo Mejia' && guardaPlegado.c === '1098765432' && !!guardaPlegado.nom,
+  '[A24] Editar el perfil conserva al compañero intacto', JSON.stringify(guardaPlegado));
 
 /* ═══════════════════════════════════════════════════════════════════════════
    B · NADA SE PERDIO — la mitad que de verdad protege este trabajo

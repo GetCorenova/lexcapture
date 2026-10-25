@@ -546,23 +546,17 @@ log(flujos8[1] && !/\) Tj/.test(flujos8[1].split('endstream')[0]),
 /* ══ G · COMPAÑERO DE PATRULLA ═════════════════════════════════════════════ */
 console.log('\n── G · Compañero de patrulla y entidad ──');
 
-await page.evaluate(() => { go('perfil'); openPerfilForm('pf-1'); });
+/* ⚠️ Desde el 2026-10-24 el compañero tiene su propia tarjeta en Perfil y se
+   escribe a mano en su formulario (mismos ids `pfm-c…`). */
+await page.evaluate(() => { go('perfil'); openCompaneroForm(); });
 await page.waitForTimeout(250);
-/* ⚠️ Desde la Mejora 7 (2026-08-31) el compañero vive en su propio panel del
-   formulario, que nace PLEGADO mientras esté vacío — que es el caso aquí. Se
-   despliega antes de rellenarlo, igual que haría el funcionario. */
-await page.evaluate(() => {
-  const b = document.getElementById('acc-body-pfm-comp');
-  if (b && b.style.display === 'none') lcAccToggle('pfm-comp');
-});
-await page.waitForTimeout(200);
 log(await page.isVisible('#pfm-cnombre'),
   '⚠️ El compañero de patrulla se registra UNA vez en el perfil: un procedimiento lo hace una patrulla de dos');
 await page.fill('#pfm-cgrado', 'Patrullero');
 await page.fill('#pfm-cnombre', 'JUAN PABLO MEJIA');
 await page.fill('#pfm-ccedula', '1.098.765.432');
 await page.fill('#pfm-ccargo', 'Patrullero de Cuadrante');
-await page.click('#modal-c button[onclick^="savePerfilForm"]');
+await page.click('#modal-c button[onclick^="saveCompaneroForm"]');
 await page.waitForTimeout(300);
 const comp = await page.evaluate(() => (DB.getConfig().perfiles[0] || {}).companero);
 log(comp && comp.nombre === 'JUAN PABLO MEJIA' && comp.cedula === '1098765432',

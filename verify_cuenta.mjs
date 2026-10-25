@@ -115,8 +115,8 @@ await abrir(T0);
 const a1 = await T0.page.evaluate(() => ({ ov: document.getElementById('cu-ov').classList.contains('on'), activa: cuActiva(),
   inst: cuInstalada(), aj: (go('ajustes'), document.getElementById('aj-cuenta').innerHTML) }));
 log(!a1.ov && !a1.activa && a1.aj === '', '[A1] en localhost sin emuladores la app abre como antes, sin bienvenida ni sección Cuenta');
-log(!a1.inst && /var CU_FB = \{ apiKey: '', authDomain: '', projectId: '', appId: '', messagingSenderId: '' \};/.test(src),
-    '[A2] sin configuración de Firebase la cuenta queda «pendiente de instalación» y no bloquea nada');
+log(!a1.activa && /var CU_FB = \{ apiKey: '[^']*', authDomain: '[^']*', projectId: '(flagrante)?', appId: '[^']*', messagingSenderId: '[^']*' \};/.test(src),
+    '[A2] la configuración de Firebase (vacía o la del proyecto real) no activa la cuenta en localhost sin emuladores');
 await T0.ctx.close();
 
 const A = await telefono();
@@ -292,6 +292,8 @@ await A.page.click('text=Cerrar sesión'); await A.page.click('.mc >> button.bp'
 await pant(A.page, 'bienvenida');
 await A.page.click('text=Ya tengo cuenta'); await pant(A.page, 'entrar');
 await A.page.click('text=¿Olvidaste tu contraseña?'); await pant(A.page, 'olvido');
+/* E1-E8: el enlace abre ESTA app (URL de acción propia, CU_ACCION_EN_APP). */
+await A.page.evaluate(() => { CU_ACCION_EN_APP = true; });
 await A.page.fill('#cu-correo', CORREO_A); await A.page.click('#cu-ok');
 await A.page.waitForFunction(() => !document.getElementById('cu-info').hidden, null, { timeout: 30000 });
 const rlink = await oob(CORREO_A, 'PASSWORD_RESET');
@@ -332,16 +334,63 @@ const rlink2 = await oob(CORREO_A, 'PASSWORD_RESET');
 await abrir(A, URL + '?mode=resetPassword&oobCode=' + rlink2.oobCode);
 await pant(A.page, 'restablecer');
 const SINCOD = 'Sin codigo A33';
+const TRAS_T = 'Tras temporal T7';
 await A.page.fill('#cu-clave', SINCOD); await A.page.fill('#cu-clave2', SINCOD); await A.page.click('#cu-ok');
 await pant(A.page, 'necesitaCodigo');
 await A.page.click('text=No tengo el código');
 await pant(A.page, 'codigo');
 const e8 = await A.page.evaluate(() => ({ dek: _cuenta.dek, previa: !!DB.getCase('previa'), s: _cuenta.sesion }));
 log(e8.dek !== sesA.dek && e8.previa && e8.s, '[E8] sin código se estrena otra llave y lo del teléfono no se toca');
-const codigoA3 = await A.page.getAttribute('#cu-codigo', 'data-codigo');
+let codigoA3 = await A.page.getAttribute('#cu-codigo', 'data-codigo');
 await A.page.fill('#cu-conf', codigoA3.slice(-4)); await A.page.click('#cu-ok');
 await A.page.waitForFunction(() => !document.getElementById('cu-ov').classList.contains('on'), null, { timeout: 30000 });
 const dekA3 = e8.dek;
+
+/* E9-E15: la URL de acción NO se puede cambiar en el proyecto real, así que el
+   enlace abre la página de Google y allí se escribe una contraseña TEMPORAL. */
+await A.page.evaluate(() => go('ajustes'));
+await A.page.click('text=Cerrar sesión'); await A.page.click('.mc >> button.bp');
+await pant(A.page, 'bienvenida');
+await A.page.click('text=Ya tengo cuenta'); await pant(A.page, 'entrar');
+await A.page.click('text=¿Olvidaste tu contraseña?'); await pant(A.page, 'olvido');
+log(await A.page.evaluate(() => CU_ACCION_EN_APP === false) && /var CU_ACCION_EN_APP = false;/.test(src),
+    '[E9] la app publicada da por hecho que el enlace abre la página de Google');
+await A.page.fill('#cu-correo', CORREO_A); await A.page.click('#cu-ok');
+await pant(A.page, 'temporal');
+const e10 = await A.page.evaluate(() => ({ correo: document.getElementById('cu-correo').value, info: !document.getElementById('cu-info').hidden,
+  txt: document.getElementById('cu-box').innerText }));
+log(e10.correo === CORREO_A && e10.info && /temporal/i.test(e10.txt), '[E10] tras enviar el enlace se explica la contraseña temporal, con el correo ya puesto');
+/* La página de Google: Firebase guarda la temporal TAL CUAL. */
+const rlink3 = await oob(CORREO_A, 'PASSWORD_RESET');
+const TEMP = 'temporal123';
+await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:resetPassword?key=demo-flagrante`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ oobCode: rlink3.oobCode, newPassword: TEMP }) });
+await A.page.fill('#cu-temp', TEMP); await A.page.fill('#cu-clave', TEMP); await A.page.fill('#cu-clave2', TEMP); await A.page.click('#cu-ok');
+await A.page.waitForFunction(() => !document.getElementById('cu-err').hidden, null, { timeout: 30000 });
+log(/temporal/.test(await A.page.textContent('#cu-err')), '[E11] la contraseña nueva no puede ser la temporal (la vio la página de Google)');
+await A.page.fill('#cu-temp', 'otra cosa 9'); await A.page.fill('#cu-clave', TRAS_T); await A.page.fill('#cu-clave2', TRAS_T); await A.page.click('#cu-ok');
+await A.page.waitForFunction(() => !document.getElementById('cu-err').hidden && /no coincide/.test(document.getElementById('cu-err').textContent), null, { timeout: 60000 });
+log(await enPant(A.page, 'temporal'), '[E12] una temporal equivocada se dice y no deja nada a medias');
+const antesT = A.red.length;
+await A.page.fill('#cu-temp', TEMP); await A.page.fill('#cu-clave', TRAS_T); await A.page.fill('#cu-clave2', TRAS_T); await A.page.click('#cu-ok');
+await A.page.waitForFunction(() => !!document.querySelector('.cu-pant[data-p="necesitaCodigo"]') ||
+  (document.getElementById('cu-err') && !document.getElementById('cu-err').hidden), null, { timeout: 60000 });
+if (!(await enPant(A.page, 'necesitaCodigo'))) console.log('     pantalla:', await A.page.textContent('#cu-err'));
+await pant(A.page, 'necesitaCodigo');
+const redT = A.red.slice(antesT);
+const updT = redT.find(x => /accounts:update/.test(x.u) && /"password"/.test(x.b));
+log(!!updT && JSON.parse(updT.b).password.startsWith('Fa1!') && !redT.some(x => x.b.includes(TRAS_T)),
+    '[E13] la contraseña nueva se cambia en el acto por la llave derivada: Firebase nunca la recibe');
+await A.page.fill('#cu-cod', codigoA3); await A.page.click('#cu-ok');
+await pant(A.page, 'codigo');
+codigoA3 = await A.page.getAttribute('#cu-codigo', 'data-codigo');
+await A.page.fill('#cu-conf', codigoA3.slice(-4)); await A.page.click('#cu-ok');
+await A.page.waitForFunction(() => !document.getElementById('cu-ov').classList.contains('on'), null, { timeout: 30000 });
+const e14 = await A.page.evaluate(() => ({ dek: _cuenta.dek, previa: !!DB.getCase('previa') }));
+log(e14.dek === dekA3 && e14.previa, '[E14] con el código se recupera la MISMA llave y lo del teléfono sigue ahí');
+const tempYa = await (await fetch(`${AUTH}/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=demo-flagrante`, {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: CORREO_A, password: TEMP, returnSecureToken: true }) })).json();
+log(!!tempYa.error, '[E15] la contraseña temporal deja de servir');
 
 /* ═══ F · CÓDIGO NUEVO DESDE AJUSTES ═══════════════════════════════════ */
 await A.page.evaluate(() => go('ajustes'));
@@ -349,7 +398,7 @@ await A.page.click('text=Código de recuperación nuevo');
 await A.page.fill('#cu-clave', 'Mala clave 1'); await A.page.click('#cu-ok');
 await A.page.waitForFunction(() => !document.getElementById('cu-err').hidden, null, { timeout: 30000 });
 log(/incorrectos/.test(await A.page.textContent('#cu-err')), '[F1] sin la contraseña no se genera otro código');
-await A.page.fill('#cu-clave', SINCOD); await A.page.click('#cu-ok');
+await A.page.fill('#cu-clave', TRAS_T); await A.page.click('#cu-ok');
 await pant(A.page, 'codigo');
 const codigoA4 = await A.page.getAttribute('#cu-codigo', 'data-codigo');
 const f2 = await A.page.evaluate(async ([viejo, nuevo, uid]) => {
@@ -416,7 +465,7 @@ await T2.ctx.close();
 const i5 = await A.page.evaluate(async claves => {
   let txt = JSON.stringify(Object.assign({}, localStorage));
   return claves.filter(c => txt.includes(c));
-}, [CLAVE_A, NUEVA_A, CORTADA, RESET, SINCOD, codigoA, codigoA4]);
+}, [CLAVE_A, NUEVA_A, CORTADA, RESET, SINCOD, TRAS_T, codigoA, codigoA4]);
 log(i5.length === 0, '[I5] ninguna contraseña ni código queda escrito en el almacenamiento del teléfono');
 const ruido = errs.filter(e => !/auth\/|permission-denied|PERMISSION_DENIED|400 \(Bad Request\)|status of 4\d\d/.test(e));
 log(ruido.length === 0, '[I6] consola limpia (sin contar los rechazos que la prueba provoca)', ruido.slice(0, 3).join(' | '));

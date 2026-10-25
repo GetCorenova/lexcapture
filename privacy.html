@@ -31,7 +31,7 @@
 </head>
 <body>
 <h1>Política de Privacidad — Flagrante</h1>
-<p class="updated">Última actualización: 23 de octubre de 2026</p>
+<p class="updated">Última actualización: 25 de octubre de 2026</p>
 
 <p>
   Flagrante es una aplicación de uso profesional para el registro de procedimientos de captura y la
@@ -140,7 +140,7 @@
   </li>
   <li>
     La firma manuscrita viaja únicamente a los equipos del <strong>mismo usuario</strong>, cifrada
-    como lo demás. A otra persona no se envía nunca (tampoco en «Compartir con otro equipo»).
+    como lo demás. A otra persona no se envía nunca (tampoco en «Modo compartir»).
   </li>
   <li>
     Solo el titular de la cuenta puede leer o modificar sus registros; las reglas del servidor lo
@@ -154,22 +154,36 @@
   <a href="https://firebase.google.com/support/privacy" rel="noopener">información de privacidad de Firebase</a>.
 </p>
 
-<h2>5. Compartir con otro equipo (opcional)</h2>
+<h2>5. Compartir con un compañero (opcional, «Modo compartir»)</h2>
 <p>
-  La aplicación permite pasar registros ya diligenciados a otro equipo, por decisión expresa del
-  usuario y de dos maneras, ambas cifradas:
+  La aplicación permite pasar personas y capturas ya diligenciadas a otro funcionario, siempre por
+  decisión expresa del usuario y de dos maneras, ambas cifradas:
 </p>
 <ul>
   <li>
-    <strong>Vínculo directo entre los dos equipos</strong>, por la red local, tras escanear un código
-    en la pantalla del otro. La información viaja <strong>directamente de un equipo al otro</strong>:
-    no pasa por ningún servidor, ni de la aplicación ni de terceros.
+    <strong>A la cuenta de un compañero.</strong> Primero los dos se agregan como compañeros
+    escaneando un código en la pantalla del otro; con eso cada equipo guarda la llave pública del
+    compañero. Lo que se le envía se <strong>cifra en el dispositivo</strong> con una llave que solo
+    pueden calcular los dos y se deja en su buzón de la nube (Cloud Firestore, São Paulo). Quien
+    desarrolla la aplicación y el proveedor de la nube no pueden leerlo: ven solo qué cuenta escribe
+    a cuál, cuándo y de qué tamaño. Nada se guarda en el equipo del compañero hasta que él lo
+    revisa y lo acepta, y el mensaje se borra del buzón en cuanto lo atiende.
+  </li>
+  <li>
+    <strong>Cambios posteriores.</strong> Si alguno de los dos sigue diligenciando una captura que
+    compartieron, lo que cambió le llega al otro por el mismo buzón, cifrado igual, y
+    <strong>no se aplica hasta que el otro lo autoriza</strong> con un resumen a la vista.
   </li>
   <li>
     <strong>Archivo cifrado</strong> que el usuario entrega por el medio que elija, protegido con una
-    clave que la aplicación genera y que el usuario comunica por separado.
+    clave que la aplicación genera y que el usuario comunica por separado. No necesita cuenta ni
+    conexión.
   </li>
 </ul>
+<p>
+  La firma manuscrita no se envía nunca a otra persona. Quitar a un compañero de la lista deja de
+  enviarle cambios; lo que ya recibió queda en su equipo, igual que un documento entregado.
+</p>
 
 <h2>6. Documentos generados</h2>
 <p>
@@ -181,8 +195,9 @@
 
 <h2>7. Cámara</h2>
 <p>
-  La aplicación utiliza la cámara en una sola función: leer el código que otro equipo muestra en
-  pantalla para vincularlo y poder pasarle registros. La imagen del código se procesa en el momento
+  La aplicación utiliza la cámara para leer códigos que otro equipo muestra en pantalla: el código
+  para agregar a un compañero en «Modo compartir» y el código de patrulla con los datos del
+  compañero en el Perfil. La imagen del código se procesa en el momento
   dentro del dispositivo, <strong>no se guarda ni se envía a ninguna parte</strong>, y la cámara se
   apaga en cuanto el código se lee. El sistema operativo pide el permiso la primera vez y el usuario
   puede negarlo o retirarlo cuando quiera: el resto de la aplicación sigue funcionando, y los
@@ -190,11 +205,26 @@
 </p>
 
 <h2>8. Suscripciones y pagos</h2>
-<p class="destacado">
-  <strong>La versión publicada no ofrece suscripciones ni compras dentro de la aplicación.</strong>
-  No hay nada que comprar, no se procesa ningún pago y no se recoge ningún dato de compra. Si en el
-  futuro se añade una suscripción, esta política se actualizará <strong>antes</strong> de que esté
-  disponible, y se explicará aquí qué datos intervienen y quién los trata.
+<p>
+  Terminada la prueba gratuita, el uso de Flagrante requiere una suscripción (mensual o anual). Se
+  compra únicamente en la aplicación de Android, a través de <strong>Google Play</strong>, que es
+  quien cobra: Flagrante nunca ve ni guarda datos de tarjetas ni de medios de pago. Los precios son
+  los que muestra Google Play en tu país.
+</p>
+<ul>
+  <li><strong>Google Play</strong> procesa el pago con tu cuenta de Google, según su propia política
+      de privacidad.</li>
+  <li><strong>RevenueCat</strong> (RevenueCat, Inc.) recibe de Google Play el comprobante de la
+      compra para confirmar que es válido, junto con el identificador interno de tu cuenta de
+      Flagrante (un código, no tu nombre ni tu correo). No recibe capturas, personas, documentos ni
+      ningún otro dato de tu trabajo.</li>
+  <li>El servidor de Flagrante consulta a RevenueCat si la suscripción está vigente y guarda
+      únicamente el plan y su fecha de vencimiento.</li>
+</ul>
+<p>
+  La suscripción se renueva sola hasta que la canceles en Google Play → Pagos y suscripciones.
+  Al eliminar tu cuenta se borra también el registro de tu plan; el historial de pagos lo conservan
+  Google Play y RevenueCat según la ley y sus propias políticas.
 </p>
 
 <h2>9. Permisos que utiliza la aplicación</h2>
@@ -210,8 +240,13 @@
     </tr>
     <tr>
       <td>Cámara</td>
-      <td>Leer el código de vinculación que otro equipo muestra en pantalla. Es opcional: sin este
-          permiso el resto de la aplicación funciona igual.</td>
+      <td>Leer el código que otro equipo muestra en pantalla (agregar a un compañero o llenar los
+          datos del compañero de patrulla). Es opcional: sin este permiso el resto de la aplicación
+          funciona igual.</td>
+    </tr>
+    <tr>
+      <td>Facturación de Google Play</td>
+      <td>Comprar y renovar la suscripción (ver «8. Suscripciones y pagos»).</td>
     </tr>
   </tbody>
 </table>
@@ -234,7 +269,7 @@
 <p>
   La cuenta se elimina desde la propia aplicación, en <strong>Ajustes → Cuenta → Eliminar mi
   cuenta</strong>: se borran la cuenta de Firebase, lo que tenga en la nube, su derecho de uso y la
-  información del teléfono. Cerrar sesión, en cambio, no borra nada salvo que se pida. El código
+  información del teléfono, incluido su buzón de «Modo compartir». Lo que el usuario ya entregó a un compañero queda en el equipo de este. Cerrar sesión, en cambio, no borra nada salvo que se pida. El código
   antifraude del teléfono (sin relación con la cuenta) se conserva, para que eliminar la cuenta no
   sirva para repetir la prueba.
 </p>

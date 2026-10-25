@@ -172,15 +172,13 @@ console.log('\n── VI · La preferencia se recuerda ──\n');
 console.log('\n── VII · Las fugas de color medidas ──\n');
 {
   /* ⚠️ La barra del modo invitado era la otra fuga (#0E1020 —el --acc-fg del
-     OSCURO— escrito a pelo: 3,11:1 en claro) y se fue con el modo, que se retiró
-     entero de la app. Su sitio lo ocupa la OTRA barra fija de la aplicación, la
-     del Modo compartir, que nunca se había medido y corre el mismo riesgo; y lo
-     que protegía aquel check se conserva como guarda ESTRUCTURAL más abajo. */
-  /* ⚠️ Esta franja se pinta sobre un fondo SEMITRANSPARENTE (--ok-bg es el mismo
-     verde de --ok al 12 %), así que hay que componerlo sobre el fondo real de la
-     página antes de medir: leyendo el rgba a pelo, el fondo y el texto salen del
-     mismo color base y el contraste da 1,00:1 — un falso negativo. La barra
-     anterior era opaca y no lo necesitaba. */
+     OSCURO— escrito a pelo: 3,11:1 en claro) y se fue con el modo. La franja del
+     Modo compartir que la sustituyó aquí se fue con el vínculo por wifi
+     (2026-10-25); su sitio lo ocupa el aviso de «cambios por revisar» del buzón,
+     que es el banner que hoy pinta la app encima de la lista de capturas.
+     ⚠️ Su fondo es SEMITRANSPARENTE (--warn-bg), así que hay que componerlo sobre
+     el fondo real de la página antes de medir: leyendo el rgba a pelo, fondo y
+     texto salen del mismo color base y el contraste da 1,00:1 — un falso negativo. */
   const componer = (c, base) => {
     const m = (c.match(/[\d.]+/g) || []).map(Number);
     const b = (base.match(/[\d.]+/g) || []).map(Number);
@@ -191,19 +189,23 @@ console.log('\n── VII · Las fugas de color medidas ──\n');
     const { ctx, page } = await abrir({ pref: tema });
     await page.waitForTimeout(500);
     const m = await page.evaluate(() => {
-      const b = document.getElementById('pt-barra');
-      if (!b) return null;
-      b.classList.add('on');
-      const cs = getComputedStyle(b);
-      const btn = b.querySelector('.pb-btn');
-      return { fg: cs.color, bg: cs.backgroundColor, btnFg: btn ? getComputedStyle(btn).color : null,
-               base: getComputedStyle(document.body).backgroundColor };
+      const d = document.createElement('div');
+      d.innerHTML = '<div class="bz-aviso"><span class="bz-av-pt"></span><div class="bz-av-b"><b>X hizo cambios</b>' +
+        '<span>Revísalos</span></div><span class="bz-av-ir">Ver</span></div>';
+      document.body.appendChild(d);
+      const b = d.firstChild, cs = getComputedStyle(b);
+      const r = { fg: getComputedStyle(b.querySelector('.bz-av-b b')).color, bg: cs.backgroundColor,
+                  btnFg: getComputedStyle(b.querySelector('.bz-av-ir')).color,
+                  base: getComputedStyle(document.body).backgroundColor };
+      d.remove();
+      return r;
     });
-    if (!m) { log(false, `Franja del Modo compartir en ${tema}`, 'no se encontró #pt-barra'); }
+    if (!m) { log(false, `Aviso de cambios por revisar en ${tema}`, 'no se pudo pintar'); }
     else {
-      const c = contraste(m.fg, componer(m.bg, m.base));
-      log(c >= 4.5, `Franja del Modo compartir en ${tema}: cumple AA para texto normal`, c.toFixed(2) + ':1');
-      log(m.btnFg === m.fg, `  …y su botón usa el mismo color de primer plano`, m.btnFg);
+      const fondo = componer(m.bg, m.base);
+      const c = contraste(m.fg, fondo), c2 = contraste(m.btnFg, fondo);
+      log(c >= 4.5, `Aviso de cambios por revisar en ${tema}: el título cumple AA para texto normal`, c.toFixed(2) + ':1');
+      log(c2 >= 4.5, `  …y su «Ver» también`, c2.toFixed(2) + ':1');
     }
     await ctx.close();
   }

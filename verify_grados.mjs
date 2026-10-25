@@ -135,12 +135,16 @@ console.log('\n── IV · El datalist y los cuatro campos ──\n');
     'Perfil: el campo sigue siendo <input> con el mismo id, ahora con catálogo', 'list=' + (perfil && perfil.list));
   log(perfil && perfil.hint, '  …y tiene su pista de abreviatura', '#pfm-grado-ab');
 
-  /* ⚠️ El compañero de patrulla es el QUINTO campo de grado y vive en el mismo
-     formulario. Se le pasa por alto con facilidad justo porque está plegado
-     dentro del perfil, y es el que alimenta la cadena de custodia. */
+  /* ⚠️ El compañero de patrulla es el QUINTO campo de grado. Desde el
+     2026-10-24 vive en su propia tarjeta (formulario `openCompaneroForm`, que
+     exige un perfil y aquí todavía no hay ninguno), así que se pinta su bloque
+     —el mismo `pfmCampos` que usa ese formulario— aparte. Más abajo, con un
+     perfil ya guardado, se mide en el formulario real. */
   const comp = await page.evaluate(() => {
+    const d = document.createElement('div'); d.innerHTML = pfmCampos('pfm-c', {}); document.body.appendChild(d);
     const i = document.getElementById('pfm-cgrado');
-    return i ? { list: i.getAttribute('list'), hint: !!document.getElementById('pfm-cgrado-ab') } : null;
+    const r = i ? { list: i.getAttribute('list'), hint: !!document.getElementById('pfm-cgrado-ab') } : null;
+    d.remove(); return r;
   });
   log(comp && comp.list === 'dl-grado' && comp.hint,
     'El compañero de patrulla usa el mismo catálogo', '#pfm-cgrado');
@@ -225,10 +229,15 @@ console.log('\n── VIII · El modelo no cambió ──\n');
      lado, y nada más la produce. */
   await page.evaluate(() => { go('perfil'); openPerfilForm(null); });
   await page.waitForTimeout(450);
-  const enDom = await page.evaluate(ids2 => ids2.map(id => {
+  const mide = id => {
     const i = document.getElementById(id);
     return !!(i && i.getAttribute('list') === 'dl-grado' && document.getElementById(id + '-ab'));
-  }), ['pfm-grado', 'pfm-cgrado']);
+  };
+  const enDom = [await page.evaluate(mide, 'pfm-grado')];
+  /* El compañero, en su propio formulario (tarjeta propia desde el 2026-10-24). */
+  await page.evaluate(() => { closeModal(); openCompaneroForm(); });
+  await page.waitForTimeout(300);
+  enDom.push(await page.evaluate(mide, 'pfm-cgrado'));
   await page.evaluate(() => closeModal());
   const viaHelper = enDom.every(Boolean) &&
     ['w-sGrado', 'oj-f-gra'].every(id => html.includes("lcGradoInput('" + id + "'"));

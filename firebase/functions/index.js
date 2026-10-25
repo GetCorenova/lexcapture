@@ -45,9 +45,13 @@ const REGION = 'southamerica-east1';
 setGlobalOptions({ region: REGION, maxInstances: 10 });
 
 const HMAC = defineSecret('PRUEBA_HMAC');
+/* F5 · la clave SECRETA de RevenueCat (`sk_…`, Project settings → API keys). Solo
+   la ve el servidor; la del teléfono es la pública (`goog_…`). */
+const RC_SK = defineSecret('REVENUECAT_SK');
 const EMULADOR = process.env.FUNCTIONS_EMULATOR === 'true';
 const { PAQUETE, DIA, PRUEBA_DIAS, desechable, hashSolicitud, hashDispositivo, yyyymm,
         revisarVeredicto, recallUsado } = require('./prueba');
+const { estadoRC, debeConsultar, cambioRC } = require('./compras');
 const ALCANCE = 'https://www.googleapis.com/auth/playintegrity';
 
 /* Un «no» del servidor. El motivo va también en `details`: el SDK web añade el
@@ -125,10 +129,50 @@ function uidDe(req) {
   return uid;
 }
 
-exports.miDerecho = onCall({ memory: '256MiB', timeoutSeconds: 15 }, async (req) => {
+/* ── RevenueCat (F5) ──────────────────────────────────────────────────────── */
+/* El cliente de RevenueCat de la cuenta: `subscriber` de GET /v1/subscribers.
+   En el emulador no se le habla a RevenueCat: el «cliente» es el documento
+   `_simRC/{uid}` (colección que las reglas cierran), que escribe la prueba. */
+async function clienteRC(uid) {
+  if (EMULADOR) {
+    const s = await db.doc('_simRC/' + uid).get();
+    return s.exists ? s.data() : { entitlements: {}, subscriptions: {} };
+  }
+  const r = await fetch('https://api.revenuecat.com/v1/subscribers/' + encodeURIComponent(uid), {
+    headers: { Authorization: 'Bearer ' + RC_SK.value().trim(), Accept: 'application/json' }
+  });
+  if (!r.ok) throw new Error('RevenueCat respondió ' + r.status);
+  const j = await r.json();
+  return j && j.subscriber;
+}
+
+/* Lo guardado, puesto al día con RevenueCat si hace falta. Si RevenueCat no
+   responde se devuelve lo guardado: un fallo suyo no le quita el plan a nadie
+   ni se lo da. */
+async function derechoAlDia(uid, ahora, forzar) {
+  const ref = db.doc('entitlements/' + uid);
+  const s = await ref.get();
+  const d = s.exists ? s.data() : null;
+  if (!debeConsultar(d, ahora, forzar)) return d;
+  let est;
+  try { est = estadoRC(await clienteRC(uid), ahora); }
+  catch (e) { logger.warn('revenuecat: no se pudo consultar', { motivo: e.message }); return d; }
+  const plano = d ? Object.assign({}, d, { vence: d.vence ? d.vence.toMillis() : 0 }) : null;
+  const c = cambioRC(plano, est, ahora);
+  if (!c) return d;
+  const nuevo = Object.assign({}, c, { vence: Timestamp.fromMillis(c.vence), act: FieldValue.serverTimestamp() });
+  await ref.set(nuevo, { merge: true });
+  logger.info('suscripción al día', { uid, activo: est.activo, sandbox: est.sandbox });
+  return Object.assign({}, d || {}, nuevo);
+}
+
+/* `forzar`: preguntar a RevenueCat aunque el plan pagado tenga días por delante
+   (justo después de comprar, o al tocar «Ya pagué: revisar»). */
+exports.miDerecho = onCall({ memory: '256MiB', timeoutSeconds: 15, secrets: [RC_SK] }, async (req) => {
   const uid = uidDe(req);
-  const s = await db.doc('entitlements/' + uid).get();
-  return salida(s.exists ? s.data() : null, Date.now());
+  const ahora = Date.now();
+  const forzar = !!(req.data && req.data.forzar);
+  return salida(await derechoAlDia(uid, ahora, forzar), ahora);
 });
 
 exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: [HMAC] }, async (req) => {
@@ -136,13 +180,15 @@ exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: 
   const ahora = Date.now();
   const ref = db.doc('entitlements/' + uid);
 
-  /* 5 · Una prueba por cuenta. Si la tiene vigente, se devuelve tal cual (pedir
-     dos veces no es un error); si ya la tuvo, no se repite. */
+  /* 5 · Una prueba por cuenta. Si tiene un plan vigente (prueba o pagado), se
+     devuelve tal cual (pedir dos veces no es un error); si ya tuvo la prueba, no
+     se repite. Quien pagó sin haberla usado y dejó vencer la suscripción
+     todavía puede pedirla (los controles del teléfono siguen rigiendo). */
   const previo = await ref.get();
   if (previo.exists) {
     const d = previo.data();
     if (d.vence && d.vence.toMillis() > ahora) return salida(d, ahora);
-    throw no('failed-precondition', 'cuenta-ya-uso-prueba');
+    if (d.pruebaUsada) throw no('failed-precondition', 'cuenta-ya-uso-prueba');
   }
 
   /* 1 · El correo. El token lo firma Firebase: no se puede falsear. */
@@ -188,9 +234,10 @@ exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: 
   try {
     resultado = await db.runTransaction(async (tx) => {
       const [e, tel] = await tx.getAll(ref, refTel);
-      if (e.exists) return e.data();           // otro pedido ganó la carrera
+      if (e.exists && (e.data().pruebaUsada || (e.data().vence && e.data().vence.toMillis() > ahora)))
+        return e.data();                       // otro pedido ganó la carrera, o pagó entretanto
       if (tel.exists) throw no('failed-precondition', 'telefono-ya-uso-prueba');
-      tx.create(ref, entitlement);
+      tx.set(ref, entitlement);
       tx.create(refTel, { fecha: Timestamp.fromMillis(ahora) });
       return null;
     });
@@ -220,6 +267,8 @@ exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: 
    prueba se queda — no tiene el uid y es lo que impide repetirla. */
 exports.alBorrarUsuario = functionsV1.region(REGION).auth.user().onDelete(async (user) => {
   await db.recursiveDelete(db.doc('users/' + user.uid));
+  /* Su buzón de compartir entre cuentas: lo que otros le dejaron y no abrió. */
+  await db.recursiveDelete(db.doc('buzon/' + user.uid));
   await db.doc('entitlements/' + user.uid).delete();
   logger.info('cuenta eliminada: datos del servidor borrados', { uid: user.uid });
 });

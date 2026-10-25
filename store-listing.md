@@ -23,6 +23,14 @@ Productividad (Productivity)
 > que la app no tiene es motivo de rechazo por ficha engañosa. **Se reponen cuando
 > cada una exista de verdad, y entonces hay que actualizar también Seguridad de
 > los datos y la Clasificación del contenido.**
+> ⚠️ **2026-10-24 — rechazo por «Afirmaciones engañosas: falta el enlace a la fuente de
+> información gubernamental».** Por eso la descripción ABRE con la renuncia de
+> responsabilidad y lleva la sección FUENTES OFICIALES con enlaces .gov.co, todos
+> comprobados ese día (HTTP 200). No quitar ninguna de las dos piezas. Si un enlace
+> muere (la Fiscalía ya movió los PDF una vez), sustituirlo por uno vigente antes de la
+> siguiente revisión.
+AVISO: Flagrante es una aplicación privada e independiente. No representa ni está afiliada, respaldada o autorizada por la Fiscalía General de la Nación, la Policía Nacional ni ninguna otra entidad pública. No es un canal oficial y no reemplaza los sistemas ni los trámites de ninguna entidad. Las normas y formatos que usa provienen de las fuentes oficiales citadas al final de esta descripción.
+
 Flagrante es una herramienta de trabajo en campo para digitalizar el registro de capturas y aprehensiones según el procedimiento penal colombiano (Ley 906 de 2004). Está pensada para usarse con el teléfono en la mano, sin conexión a internet.
 
 Reemplaza el llenado manual en papel: se diligencia una sola vez y la aplicación produce los documentos del procedimiento con esos mismos datos.
@@ -52,7 +60,40 @@ Toda la información se guarda cifrada (AES-256) en el propio dispositivo y la a
 TRABAJO EN PAREJA
 Dos equipos se vinculan mostrando un código en pantalla y se pasan las personas y las capturas ya registradas, directamente entre los dos teléfonos por la misma red wifi, sin pasar por ningún servidor. También se pueden pasar por archivo cifrado.
 
-Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado.
+FUENTES OFICIALES
+Las normas y los formatos de Policía Judicial (FPJ) que usa la aplicación son documentos públicos: la Fiscalía los publica en su sitio oficial y cualquier persona puede consultarlos y obtenerlos (Ley 1712 de 2014, acceso a la información pública: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=56882). Flagrante no los altera: los rellena sobre el archivo original. Consulta siempre la versión vigente:
+• Ley 906 de 2004, Código de Procedimiento Penal: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=14787
+• Ley 1098 de 2006, Código de la Infancia y la Adolescencia: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=22106
+• Constitución Política de 1991 (artículo 28, término de 36 horas): https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=4125
+• Formatos de Policía Judicial (FPJ), Fiscalía General de la Nación: https://www.fiscalia.gov.co/policia-judicial/
+• Manual Único de Policía Judicial: https://www.fiscalia.gov.co/media-portalweb-prd/Manual-CTI-Unico-de-Policia-Judicial.pdf
+• Manual del Sistema de Cadena de Custodia: https://www.fiscalia.gov.co/media-portalweb-prd/MANUAL-DEL-SISTEMA-DE-CADENA-DE-CUSTODIA.pdf
+
+Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado. Las decisiones del procedimiento y el contenido de cada documento son responsabilidad del funcionario que lo firma.
+
+### ⏳ Cambios para el paquete de la F5 (versionCode 6) — pegar JUNTO con él, no antes
+La descripción de arriba es la que está en revisión (versionCode 5, sin cuenta ni compras).
+Al subir el paquete con la cuenta, la nube y la suscripción, hacer estos tres cambios
+(medido: queda en **3 937 / 4 000**):
+1. **Quitar** el párrafo «Reemplaza el llenado manual en papel: …» (repite el anterior).
+2. **Sustituir** el bloque FUNCIONA SIN CONEXIÓN por este — ⚠️ el actual dice «El acceso
+   se protege con un PIN de 4 dígitos», que es falso desde la F1 (ya no hay PIN):
+```
+FUNCIONA SIN CONEXIÓN
+Todo se guarda cifrado (AES-256) en el teléfono, y la app arranca y produce documentos sin señal. Con tu cuenta, se sincroniza cifrado de extremo a extremo entre tus equipos.
+
+PRUEBA Y SUSCRIPCIÓN
+14 días gratis, sin tarjeta. Después, suscripción mensual o anual con Google Play; se renueva sola hasta que la canceles en Pagos y suscripciones.
+```
+3. Y en la misma tanda, en Play Console: **«Sí» a productos digitales** (Clasificación del
+   contenido) y **historial de compras** en Seguridad de los datos (ver abajo).
+4. **Sustituir** el párrafo de TRABAJO EN PAREJA (el vínculo por wifi se retiró el
+   2026-10-25; ahora se comparte con la cuenta del compañero). Es más corto que el actual
+   (211 contra 246 caracteres), así que el total no pasa de 4 000:
+```
+TRABAJO EN PAREJA
+Agrega a tu compañero con un código en pantalla y pásale personas y capturas cifradas de extremo a extremo. Lo que él diligencie después vuelve a ti y solo se aplica si lo autorizas. También por archivo cifrado.
+```
 
 ## Datos de contacto
 - Correo: getcorenova@gmail.com
@@ -117,14 +158,17 @@ Qué declarar:
    cifrados en el dispositivo. El envío de un documento por WhatsApp o correo lo
    dispara el usuario hacia la app que él elige; Flagrante no transmite nada por
    su cuenta.
-5. **El paso de datos entre dos equipos (Modo compartir) es directo entre los dos
-   teléfonos** por la red local, cifrado, sin servidor intermedio.
+5. **Modo compartir (desde 2026-10-25): lo que se le pasa a un compañero va a SU cuenta**,
+   cifrado en el dispositivo con una llave que solo calculan los dos (buzón en Firestore).
+   El desarrollador no puede leerlo y el mensaje se borra al atenderlo; para el formulario es
+   **transferencia a otro usuario por decisión expresa del usuario**, cifrada en tránsito. El
+   vínculo directo por wifi se retiró. El archivo cifrado `.lexc` lo entrega el propio usuario.
 
 ## Permisos declarados en el manifiesto, y qué decir de cada uno
 | Permiso | Para qué |
 |---|---|
 | `INTERNET` + `ACCESS_NETWORK_STATE` | Cargar la aplicación y, solo si se activan, la copia en Drive y la comprobación de la suscripción |
-| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código de vinculación que otro equipo muestra en pantalla. Opcional: sin él, todo lo demás funciona |
+| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código que otro equipo muestra en pantalla: agregar a un compañero (Modo compartir) o el código de patrulla del Perfil. Opcional: sin él, todo lo demás funciona |
 | `com.android.vending.BILLING` | Procesar la suscripción a través de Google Play |
 
 ## Clasificación de contenido
