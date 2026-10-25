@@ -139,7 +139,7 @@ async function clienteRC(uid) {
     return s.exists ? s.data() : { entitlements: {}, subscriptions: {} };
   }
   const r = await fetch('https://api.revenuecat.com/v1/subscribers/' + encodeURIComponent(uid), {
-    headers: { Authorization: 'Bearer ' + RC_SK.value(), Accept: 'application/json' }
+    headers: { Authorization: 'Bearer ' + RC_SK.value().trim(), Accept: 'application/json' }
   });
   if (!r.ok) throw new Error('RevenueCat respondió ' + r.status);
   const j = await r.json();
