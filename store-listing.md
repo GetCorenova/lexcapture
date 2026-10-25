@@ -87,6 +87,13 @@ PRUEBA Y SUSCRIPCIÓN
 ```
 3. Y en la misma tanda, en Play Console: **«Sí» a productos digitales** (Clasificación del
    contenido) y **historial de compras** en Seguridad de los datos (ver abajo).
+4. **Sustituir** el párrafo de TRABAJO EN PAREJA (el vínculo por wifi se retiró el
+   2026-10-25; ahora se comparte con la cuenta del compañero). Es más corto que el actual
+   (211 contra 246 caracteres), así que el total no pasa de 4 000:
+```
+TRABAJO EN PAREJA
+Agrega a tu compañero con un código en pantalla y pásale personas y capturas cifradas de extremo a extremo. Lo que él diligencie después vuelve a ti y solo se aplica si lo autorizas. También por archivo cifrado.
+```
 
 ## Datos de contacto
 - Correo: getcorenova@gmail.com
@@ -151,14 +158,17 @@ Qué declarar:
    cifrados en el dispositivo. El envío de un documento por WhatsApp o correo lo
    dispara el usuario hacia la app que él elige; Flagrante no transmite nada por
    su cuenta.
-5. **El paso de datos entre dos equipos (Modo compartir) es directo entre los dos
-   teléfonos** por la red local, cifrado, sin servidor intermedio.
+5. **Modo compartir (desde 2026-10-25): lo que se le pasa a un compañero va a SU cuenta**,
+   cifrado en el dispositivo con una llave que solo calculan los dos (buzón en Firestore).
+   El desarrollador no puede leerlo y el mensaje se borra al atenderlo; para el formulario es
+   **transferencia a otro usuario por decisión expresa del usuario**, cifrada en tránsito. El
+   vínculo directo por wifi se retiró. El archivo cifrado `.lexc` lo entrega el propio usuario.
 
 ## Permisos declarados en el manifiesto, y qué decir de cada uno
 | Permiso | Para qué |
 |---|---|
 | `INTERNET` + `ACCESS_NETWORK_STATE` | Cargar la aplicación y, solo si se activan, la copia en Drive y la comprobación de la suscripción |
-| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código de vinculación que otro equipo muestra en pantalla. Opcional: sin él, todo lo demás funciona |
+| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código que otro equipo muestra en pantalla: agregar a un compañero (Modo compartir) o el código de patrulla del Perfil. Opcional: sin él, todo lo demás funciona |
 | `com.android.vending.BILLING` | Procesar la suscripción a través de Google Play |
 
 ## Clasificación de contenido

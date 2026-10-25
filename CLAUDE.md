@@ -5572,6 +5572,9 @@ dos teléfonos se juntan en la misma red wifi (uno activa su zona wifi) y **no h
 datos**.
 
 ## Modo compartir (2026-09-07) — se comparten REGISTROS, no se diligencia un procedimiento entre dos
+⚠️ **EL VÍNCULO POR WIFI SE RETIRÓ EL 2026-10-25** (paso 4 de «Compartir entre cuentas», al final):
+hoy se comparte con la cuenta del compañero (buzón cifrado) o por archivo `.lexc`. Quedan el
+códec, el lector, el sobre, la revisión y la fusión al recibir.
 ⚠️ **ESTA SECCIÓN SUSTITUYE ENTERAS LAS DEL «MODO PATRULLA» (fases 1 a 5, 2026-09-04).** Aquello se
 retiró del código: no está desactivado, no está detrás de una bandera — no existe. Lo que sigue en
 pie es el transporte (el códec de códigos y el vínculo por WebRTC), que se conservó porque estaba
@@ -6137,6 +6140,8 @@ abren con la nueva ([I8]) y **no** con la vieja ([I9]).
 - Anti-caché `?v=108` / `cache-v108`, `_BUILD=108`.
 
 ## Las actas se ponen al día solas (2026-09-20)
+⚠️ **RETIRADO EL 2026-10-25** junto con el vínculo por wifi. Lo sustituye el paso 3 del buzón: los
+cambios del compañero vuelven, pero solo se aplican si se autorizan.
 Reportado como requerimiento: el reparto de la patrulla no termina cuando se manda la captura. El
 compañero se queda con ella y diligencia lo que viene después —acta de derechos, cadena de custodia,
 rótulo, acta de incautación y acta de entrega— y eso **se quedaba en su teléfono** salvo que volviera
@@ -8058,3 +8063,49 @@ nuevo, contra los emuladores, dos cuentas).
   tarjetas»** (`lcComp*` llama a `ptQrSvg`/`ptScanAbrir` y esas suites miden el aislamiento del módulo
   con una lista blanca): hay que añadirle esas funciones a la lista. No es de este paso.
   Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.
+
+### Paso 4: se retira el vínculo por wifi (2026-10-25)
+Con el buzón de la cuenta (pasos 1-3) haciendo lo mismo sin que los dos teléfonos tengan que estar
+juntos ni en la misma red, el vínculo directo por wifi y las actas que se ponían al día solas
+sobraban. **Retirados del código, no desactivados.** Verificado con `verify_compartir.mjs`
+(**38 checks**, reescrita; antes 57 sobre el wifi) y las suites del buzón.
+- **Qué se fue**: el bloque «EL VÍNCULO» entero (WebRTC, código de invitación y respuesta,
+  descriptor comprimido, canal cifrado, latido, `ptEnviarRegistros`, `ptEstado`, `ptDesvincular`…),
+  «LO QUE SE DILIGENCIA DESPUÉS VIAJA SOLO» (`ptRecorte`, `ptAutoDoc`, `ptPonerseAlDia`,
+  `ptRecibirAuto`, la marca `c._sync`), el aviso neutro `lcDocGuardado`/`lcAlGuardarDoc` y sus cinco
+  llamadas (ya no lo escuchaba nadie: el paso 3 se engancha en `DB.saveCase`), la franja
+  `#pt-barra` con su CSS, `body.pt` y el token `--ok-band`, los estados de la pantalla
+  (inicio · preparando · mostrando · respondiendo · vinculado), la insignia «Sincroniza» y el renglón
+  del expediente del wifi (`lcBadgeSync`/`lcExpSyncHtml` solo consultan ya al buzón).
+  `ptRecibirCasos` y `ptAplicarPaquete` perdieron el parámetro del compañero de wifi.
+- **Qué se quedó**: el códec de códigos y el lector (`ptQr*`, `ptQrSvg`, `ptQrDeVideo`,
+  `ptScanAbrir`; los usan el código de compañero del buzón y el código de patrulla del Perfil), el
+  sobre y su validación (`ptPaquete`/`ptAbrirPaquete`), la revisión antes de importar, la fusión al
+  recibir, el **archivo `.lexc`** (decisión del usuario: se queda como respaldo), `ptMiNombre` y
+  `_ptAzar` (los usan la cuenta y el buzón).
+- **La pantalla**, de arriba abajo y sin estados: mis compañeros · por revisar · enviados · qué
+  marcar (personas, capturas) · «Enviar a …» · «Por archivo». Las casillas son las mismas para el
+  buzón y el archivo; sin nada marcado, el archivo dice «Marca arriba…». Sin cuenta solo queda el
+  archivo. ⚠️ La palabra «cifrado» no va en pantalla (`verify_envio_buzon` [I1]): el archivo se
+  describe «con clave».
+- ⚠️ **Lo que ya estaba guardado**: capturas con `c._sync` de antes conservan esa clave (empieza por
+  `_`, no viaja ni entra en la huella) y ya nada la lee. No se migra.
+- `privacy.html` §5 reescrita (compañeros, buzón cifrado en Firestore, cambios que se autorizan,
+  archivo), §7 y la fila de la cámara (agregar compañero + código de patrulla) y §11 (eliminar la
+  cuenta borra el buzón). `store-listing.md`: punto 4 del bloque de la F5 con el párrafo nuevo de
+  TRABAJO EN PAREJA (211 caracteres contra 246, no pasa de 4 000) y el punto 5 de Seguridad de los
+  datos. La descripción que está en revisión **no se tocó**.
+- `verify_sincro.mjs` (32, solo medía el wifi) se movió a `../Depuración/08-suites-obsoletas/`.
+  Adaptadas sin bajar lo que protegen: `verify_prueba` [V4]/[E5] (nueve puertas: la de wifi se fue),
+  `verify_tema` (la franja medida se sustituyó por el aviso ámbar de «cambios por revisar», AA en
+  los dos temas), y `_ptUiPaso` fuera de las tres suites del buzón.
+- ⚠️ `verify_compartir` [E3] admite `ptQrSvg`/`ptScanAbrir` antes del módulo: el código de patrulla
+  del Perfil (`lcComp*`) los usa, y es un consumidor del lector, no una llamada al envío.
+- ⚠️ **Defecto del paso 3 que destapó la medición nueva de `verify_tema`**: el «Ver» del aviso de
+  cambios iba en ámbar sobre el fondo ámbar claro y daba **3,98:1** (por debajo de AA). Pasa al
+  color del texto (12,9-13,0:1 en los dos temas).
+- Regresiones en verde: compartir 38 · compañeros 34 · envío 36 · cambios 33 · prueba 71 · tema 51 ·
+  csp 11 · nube 39 · cuenta 62 · almacén 13 · expediente 13 · menú+expediente 16 · personas 25 ·
+  custodia 111 · incautación 141 · entrega 111 · fpj6 140 · firma 62. Siguen los preexistentes:
+  `verify_ds` 8/9 («favorito con estrella SVG») y `verify_jerarquia` 65/66 (aviso de Ajustes).
+  Anti-caché `?v=147` / `cache-v147`, `_BUILD=147`.

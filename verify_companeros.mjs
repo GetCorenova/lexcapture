@@ -283,7 +283,7 @@ const otraVez = await esperar(async () => (await contactos(B)).some(c => c.uid =
 log(otraVez, '[C11] Se pueden volver a agregar con un código nuevo');
 
 /* ═══ D · LO QUE SE VE ═══════════════════════════════════════════════════ */
-await B.page.evaluate(() => { _ptUiPaso = 'inicio'; go('compartir'); });
+await B.page.evaluate(() => { go('compartir'); });
 await B.page.waitForTimeout(300);
 const vista = await B.page.evaluate(() => {
   const c = document.getElementById('bz-companeros'), r = c ? c.getBoundingClientRect() : null;
@@ -311,7 +311,7 @@ const tecnicas = await B.page.evaluate(() => {
 });
 log(!textos.length && !tecnicas.length, '[D3] Textos cortos y sin una palabra técnica', JSON.stringify(textos.concat(tecnicas)));
 const sinCuenta = await telefono(false); await abrir(sinCuenta);
-const nada = await sinCuenta.page.evaluate(() => { _ptUiPaso = 'inicio'; go('compartir'); return { activa: bzActiva(), card: !!document.getElementById('bz-companeros') }; });
+const nada = await sinCuenta.page.evaluate(() => { go('compartir'); return { activa: bzActiva(), card: !!document.getElementById('bz-companeros') }; });
 log(!nada.activa && !nada.card, '[D4] Sin cuenta no aparece (la pantalla de siempre)');
 
 const reales = errs.filter(e => !/permission|PERMISSION_DENIED|Missing or insufficient/i.test(e));

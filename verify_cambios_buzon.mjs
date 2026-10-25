@@ -303,7 +303,7 @@ log(!(await caso(A, 'no-esta')) && (await bandeja(A)).length === 0 && (await buz
 await editar(B, 'cas-1', c => { c.testigos = [{ id: 'tes-1', priNom: 'PEDRO', priApe: 'RUIZ' }]; });
 await esperar(async () => (await pendienteUpd(A, 'cas-1')).length === 1, 30000);
 const pant = await A.page.evaluate(() => {
-  _ptUiPaso = 'inicio'; go('compartir');
+  go('compartir');
   const c = document.getElementById('bz-pendientes');
   const malos = []; document.querySelectorAll('#cp-pane .bz-de, #cp-pane .bz-nom, #cp-pane p').forEach(e => { if (e.innerText.length > 110) malos.push(e.innerText); });
   const t = document.getElementById('cp-pane').innerText.toLowerCase();

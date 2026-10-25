@@ -176,7 +176,7 @@ await A.page.evaluate(async s => {
 }, SECRETO);
 
 /* ═══ E · ENVIAR, REVISAR, ACEPTAR ═══════════════════════════════════════ */
-await A.page.evaluate(() => { _ptUiPaso = 'inicio'; _ptSel = { p: {}, c: {} }; go('compartir'); });
+await A.page.evaluate(() => { _ptSel = { p: {}, c: {} }; go('compartir'); });
 await A.page.waitForSelector('#cp-pane .bz-env button');
 const antes = await A.page.evaluate(() => { const b = document.querySelector('#cp-pane .bz-env button'); return { txt: b.innerText, dis: b.disabled }; });
 log(/^Enviar a PT Luz Marín$/.test(antes.txt) && antes.dis, '[E1] Hay un botón «Enviar a» por compañero, apagado mientras no haya nada marcado', antes.txt);
@@ -195,7 +195,7 @@ log(llego && docs.length === 1 && docs[0].fields.t.stringValue === 'env' &&
 chunks0.push(...docs);
 log((await cuantos(B)).p === 0 && (await cuantos(B)).c === 0, '[E4] Al llegar NO se guarda nada todavía');
 const vB = await B.page.evaluate(() => {
-  _ptUiPaso = 'inicio'; go('compartir');
+  go('compartir');
   const c = document.getElementById('bz-pendientes'), n = document.getElementById('bz-cnt-nav');
   return { txt: c ? c.innerText : '', alto: c ? c.getBoundingClientRect().height : 0, cnt: n ? n.textContent : '', vis: n ? n.style.display !== 'none' : false };
 });
@@ -327,7 +327,7 @@ log(sinRoto && !sinRoto.roto, '[H4] Nada de esto marca al compañero como «llav
 /* ═══ I · LA PANTALLA ════════════════════════════════════════════════════ */
 await A.page.evaluate(async () => { _ptSel = { p: { 'per-1': true }, c: {} }; await bzUiEnviar(bzContactos()[0].uid); });
 await esperar(async () => (await bandeja(B)).length === 1);
-await B.page.evaluate(() => { _ptUiPaso = 'inicio'; go('compartir'); });
+await B.page.evaluate(() => { go('compartir'); });
 const malos = await B.page.evaluate(() => {
   const m = [];
   document.querySelectorAll('#cp-pane p, #cp-pane .de, #cp-pane .bz-de, #cp-pane .bz-nom').forEach(e => { if (e.innerText.length > 110) m.push(e.innerText); });
@@ -341,7 +341,7 @@ const mas = await B.page.evaluate(() => { const e = document.getElementById('bz-
 log(mas, '[I3] El contador también sale en «Más»');
 await B.page.screenshot({ path: join(ROOT, 'verify_envio_buzon.png'), fullPage: true });
 const sinCuenta = await telefono(false); await abrir(sinCuenta);
-const nada = await sinCuenta.page.evaluate(() => { _ptUiPaso = 'inicio'; go('compartir'); return !document.getElementById('bz-pendientes') && !document.querySelector('.bz-env'); });
+const nada = await sinCuenta.page.evaluate(() => { go('compartir'); return !document.getElementById('bz-pendientes') && !document.querySelector('.bz-env'); });
 log(nada, '[I4] Sin cuenta no aparece nada de esto');
 const reales = errs.filter(e => !/permission|PERMISSION_DENIED|Missing or insufficient|ERR_INTERNET_DISCONNECTED|net::ERR|offline/i.test(e));
 log(!reales.length, '[I5] Consola sin errores (salvo los provocados)', reales.slice(0, 3).join(' | '));

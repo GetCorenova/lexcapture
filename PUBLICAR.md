@@ -230,7 +230,7 @@ técnicos, ninguno visible para el usuario. **No «corregirlos»:**
 | `getcorenova.github.io/lexcapture/` (URL) | Es la **versión web**. El `.aab` ya no carga de ahí desde el versionCode 4, pero los versionCode 1-3 instalados sí: no moverla mientras quede alguno |
 | `server.hostname = getcorenova.github.io` (envoltorio) | Es el **origen** del almacenamiento del WebView: cambiarlo deja a cada teléfono con un almacenamiento **vacío** (las capturas siguen ahí, pero la app ya no las ve) |
 | `LexCapture_v8.html` | Lo referencian ~40 suites de regresión y el `sw.js` |
-| `PT_MARCA` · canal WebRTC (`lexcapture`) | Rompe el vínculo entre dos teléfonos con versiones distintas (Modo compartir). Los dos de Drive (`lexcapture-sync-v1`, `lexcapture-sync.bin`) ya no existen: se fueron con la copia en Drive en la F4 |
+| `PT_MARCA` (`lexcapture`) | Es la marca del sobre de Modo compartir (buzón y archivo `.lexc`): cambiarla deja de abrir los archivos ya exportados y lo que haya en el buzón. El canal WebRTC se retiró el 2026-10-25, y los dos de Drive (`lexcapture-sync-v1`, `lexcapture-sync.bin`) en la F4 |
 | alias del keystore | El keystore es **irremplazable** |
 
 ### Decisiones irreversibles
