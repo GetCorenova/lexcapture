@@ -78,6 +78,43 @@ service cloud.firestore {
         && registro() && request.resource.data.rev == resource.data.rev + 1;
     }
 
+    // ── COMPARTIR ENTRE CUENTAS (2026-10-24) ──────────────────────────────
+    // La llave de identidad de la cuenta: la pública y la privada cifrada con
+    // una llave que sale de la DEK. Solo el dueño la lee y la escribe; a otra
+    // cuenta su pública le llega en persona, en el código que escanea.
+    match /users/{uid}/llaves/id {
+      allow read, delete: if esDueno(uid);
+      allow create, update: if esDueno(uid)
+        && request.resource.data.keys().hasOnly(['v', 'pub', 'priv', 'act'])
+        && request.resource.data.keys().hasAll(['v', 'pub', 'priv'])
+        && request.resource.data.v == 1
+        && request.resource.data.pub is string && request.resource.data.pub.size() == 88
+        && sobre(request.resource.data.priv);
+    }
+
+    // El buzón: lo que otra cuenta le deja a esta, cifrado de un teléfono al
+    // otro. Cualquiera con sesión puede DEJAR un mensaje firmado con su propio
+    // uid (de == quien escribe); solo el dueño del buzón lo lee y lo borra, y
+    // nadie lo cambia. Lo que llega de quien no es compañero, la app lo borra
+    // sin abrirlo. No exige plan vigente (decisión del usuario).
+    function mensaje(mid) {
+      let d = request.resource.data;
+      return mid.matches('^[A-Za-z0-9_-]{16,40}$')
+        && d.keys().hasOnly(['v', 'de', 't', 'ct', 'eph', 'ts'])
+        && d.keys().hasAll(['v', 'de', 't', 'ct', 'ts'])
+        && d.v == 1
+        && d.de == request.auth.uid
+        && d.ts == request.time
+        && d.t is string && d.t.matches('^[a-z]{2,16}$')
+        && d.ct is string && d.ct.size() > 20 && d.ct.size() < 900000
+        && (!('eph' in d) || (d.eph is string && d.eph.size() == 88));
+    }
+    match /buzon/{para}/m/{mid} {
+      allow read, delete: if esDueno(para);
+      allow create: if request.auth != null && mensaje(mid);
+      allow update: if false;
+    }
+
     match /entitlements/{uid} {
       allow read: if esDueno(uid);
       allow write: if false;

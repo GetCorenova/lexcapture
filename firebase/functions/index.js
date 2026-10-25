@@ -267,6 +267,8 @@ exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: 
    prueba se queda — no tiene el uid y es lo que impide repetirla. */
 exports.alBorrarUsuario = functionsV1.region(REGION).auth.user().onDelete(async (user) => {
   await db.recursiveDelete(db.doc('users/' + user.uid));
+  /* Su buzón de compartir entre cuentas: lo que otros le dejaron y no abrió. */
+  await db.recursiveDelete(db.doc('buzon/' + user.uid));
   await db.doc('entitlements/' + user.uid).delete();
   logger.info('cuenta eliminada: datos del servidor borrados', { uid: user.uid });
 });

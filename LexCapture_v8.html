@@ -574,6 +574,15 @@ body.nat::after{bottom:0;height:var(--sab)}
 .cp-it .cp-ti{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
 .cp-it .cp-de{font-size:12px;color:var(--text-3);margin-top:1px;overflow-wrap:anywhere}
 
+/* Mis compañeros (compartir entre cuentas): una fila por compañero, con su
+   código de seguridad y la salida para quitarlo. */
+.bz-lista{display:flex;flex-direction:column;gap:6px;margin:4px 0 10px}
+.bz-it{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2)}
+.bz-b{flex:1;min-width:0}
+.bz-nom{font-size:14px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.bz-de{font-size:12px;color:var(--text-3);margin-top:1px}
+.bz-de.mal{color:var(--err)}
+
 /* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
 #pt-scan{
   display:none;position:fixed;inset:0;z-index:1500;background:#000;
@@ -3146,7 +3155,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 143;
+var _BUILD = 144;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -23389,11 +23398,15 @@ function renderCompartir() {
     : 'Pásale al compañero las personas y capturas que ya tienes';
   if (e.activa) _ptUiPaso = 'vinculado';
   else if (_ptUiPaso === 'vinculado') _ptUiPaso = 'inicio';
-  pane.innerHTML = _ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
+  /* Compartir entre cuentas (paso 1): los compañeros van arriba; su código
+     ocupa la pantalla mientras se enseña. Sin cuenta no aparece nada. */
+  var bz = (typeof bzActiva === 'function' && bzActiva());
+  if (bz && _bzUi === 'codigo') { pane.innerHTML = bzUiCodigo(); return; }
+  pane.innerHTML = (bz && (_ptUiPaso === 'inicio' || _ptUiPaso === 'vinculado') ? bzUiCompaneros() : '') + (_ptUiPaso === 'vinculado' ? _ptUiVinculado(e)
     : _ptUiPaso === 'preparando' ? _ptUiPreparando()
     : _ptUiPaso === 'mostrando' ? _ptUiCodigo(true)
     : _ptUiPaso === 'respondiendo' ? _ptUiCodigo(false)
-    : _ptUiInicio();
+    : _ptUiInicio());
 }
 
 function _ptUiInicio() {
@@ -26289,11 +26302,13 @@ function nbArrancar() {
   if (!nbActiva()) return;
   /* Ya arrancada: pasar otra vez por aquí es que algo cambió (el plan, la
      sesión): se reintenta aunque la última subida se hubiera rechazado. */
+  bzArrancar();
   if (_nbArrancado) { _nbNegado = 0; nbEscuchar(); nbProgramar(800); return; }
   _nbArrancado = true;
   setTimeout(function () { if (!nbActiva()) return; nbEscuchar(); nbRonda(); }, NB_ARRANQUE);
 }
 function nbDetener() {
+  bzDetener();
   if (_nbUnsub) { try { _nbUnsub(); } catch (e) {} }
   _nbUnsub = null;
   clearTimeout(_nbProg); _nbProg = null;
@@ -26369,6 +26384,479 @@ function nbAjSincronizar() {
   _nbNegado = 0;
   nbEscuchar();
   nbRonda();
+}
+
+/* ═══ COMPAÑEROS Y BUZÓN (compartir entre cuentas · paso 1, 2026-10-24) ═══════
+   Lo que sustituye al vínculo por wifi del Modo compartir. Dos funcionarios con
+   cuenta se agregan como compañeros UNA vez, estando juntos, y desde ahí se pasan
+   personas y capturas por un BUZÓN en la nube, cifrado de un teléfono al otro:
+   Firebase sabe quién le escribe a quién, cuándo y cuánto ocupa; nunca qué.
+
+   LLAVES DE IDENTIDAD — un par ECDH P-256 por CUENTA, no por equipo:
+   · la privada viaja a `users/{uid}/llaves/id`, cifrada con una llave que sale de
+     la DEK, así todos los equipos de la cuenta tienen la misma;
+   · en este equipo vive en IndexedDB, cifrada con la llave del equipo, y sirve
+     sin señal.
+   ⚠️ EN UN DOCUMENTO APARTE de `llaves/main`: las operaciones de la cuenta (usar
+   el código, empezar de cero) reescriben ese documento entero y se llevarían la
+   llave por delante.
+   ⚠️ Si la DEK cambia (empezar de cero sin código) la llave de identidad NO
+   cambia: este equipo la conserva y la vuelve a cifrar con la DEK nueva. Así los
+   compañeros no se pierden.
+
+   AGREGAR UN COMPAÑERO — un solo escaneo:
+   1. A enseña un código con su uid, su llave pública, su nombre y un secreto de un
+      solo uso (16 bytes, válido 5 minutos).
+   2. B lo escanea: ya tiene la llave de A, auténtica porque la vio en persona.
+      Le deja en el buzón una solicitud cifrada con una llave efímera MÁS el
+      secreto del código: solo la abre A, y solo la pudo escribir quien vio el
+      código.
+   3. A la abre, guarda a B y le responde «hola» por el canal ya establecido.
+   ⚠️ Nadie —tampoco el servidor— puede meter su llave en medio: la de A viaja en
+   el código, en persona; la de B, dentro de un sobre que exige el secreto del
+   código.
+
+   EL CANAL ENTRE DOS COMPAÑEROS: ECDH estático (mi privada × su pública) → HKDF →
+   AES-GCM, con tipo, remitente, destinatario y el id del mensaje como dato
+   adicional autenticado. Solo esas dos cuentas pueden cifrar o descifrar, así que
+   un mensaje que abre ES de ese compañero.
+   ⚠️ Sin secreto hacia adelante, a conciencia: quien robara la llave privada de
+   una cuenta leería lo que siga en su buzón. Los mensajes se borran al
+   procesarse, que es lo que acota eso.
+
+   ⚠️ EL BUZÓN NO EXIGE PLAN VIGENTE (decisión del usuario): ni para enviar ni para
+   recibir. Con el plan vencido la app ya se cierra entera, así que en la práctica
+   solo importa en las reglas. */
+
+var BZ_COD_MS = 5 * 60000;           // lo que vale el código en pantalla
+var BZ_GRACIA_MS = 2 * 60000;        // una solicitud que llega un poco después
+var BZ_INVIT_VIDA = 86400000;        // un código se recuerda un día (por si no había señal)
+var BZ_MAGIA = [70, 76, 71, 49];     // «FLG1»: distinto del código del vínculo por wifi
+var BZ_NOM_MAX = 40;                 // bytes del nombre dentro del código
+var BZ_TIPOS = ['contacto', 'hola']; // lo que esta versión sabe atender
+var _bzId = null;                    // {uid, dek, nube, priv, privB64, pubB64, pubRaw, huella}
+var _bzIdP = null;
+var _bzInvit = [];                   // [{tok, exp}]: los códigos enseñados que siguen vivos
+var _bzUnsub = null, _bzCola = Promise.resolve(), _bzCanal = {}, _bzGen = 0, _bzVistos = {};
+var _bzUi = '';                      // '' · 'codigo'
+var _bzCodigo = null, _bzReloj = null;
+
+function bzActiva() { return cuActiva() && cuSesion(); }
+function bzClaveLocal(uid) { return 'bz|' + uid; }
+function _bzRefId(uid) { return FB.doc(_cuFB.db, 'users', uid, 'llaves', 'id'); }
+function _bzAadId(uid) { return 'flagrante|identidad|' + uid; }
+function _bzAad(t, de, para, mid) { return 'flagrante|bz|' + t + '|' + de + '|' + para + '|' + mid; }
+function _bzMid() { return _cuB64u(_ptAzar(16)); }
+function _bzTxt(b) { try { return JSON.parse(new TextDecoder().decode(b)); } catch (e) { return null; } }
+
+/* ── Llaves ─────────────────────────────────────────────────────────────── */
+async function _bzEnvoltura(dekB64) {
+  var hk = await crypto.subtle.importKey('raw', _cuDeB64(dekB64), 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: _cuTE('flagrante|identidad'), info: _cuTE('flagrante|identidad|envoltura') }, hk,
+    { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+function _bzImportarPriv(pkcs8) {
+  return crypto.subtle.importKey('pkcs8', pkcs8, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']);
+}
+function _bzImportarPub(raw) {
+  return crypto.subtle.importKey('raw', raw, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+}
+async function _bzGenerar() {
+  var k = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  return { priv: _b64FromBytes(new Uint8Array(await crypto.subtle.exportKey('pkcs8', k.privateKey))),
+           pub: _b64FromBytes(new Uint8Array(await crypto.subtle.exportKey('raw', k.publicKey))) };
+}
+/* El código de seguridad de una llave: 8 caracteres que los dos pueden comparar
+   mirando las pantallas. */
+async function bzHuella(pubRaw) {
+  var s = lcB32Enc(new Uint8Array(await crypto.subtle.digest('SHA-256', pubRaw)).slice(0, 5));
+  return s.slice(0, 4) + '-' + s.slice(4, 8);
+}
+async function _bzSecreto(priv, pubRaw) {
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: await _bzImportarPub(pubRaw) }, priv, 256));
+}
+async function _bzHkdf(ikm, sal, info) {
+  var hk = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: _cuTE(sal), info: _cuTE(info) }, hk,
+    { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function _bzGuardarLocal() {
+  var id = _bzId; if (!id) return;
+  var txt = JSON.stringify({ v: 1, uid: id.uid, priv: id.privB64, pub: id.pubB64, invit: _bzInvit });
+  try { await lcIdbSet(bzClaveLocal(id.uid), await _lcEncrypt(txt)); }
+  catch (e) { console.warn('[Flagrante] compañeros: no se pudo guardar la identidad en este equipo', e); }
+}
+
+/* La identidad de la cuenta. Con señal, la de la nube manda si abre; si no
+   existe o ya no abre (la DEK cambió), se sube la de este equipo o una nueva.
+   Sin señal sirve la de este equipo. Sin ninguna de las dos: null. */
+async function bzIdentidad() {
+  if (!bzActiva()) return null;
+  var uid = _cuenta.uid, dek = _cuenta.dek;
+  if (_bzId && _bzId.uid === uid && _bzId.dek === dek && (_bzId.nube || !navigator.onLine)) return _bzId;
+  if (_bzIdP) return _bzIdP;
+  _bzIdP = (async function () {
+    var loc = null;
+    try { var enc = await lcIdbGet(bzClaveLocal(uid)); if (enc) loc = JSON.parse(await _lcDecrypt(enc)); } catch (e) { loc = null; }
+    if (loc && loc.uid !== uid) loc = null;
+    _bzInvit = ((loc && loc.invit) || []).filter(function (i) { return i && i.exp + BZ_INVIT_VIDA > Date.now(); });
+    var par = null, enNube = false;
+    if (navigator.onLine) {
+      try {
+        await cuSdk();
+        var u = await _cuUsuarioListo();
+        if (u && u.uid === uid) {
+          var env = await _bzEnvoltura(dek);
+          var snap = await FB.getDocFromServer(_bzRefId(uid));
+          var d = snap.exists() ? snap.data() : null;
+          var priv = d ? await cuDesenvolver(env, d.priv, _bzAadId(uid)) : null;
+          if (priv && typeof d.pub === 'string') par = { priv: _b64FromBytes(priv), pub: d.pub };
+          else {
+            par = loc ? { priv: loc.priv, pub: loc.pub } : await _bzGenerar();
+            await FB.setDoc(_bzRefId(uid), { v: 1, pub: par.pub, priv: await cuEnvolver(env, _cuDeB64(par.priv), _bzAadId(uid)),
+                                             act: FB.serverTimestamp() });
+          }
+          enNube = true;
+        }
+      } catch (e) { par = null; console.warn('[Flagrante] compañeros: no se pudo leer la identidad de la cuenta', e); }
+    }
+    if (!par && loc) par = { priv: loc.priv, pub: loc.pub };
+    if (!par || !_cuenta || _cuenta.uid !== uid) return null;
+    var pubRaw = _cuDeB64(par.pub);
+    var cambio = !_bzId || _bzId.pubB64 !== par.pub;
+    _bzId = { uid: uid, dek: dek, nube: enNube, privB64: par.priv, pubB64: par.pub, pubRaw: pubRaw,
+              priv: await _bzImportarPriv(_cuDeB64(par.priv)), huella: await bzHuella(pubRaw) };
+    if (cambio) _bzCanal = {};
+    if (!loc || loc.priv !== par.priv) await _bzGuardarLocal();
+    return _bzId;
+  })().finally(function () { _bzIdP = null; });
+  return _bzIdP;
+}
+
+/* ── Compañeros ─────────────────────────────────────────────────────────────
+   Viven en la configuración (`cfg.contactos`), así pasan solos a los demás
+   equipos de la cuenta por la nube. `id` = uid: la fusión de la nube junta las
+   listas por identificador. */
+function bzContactos() {
+  try { return (lcCfgCrudo().contactos || []).filter(function (c) { return c && c.uid && c.pub; }); } catch (e) { return []; }
+}
+function bzContacto(uid) {
+  var l = bzContactos();
+  for (var i = 0; i < l.length; i++) if (l[i].uid === uid) return l[i];
+  return null;
+}
+async function _bzGuardarContacto(c) {
+  var cfg = lcCfgCrudo(), l = cfg.contactos || [], prev = null, out = [];
+  l.forEach(function (x) { if (x && x.uid === c.uid) prev = x; else if (x) out.push(x); });
+  out.push(Object.assign({}, prev || {}, c, { id: c.uid }));
+  cfg.contactos = out;
+  await DB.saveConfig(cfg);
+}
+async function bzQuitarContacto(uid) {
+  var cfg = lcCfgCrudo();
+  cfg.contactos = (cfg.contactos || []).filter(function (x) { return x && x.uid !== uid; });
+  await DB.saveConfig(cfg);
+  Object.keys(_bzCanal).forEach(function (k) { if (k.indexOf(uid + '|') === 0) delete _bzCanal[k]; });
+}
+
+/* El canal con un compañero. */
+async function bzCanal(con) {
+  var id = _bzId; if (!id) return null;
+  var k = con.uid + '|' + con.pub + '|' + id.pubB64;
+  if (!_bzCanal[k]) {
+    var par = [id.uid, con.uid].sort().join('|');
+    _bzCanal[k] = await _bzHkdf(await _bzSecreto(id.priv, _cuDeB64(con.pub)), 'flagrante|buzon', 'flagrante|buzon|' + par);
+  }
+  return _bzCanal[k];
+}
+
+/* ── El buzón: escribir ─────────────────────────────────────────────────── */
+async function _bzEscribir(para, doc, mid) {
+  var fb = await cuSdk();
+  await FB.setDoc(FB.doc(fb.db, 'buzon', para, 'm', mid),
+    Object.assign({ v: 1, de: _cuenta.uid, ts: FB.serverTimestamp() }, doc));
+}
+async function bzEnviar(con, t, carga) {
+  var id = await bzIdentidad(); if (!id) throw _cuErr('bz/sin-identidad');
+  var mid = _bzMid();
+  var ct = await cuEnvolver(await bzCanal(con), _cuTE(JSON.stringify(carga)), _bzAad(t, id.uid, con.uid, mid));
+  await nbConTiempo(_bzEscribir(con.uid, { t: t, ct: ct }, mid), 20000);
+  return mid;
+}
+async function _bzAbrir(con, t, mid, ct) {
+  var b = await cuDesenvolver(await bzCanal(con), ct, _bzAad(t, con.uid, _bzId.uid, mid));
+  return b ? _bzTxt(b) : null;
+}
+
+/* ── El código para agregar a un compañero ──────────────────────────────────
+   «FLG1» · largo + uid · llave pública (65) · secreto (16) · largo + nombre.
+   ≈155 bytes: entra en un código de versión 9, como el del vínculo por wifi. */
+function _bzRecortar(s, max) {
+  s = String(s || '');
+  while (s && _cuTE(s).length > max) s = s.slice(0, -1);
+  return s;
+}
+function _bzCodigoBytes(id, tok, nom) {
+  var u = _cuTE(id.uid), n = _cuTE(_bzRecortar(nom, BZ_NOM_MAX));
+  var out = new Uint8Array(4 + 1 + u.length + 65 + 16 + 1 + n.length), o = 0;
+  out.set(BZ_MAGIA, o); o += 4;
+  out[o++] = u.length; out.set(u, o); o += u.length;
+  out.set(id.pubRaw, o); o += 65;
+  out.set(tok, o); o += 16;
+  out[o++] = n.length; out.set(n, o);
+  return out;
+}
+function bzLeerCodigo(b) {
+  try {
+    if (!b || b.length < 4 + 1 + 6 + 65 + 16 + 1) return null;
+    for (var i = 0; i < 4; i++) if (b[i] !== BZ_MAGIA[i]) return null;
+    var o = 4, ul = b[o++];
+    if (ul < 6 || ul > 64) return null;
+    var uid = new TextDecoder().decode(b.slice(o, o + ul)); o += ul;
+    if (!/^[A-Za-z0-9_-]+$/.test(uid)) return null;
+    var pub = b.slice(o, o + 65); o += 65;
+    if (pub.length !== 65 || pub[0] !== 4) return null;
+    var tok = b.slice(o, o + 16); o += 16;
+    if (tok.length !== 16) return null;
+    var nl = b[o++];
+    if (o + nl !== b.length) return null;
+    return { uid: uid, pub: pub, tok: tok, nom: new TextDecoder().decode(b.slice(o, o + nl)) };
+  } catch (e) { return null; }
+}
+async function bzNuevoCodigo() {
+  var id = await bzIdentidad(); if (!id) return null;
+  var tok = _ptAzar(16), ts = Date.now();
+  _bzInvit = _bzInvit.filter(function (i) { return i.exp + BZ_INVIT_VIDA > ts; });
+  _bzInvit.push({ tok: _b64FromBytes(tok), exp: ts + BZ_COD_MS });
+  if (_bzInvit.length > 5) _bzInvit = _bzInvit.slice(-5);
+  await _bzGuardarLocal();
+  return { bytes: _bzCodigoBytes(id, tok, ptMiNombre()), ts: ts };
+}
+
+/* Quien escanea: guarda al compañero y le deja la solicitud en el buzón.
+   ⚠️ Se guarda ANTES de escribir la solicitud: el «hola» de vuelta puede llegar
+   en un instante, y un «hola» de quien todavía no es compañero se descarta. Si la
+   solicitud no sale, se deshace. */
+async function bzAgregarDesdeCodigo(bytes) {
+  var c = bzLeerCodigo(bytes);
+  if (!c) return { ok: false, motivo: 'no es el de un compañero de Flagrante.' };
+  var id = await bzIdentidad();
+  if (!id) return { ok: false, motivo: 'no se pudo procesar: revisa la señal e inténtalo de nuevo.' };
+  if (c.uid === id.uid) return { ok: false, motivo: 'es el tuyo: escanea el del compañero.' };
+  try { await _bzImportarPub(c.pub); } catch (e) { return { ok: false, motivo: 'no es el de un compañero de Flagrante.' }; }
+  var antes = bzContacto(c.uid);
+  await _bzGuardarContacto({ uid: c.uid, nom: c.nom, pub: _b64FromBytes(c.pub), huella: await bzHuella(c.pub),
+                             desde: Date.now(), confirmado: 0, roto: false });
+  try {
+    var eph = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+    var ephRaw = new Uint8Array(await crypto.subtle.exportKey('raw', eph.publicKey));
+    var ikm = new Uint8Array(48);
+    ikm.set(await _bzSecreto(eph.privateKey, c.pub)); ikm.set(c.tok, 32);
+    var k = await _bzHkdf(ikm, 'flagrante|contacto', 'flagrante|contacto|' + c.uid + '|' + id.uid);
+    var mid = _bzMid();
+    var ct = await cuEnvolver(k, _cuTE(JSON.stringify({ uid: id.uid, pub: id.pubB64, nom: ptMiNombre() || '' })),
+                              _bzAad('contacto', id.uid, c.uid, mid));
+    await nbConTiempo(_bzEscribir(c.uid, { t: 'contacto', ct: ct, eph: _b64FromBytes(ephRaw) }, mid), 20000);
+  } catch (e) {
+    console.warn('[Flagrante] compañeros: la solicitud no salió', e);
+    if (antes) await _bzGuardarContacto(antes); else await bzQuitarContacto(c.uid);
+    return { ok: false, motivo: 'no se pudo enviar: revisa la señal e inténtalo de nuevo.' };
+  }
+  return { ok: true, nom: c.nom };
+}
+
+/* ── El buzón: recibir ──────────────────────────────────────────────────────
+   Una escucha en vivo de `buzon/{yo}/m`. Cada mensaje se atiende una vez y en
+   orden. ⚠️ Lo que no se sabe atender NO se borra: puede ser de un tipo que
+   entiende una versión más nueva, o una solicitud para el código que enseñó
+   OTRO equipo de esta misma cuenta (solo él tiene el secreto). */
+async function bzEscuchar() {
+  if (_bzUnsub || !navigator.onLine || !bzActiva()) return;
+  var id = await bzIdentidad();
+  if (!id || _bzUnsub) return;
+  var u = null; try { u = await _cuUsuarioListo(); } catch (e) {}
+  if (!u || u.uid !== id.uid || _bzUnsub) return;
+  var gen = _bzGen;
+  _bzUnsub = FB.onSnapshot(FB.collection(_cuFB.db, 'buzon', id.uid, 'm'), function (snap) {
+    if (gen !== _bzGen) return;
+    snap.docChanges().forEach(function (ch) {
+      /* Al borrarse se olvida: un mensaje que se vuelva a crear con el mismo
+         identificador es otro mensaje y hay que atenderlo. */
+      if (ch.type === 'removed') { delete _bzVistos[ch.doc.id]; return; }
+      var mid = ch.doc.id, d = ch.doc.data();
+      if (_bzVistos[mid]) return;
+      _bzVistos[mid] = 1;
+      _bzCola = _bzCola.then(function () { return _bzProcesar(mid, d, gen); })
+        .catch(function (e) { console.warn('[Flagrante] buzón: un mensaje no se pudo atender', e); });
+    });
+  }, function (e) { _bzUnsub = null; console.warn('[Flagrante] buzón: la escucha se cortó', e); });
+}
+async function _bzProcesar(mid, d, gen) {
+  if (gen !== _bzGen || !_bzId) return;
+  var yo = _bzId.uid, ts = (d && d.ts && d.ts.toMillis) ? d.ts.toMillis() : 0;
+  function borrar() { return FB.deleteDoc(FB.doc(_cuFB.db, 'buzon', yo, 'm', mid)).catch(function () {}); }
+  if (!d || d.v !== 1 || typeof d.de !== 'string' || typeof d.t !== 'string' || typeof d.ct !== 'string') return borrar();
+  if (d.t === 'contacto') return _bzSolicitud(mid, d, ts, borrar);
+  var con = bzContacto(d.de);
+  if (!con) return borrar();               // de quien no es compañero: no se abre
+  if (BZ_TIPOS.indexOf(d.t) < 0) return;   // de un compañero, pero de una versión más nueva
+  var carga = await _bzAbrir(con, d.t, mid, d.ct);
+  if (!carga) {
+    /* Era de un compañero y no abre: una de las dos llaves cambió. Se dice en
+       su tarjeta para que vuelvan a agregarse. */
+    await _bzGuardarContacto(Object.assign({}, con, { roto: true }));
+    bzRepintar();
+    return borrar();
+  }
+  if (d.t === 'hola') {
+    var nom = String(carga.nom || '').slice(0, 80);
+    await _bzGuardarContacto(Object.assign({}, con, { confirmado: con.confirmado || Date.now(), roto: false, nom: nom || con.nom }));
+    await borrar();
+    bzRepintar();
+    toast((nom || con.nom || 'El compañero') + ' confirmó: ya pueden pasarse personas y capturas', 4000);
+  }
+}
+/* Una solicitud de quien escaneó mi código. Se prueba con cada código vivo que
+   enseñó este equipo; el que la abre queda gastado. */
+async function _bzSolicitud(mid, d, ts, borrar) {
+  var id = _bzId, s, carga = null, usado = -1, i, ikm, k, b;
+  if (typeof d.eph !== 'string') return borrar();
+  try { s = await _bzSecreto(id.priv, _cuDeB64(d.eph)); } catch (e) { return borrar(); }
+  for (i = 0; i < _bzInvit.length && !carga; i++) {
+    if (ts && ts > _bzInvit[i].exp + BZ_GRACIA_MS) continue;
+    ikm = new Uint8Array(48); ikm.set(s); ikm.set(_cuDeB64(_bzInvit[i].tok), 32);
+    k = await _bzHkdf(ikm, 'flagrante|contacto', 'flagrante|contacto|' + id.uid + '|' + d.de);
+    b = await cuDesenvolver(k, d.ct, _bzAad('contacto', d.de, id.uid, mid));
+    if (b) { carga = _bzTxt(b); usado = i; }
+  }
+  if (!carga) {
+    /* Puede ser del código de otro equipo de esta cuenta: se deja un día. */
+    if (!ts || Date.now() - ts > BZ_INVIT_VIDA) return borrar();
+    return;
+  }
+  var pubRaw;
+  try { pubRaw = _cuDeB64(String(carga.pub || '')); await _bzImportarPub(pubRaw); } catch (e) { return borrar(); }
+  if (carga.uid !== d.de || pubRaw.length !== 65) return borrar();
+  _bzInvit.splice(usado, 1);
+  await _bzGuardarLocal();
+  var con = { uid: d.de, nom: String(carga.nom || '').slice(0, 80), pub: _b64FromBytes(pubRaw), huella: await bzHuella(pubRaw),
+              desde: Date.now(), confirmado: Date.now(), roto: false };
+  await _bzGuardarContacto(con);
+  await borrar();
+  try { await bzEnviar(con, 'hola', { nom: ptMiNombre() || '' }); }
+  catch (e) { console.warn('[Flagrante] compañeros: la confirmación no salió', e); }
+  if (_bzUi === 'codigo') { _bzUi = ''; _bzCodigo = null; }
+  bzRepintar();
+  toast((con.nom || 'El compañero') + ' quedó agregado como compañero', 4000);
+}
+
+/* ── Arrancar y parar (con la nube) ─────────────────────────────────────── */
+function bzArrancar() {
+  if (!bzActiva()) return;
+  setTimeout(function () { if (bzActiva()) bzEscuchar(); }, 1200);
+}
+function bzDetener() {
+  if (_bzUnsub) { try { _bzUnsub(); } catch (e) {} }
+  _bzUnsub = null; _bzGen++; _bzId = null; _bzCanal = {}; _bzVistos = {}; _bzInvit = [];
+  _bzUi = ''; _bzCodigo = null;
+  if (_bzReloj) { clearInterval(_bzReloj); _bzReloj = null; }
+}
+window.addEventListener('online', function () { if (bzActiva()) bzEscuchar(); });
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible' && bzActiva()) bzEscuchar();
+});
+
+/* ── Lo que se ve, en «Modo compartir» ──────────────────────────────────── */
+function bzRepintar() {
+  try { if (_on('compartir')) renderCompartir(); } catch (e) {}
+}
+function bzUiCompaneros() {
+  var l = bzContactos();
+  var h = '<div class="card" id="bz-companeros"><div class="st">Mis compañeros</div>';
+  if (!l.length) h += '<p class="txd txs">Agrégalo una sola vez, estando juntos. Después se pasan cosas desde cualquier lugar.</p>';
+  else {
+    h += '<div class="bz-lista">';
+    l.forEach(function (c) {
+      var est = c.roto ? 'Las llaves cambiaron: vuelvan a agregarse'
+        : (c.confirmado ? 'Código de seguridad ' + (c.huella || '') : 'Esperando su confirmación');
+      h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">' + escHtml(c.nom || 'Compañero sin nombre') + '</div>' +
+           '<div class="bz-de' + (c.roto ? ' mal' : '') + '">' + escHtml(est) + '</div></div>' +
+           '<button class="btn bs cp-mini" data-uid="' + escAttr(c.uid) + '" onclick="bzUiQuitar(this.dataset.uid)">Quitar</button></div>';
+    });
+    h += '</div>';
+  }
+  h += '<div class="pt-paso">' +
+    '<button class="pt-op" onclick="bzUiMostrar()"><div class="lic">' + PT_IC.mostrar + '</div>' +
+    '<div><div class="ti">Mostrar mi código</div><div class="de">El compañero lo escanea y quedan agregados</div></div></button>' +
+    '<button class="pt-op" onclick="bzUiEscanear()"><div class="lic">' + PT_IC.escanear + '</div>' +
+    '<div><div class="ti">Escanear el del compañero</div><div class="de">Si el código lo está mostrando él</div></div></button>' +
+    '</div></div>';
+  return h;
+}
+function bzUiCodigo() {
+  var quedan = _bzCodigo ? Math.max(0, BZ_COD_MS - (Date.now() - _bzCodigo.ts)) : 0;
+  var svg = _bzCodigo ? ptQrSvg(_bzCodigo.bytes, 320) : '';
+  return '<div class="cp-code">' +
+    '<div class="cc-hd"><div class="cc-ti">Enséñale este código</div>' +
+    '<div class="cc-de">El compañero abre «Modo compartir» y toca «Escanear el del compañero».</div></div>' +
+    '<div class="pt-qr">' + (svg || '<div class="cc-mal">No se pudo dibujar el código aquí.</div>') + '</div>' +
+    '<div class="cc-pie"><span class="cc-pt' + (quedan > 0 ? ' viva' : '') + '"></span>' +
+    '<span id="bz-cuenta">' + _bzCuentaTxt(quedan) + '</span></div></div>' +
+    '<div class="cp-esperando"><span class="cp-giro chico"></span>Esperando a que lo escanee…</div>' +
+    '<button class="btn bs bbl" onclick="bzUiMostrar()">Generar otro código</button>' +
+    '<button class="btn bs bbl" onclick="bzUiCerrarCodigo()">Volver</button>';
+}
+function _bzCuentaTxt(q) {
+  if (q <= 0) return 'Caducó — genera uno nuevo';
+  var m = Math.floor(q / 60000), s = Math.floor((q % 60000) / 1000);
+  return 'Válido ' + m + ':' + (s < 10 ? '0' : '') + s + ' más';
+}
+async function bzUiMostrar() {
+  if (!navigator.onLine) { toast('Necesitas señal para agregar un compañero.', 3500); return; }
+  var c = await bzNuevoCodigo();
+  if (!c) { toast('No se pudo preparar tu código. Revisa la señal e inténtalo de nuevo.', 4000); return; }
+  _bzCodigo = c; _bzUi = 'codigo';
+  bzEscuchar();
+  renderCompartir();
+  if (_bzReloj) clearInterval(_bzReloj);
+  _bzReloj = setInterval(function () {
+    var el = document.getElementById('bz-cuenta');
+    if (!el || _bzUi !== 'codigo' || !_bzCodigo) { clearInterval(_bzReloj); _bzReloj = null; return; }
+    el.textContent = _bzCuentaTxt(Math.max(0, BZ_COD_MS - (Date.now() - _bzCodigo.ts)));
+  }, 1000);
+}
+function bzUiCerrarCodigo() {
+  _bzUi = ''; _bzCodigo = null;
+  if (_bzReloj) { clearInterval(_bzReloj); _bzReloj = null; }
+  renderCompartir();
+}
+function bzUiEscanear() {
+  if (!navigator.onLine) { toast('Necesitas señal para agregar un compañero.', 3500); return; }
+  ptScanAbrir('Apunta al código que muestra el compañero', async function (bytes) {
+    if (!bzLeerCodigo(bytes)) { toast('Ese código no es el de un compañero de Flagrante.'); return false; }
+    _ptScanEstado('Agregando al compañero…');
+    var r = await bzAgregarDesdeCodigo(bytes);
+    if (!r.ok) { toast('Ese código ' + r.motivo, 4000); return true; }
+    toast((r.nom || 'El compañero') + ' quedó agregado. Falta que su teléfono lo confirme.', 4000);
+    bzRepintar();
+    return true;
+  });
+}
+function bzUiQuitar(uid) {
+  var c = bzContacto(uid); if (!c) return;
+  openModal(
+    '<div class="mh"><h2>Quitar compañero</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+    '<p class="txd txs">' + escHtml(c.nom || 'Este compañero') + ' ya no podrá enviarte nada. Lo que te pasó se queda aquí.</p>' +
+    '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
+      '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
+      '<button class="btn bp" data-uid="' + escAttr(uid) + '" onclick="bzUiQuitarSi(this.dataset.uid)">Quitar</button>' +
+    '</div>');
+}
+async function bzUiQuitarSi(uid) {
+  closeModal();
+  await bzQuitarContacto(uid);
+  renderCompartir();
+  toast('Compañero quitado');
 }
 
 // NOTA: el SW solo funciona en HTTPS o localhost.

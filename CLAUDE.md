@@ -7918,3 +7918,64 @@ con el complemento de RevenueCat simulado en el teléfono y RevenueCat simulado 
 - `verify_prueba` [V9] adaptado (una app sin el complemento pide actualizar), sigue en 71/71.
   En verde: compras 30 · prueba 71 · cuenta 62 · nube 39 · csp 11.
   Anti-caché `?v=143` / `cache-v143`, `_BUILD=143`.
+
+## Compartir entre cuentas — paso 1: compañeros y buzón (2026-10-24)
+Sustituye, por etapas, al Modo compartir por wifi. El usuario pidió revisar su complejidad: lo que
+necesita es pasar personas y capturas cifradas a otro funcionario, que él siga diligenciando el
+expediente y que sus cambios VUELVAN a quien compartió, **sin aplicarse hasta que este los
+autorice**, con un aviso breve y un resumen de lo agregado o editado. El módulo actual (~2 900 líneas:
+códec QR, conexión directa WebRTC, misma wifi, actas que se actualizan solas) no cumplía tres de esos
+requisitos: los cambios solo volvían con los dos teléfonos abiertos y vinculados, se aplicaban solos y
+no había resumen. Se diseñó antes de que existiera la cuenta; con la cuenta y la nube (F2-F4) hay una
+vía más sencilla. Rama `compartir-cuentas` (sobre `f5-compras`), **sin fusionar ni publicar**. Cuatro
+pasos, cada uno espera aprobación: **1 compañeros** · 2 envío · 3 devoluciones con autorización ·
+4 retiro del vínculo por wifi y `privacy.html`.
+- **Decisiones del usuario (2026-10-24)**: (1) en los DOS sentidos — si el dueño corrige después, al
+  otro también le llega como pendiente; (2) si los dos cambiaron el mismo dato, el resumen lo marca y
+  por defecto se conserva el propio; (3) el archivo `.lexc` se queda como respaldo; (4) el buzón **no
+  exige plan vigente**, ni para enviar ni para recibir (con el plan vencido la app ya se cierra).
+
+### Lo que hay en el paso 1 (módulo `bz*`, tras la nube)
+- **Llave de identidad por CUENTA** (ECDH P-256): `users/{uid}/llaves/id` = `{v, pub, priv}` con la
+  privada cifrada con una llave que sale de la DEK (HKDF `flagrante|identidad`); en el equipo, en
+  IndexedDB (`bz|<uid>`) cifrada con la llave del equipo, y sirve sin señal. ⚠️ **Documento aparte de
+  `llaves/main`**: las operaciones de la cuenta (usar el código, empezar de cero) reescriben ese
+  documento entero con `setDoc`. ⚠️ Si la DEK cambia, la llave de identidad NO cambia: el equipo la
+  vuelve a cifrar con la DEK nueva y los compañeros no se pierden. Con señal manda la de la nube si
+  abre; todos los equipos de la cuenta tienen la misma.
+- **Agregar un compañero con UN escaneo**: A enseña un código (`FLG1` · uid · llave pública · secreto
+  de 16 bytes · nombre; ~130 B, QR versión 8, vale 5 min). B lo lee con el lector de siempre, guarda a
+  A y le deja en el buzón una solicitud cifrada con una llave efímera **más el secreto del código**:
+  solo la abre A y solo la pudo escribir quien vio el código. A guarda a B y responde «hola». ⚠️ Nadie
+  —tampoco el servidor— puede meter su llave en medio: la de A viaja en persona y la de B dentro de un
+  sobre que exige el secreto. El secreto es de **un solo uso** y caduca (una foto vieja no sirve).
+  ⚠️ B guarda a A **antes** de escribir la solicitud: el «hola» puede llegar en un instante y uno de
+  quien no es compañero se descarta. Si la solicitud no sale, se deshace.
+- **Código de seguridad** (`bzHuella`, 8 caracteres de la huella SHA-256 de la llave): los dos ven el
+  mismo en las dos pantallas.
+- **Compañeros en `cfg.contactos`** (`id` = uid): pasan solos a los demás equipos de la cuenta por la
+  nube, que funde las listas por identificador.
+- **El canal**: ECDH estático (mi privada × su pública) → HKDF → AES-GCM, con tipo, remitente,
+  destinatario e id del mensaje como dato adicional autenticado: un mensaje que abre ES de ese
+  compañero, y un sobre movido a otro mensaje o tipo no abre. ⚠️ Sin secreto hacia adelante, a
+  conciencia; los mensajes se borran al procesarse.
+- **El buzón**: `buzon/{para}/m/{mid}` = `{v, de, t, ct, eph?, ts}`. Escucha en vivo
+  (`bzEscuchar`) que arranca y para con la nube (`nbArrancar`/`nbDetener`). Lo de quien no es
+  compañero se borra sin abrirse. ⚠️ **Lo que no se sabe atender NO se borra**: un tipo de una
+  versión más nueva, o una solicitud para el código que enseñó OTRO equipo de la misma cuenta (solo
+  él tiene el secreto; se deja un día). Un mensaje de un compañero que no abre marca su tarjeta «las
+  llaves cambiaron: vuelvan a agregarse».
+- **Reglas**: la llave de identidad solo la lee y escribe su dueño; en el buzón cualquiera con sesión
+  puede DEJAR un mensaje con `de == su uid` (y `ts == request.time`, campos acotados), solo el dueño
+  lo lee y lo borra, y nadie lo cambia. `alBorrarUsuario` borra también `buzon/{uid}` (⚠️ hay que
+  volver a desplegar las funciones y las reglas).
+- **Pantalla**: tarjeta «Mis compañeros» arriba en Modo compartir (solo con cuenta y sesión), con
+  «Mostrar mi código» / «Escanear el del compañero», el código de seguridad y «Quitar». El vínculo por
+  wifi sigue debajo hasta el paso 4.
+- `verify_companeros.mjs` (**34 checks**, nuevo, contra los emuladores): identidad cifrada, sin señal,
+  repuesta con la misma llave, la misma en dos equipos; el código pasa por el lector QR de verdad;
+  los dos confirmados con el mismo código de seguridad; un solo uso; caducidad; reglas (leer ajeno,
+  suplantar, cambiar, campos sueltos); lo de quien no es compañero se borra; quitar y volver a agregar;
+  la tarjeta se ve; sin cuenta no aparece. ⚠️ **Comprobado que muerde**: quitando la caducidad y el
+  filtro de compañeros fallan [B9], [C9] y [C10].
+- Anti-caché `?v=144` / `cache-v144`, `_BUILD=144`. Sin `.aab` nuevo: el paso 1 viaja en el mismo paquete que la F5 cuando se apruebe todo.
