@@ -175,60 +175,66 @@ await A.page.evaluate(async s => {
     victimas: [], testigos: [], elementos: [], narracion: { texto: s } }]);
 }, SECRETO);
 
-/* ═══ E · ENVIAR, REVISAR, ACEPTAR ═══════════════════════════════════════ */
-await A.page.evaluate(() => { _ptSel = { p: {}, c: {} }; go('compartir'); });
-await A.page.waitForSelector('#cp-pane .bz-env button');
-const antes = await A.page.evaluate(() => { const b = document.querySelector('#cp-pane .bz-env button'); return { txt: b.innerText, dis: b.disabled }; });
-log(/^Enviar a PT Luz Marín$/.test(antes.txt) && antes.dis, '[E1] Hay un botón «Enviar a» por compañero, apagado mientras no haya nada marcado', antes.txt);
-await A.page.check('#cp-pane input[data-id="per-1"]');
-await A.page.check('#cp-pane input[data-id="cas-1"]');
-const marcado = await A.page.evaluate(() => { const b = document.querySelector('#cp-pane .bz-env button'); return { txt: b.innerText, dis: b.disabled }; });
-log(/\(2\)/.test(marcado.txt) && !marcado.dis, '[E2] Al marcar, el botón dice cuántos van', marcado.txt);
+/* ═══ E · ENVIAR, REVISAR, ACEPTAR (por «Enviar a», desde Capturas) ══════ */
+await A.page.evaluate(() => { go('capturas'); });
+await A.page.waitForSelector('#ev-capturas .ev-chip.ok');
+const chip = await A.page.evaluate(() => document.querySelector('#ev-capturas .ev-chip.ok').innerText.trim());
+await A.page.click('#ev-capturas .ev-chip.ok');
+const antes = await A.page.evaluate(() => { const b = document.querySelector('#ev-capturas .ev-sel .bp'); return { txt: document.querySelector('#ev-capturas .ev-sel').innerText, dis: b.disabled }; });
+log(chip === 'Luz MARÍN' && /Enviar a Luz MARÍN/.test(antes.txt) && antes.dis,
+  '[E1] Tocar al vinculado abre la selección sobre la lista, con «Enviar» apagado mientras no haya nada marcado', chip);
+await A.page.click('#cl [data-ev="cas-1"] .cc');
+const marcado = await A.page.evaluate(() => { const b = document.querySelector('#ev-capturas .ev-sel .bp'); return { txt: b.innerText, dis: b.disabled }; });
+log(/Enviar \(1\)/.test(marcado.txt) && !marcado.dis, '[E2] Al marcar, el botón dice cuántas van', marcado.txt);
 const chunks0 = [];
-await A.page.click('#cp-pane .bz-env button');
+await A.page.click('#ev-capturas .ev-sel .bp');
 const llego = await esperar(async () => (await bandeja(B)).length === 1);
 const docs = await buzon(uB);
 const crudo = JSON.stringify(docs);
 log(llego && docs.length === 1 && docs[0].fields.t.stringValue === 'env' &&
-    !crudo.includes(SECRETO) && !crudo.includes('43111222') && !crudo.includes('GÓMEZ'),
+    !crudo.includes(SECRETO) && !crudo.includes('71000111') && !crudo.includes('PÉREZ'),
   '[E3] Viaja por el buzón y Firestore no ve el contenido (ni nombres, ni documentos, ni el relato)');
 chunks0.push(...docs);
 log((await cuantos(B)).p === 0 && (await cuantos(B)).c === 0, '[E4] Al llegar NO se guarda nada todavía');
 const vB = await B.page.evaluate(() => {
-  go('compartir');
-  const c = document.getElementById('bz-pendientes'), n = document.getElementById('bz-cnt-nav');
-  return { txt: c ? c.innerText : '', alto: c ? c.getBoundingClientRect().height : 0, cnt: n ? n.textContent : '', vis: n ? n.style.display !== 'none' : false };
+  go('capturas');
+  const av = document.querySelector('#cl .ev-llego'), n = document.getElementById('bz-cnt-nav'), pt = document.getElementById('bz-punto');
+  evGestionar('c');
+  const c = document.getElementById('bz-pendientes');
+  return { av: av ? av.innerText : '', txt: c ? c.innerText : '', alto: c ? c.getBoundingClientRect().height : 0,
+           cnt: n ? n.textContent : '', vis: n ? n.style.display !== 'none' : false, punto: pt ? pt.style.display !== 'none' : false };
 });
-log(vB.alto > 60 && /De PT Nelson David/.test(vB.txt) && /1 persona y 1 captura/.test(vB.txt) && /Revisar/.test(vB.txt) && vB.cnt === '1' && vB.vis,
-  '[E5] Al otro le aparece «Por revisar» con quién lo envió y qué trae, y el contador del menú', vB.cnt);
-log(/Te llegó de PT Nelson David: 1 persona y 1 captura/.test(await dichos(B)), '[E6] Y un aviso breve al llegar', (await dichos(B)).slice(0, 90));
+await B.page.evaluate(() => closeModal());
+log(/Nelson DAVID te envió 1 captura/.test(vB.av) && vB.alto > 60 && /De Nelson DAVID/.test(vB.txt) && /1 captura/.test(vB.txt) && /Revisar/.test(vB.txt) && vB.cnt === '1' && vB.vis && vB.punto,
+  '[E5] Al otro le sale el aviso encima de Capturas, «Por revisar» en el panel y el contador en Capturas', vB.av.replace(/\n/g, ' · '));
+log(/Te llegó de Nelson DAVID: 1 captura/.test(await dichos(B)), '[E6] Y un aviso breve al llegar', (await dichos(B)).slice(0, 90));
 log((await bandeja(B2)).length === 1, '[E7] Lo ve también su otro equipo (la bandeja es el propio buzón)');
-const envA = await A.page.evaluate(() => { go('compartir'); const c = document.getElementById('bz-enviados'); return c ? c.innerText : ''; });
-log(/A PT Luz Marín/.test(envA) && /Esperando que lo revise/.test(envA), '[E8] Quien envió ve «Esperando que lo revise»');
+const envA = await A.page.evaluate(() => { evGestionar('c'); const c = document.getElementById('bz-enviados'); const t = c ? c.innerText : ''; closeModal(); return t; });
+log(/A Luz MARÍN/.test(envA) && /Esperando que lo revise/.test(envA), '[E8] Quien envió ve «Esperando que lo revise»');
 
 const k = (await bandeja(B))[0].k;
-await B.page.evaluate(k => bzUiRevisar(k), k);
+await B.page.click('#cl .ev-llego');
 await B.page.waitForSelector('#modal.open');
 const modal = await B.page.evaluate(() => document.getElementById('modal-c').innerText);
 log(/Revisa lo que llegó/.test(modal) && /Nada se guarda hasta que lo aceptes/.test(modal) && /Ahora no/.test(modal),
-  '[E9] Revisar abre la revisión de siempre, con «Ahora no»');
+  '[E9] El aviso abre la revisión de siempre, con «Ahora no»');
 await pulsar(B, 'Ahora no');
 await B.page.waitForTimeout(400);
-log((await bandeja(B)).length === 1 && (await cuantos(B)).p === 0, '[E10] «Ahora no» lo deja por revisar y no guarda nada');
+log((await bandeja(B)).length === 1 && (await cuantos(B)).c === 0, '[E10] «Ahora no» lo deja por revisar y no guarda nada');
 await B.page.evaluate(k => bzUiRevisar(k), k);
 await B.page.waitForSelector('#modal.open');
 await pulsar(B, 'Importar');
-const guardado = await esperar(async () => (await cuantos(B)).p === 1 && (await cuantos(B)).c === 1);
-const datos = await B.page.evaluate(() => ({ tel: DB.getPersons()[0].tel, rel: DB.getCases()[0].narracion.texto }));
-log(guardado && datos.tel === '3001234567' && datos.rel === SECRETO, '[E11] Al importar, entran la persona y la captura, íntegras');
+const guardado = await esperar(async () => (await cuantos(B)).c === 1);
+const datos = await B.page.evaluate(() => ({ cap: DB.getCases()[0].capturados[0].numDoc, rel: DB.getCases()[0].narracion.texto }));
+log(guardado && datos.cap === '71000111' && datos.rel === SECRETO, '[E11] Al importar, entra la captura íntegra');
 const vacio = await esperar(async () => (await buzon(uB)).length === 0);
 log(vacio, '[E12] Los pedazos se borran del buzón');
 const fueB2 = await esperar(async () => (await bandeja(B2)).length === 0);
 log(fueB2, '[E13] Y desaparece de «Por revisar» en su otro equipo');
-const sinCnt = await B.page.evaluate(() => document.getElementById('bz-cnt-nav').style.display === 'none');
-log(sinCnt, '[E14] El contador del menú se apaga');
+const sinCnt = await B.page.evaluate(() => document.getElementById('bz-cnt-nav').style.display === 'none' && !document.querySelector('#cl .ev-llego'));
+log(sinCnt, '[E14] El contador y el aviso se apagan');
 const acuse = await esperar(async () => (await salidaDe(A)).filter(x => !x.oculto).length === 0);
-log(acuse && /Luz Marín importó 2 registros/.test(await dichos(A)), '[E15] A quien envió le llega el acuse: «importó 2 registros»', (await dichos(A)).slice(-80));
+log(acuse && /Luz MARÍN importó 1 registro/.test(await dichos(A)), '[E15] A quien envió le llega el acuse: «importó 1 registro»', (await dichos(A)).slice(-80));
 log(await esperar(async () => (await buzon(uA)).length === 0), '[E16] El acuse lo atiende el equipo que envió, no el otro de su cuenta');
 
 /* Un pedazo que reaparece (el borrado no alcanzó a salir): no vuelve a pedir revisión. */
@@ -237,7 +243,7 @@ const rp = await fetch(`${FS}/v1/${f0.name}`, { method: 'PATCH', headers: OWNER,
 /* Se espera a que los dos equipos de B lo hayan visto antes de mirar. */
 await B.page.waitForTimeout(4000);
 const reBorrado = rp.ok && await esperar(async () => (await buzon(uB)).length === 0);
-log(reBorrado && (await bandeja(B)).length === 0 && (await bandeja(B2)).length === 0 && (await cuantos(B)).p === 1,
+log(reBorrado && (await bandeja(B)).length === 0 && (await bandeja(B2)).length === 0 && (await cuantos(B)).c === 1,
   '[E17] Un envío ya atendido que reaparece se borra solo y no se importa dos veces');
 
 /* ═══ F · UN ENVÍO GRANDE, EN PEDAZOS ═══════════════════════════════════ */
@@ -272,8 +278,10 @@ await A.page.evaluate(async () => {
 await A.ctx.setOffline(true);
 const off = await A.page.evaluate(async () => {
   const r = await bzEnviarRegistros(bzContactos()[0].uid, DB.getPersons().filter(p => p.id === 'per-2'), []);
-  go('compartir');
-  return { r, onLine: navigator.onLine, txt: (document.getElementById('bz-enviados') || {}).innerText || '' };
+  evGestionar('c');
+  const txt = (document.getElementById('bz-enviados') || {}).innerText || '';
+  closeModal();
+  return { r, onLine: navigator.onLine, txt };
 });
 await A.page.waitForTimeout(2500);
 log(off.r.ok && !off.onLine && /Sin señal: sale cuando vuelva/.test(off.txt) && (await buzon(uB)).length === 0,
@@ -305,7 +313,7 @@ const C = await telefono(); await abrir(C);
 await crearCuenta(C, 'tercero@flagrante.test', 'Tercero Ajeno');
 await enLinea(C);
 await C.page.evaluate(async uB => _bzEscribir(uB, { t: 'env', ct: 'x'.repeat(60) }, 'ajeno-env-0123456789'), uB);
-const fueraC = await esperar(async () => !(await buzon(uB)).some(d => d.name.endsWith('ajeno-env-0123456789')));
+const fueraC = await esperar(async () => !(await buzon(uB)).some(d => d.name.endsWith('ajeno-env-0123456789')), 60000);   // un desconocido se espera BZ_DESC_ESPERA antes de borrarse
 log(fueraC && (await bandeja(B)).length === 0, '[H1] Un envío de quien no es compañero se borra sin abrirse');
 /* Un envío al que le falta un pedazo: se ve «Llegando…» y a la semana se descarta. */
 const mitad = await A.page.evaluate(async uB => {
@@ -316,7 +324,7 @@ const mitad = await A.page.evaluate(async uB => {
 }, uB);
 await escribirDoc(`buzon/${uB}/m/${mitad.mid}`, { v: { integerValue: '1' }, de: { stringValue: uA }, t: { stringValue: 'env' },
   ct: { stringValue: mitad.ct }, ts: { timestampValue: new Date(Date.now() - 8 * DIA).toISOString() } });
-const llegando = await esperar(async () => B.page.evaluate(() => { renderCompartir(); return /Llegando… 1 de 2/.test(document.getElementById('cp-pane').innerText); }));
+const llegando = await esperar(async () => B.page.evaluate(() => { evGestionar('c'); const si = /Llegando… 1 de 2/.test(document.getElementById('ev-gest').innerText); closeModal(); return si; }));
 log(llegando, '[H2] Mientras faltan pedazos se ve «Llegando…», sin nada que aceptar');
 await B.page.evaluate(() => _bzLimpiarPartes());
 const limpio = await esperar(async () => !(await buzon(uB)).some(d => d.name.endsWith(mitad.mid)));
@@ -325,23 +333,23 @@ const sinRoto = (await contactos(B)).find(c => c.uid === uA);
 log(sinRoto && !sinRoto.roto, '[H4] Nada de esto marca al compañero como «llaves cambiaron»');
 
 /* ═══ I · LA PANTALLA ════════════════════════════════════════════════════ */
-await A.page.evaluate(async () => { _ptSel = { p: { 'per-1': true }, c: {} }; await bzUiEnviar(bzContactos()[0].uid); });
+await A.page.evaluate(async () => { await bzUiEnviar(bzContactos()[0].uid, DB.getPersons().filter(p => p.id === 'per-1'), []); });
 await esperar(async () => (await bandeja(B)).length === 1);
-await B.page.evaluate(() => { go('compartir'); });
+await B.page.evaluate(() => { go('personas'); evGestionar('p'); });
 const malos = await B.page.evaluate(() => {
   const m = [];
-  document.querySelectorAll('#cp-pane p, #cp-pane .de, #cp-pane .bz-de, #cp-pane .bz-nom').forEach(e => { if (e.innerText.length > 110) m.push(e.innerText); });
-  const t = document.getElementById('cp-pane').innerText.toLowerCase();
+  document.querySelectorAll('#ev-gest p, #ev-gest .de, #ev-gest .bz-de, #ev-gest .bz-nom, .ev-llego').forEach(e => { if (e.innerText.length > 110) m.push(e.innerText); });
+  const t = (document.getElementById('ev-gest').innerText + ' ' + document.getElementById('pl').innerText).toLowerCase();
   return m.concat(['firebase', 'firestore', 'servidor', 'uid', 'buzón', 'pedazo', 'cifrad'].filter(w => t.includes(w)));
 });
 log(!malos.length, '[I1] Textos cortos y sin palabras técnicas', JSON.stringify(malos));
 const anchoOk = await B.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
 log(anchoOk, '[I2] Sin desborde horizontal en el teléfono');
-const mas = await B.page.evaluate(() => { const e = document.getElementById('bz-cnt-mas'); return e && e.textContent === '1' && e.style.display !== 'none'; });
-log(mas, '[I3] El contador también sale en «Más»');
+const mas = await B.page.evaluate(() => { closeModal(); const a = document.querySelector('#pl .ev-llego'); return a ? a.innerText : ''; });
+log(/Nelson DAVID te envió 1 persona/.test(mas), '[I3] El aviso también sale encima de Personas', mas.replace(/\n/g, ' · '));
 await B.page.screenshot({ path: join(ROOT, 'verify_envio_buzon.png'), fullPage: true });
 const sinCuenta = await telefono(false); await abrir(sinCuenta);
-const nada = await sinCuenta.page.evaluate(() => { go('compartir'); return !document.getElementById('bz-pendientes') && !document.querySelector('.bz-env'); });
+const nada = await sinCuenta.page.evaluate(() => { go('capturas'); evGestionar('c'); return !document.getElementById('bz-pendientes') && !document.querySelector('.ev-llego') && !document.querySelector('.ev-chip.ok'); });
 log(nada, '[I4] Sin cuenta no aparece nada de esto');
 const reales = errs.filter(e => !/permission|PERMISSION_DENIED|Missing or insufficient|ERR_INTERNET_DISCONNECTED|net::ERR|offline/i.test(e));
 log(!reales.length, '[I5] Consola sin errores (salvo los provocados)', reales.slice(0, 3).join(' | '));

@@ -140,7 +140,7 @@
   </li>
   <li>
     La firma manuscrita viaja únicamente a los equipos del <strong>mismo usuario</strong>, cifrada
-    como lo demás. A otra persona no se envía nunca (tampoco en «Modo compartir»).
+    como lo demás. A otra persona no se envía nunca (tampoco con «Enviar a»).
   </li>
   <li>
     Solo el titular de la cuenta puede leer o modificar sus registros; las reglas del servidor lo
@@ -154,16 +154,16 @@
   <a href="https://firebase.google.com/support/privacy" rel="noopener">información de privacidad de Firebase</a>.
 </p>
 
-<h2>5. Compartir con un compañero (opcional, «Modo compartir»)</h2>
+<h2>5. Enviar a otro funcionario (opcional, «Enviar a»)</h2>
 <p>
   La aplicación permite pasar personas y capturas ya diligenciadas a otro funcionario, siempre por
   decisión expresa del usuario y de dos maneras, ambas cifradas:
 </p>
 <ul>
   <li>
-    <strong>A la cuenta de un compañero.</strong> Primero los dos se agregan como compañeros
-    escaneando un código en la pantalla del otro; con eso cada equipo guarda la llave pública del
-    compañero. Lo que se le envía se <strong>cifra en el dispositivo</strong> con una llave que solo
+    <strong>A la cuenta de un funcionario vinculado.</strong> Primero se vinculan una sola vez: quien
+    invita muestra un código en su pantalla y el otro lo escanea; con eso cada equipo guarda la llave
+    pública del otro. Cada cuenta puede tener hasta tres vinculados y quitarlos cuando quiera. Lo que se le envía se <strong>cifra en el dispositivo</strong> con una llave que solo
     pueden calcular los dos y se deja en su buzón de la nube (Cloud Firestore, São Paulo). Quien
     desarrolla la aplicación y el proveedor de la nube no pueden leerlo: ven solo qué cuenta escribe
     a cuál, cuándo y de qué tamaño. Nada se guarda en el equipo del compañero hasta que él lo
@@ -196,7 +196,7 @@
 <h2>7. Cámara</h2>
 <p>
   La aplicación utiliza la cámara para leer códigos que otro equipo muestra en pantalla: el código
-  para agregar a un compañero en «Modo compartir» y el código de patrulla con los datos del
+  para vincular a otro funcionario en «Enviar a» y el código de patrulla con los datos del
   compañero en el Perfil. La imagen del código se procesa en el momento
   dentro del dispositivo, <strong>no se guarda ni se envía a ninguna parte</strong>, y la cámara se
   apaga en cuanto el código se lee. El sistema operativo pide el permiso la primera vez y el usuario
@@ -240,7 +240,7 @@
     </tr>
     <tr>
       <td>Cámara</td>
-      <td>Leer el código que otro equipo muestra en pantalla (agregar a un compañero o llenar los
+      <td>Leer el código que otro equipo muestra en pantalla (vincular a otro funcionario o llenar los
           datos del compañero de patrulla). Es opcional: sin este permiso el resto de la aplicación
           funciona igual.</td>
     </tr>
@@ -269,7 +269,7 @@
 <p>
   La cuenta se elimina desde la propia aplicación, en <strong>Ajustes → Cuenta → Eliminar mi
   cuenta</strong>: se borran la cuenta de Firebase, lo que tenga en la nube, su derecho de uso y la
-  información del teléfono, incluido su buzón de «Modo compartir». Lo que el usuario ya entregó a un compañero queda en el equipo de este. Cerrar sesión, en cambio, no borra nada salvo que se pida. El código
+  información del teléfono, incluido su buzón de «Enviar a». Lo que el usuario ya entregó a un compañero queda en el equipo de este. Cerrar sesión, en cambio, no borra nada salvo que se pida. El código
   antifraude del teléfono (sin relación con la cuenta) se conserva, para que eliminar la cuenta no
   sirva para repetir la prueba.
 </p>

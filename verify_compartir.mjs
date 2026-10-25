@@ -248,14 +248,16 @@ await pageB.evaluate(async () => {
 //      «Guardar un archivo»; sale una descarga y una clave. B toca «Recibir un
 //      archivo», teclea la clave, revisa y acepta — y se le dice qué llegó.
 const descarga = page.waitForEvent('download', { timeout: 15000 });
-await page.evaluate(() => { ptAbrirCompartir(); ptUiMarcar('p', 'p-cap', true); });
-await page.click('#cp-pane .pt-op:has-text("Guardar un archivo")');
+await page.evaluate(() => { go('personas'); evGestionar('p'); });
+await page.click('#ev-gest .pt-op:has-text("Guardar un archivo")');
+await page.click('#pl .prow[data-ev="p-cap"]');
+await page.click('#ev-personas .ev-sel .bp');
 const dl = await descarga;
 const c1pin = (await page.textContent('#modal-c .cf-pin-n')).replace(/\D/g, '');
 const c1ruta = await dl.path();
 const c1bytes = Array.from(readFileSync(c1ruta));
 await page.evaluate(() => closeModal());
-await pageB.evaluate((arr) => { ptAbrirCompartir(); ptPedirClaveArchivo(Uint8Array.from(arr).buffer, 'Flagrante.lexc'); }, c1bytes);
+await pageB.evaluate((arr) => { go('personas'); ptPedirClaveArchivo(Uint8Array.from(arr).buffer, 'Flagrante.lexc'); }, c1bytes);
 await pageB.fill('#pt-arch-pin', c1pin);
 await pageB.click('#modal-c button:has-text("Abrir")');
 await aceptarEnReceptor(pageB);
@@ -467,26 +469,21 @@ log(/ajustes del teléfono/.test(f13.denegado) && /Otra aplicación/.test(f13.oc
    D · LA PANTALLA
    ══════════════════════════════════════════════════════════════════════════ */
 
-// [D1] La pantalla existe, es un DESTINO PROPIO del panel lateral, y SE VE.
-//      ⚠️ Se mide el rectángulo y no solo el contenido del DOM: una pantalla
-//      insertada fuera del contenedor no se dibuja y todos los checks de
-//      contenido seguirían en verde.
+// [D1] «Modo compartir» ya no es un destino: enviar es la barra «Enviar a» de
+//      Capturas y de Personas, y SE VE (se mide el rectángulo, no solo el DOM).
 const d1 = await page.evaluate(() => {
-  ptAbrirCompartir();
-  const s = document.getElementById('screen-compartir');
-  const r = s.getBoundingClientRect();
-  const item = document.querySelector('.sb-item[data-screen="compartir"]');
-  return { existe: !!s, dentro: !!s.closest('#main'), alto: Math.round(r.height), ancho: Math.round(r.width),
-           enPanel: !!item, rotulo: item ? item.textContent.trim() : '',
+  const medir = (pant, id) => { go(pant); const r = document.getElementById(id).getBoundingClientRect();
+    return { alto: Math.round(r.height), ancho: Math.round(r.width), dentro: !!document.getElementById(id).closest('#main') }; };
+  return { cap: medir('capturas', 'ev-capturas'), per: medir('personas', 'ev-personas'),
+           pant: !!document.getElementById('screen-compartir'), item: !!document.querySelector('[data-screen="compartir"]'),
            enScreens: screens.indexOf('compartir') >= 0 };
 });
-log(d1.existe && d1.dentro && d1.alto > 200 && d1.ancho > 200 && d1.enPanel && d1.enScreens && /Modo compartir/.test(d1.rotulo),
-  '[D1] «Modo compartir» es un destino del panel lateral y la pantalla se dibuja',
-  d1.ancho + '×' + d1.alto + ' px · «' + d1.rotulo + '»');
+log(!d1.pant && !d1.item && !d1.enScreens && d1.cap.dentro && d1.per.dentro && d1.cap.alto > 20 && d1.per.alto > 20 && d1.cap.ancho > 100,
+  '[D1] Sin pantalla «Modo compartir»: «Enviar a» está en Capturas y en Personas y se dibuja',
+  d1.cap.ancho + '×' + d1.cap.alto + ' · ' + d1.per.ancho + '×' + d1.per.alto + ' px');
 
-// [D2] EL MENÚ DE LA CAPTURA NO LA NOMBRA. Compartir no es una acción de una
-//      captura: lo que se le pasa al compañero son sobre todo personas, que
-//      muchas veces todavía no están en ninguna.
+// [D2] EL MENÚ DE LA CAPTURA NO LA NOMBRA: enviar se hace desde la barra, con
+//      varias a la vez, no captura por captura.
 const d2 = await page.evaluate(async () => {
   const c = SIM.genFlagrancia('URI'); await DB.saveCase(c);
   go('capturas');
@@ -498,7 +495,7 @@ const d2 = await page.evaluate(async () => {
   const docs = lcEstadoDocs(c).map(d => d.lbl || d.nombre || '');
   const nombra = tit.filter(t => docs.some(d => d && t.indexOf(d) >= 0));
   const r = { tit, nombra, scroll: sh.scrollHeight > sh.clientHeight + 1,
-              alto: sh.scrollHeight, comparte: tit.some(t => /compart|compañero/i.test(t)) };
+              alto: sh.scrollHeight, comparte: tit.some(t => /compart|compañero|enviar a/i.test(t)) };
   closeSheet();
   return r;
 });
@@ -506,50 +503,58 @@ log(!d2.comparte && d2.nombra.length === 0 && !d2.scroll,
   '[D2] El menú de la captura no ofrece compartir ni nombra ningún documento',
   d2.tit.join(' | '));
 
-// [D3] Sin cuenta, la pantalla ofrece qué marcar y el archivo, y nada más: ni un
-//      código, ni un «vincular», ni una palabra del wifi.
+// [D3] Sin cuenta, el panel dice que vincular necesita la cuenta y ofrece el
+//      archivo, y nada más: ni un código, ni una palabra del wifi.
 const d3 = await page.evaluate(() => {
-  ptAbrirCompartir();
-  const t = document.getElementById('screen-compartir').innerText;
-  return { ops: [...document.querySelectorAll('#cp-pane .pt-op .ti')].map(e => e.textContent.trim()),
-           grupos: [...document.querySelectorAll('#cp-pane .card .st')].map(e => e.textContent.trim().toLowerCase()),
-           wifi: /wifi|vincul|zona wifi|misma red/i.test(t) };
+  evGestionar('p');
+  const t = document.getElementById('ev-gest').innerText;
+  const r = { ops: [...document.querySelectorAll('#ev-gest .pt-op .ti')].map(e => e.textContent.trim()),
+              cuenta: /necesita la cuenta/.test(t), qr: !!document.querySelector('#ev-gest .pt-qr'),
+              wifi: /wifi|zona wifi|misma red/i.test(t) };
+  closeModal();
+  return r;
 });
-log(d3.ops.length === 2 && d3.ops.every(t => /archivo/i.test(t)) && d3.grupos.indexOf('personas') >= 0
-    && d3.grupos.indexOf('capturas') >= 0 && !d3.wifi,
-  '[D3] La pantalla ofrece qué marcar y el archivo, sin rastro del wifi', d3.ops.join(' | '));
+log(d3.ops.length === 2 && d3.ops.every(t => /archivo/i.test(t)) && d3.cuenta && !d3.qr && !d3.wifi,
+  '[D3] Sin cuenta, el panel ofrece el archivo y explica lo de la cuenta, sin rastro del wifi', d3.ops.join(' | '));
 
-// [D4] Marcar funciona y el archivo usa lo marcado; sin marcar, se dice qué hacer.
+// [D4] La selección sobre la lista: «Todas» marca lo que se ve y, sin nada
+//      marcado, «Guardar» no hace nada y lo dice.
 const d4 = await page.evaluate(async () => {
-  ptAbrirCompartir();
-  const items = document.querySelectorAll('#cp-pane .cp-it').length;
-  _ptSel = { p: {}, c: {} };
-  await ptUiExportar();
+  go('personas');
+  evGestionar('p'); evArchivo();
+  const filas = document.querySelectorAll('#pl .prow.ev-on').length;
+  await evEnviar();
   const aviso = (document.getElementById('toast') || {}).textContent || '';
-  ptUiMarcarTodo('p');
-  const marcadas = _ptContar('p') === _ptRegistros('p').length;
-  ptUiMarcarTodo('p');
-  return { items, aviso, marcadas, limpio: _ptContar('p') === 0 };
+  evMarcarTodo('p');
+  const marcadas = Object.keys(_evSel.ids).length === DB.getPersons().length;
+  evMarcarTodo('p');
+  const limpio = Object.keys(_evSel.ids).length === 0;
+  evCancelar();
+  return { filas, aviso, marcadas, limpio, fuera: _evSel === null };
 });
-log(d4.items >= 3 && /Marca arriba/.test(d4.aviso) && d4.marcadas && d4.limpio,
-  '[D4] Se marcan personas y capturas; sin nada marcado el archivo dice qué hacer', d4.items + ' registros');
+log(d4.filas >= 1 && /Marca al menos/.test(d4.aviso) && d4.marcadas && d4.limpio && d4.fuera,
+  '[D4] Se marca sobre la lista; sin nada marcado el archivo dice qué hacer', d4.filas + ' personas');
 
-// [D5] NI UNA PALABRA TÉCNICA en la pantalla.
+// [D5] NI UNA PALABRA TÉCNICA en la barra ni en el panel.
 const d5 = await page.evaluate(() => {
   const malas = /\b(IP|puerto|socket|host|WebRTC|DataChannel|SDP|ICE|API|servidor|base de datos|token|payload|sesión|canal)\b/i;
-  ptAbrirCompartir();
-  const m = document.getElementById('screen-compartir').innerText.match(malas);
+  go('personas'); evGestionar('p');
+  const t = document.getElementById('ev-personas').innerText + ' ' + document.getElementById('ev-gest').innerText;
+  closeModal();
+  const m = t.match(malas);
   return m ? m[0] : '';
 });
-log(!d5, '[D5] La pantalla no usa una sola palabra técnica', d5);
+log(!d5, '[D5] La barra y el panel no usan una sola palabra técnica', d5);
 
 // [D7] Sistema visual: sin emojis y sin colores propios fuera de los tokens.
 const bloqueCss = src.slice(src.indexOf('/* ═══ MODO COMPARTIR ═══'), src.indexOf('/* ═══ BANNER PWA ═══ */'));
 const cssSinComentarios = bloqueCss.replace(/\/\*[\s\S]*?\*\//g, '');
 const literales = (cssSinComentarios.match(/#[0-9a-fA-F]{3,6}\b/g) || []);
 const emojis = await page.evaluate(() => {
-  ptAbrirCompartir();
-  return /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(document.getElementById('screen-compartir').innerText);
+  evGestionar('p');
+  const e = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(document.getElementById('ev-gest').innerText);
+  closeModal();
+  return e;
 });
 /* ⚠️ Los únicos literales admitidos son blanco y negro PUROS, y los dos tienen
    motivo medido: un código se lee por contraste (en tema oscuro, uno claro sobre
@@ -562,9 +567,11 @@ log(literales.length > 0 && literales.every(c => /^#(fff|000|ffffff|000000)$/i.t
 // [D8] En los dos temas.
 const d8 = await page.evaluate(() => {
   const medir = () => {
-    ptAbrirCompartir();
-    const cs = getComputedStyle(document.querySelector('#cp-pane .pt-op'));
-    return cs.color + ' sobre ' + cs.backgroundColor;
+    evGestionar('p');
+    const cs = getComputedStyle(document.querySelector('#ev-gest .pt-op'));
+    const r = cs.color + ' sobre ' + cs.backgroundColor;
+    closeModal();
+    return r;
   };
   setTheme('dark'); const osc = medir();
   setTheme('light'); const cla = medir();
@@ -578,12 +585,13 @@ log(d8.osc !== d8.cla && !/rgba\(0, 0, 0, 0\)/.test(d8.osc),
 const d9 = await page.evaluate(() => {
   const peninsular = /\b(pod[ée]is|ten[ée]is|deb[ée]is|qued[áa]is|os\s+conect|vosotros|quer[áa]is|conectaros|vincularos)\b/i;
   const largos = [], malas = [];
-  ptAbrirCompartir();
-  document.querySelectorAll('#screen-compartir p, #screen-compartir .de, #screen-compartir .cp-de').forEach(e => {
+  evGestionar('p');
+  document.querySelectorAll('#ev-gest p, #ev-gest .de, #ev-personas').forEach(e => {
     const t = e.textContent.trim();
     if (t.length > 110) largos.push(t.slice(0, 60) + '…(' + t.length + ')');
     const m = t.match(peninsular); if (m) malas.push(m[0]);
   });
+  closeModal();
   return { largos, malas };
 });
 log(d9.largos.length === 0 && d9.malas.length === 0,
@@ -621,8 +629,8 @@ log(e2, '[E2] El formulario vuelve a medir «sucio» con la huella de siempre');
 //      los manejadores de su propia pantalla y las dos consultas del buzón.
 const antes = src.slice(0, src.indexOf('MODO COMPARTIR · LOS DATOS'));
 const llamadas = [...antes.matchAll(/\b(pt[A-Z]\w*|renderCompartir)\s*\(/g)].map(m => m[1]);
-const permitidas = ['ptAbrirCompartir', 'renderCompartir', 'ptScanCerrar', 'ptUiMarcar', 'ptUiMarcarTodo',
-  'ptArchivoElegido', 'ptUiExportar', 'ptImportarArchivo', 'ptConfAceptar', 'ptConfCancelar', 'ptConfDup',
+const permitidas = ['ptScanCerrar',
+  'ptArchivoElegido', 'ptImportarArchivo', 'ptConfAceptar', 'ptConfCancelar', 'ptConfDup',
   'ptAbrirArchivoConClave',
   /* El código de patrulla del Perfil (`lcComp*`) dibuja y lee con el mismo códec
      y el mismo lector: es un consumidor del lector, no una llamada al envío. */

@@ -8167,3 +8167,43 @@ La app funciona como antes de la F2 y los datos se quedan en el equipo.
   siguen igual: cuenta 62 · expediente 13).
 - El código de la cuenta NO se retiró. Para volver a encenderla en la web: `CU_WEB_SIN_CUENTA = false`.
 - Anti-caché `?v=148` / `cache-v148`, `_BUILD=148`.
+
+## «Enviar a» sustituye a Modo compartir (2026-10-25)
+Pedido del usuario con dos pantallazos (Capturas y Personas, un recuadro «Enviar a: David NELSON»):
+la pantalla «Modo compartir» era espacio innecesario; enviar tiene que ser un botón de las dos
+listas. Verificado con `verify_enviar_a.mjs` (**18 checks**, nuevo, sin cuenta) y las suites del
+buzón contra los emuladores. Rama `enviar-a`.
+- **Retirada la pantalla** (`#screen-compartir`, su ítem del panel y de «Más», `renderCompartir`,
+  `_ptSel`, `ptUiMarcar*`, `ptUiExportar`, `bzUiEnvio`). El transporte, el cifrado, la revisión antes
+  de importar, la fusión y los cambios que vuelven con autorización (pasos 1-3 del buzón) **no se
+  tocaron**: solo cambió por dónde se entra.
+- **La barra** (`evPintar`, `#ev-capturas` en la fila del orden · `#ev-personas` bajo el buscador):
+  «Enviar a:» + los vinculados **listos, en verde**, con nombre y PRIMER APELLIDO (`bzNomCorto`:
+  quita el grado; con 4+ palabras el apellido es la penúltima, con 2-3 la segunda — ⚠️ con tres
+  palabras es ambiguo, el perfil guarda el nombre en un solo campo). Sin vinculados: «Vincular».
+  Los que esperan confirmación o están rotos no salen en la barra: se ven en el panel.
+- **Selección sobre la misma lista** (`_evSel = {k, dest, ids}`): tocar un vinculado convierte la
+  tarjeta en casilla (`evCls`/`evChk`/`evClick`, sin menú ⋮), y la fila pasa a «Enviar a X · N
+  marcadas · Todas · Cancelar · Enviar». Salir de la lista la cancela (`evAlNavegar` en `go`).
+  ⚠️ Se envía desde UNA lista a la vez: personas desde Personas, capturas desde Capturas.
+- **El panel** (`evGestionar`, `openPanel`): por revisar · vinculados (N de 3, con interruptor verde
+  y Quitar) · vincular («mostrar mi código» / «escanear un código») · enviados · por archivo. El
+  archivo `.lexc` se arma con la misma selección (`dest:'archivo'`). Sin cuenta (la web de GitHub)
+  dice que vincular necesita la cuenta y ofrece solo el archivo.
+- **Máximo 3 vinculados** (`BZ_MAX`): se comprueba al mostrar el código, al escanear y al recibir la
+  solicitud (dos que escanean el mismo código). **Apagar** (`contacto.off`) solo lo saca de la barra:
+  sigue vinculado y sigue pudiendo enviarte. Vincular sigue sin depender del plan.
+- **Lo que llegó**: aviso ámbar encima de Capturas y de Personas («Nelson DAVID te envió 1
+  captura · Revisar», `bzAvisoBandeja`) + contador en el ítem Capturas (panel y barra inferior).
+  El nombre corto se usa en todos los textos del buzón.
+- ⚠️ **Defecto PREEXISTENTE corregido**: el segundo equipo de una cuenta recibía un envío antes de
+  que la nube le trajera la lista de vinculados, lo tomaba por desconocido y lo BORRABA del buzón —
+  y con eso desaparecía también del otro equipo, que ya lo tenía por revisar. La suite vieja no lo
+  veía porque tardaba un poco más en enviar. Ahora un remitente desconocido se deja en espera
+  `BZ_DESC_ESPERA` (30 s), reintentando cada 5 s y tras cada ronda de la nube; si sigue sin
+  reconocerse, se borra sin abrirse como antes.
+- Anti-caché `?v=149` / `cache-v149`, `_BUILD=149`.
+- Suites adaptadas sin bajar lo que protegen: `verify_compartir` (38), `verify_companeros` (37, +2:
+  tope de 3 y apagar), `verify_envio_buzon` (36, el envío pasa por la barra y la selección),
+  `verify_cambios_buzon`, `verify_prueba` [V3]/[V4], `verify_csp`. `privacy.html` §5, §7, §9 y §11,
+  `store-listing.md` y `PUBLICAR.md` dicen «Enviar a».

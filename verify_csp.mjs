@@ -73,7 +73,7 @@ const rec = await page.evaluate(async () => {
   const hechos = [];
   const c = SIM.genFlagrancia ? SIM.genFlagrancia() : null;
   if (c) { await DB.saveCase(c); hechos.push('flagrancia'); }
-  for (const s of ['capturas', 'personas', 'estadisticas', 'despachos', 'ajustes', 'perfil', 'compartir']) {
+  for (const s of ['capturas', 'personas', 'estadisticas', 'despachos', 'ajustes', 'perfil']) {
     try { go(s); hechos.push(s); } catch (e) {}
     await new Promise(r => setTimeout(r, 150));
   }

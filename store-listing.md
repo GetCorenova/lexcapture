@@ -158,7 +158,7 @@ Qué declarar:
    cifrados en el dispositivo. El envío de un documento por WhatsApp o correo lo
    dispara el usuario hacia la app que él elige; Flagrante no transmite nada por
    su cuenta.
-5. **Modo compartir (desde 2026-10-25): lo que se le pasa a un compañero va a SU cuenta**,
+5. **«Enviar a» (desde 2026-10-25): lo que se le pasa a otro funcionario vinculado va a SU cuenta**,
    cifrado en el dispositivo con una llave que solo calculan los dos (buzón en Firestore).
    El desarrollador no puede leerlo y el mensaje se borra al atenderlo; para el formulario es
    **transferencia a otro usuario por decisión expresa del usuario**, cifrada en tránsito. El
@@ -168,7 +168,7 @@ Qué declarar:
 | Permiso | Para qué |
 |---|---|
 | `INTERNET` + `ACCESS_NETWORK_STATE` | Cargar la aplicación y, solo si se activan, la copia en Drive y la comprobación de la suscripción |
-| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código que otro equipo muestra en pantalla: agregar a un compañero (Modo compartir) o el código de patrulla del Perfil. Opcional: sin él, todo lo demás funciona |
+| `CAMERA` (+ `uses-feature required="false"`) | **Solo** leer el código que otro equipo muestra en pantalla: vincular a otro funcionario («Enviar a») o el código de patrulla del Perfil. Opcional: sin él, todo lo demás funciona |
 | `com.android.vending.BILLING` | Procesar la suscripción a través de Google Play |
 
 ## Clasificación de contenido

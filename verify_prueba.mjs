@@ -343,14 +343,15 @@ const v3 = await A.page.evaluate(async () => {
   go('personas'); r.nav = document.getElementById('screen-personas').classList.contains('on');
   startWizard('URI'); r.wiz = document.getElementById('screen-wizard').classList.contains('on');
   editCase('c-vence'); r.edit = document.getElementById('screen-wizard').classList.contains('on');
-  go('compartir'); r.comp = document.getElementById('screen-compartir').classList.contains('on');
+  _evSel = { k: 'c', dest: 'archivo', ids: { 'c-vence': true } }; await evEnviar();   // «Enviar a» por archivo
+  r.comp = !!document.querySelector('.cf-pin-n');
   r.env = (await bzEnviarRegistros('nadie', [], [DB.getCase('c-vence')])).ok;
   r.imp = await new Promise(res => ptConfirmarImportacion({ personas: [], casos: [] }, 'x', ok => res(ok)));
   r.ov = document.querySelector('#cu-ov.on .cu-pant[data-p="vencido"]') !== null;
   return r;
 });
-log(!v3.nav && !v3.wiz && !v3.edit && !v3.comp, '[V3] el guardián cierra la navegación, el formulario, editar y Modo compartir', JSON.stringify(v3));
-log(v3.env === false && v3.imp === false, '[V4] Modo compartir no envía ni recibe nada');
+log(!v3.nav && !v3.wiz && !v3.edit && !v3.comp, '[V3] el guardián cierra la navegación, el formulario, editar y el archivo de «Enviar a»', JSON.stringify(v3));
+log(v3.env === false && v3.imp === false, '[V4] «Enviar a» no envía ni recibe nada');
 log(v3.ov, '[V5] y al intentarlo vuelve la pantalla del plan vencido');
 await A.page.evaluate(() => { lcSalida('FPJ', { caso: DB.getCase('c-vence') }); lcProducirDoc('FPJ', { caso: DB.getCase('c-vence') }, { papel: 'CARTA' }); });
 await A.page.waitForTimeout(800);

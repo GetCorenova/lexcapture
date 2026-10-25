@@ -268,13 +268,13 @@ log(reglas.llaveAjena === 'permission-denied', '[C7] Nadie lee la llave de ident
 log(reglas.crear === 'paso' && reglas.cambiar === 'permission-denied' && reglas.campoExtra === 'permission-denied',
   '[C8] Se puede dejar un mensaje, pero no cambiarlo ni meterle campos sueltos', JSON.stringify(reglas));
 /* Lo de quien no es compañero se borra sin abrirlo, y no agrega a nadie. */
-const fueraB = await esperar(async () => !(await buzon(uB)).some(d => d.name.endsWith('ajeno-0123456789abcd')));
+const fueraB = await esperar(async () => !(await buzon(uB)).some(d => d.name.endsWith('ajeno-0123456789abcd')), 60000);   // un desconocido se espera BZ_DESC_ESPERA antes de borrarse
 log(fueraB && (await contactos(B)).length === 1, '[C9] Lo que deja quien no es compañero se borra sin abrirse');
 
 /* Quitar un compañero: lo que mande después ya no entra. */
 await B.page.evaluate(async uid => bzQuitarContacto(uid), uA);
 await A.page.evaluate(async uid => bzEnviar(bzContacto(uid), 'hola', { nom: 'PT Nelson David' }), uB);
-const fueraQ = await esperar(async () => (await buzon(uB)).length === 0);
+const fueraQ = await esperar(async () => (await buzon(uB)).length === 0, 60000);
 log(fueraQ && (await contactos(B)).length === 0, '[C10] Quitado el compañero, lo que mande se descarta');
 /* Y se pueden volver a agregar. */
 const cod2 = await A.page.evaluate(async () => Array.from((await bzNuevoCodigo()).bytes));
@@ -282,37 +282,83 @@ await B.page.evaluate(async b => bzAgregarDesdeCodigo(Uint8Array.from(b)), cod2)
 const otraVez = await esperar(async () => (await contactos(B)).some(c => c.uid === uA && c.confirmado));
 log(otraVez, '[C11] Se pueden volver a agregar con un código nuevo');
 
-/* ═══ D · LO QUE SE VE ═══════════════════════════════════════════════════ */
-await B.page.evaluate(() => { go('compartir'); });
+/* ═══ D · LO QUE SE VE: «Enviar a» (la pantalla Modo compartir se retiró) ═══ */
+await B.page.evaluate(() => { go('capturas'); });
+await B.page.waitForTimeout(300);
+const barra = await B.page.evaluate(() => {
+  const ch = document.querySelector('#ev-capturas .ev-chip.ok');
+  return { txt: document.getElementById('ev-capturas').innerText.replace(/\s+/g, ' ').trim(), verde: !!ch,
+           alto: ch ? ch.getBoundingClientRect().height : 0 };
+});
+log(barra.verde && barra.alto > 20 && /^Enviar a: Nelson DAVID$/.test(barra.txt),
+  '[D0] En Capturas el vinculado sale en verde con nombre y apellido', barra.txt);
+await B.page.evaluate(() => { evGestionar('c'); });
 await B.page.waitForTimeout(300);
 const vista = await B.page.evaluate(() => {
   const c = document.getElementById('bz-companeros'), r = c ? c.getBoundingClientRect() : null;
-  return { alto: r ? r.height : 0, txt: c ? c.innerText : '', btns: c ? c.querySelectorAll('.pt-op').length : 0 };
+  return { alto: r ? r.height : 0, txt: c ? c.innerText : '', btns: c ? c.querySelectorAll('.pt-op').length : 0,
+           tog: c ? c.querySelectorAll('.ev-tog.on').length : 0 };
 });
-log(vista.alto > 80 && /Nelson/.test(vista.txt) && /seguridad/i.test(vista.txt) && vista.btns === 2,
-  '[D1] «Mis compañeros» se ve en Modo compartir, con el compañero y su código de seguridad', Math.round(vista.alto) + ' px');
+log(vista.alto > 80 && /Nelson/.test(vista.txt) && /seguridad/i.test(vista.txt) && /1 de 3/.test(vista.txt) && vista.btns === 2 && vista.tog === 1,
+  '[D1] El panel de «Enviar a» lista los vinculados (1 de 3), encendido y con su código de seguridad', Math.round(vista.alto) + ' px');
 await B.page.evaluate(() => bzUiMostrar());
-await B.page.waitForSelector('#cp-pane .pt-qr svg', { timeout: 10000 });
+await B.page.waitForSelector('#bz-qr .pt-qr svg', { timeout: 10000 });
 const qr = await B.page.evaluate(() => ({
-  svg: !!document.querySelector('#cp-pane .pt-qr svg'),
+  svg: !!document.querySelector('#bz-qr .pt-qr svg'),
   cuenta: (document.getElementById('bz-cuenta') || {}).textContent || '',
-  txt: document.getElementById('cp-pane').innerText
+  full: document.getElementById('modal').classList.contains('full')
 }));
-log(qr.svg && /Válido 4:5\d|Válido 5:00/.test(qr.cuenta), '[D2] Mostrar mi código: el código y cuánto le queda', qr.cuenta);
+log(qr.svg && qr.full && /Válido 4:5\d|Válido 5:00/.test(qr.cuenta), '[D2] Vincular: el código a pantalla completa y cuánto le queda', qr.cuenta);
 const textos = await B.page.evaluate(() => {
   const malos = [];
-  document.querySelectorAll('#cp-pane p, #cp-pane .de, #cp-pane .cc-de, #cp-pane .bz-de').forEach(e => { if (e.innerText.length > 110) malos.push(e.innerText); });
+  document.querySelectorAll('#bz-qr p, #bz-qr .de, #bz-qr .cc-de, #bz-qr .bz-de').forEach(e => { if (e.innerText.length > 110) malos.push(e.innerText); });
   return malos;
 });
 await B.page.evaluate(() => bzUiCerrarCodigo());
 const tecnicas = await B.page.evaluate(() => {
-  const t = document.getElementById('cp-pane').innerText.toLowerCase();
+  const t = document.getElementById('ev-gest').innerText.toLowerCase();
   return ['firebase', 'firestore', 'servidor', 'ecdh', 'llave pública', 'uid', 'buzón'].filter(w => t.includes(w));
 });
 log(!textos.length && !tecnicas.length, '[D3] Textos cortos y sin una palabra técnica', JSON.stringify(textos.concat(tecnicas)));
+
+/* [D6] El tope: tres vinculados como mucho. */
+const tope = await B.page.evaluate(async () => {
+  closeModal();
+  const id = await bzIdentidad();
+  for (const u of ['relleno-uno-x', 'relleno-dos-x'])
+    await _bzGuardarContacto({ uid: u, nom: 'PT RELLENO ' + u, pub: id.pubB64, huella: 'XXXX-XXXX', desde: Date.now(), confirmado: Date.now(), roto: false });
+  const r = await bzAgregarDesdeCodigo(_bzCodigoBytes({ uid: 'cuarta-cuenta-x', pubRaw: id.pubRaw }, _ptAzar(16), 'PT CUARTO'));
+  await bzUiMostrar();
+  const qr = !!document.getElementById('bz-qr');
+  evGestionar('c');
+  const txt = document.getElementById('bz-companeros').innerText;
+  const n = bzContactos().length;
+  for (const u of ['relleno-uno-x', 'relleno-dos-x']) await bzQuitarContacto(u);
+  closeModal();
+  return { r, qr, txt, n, despues: bzContactos().length };
+});
+log(!tope.r.ok && /ya tienes 3/.test(tope.r.motivo) && !tope.qr && /3 de 3/.test(tope.txt) && /quita uno/.test(tope.txt) && tope.n === 3 && tope.despues === 1,
+  '[D6] Con 3 vinculados no se vincula un cuarto: ni escaneando ni mostrando el código', tope.r.motivo);
+
+/* [D7] Apagar lo saca de la barra, pero sigue vinculado y sigue pudiendo enviarte. */
+const apagado = await B.page.evaluate(async uid => {
+  await bzUiActivar(uid); go('capturas');
+  return { chip: !!document.querySelector('#ev-capturas .ev-chip.ok'), off: !!bzContacto(uid).off,
+           bar: document.getElementById('ev-capturas').innerText.replace(/\s+/g, ' ').trim() };
+}, uA);
+await A.page.evaluate(async uid => bzEnviar(bzContacto(uid), 'hola', { nom: 'PT Nelson David' }), uB);
+const recibe = await esperar(async () => (await buzon(uB)).length === 0);
+const encendido = await B.page.evaluate(async uid => {
+  await bzUiActivar(uid); go('capturas');
+  return !!document.querySelector('#ev-capturas .ev-chip.ok') && !bzContacto(uid).off;
+}, uA);
+log(!apagado.chip && apagado.off && /Vincular|Esperando/.test(apagado.bar) && recibe && encendido,
+  '[D7] Apagado no sale en «Enviar a» pero sigue recibiendo; al encenderlo vuelve', apagado.bar);
+
 const sinCuenta = await telefono(false); await abrir(sinCuenta);
-const nada = await sinCuenta.page.evaluate(() => { go('compartir'); return { activa: bzActiva(), card: !!document.getElementById('bz-companeros') }; });
-log(!nada.activa && !nada.card, '[D4] Sin cuenta no aparece (la pantalla de siempre)');
+const nada = await sinCuenta.page.evaluate(() => { go('capturas'); evGestionar('c');
+  return { activa: bzActiva(), card: !!document.getElementById('bz-companeros'), bar: document.getElementById('ev-capturas').innerText.replace(/\s+/g, ' ').trim() }; });
+log(!nada.activa && !nada.card && nada.bar === 'Enviar a: Vincular', '[D4] Sin cuenta: «Enviar a: Vincular» y en el panel no hay vinculados', nada.bar);
 
 const reales = errs.filter(e => !/permission|PERMISSION_DENIED|Missing or insufficient/i.test(e));
 log(!reales.length, '[D5] Consola sin errores (salvo los rechazos provocados en C)', reales.slice(0, 3).join(' | '));
