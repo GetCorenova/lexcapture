@@ -15,7 +15,8 @@
 > final. **F1, F2, F3 y F4 fusionadas en `main` el 2026-10-23, cada una con su commit de merge
 > (sin publicar: `main` no se ha subido a `origin`). Ni la F3 ni la F4 se publican antes que la F5
 > (la F3 cierra la app al día 15 y todavía no se puede pagar).
-> La cuenta queda dormida hasta pegar la configuración de Firebase (`CU_FB`).** Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
+> `CU_FB` ya tiene el proyecto real (build 142).** **F5 hecha en la rama `f5-compras` (2026-10-24,
+> build 143, sin fusionar ni publicar)**: ver «La suscripción (F5)» al final. Tareas del usuario (no se simulan): proyecto Firebase en São Paulo
 > (irreversible), Blaze con alerta, Email/Contraseña, App Check, Play Integrity + Device Recall en
 > Play Console, RevenueCat, suscripción sin oferta de prueba. Riesgos abiertos: `'unsafe-inline'` en
 > la CSP, y `lexcapture-android/` sin git.
@@ -7871,3 +7872,49 @@ Capturas añade «· nube hace X» o «· N sin subir» (`lcColaCopia` → `nbCo
 - ⚠️ `lexcapture-android/` sigue **sin git**: el `intent-filter` retirado del manifiesto y los
   dos complementos desinstalados quedan descritos aquí. Van en el mismo **versionCode 6** de la
   F3, que no se ha subido.
+
+## La suscripción (F5 del plan de cuenta, 2026-10-24)
+Quinta fase del plan vigente. Rama `f5-compras`, **sin fusionar ni publicar**. Verificado con
+`verify_compras.mjs` (**30 checks**, nuevo) contra los emuladores (Auth + Firestore + Functions),
+con el complemento de RevenueCat simulado en el teléfono y RevenueCat simulado en el servidor.
+
+- **El servidor sigue siendo la única fuente del derecho de uso.** `miDerecho` pregunta a la API de
+  RevenueCat (`GET /v1/subscribers/{uid}`, clave secreta `REVENUECAT_SK` como secreto de Functions)
+  y traduce el entitlement **`flagrante_pro`** a `entitlements/{uid}` con `plan:'pagado'` y su
+  vencimiento. La lógica pura está en `firebase/functions/compras.js` (`estadoRC`, `debeConsultar`,
+  `cambioRC`): vencimiento = máximo entre el de la suscripción y el del período de gracia de Google
+  Play; sin vencimiento = para siempre; pagar en plena prueba la reemplaza y conserva `pruebaUsada`;
+  un reembolso baja el vencimiento y, si RevenueCat ya no conoce el entitlement, termina hoy.
+- ⚠️ **Sin webhook, a propósito**: el único que lee el plan es la app, y la app siempre pregunta a
+  `miDerecho` cuando tiene señal. Con un plan pagado de más de 2 días por delante no se consulta a
+  RevenueCat en cada apertura; `{forzar:true}` (tras comprar, «Ya pagué: revisar», «Restaurar») sí.
+  Si RevenueCat no responde se devuelve lo guardado: un fallo suyo no quita ni da el plan.
+- ⚠️ **En el emulador RevenueCat se simula con `_simRC/{uid}`**, dentro de un `if (EMULADOR)` —
+  la misma regla que la simulación de Play Integrity ([E3] de las dos suites). Las reglas cierran
+  `_simRC` y el teléfono sigue sin poder escribir `entitlements`.
+- `iniciarPrueba`: quien pagó sin haber usado la prueba y dejó vencer la suscripción todavía puede
+  pedirla (antes, cualquier `entitlements/{uid}` vencido decía «cuenta-ya-uso-prueba»).
+- **El teléfono (`cp*`, al final del módulo del derecho de uso)**: `@revenuecat/purchases-capacitor`
+  **13.7.3** (versión fija; las 13.7.5/6 tenían dos días), llamado por `Capacitor.Plugins.Purchases`
+  sin el envoltorio de JavaScript, así que los códigos de error se leen de `code`/`data.code`
+  (`cpCodigo`: 1 cancelado, 6 ya comprado → restaurar, 10 red, 20 pago pendiente). Clave PÚBLICA
+  `goog_…` en `CP_RC_KEY`; el usuario de RevenueCat es el uid (`configure`, y `logIn` si cambia la
+  cuenta). Pantalla **`planes`** con lo que da Google Play (nombre, precio, período, equivalente
+  mensual del anual), «Restaurar compras» y el texto de renovación/cancelación que exige Play. Tras
+  pagar, `cpConfirmar` pregunta al servidor hasta 4 veces. ⚠️ **Ningún precio ni producto escrito en
+  la app**; `CP_ENT` es el único sitio donde se nombra el entitlement.
+- «Suscribirme sin la prueba» en la pantalla de la prueba (es también la salida de un teléfono que
+  no pasa Play Integrity). Ajustes → Cuenta: «Ver planes» o, pagado, «Administrar en Google Play».
+  En la web «Suscribirme» dice dónde se compra; en una app de Android sin el complemento, que se
+  actualice.
+- `privacy.html` §8 reescrita (Google Play cobra; RevenueCat recibe el recibo y el uid, nunca datos
+  de trabajo) y fila de facturación en §9. La descripción de la ficha NO se tocó (la versión 5 está
+  en revisión): el cambio está preparado en `store-listing.md` («Cambios para el paquete de la F5»),
+  y corrige de paso la frase del PIN, falsa desde la F1.
+- **Envoltorio: versionCode 6** (el mismo de F3/F4, que no se ha subido), 5 complementos, manifiesto
+  con `com.android.vending.BILLING`, `.aab` de 7,45 MB, `jar verified.`, build 143 dentro.
+  ⚠️ No probado en un teléfono real: una compra solo se puede probar instalando desde una pista de
+  Play con un probador con licencia. Las tareas de consola están en `PUBLICAR.md` §6 «F5 — tareas».
+- `verify_prueba` [V9] adaptado (una app sin el complemento pide actualizar), sigue en 71/71.
+  En verde: compras 30 · prueba 71 · cuenta 62 · nube 39 · csp 11.
+  Anti-caché `?v=143` / `cache-v143`, `_BUILD=143`.

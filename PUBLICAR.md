@@ -39,8 +39,15 @@
    nueva; después pide el código. `CU_ACCION_EN_APP = false`; si algún día se libera la
    plantilla, se pone en `true` y el enlace vuelve a abrir la app. `verify_cuenta` 62/62.
    `CU_FB` ya se puede commitear.
-5. Siguiente fase de código: **F5 compras** (RevenueCat + Play Billing, §6). En el mismo
-   paquete, poner el AVISO y las fuentes oficiales también dentro de la app (Ajustes → Info).
+5. ✅ **F5 compras hecha en código (rama `f5-compras`, build 143, sin fusionar ni publicar).**
+   `verify_compras` 30/30. `.aab` **versionCode 6** compilado y firmado (7,45 MB) con
+   `BILLING` y RevenueCat 13.7.3. Lo que falta, en este orden (§6, «F5 — tareas»):
+   a. **[USUARIO]** crear el secreto `REVENUECAT_SK` (clave secreta `sk_…` de RevenueCat).
+   b. El asistente despliega las funciones (`miDerecho` ahora pregunta a RevenueCat).
+   c. **[USUARIO]** subir el versionCode 6 a **prueba interna** (no a producción) y crear la
+      suscripción en Play; enlazar los productos en RevenueCat; probar con un probador con licencia.
+   Pendiente en el mismo paquete o el siguiente: el AVISO y las fuentes oficiales dentro de
+   la app (Ajustes → Info).
 
 En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 
@@ -358,6 +365,34 @@ respaldo. El plazo del artículo 28 son 36 horas: dejar a un policía sin su FPJ
 cuesta infinitamente más que una mensualidad sin cobrar. La app pregunta «¿tiene el
 derecho `flagrante_pro`?», nunca por un producto concreto.
 ⚠️ **En la web de escritorio no existe Play Billing**: cobrar ahí es otra decisión.
+
+### F5 — tareas para terminarla (2026-10-24)
+El código está hecho (ver «La suscripción (F5)» en `CLAUDE.md`). Cómo funciona: la app
+compra con Google Play mediante RevenueCat (usuario de RevenueCat = uid de Firebase) y
+después pregunta a `miDerecho`; **la función consulta la API de RevenueCat con la clave
+secreta** y escribe `entitlements/{uid}` con `plan: 'pagado'`. El teléfono nunca se escribe
+el plan. Sin webhook: la app siempre pregunta al servidor cuando tiene señal.
+
+1. **[USUARIO] Secreto `REVENUECAT_SK`.** RevenueCat → Project settings → API keys →
+   «+ New secret API key» (permisos de lectura de clientes, v1). Luego, en
+   `Crear App/firebase`: `npx firebase functions:secrets:set REVENUECAT_SK` y pegar la
+   clave **en la terminal**, nunca en el chat. Copia en `../keystore-RESGUARDAR/`.
+   ⚠️ Sin este secreto el despliegue de las funciones **falla** (lo exige `miDerecho`).
+2. **Desplegar** (asistente): `FUNCTIONS_DISCOVERY_TIMEOUT=60 npx firebase deploy --only functions`.
+3. **[USUARIO] Subir `app-release.aab` versionCode 6 a prueba interna.** Play no deja crear
+   suscripciones hasta que haya un paquete con `BILLING`. ⚠️ **No a producción ni a prueba
+   cerrada todavía**: falta la F6 (formularios, ficha, App Check).
+4. **[USUARIO] Play Console → Monetizar → Suscripciones**: una suscripción
+   `lexcapture_premium` con dos planes base, `mensual` (P1M, renovación automática) y `anual`
+   (P1Y), precios en COP, **sin oferta de prueba** (la prueba la da el servidor). Activarlos.
+5. **[USUARIO] RevenueCat → Products**: los productos `lexcapture_premium:mensual` y
+   `lexcapture_premium:anual` enlazados al entitlement `flagrante_pro` y en la oferta
+   `default` (paquetes Monthly y Annual). Revisar lo que dejó el asistente (abajo).
+6. **[USUARIO] Probadores con licencia** (Play Console → Configuración → Probar licencias):
+   añadir los correos de prueba. Compran sin cobro real.
+7. Recomendado: RevenueCat → Project settings → **Transfer behavior**: «Transfer to new App
+   User ID» (por defecto). Y terminar *Google developer notifications* (abajo) para que
+   RevenueCat se entere de renovaciones y cancelaciones sin esperar.
 
 ### RevenueCat — lo ya configurado (2026-10-23)
 - Proyecto **Flagrante**, app de Play Store `com.getcorenova.flagrante`

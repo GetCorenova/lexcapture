@@ -374,7 +374,8 @@ log(!v7.malo && !String(Buffer.from(bytes)).includes('ANA'), '[V8] el archivo va
 await A.page.click('text=Listo');
 await pant(A.page, 'vencido');
 await A.page.click('text=Suscribirme');
-log(/todavía no está disponible/.test(await A.page.textContent('#cu-info')), '[V9] «Suscribirme» lo dice en vez de un botón que no hace nada (la compra llega en la F5)');
+log(/Actualiza Flagrante desde Google Play/.test(await A.page.textContent('#cu-info')),
+    '[V9] en una app sin el complemento de compras, «Suscribirme» pide actualizar (la compra la mide verify_compras)');
 await A.page.click('text=Ya pagué: revisar');
 await A.page.waitForFunction(() => /todavía no tiene un plan/.test((document.getElementById('cu-info') || {}).textContent || ''), null, { timeout: 20000 });
 log(true, '[V10] «Ya pagué: revisar» pregunta al servidor y dice que no hay plan activo');

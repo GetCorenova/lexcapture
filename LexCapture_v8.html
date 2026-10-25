@@ -1288,6 +1288,14 @@ body.cu-on{overflow:hidden}
 .cu-p{font-size:14px;line-height:1.5;color:var(--text-2);margin:0}
 .cu-pasos{font-size:14px;line-height:1.5;color:var(--text-2);margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .cu-pasos b{color:var(--text)}
+.cp-planes{display:flex;flex-direction:column;gap:10px}
+.cp-plan{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:baseline;text-align:left;width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:var(--r-m);background:var(--field);color:var(--text);font:inherit;cursor:pointer;transition:border-color 120ms cubic-bezier(.25,.72,.25,1)}
+.cp-plan:hover,.cp-plan:focus-visible{border-color:var(--acc)}
+.cp-plan:disabled{opacity:.6;cursor:default}
+.cp-plan-n{font-size:16px;font-weight:600}
+.cp-plan-p{font-size:16px;font-weight:700;text-align:right}
+.cp-plan-p small{font-size:13px;font-weight:500;color:var(--text-2)}
+.cp-plan-x{grid-column:1/-1;font-size:13px;color:var(--text-2)}
 .mc .cu-p{margin-bottom:14px}
 .cu-c{text-align:center}
 .cu-pie{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--text-2);margin:4px 4px 0}
@@ -3138,7 +3146,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 142;
+var _BUILD = 143;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -25035,6 +25043,8 @@ function cuMostrar(p, d) {
             '<div class="cu-err" id="cu-err" hidden></div><div class="cu-ok-msg" id="cu-info" hidden></div>' +
             '<a class="btn bp bbl" href="' + DR_PLAY + '" target="_blank" rel="noopener">Abrir Google Play</a>' +
             '<button type="button" class="btn bs bbl" id="cu-ok" onclick="drRevisar()">Ya la inicié</button>') +
+        /* F5 · también es la salida de un teléfono que no pasa Play Integrity. */
+        (cpNativo() ? '<button type="button" class="cu-link" onclick="drComprar()">Suscribirme sin la prueba</button>' : '') +
         '<button type="button" class="cu-link" onclick="drCerrarSesion()">Cerrar sesión</button>' +
       '</div>' +
       '<p class="cu-pie">' + CU_IC.candado + '<span>Una prueba por persona y por teléfono.</span></p>';
@@ -25055,6 +25065,22 @@ function cuMostrar(p, d) {
         '<button type="button" class="cu-link" onclick="drCerrarSesion()">Cerrar sesión</button>' +
         '<button type="button" class="cu-link cu-link-peligro" onclick="cuMostrar(\'eliminar\')">Eliminar mi cuenta</button>' +
       '</div>';
+  } else if (p === 'planes') {
+    /* F5 · los planes los da Google Play: nombre, precio y período. Lo que la
+       política de Play exige decir: que se renueva sola y cómo se cancela. */
+    var paqs = d.paquetes || [];
+    h = '<button type="button" class="cu-volver" onclick="cuContinuar()">' + CU_IC.volver + 'Volver</button>' +
+      '<h2 class="cu-h">Elige tu plan</h2>' +
+      '<p class="cu-p">Todas las funciones, en todos tus equipos con esta cuenta.</p>' +
+      '<div class="cu-card">' +
+        (d.cargando ? '<div class="cu-espera"><div class="cu-giro"></div><p class="cu-p cu-c">Consultando Google Play…</p></div>'
+          : d.error ? '<div class="cu-err">' + escHtml(d.error) + '</div><button type="button" class="btn bs bbl" onclick="lcComprar()">Reintentar</button>'
+          : paqs.length ? '<div class="cp-planes">' + paqs.map(cpPaqueteHtml).join('') + '</div>'
+          : '<div class="cu-err">Google Play no tiene planes disponibles en este momento.</div>') +
+        '<div class="cu-err" id="cu-err" hidden></div><div class="cu-ok-msg" id="cu-info" hidden></div>' +
+        '<button type="button" class="cu-link" onclick="cpRestaurar()">Restaurar compras</button>' +
+      '</div>' +
+      '<p class="cu-pie">' + CU_IC.reloj + '<span>Se renueva sola hasta que la canceles en Google Play → Pagos y suscripciones.</span></p>';
   } else if (p === 'exportado') {
     h = '<div class="cu-ic-grande cu-ic-ok">' + CU_IC.ok + '</div>' +
       '<h2 class="cu-h cu-c">Copia lista</h2>' +
@@ -25437,13 +25463,14 @@ function drDesdeServidor(r) {
   return cuGuardarLocal(Object.assign({}, _cuenta, { derecho: der, reloj: loc }));
 }
 /* Pregunta el plan al servidor. false si no hay cómo (sin red o sin la sesión
-   de la nube); lanza si el servidor responde un error. */
-async function drActualizar() {
+   de la nube); lanza si el servidor responde un error. `forzar` (F5): que el
+   servidor pregunte a RevenueCat aunque el plan pagado tenga días por delante. */
+async function drActualizar(forzar) {
   if (!cuActiva() || drLibre() || !cuSesion() || !navigator.onLine) return false;
   var fb = await cuSdk();
   var u = await _cuUsuarioListo();
   if (!u || u.uid !== _cuenta.uid) return false;
-  var r = await FB.httpsCallable(fb.fns, 'miDerecho')({});
+  var r = await FB.httpsCallable(fb.fns, 'miDerecho')(forzar ? { forzar: true } : {});
   await drDesdeServidor(r.data);
   return true;
 }
@@ -25500,9 +25527,15 @@ function drPlanFila() {
     else { t = der === 'activo' ? 'Suscripción' : 'Suscripción vencida'; b = der === 'activo' ? 'b-cu-ok' : 'b-test';
       s = (der === 'activo' ? 'Vigente hasta el ' : 'Venció el ') + f + '.'; }
   }
+  /* F5 · en la app de Android: ver los planes mientras no se paga, y
+     administrar (cancelar, cambiar de plan) en Google Play una vez pagado. */
+  var acc = '';
+  if (d && d.plan === 'pagado' && der === 'activo') {
+    if (cpNativo()) acc = '<a class="btn bs bsm cu-aj-btn" href="' + CP_SUSCRIPCIONES + '" target="_blank" rel="noopener">Administrar en Google Play</a>';
+  } else if (cpNativo()) acc = '<button type="button" class="btn bp bsm cu-aj-btn" onclick="lcComprar()">Ver planes</button>';
   return '<div class="cu-aj-fila"><div class="cu-aj-k">Plan</div><div class="cu-aj-v">' + t +
     ' <span class="badge ' + b + '">' + (der === 'activo' ? 'Activo' : 'Inactivo') + '</span></div>' +
-    '<div class="cu-pista">' + s + '</div></div>';
+    '<div class="cu-pista">' + s + '</div></div>' + acc;
 }
 
 /* ── Pedir la prueba (solo en la app de Android) ─────────────────────────── */
@@ -25555,7 +25588,9 @@ var DR_MSG = {
   'dr/solo-android': 'La prueba se inicia desde la app de Android.',
   'dr/correo-sin-verificar': 'Primero confirma tu correo con el enlace que te enviamos.',
   'dr/integridad-local': 'Google Play no pudo verificar este teléfono. Actualiza Play Store y vuelve a intentarlo.',
-  'dr/sin-dispositivo': 'No se pudo identificar el teléfono. Vuelve a intentarlo.'
+  'dr/sin-dispositivo': 'No se pudo identificar el teléfono. Vuelve a intentarlo.',
+  'cp/solo-android': 'La suscripción se compra en la app de Android, con Google Play.',
+  'cp/compra': 'Google Play no pudo completar la compra. Vuelve a intentarlo.'
 };
 
 /* ── Lo que hace cada botón ──────────────────────────────────────────────── */
@@ -25569,19 +25604,16 @@ function drEmpezar() {
 function drRevisar() {
   _cuHacer('Revisando…', async function () {
     if (!navigator.onLine) throw _cuErr('unavailable');
-    if (!(await drActualizar())) throw _cuErr('cu/sin-nube');
+    /* F5: en la app de Android se le pide antes a Google Play que reenvíe lo
+       comprado con esta cuenta de Google (otro teléfono, reinstalación). */
+    await cpRestaurarCallado();
+    if (!(await drActualizar(true))) throw _cuErr('cu/sin-nube');
     if (lcDerecho() === 'activo') { renderCases(); cuContinuar(); toast('Tu plan está activo'); }
     else _cuInfo('Esta cuenta todavía no tiene un plan activo.');
   });
 }
-/* La compra llega en la F5 (RevenueCat + Google Play): esa fase define
-   `lcComprar`. Hasta entonces se dice, en vez de un botón que no hace nada. */
-function drComprar() {
-  if (typeof lcComprar === 'function') { lcComprar(); return; }
-  _cuError('');
-  _cuInfo(drNativo() ? 'La suscripción todavía no está disponible en esta versión.'
-                     : 'La suscripción se compra en la app de Android, con Google Play. Después entras aquí con la misma cuenta.');
-}
+/* La compra (F5) la hace `lcComprar`, más abajo. */
+function drComprar() { lcComprar(); }
 /* Exportar: el mismo archivo cifrado (.lexc) de Modo compartir, con todas las
    personas y capturas y una clave de seis dígitos. Funciona sin señal. */
 function drExportar() {
@@ -25607,6 +25639,143 @@ function drEliminar() {
   var a = _cuVal('cu-clave'); if (!a) { _cuError('Escribe tu contraseña.'); return; }
   if (!confirm('Confirmación final: se elimina tu cuenta y toda su información. ¿Continuar?')) return;
   _cuHacer('Eliminando…', async function () { await cuEliminarCuenta(a); });
+}
+
+/* ═══ LA SUSCRIPCIÓN (F5 del plan de cuenta, 2026-10-24) ════════════════════
+   Google Play cobra y RevenueCat valida el recibo; el derecho de uso lo sigue
+   diciendo SOLO el servidor (`miDerecho` pregunta a RevenueCat y escribe
+   `entitlements/{uid}` con `plan: 'pagado'`). El teléfono compra y luego
+   pregunta: nunca se da el plan a sí mismo.
+
+   · Solo en la app de Android (complemento `@revenuecat/purchases-capacitor`).
+     En la web se dice dónde se compra, y después se entra con la misma cuenta.
+   · El usuario de RevenueCat ES el uid de Firebase: lo comprado queda en la
+     cuenta, no en el teléfono, y vale en todos sus equipos.
+   · Los planes y sus precios los da Google Play (oferta `default`: mensual y
+     anual). No hay ningún precio escrito en la app.
+   · Ningún dato de capturas ni de personas llega a RevenueCat: solo el uid y
+     el recibo de la compra.
+   ⚠️ Los «accesos gratuitos» y los «descuentos» son códigos promocionales y
+   probadores con licencia de Play Console — no se programan aquí (ya se intentó
+   una vez y se retiró entero: «Puntos 2 y 3 · RETIRADO» en CLAUDE.md). */
+var CP_RC_KEY = 'goog_vKJzoidrLNxFALSmhtZbOEvvcOa';   // clave PÚBLICA del SDK (Android)
+var CP_ENT = 'flagrante_pro';
+var CP_SUSCRIPCIONES = 'https://play.google.com/store/account/subscriptions?package=com.getcorenova.flagrante';
+var _cpConfig = false, _cpUid = null, _cpPaquetes = [];
+
+function cpNativo() {
+  try {
+    var C = window.Capacitor;
+    return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform() === 'android' &&
+              C.Plugins && C.Plugins.Purchases);
+  } catch (e) { return false; }
+}
+/* El código de error de RevenueCat: llega en `code` o en `data.code` según el
+   puente (aquí se llama al complemento sin su envoltorio de JavaScript). */
+function cpCodigo(e) {
+  var c = e && (e.code != null ? e.code : (e.data && e.data.code != null ? e.data.code : (e.userInfo && e.userInfo.code)));
+  return c == null ? '' : String(c);
+}
+/* RevenueCat listo y con la cuenta de esta sesión. */
+async function cpPreparar() {
+  if (!cpNativo()) throw _cuErr('cp/solo-android');
+  if (!cuSesion()) throw _cuErr('cu/sin-nube');
+  var P = window.Capacitor.Plugins.Purchases;
+  if (!_cpConfig) {
+    await P.configure({ apiKey: CP_RC_KEY, appUserID: _cuenta.uid });
+    _cpConfig = true; _cpUid = _cuenta.uid;
+  } else if (_cpUid !== _cuenta.uid) {
+    await P.logIn({ appUserID: _cuenta.uid });
+    _cpUid = _cuenta.uid;
+  }
+  return P;
+}
+function cpActivoEn(ci) {
+  return !!(ci && ci.entitlements && ci.entitlements.active && ci.entitlements.active[CP_ENT]);
+}
+/* «Restaurar» sin ruido: lo usa «Ya pagué: revisar». Si no se puede (web, sin
+   señal) no pasa nada: la pregunta al servidor va igual. */
+async function cpRestaurarCallado() {
+  if (!cpNativo() || !cuSesion()) return;
+  try { var P = await cpPreparar(); await P.restorePurchases(); } catch (e) { console.warn('[Flagrante] restaurar compras', cpCodigo(e)); }
+}
+/* Después de pagar: el servidor tiene que verlo. RevenueCat recibe el recibo
+   antes de que la compra termine, pero se reintenta un poco por si tarda. */
+async function cpConfirmar(ci) {
+  for (var i = 0; i < 4; i++) {
+    if (i) await new Promise(function (r) { setTimeout(r, 2500); });
+    try { await drActualizar(true); } catch (e) { if (i === 3) throw e; }
+    if (lcDerecho() === 'activo' && _cuenta.derecho && _cuenta.derecho.plan === 'pagado') return true;
+  }
+  return false;
+}
+
+var CP_PERIODO = { MONTHLY: ['Mensual', 'al mes'], ANNUAL: ['Anual', 'al año'], SIX_MONTH: ['Semestral', 'cada 6 meses'],
+                   THREE_MONTH: ['Trimestral', 'cada 3 meses'], TWO_MONTH: ['Bimestral', 'cada 2 meses'], WEEKLY: ['Semanal', 'a la semana'] };
+function cpPaqueteHtml(p, i) {
+  var per = CP_PERIODO[p.packageType] || [(p.product && p.product.title) || 'Plan', ''];
+  var pr = p.product || {};
+  var mes = p.packageType === 'ANNUAL' && pr.pricePerMonthString ? 'Equivale a ' + pr.pricePerMonthString + ' al mes' : '';
+  return '<button type="button" class="cp-plan" onclick="cpComprar(' + i + ')">' +
+    '<span class="cp-plan-n">' + escHtml(per[0]) + '</span>' +
+    '<span class="cp-plan-p">' + escHtml(pr.priceString || '') + (per[1] ? ' <small>' + escHtml(per[1]) + '</small>' : '') + '</span>' +
+    (mes ? '<span class="cp-plan-x">' + escHtml(mes) + '</span>' : '') +
+  '</button>';
+}
+
+/* «Suscribirme»: en la web se dice dónde se compra; en la app, los planes. */
+function lcComprar() {
+  if (!cpNativo()) {
+    _cuError('');
+    /* Una app de Android anterior a la F5 no trae el complemento de compras. */
+    var nat = false; try { nat = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform()); } catch (e) {}
+    _cuInfo(nat ? 'Actualiza Flagrante desde Google Play para suscribirte.'
+                         : 'La suscripción se compra en la app de Android, con Google Play. Después entras aquí con la misma cuenta.');
+    return;
+  }
+  cuMostrar('planes', { cargando: true });
+  cpCargarPlanes();
+}
+async function cpCargarPlanes() {
+  try {
+    var P = await cpPreparar();
+    var o = await P.getOfferings();
+    var of = o && (o.current || (o.all && o.all['default']));
+    _cpPaquetes = (of && of.availablePackages) || [];
+    cuMostrar('planes', { paquetes: _cpPaquetes });
+  } catch (e) {
+    console.warn('[Flagrante] planes', cpCodigo(e), e && e.message);
+    cuMostrar('planes', { error: cpCodigo(e) === '10' || !navigator.onLine ? CU_MSG.unavailable : 'Google Play no mostró los planes. Vuelve a intentarlo.' });
+  }
+}
+function cpComprar(i) {
+  var paq = _cpPaquetes[i]; if (!paq) return;
+  _cuHacer('Abriendo Google Play…', async function () {
+    var P = await cpPreparar(), r;
+    try { r = await P.purchasePackage({ aPackage: paq }); }
+    catch (e) {
+      var c = cpCodigo(e);
+      if (c === '1' || (e && e.userCancelled)) return;                       // cerró la ventana de Google Play
+      if (c === '20') { _cuInfo('El pago quedó pendiente en Google Play. Cuando se confirme, toca «Ya pagué: revisar».'); return; }
+      if (c === '6') { r = await P.restorePurchases(); }                       // ya la tenía: se recupera
+      else if (c === '10') throw _cuErr('unavailable');
+      else { var x = _cuErr('cp/compra'); x.detalle = c; throw x; }
+    }
+    var ci = r && r.customerInfo;
+    _cuTrabajando(true, 'Activando tu plan…');
+    if (await cpConfirmar(ci)) { renderCases(); cuContinuar(); toast('Gracias. Tu suscripción está activa', 5000); return; }
+    _cuInfo(cpActivoEn(ci) ? 'Google Play confirmó el pago. Se activará en unos minutos: toca «Ya pagué: revisar».'
+                           : 'La compra no se completó. Si Google Play te cobró, toca «Restaurar compras».');
+  });
+}
+function cpRestaurar() {
+  _cuHacer('Restaurando…', async function () {
+    if (!navigator.onLine) throw _cuErr('unavailable');
+    var P = await cpPreparar();
+    await P.restorePurchases();
+    if (await cpConfirmar(null)) { renderCases(); cuContinuar(); toast('Tu suscripción está activa'); return; }
+    _cuInfo('Google Play no tiene una suscripción vigente con tu cuenta de Google.');
+  });
 }
 
 /* Al volver a la app: si el plan venció mientras estaba en segundo plano, se

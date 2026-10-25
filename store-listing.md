@@ -71,6 +71,23 @@ Las normas y los formatos de Policía Judicial (FPJ) que usa la aplicación son 
 
 Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado. Las decisiones del procedimiento y el contenido de cada documento son responsabilidad del funcionario que lo firma.
 
+### ⏳ Cambios para el paquete de la F5 (versionCode 6) — pegar JUNTO con él, no antes
+La descripción de arriba es la que está en revisión (versionCode 5, sin cuenta ni compras).
+Al subir el paquete con la cuenta, la nube y la suscripción, hacer estos tres cambios
+(medido: queda en **3 937 / 4 000**):
+1. **Quitar** el párrafo «Reemplaza el llenado manual en papel: …» (repite el anterior).
+2. **Sustituir** el bloque FUNCIONA SIN CONEXIÓN por este — ⚠️ el actual dice «El acceso
+   se protege con un PIN de 4 dígitos», que es falso desde la F1 (ya no hay PIN):
+```
+FUNCIONA SIN CONEXIÓN
+Todo se guarda cifrado (AES-256) en el teléfono, y la app arranca y produce documentos sin señal. Con tu cuenta, se sincroniza cifrado de extremo a extremo entre tus equipos.
+
+PRUEBA Y SUSCRIPCIÓN
+14 días gratis, sin tarjeta. Después, suscripción mensual o anual con Google Play; se renueva sola hasta que la canceles en Pagos y suscripciones.
+```
+3. Y en la misma tanda, en Play Console: **«Sí» a productos digitales** (Clasificación del
+   contenido) y **historial de compras** en Seguridad de los datos (ver abajo).
+
 ## Datos de contacto
 - Correo: getcorenova@gmail.com
 - Sitio web: https://getcorenova.github.io/lexcapture/
