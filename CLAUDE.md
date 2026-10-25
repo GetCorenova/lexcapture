@@ -8012,3 +8012,49 @@ revisión de siempre. Mismo bloque `bz*`, a continuación del paso 1. Verificado
 - ⚠️ La revisión con resumen de cambios y la autorización de lo que el compañero diligencie después
   es el paso 3; todavía no se guarda la versión base de lo compartido.
 - `verify_prueba` [E5] cuenta ahora DIEZ puertas del guardián (la nueva firma de `ptConfirmarImportacion` y `bzEnviarRegistros`); 71/71. En verde: compañeros 34 · compartir 57 · csp 11 · almacén 13 · nube 39 · cuenta 62 · compras 30 · tema 51 · sincro 32. Anti-caché `?v=145` / `cache-v145`, `_BUILD=145`.
+
+### Paso 3: los cambios vuelven, con autorización (2026-10-25)
+Una captura que se pasó por el buzón queda **compartida** entre las dos cuentas. Cuando cualquiera de
+los dos la guarda —formulario, acta, cadena de custodia, rótulo, dossier—, lo que cambió le llega al
+otro, y al otro **no se le aplica solo**: aviso breve + resumen («Agregó el testigo PEDRO RUIZ ·
+Editó el teléfono de la víctima MARÍA GÓMEZ») y decide **Aplicar / Descartar / Ahora no**. Mismo
+bloque `bz*`, a continuación del paso 2. Verificado con `verify_cambios_buzon.mjs` (**33 checks**,
+nuevo, contra los emuladores, dos cuentas).
+- **La base**: cada captura compartida guarda, por compañero, la última versión que los dos tienen
+  en común (`caso.bzc[uid] = {b, t}`): la que se envió, la que se aceptó o la que quedó tras aplicar.
+  Al guardar, si la captura ya no es esa base, sale un mensaje `upd` (mismo troceado y cola de salida
+  que el paso 2) con la base **y** la versión nueva. Quien recibe funde a **tres vías** (`lcFundir3`,
+  la de la nube): solo se le proponen los cambios que el otro HIZO, no las diferencias entre los dos.
+  ⚠️ `bzc` viaja por la NUBE (cifrado, como todo: cualquier equipo de la cuenta sabe qué está
+  compartido) y **nunca al compañero**: `ptParaEnviar` lo quita en las tres vías (buzón, wifi, `.lexc`).
+  ⚠️ `DB.saveCase` conserva el `bzc` guardado: el formulario trabaja sobre una copia de cuando se abrió
+  y no puede devolver unas bases viejas.
+- **El aviso sale de `DB.saveCase` y NO de `saveCases`** (`bzAlGuardarCaso`, con espera de 2,5 s):
+  por `saveCase` pasa lo que guarda el funcionario; por `saveCases`, lo que llega de fuera (la nube, lo
+  importado, lo autorizado). Así **lo recibido no vuelve en eco**, por construcción.
+  `bzRevisarCompartidas` serializa las rondas y repite si entró otro guardado entretanto.
+- **Si los dos cambiaron lo mismo** (decisión del usuario): el resumen lo marca con «Tuyo / Suyo» y
+  **por defecto se queda lo propio**. **En los dos sentidos** (decisión del usuario): el que compartió
+  también manda sus correcciones, y al otro le llegan igual, por revisar.
+- ⚠️ **Los sellos `updated`** (actas, custodia, orden) cambian en cada guardado: se quedan en los
+  datos pero no cuentan como cambio (`_bzEsSello`, `_bzSinSellos`). Sin eso, abrir y cerrar un acta
+  sin tocarla le mandaba al otro un «cambio» vacío.
+- ⚠️ **Quién suscribe no viaja** (`PT_SOLO_DUENO`: servidor, foto del dossier, firmante y membrete
+  del oficio; `_bzProteger`): cada uno firma con su funcionario. ⚠️ **Un cambio nunca crea una
+  captura**: si aquí no está, o no está compartida con quien lo manda, se descarta. ⚠️ **Con la
+  captura abierta en el formulario no se aplica** (`nbBloqueado`): el formulario la reemplazaría al
+  guardar. ⚠️ **No se propaga borrar la captura entera**: cada uno decide sobre la suya.
+- **Descartar** no cambia nada y deja la base como estaba: lo descartado no se vuelve a proponer
+  salvo que se edite otra vez. **Aplicar** guarda con `saveCases` y mueve la base.
+- **Lo que se ve**: insignia ámbar «Cambios por revisar» (o azul «Compartida») en la tarjeta de la
+  lista (`bzBadgeCaso`, vía `lcBadgeSync`), tarjeta de aviso encima de la lista de Capturas
+  (`bzAvisoCapturas`), renglón en el expediente con «Revisar los cambios» (`bzExpHtml`, vía
+  `lcExpSyncHtml`), y la entrada en «Por revisar» de Modo compartir. Todo con tokens (ámbar = espera
+  una decisión). Mirado en pantalla: `verify_cambios_buzon*.png`.
+- Regresiones en verde (sin otra sesión usando los emuladores): cambios 33 · envío 36 ·
+  compañeros 34 · nube 39 · cuenta 62 · prueba 71 · csp 11 · almacén 13 · expediente 13 ·
+  menú+expediente 16 · personas 25 · custodia 111 · firma 62 · tema 51.
+  ⚠️ `verify_compartir` [E3] y `verify_sincro` [B2] fallan por **código de «Perfil en tres
+  tarjetas»** (`lcComp*` llama a `ptQrSvg`/`ptScanAbrir` y esas suites miden el aislamiento del módulo
+  con una lista blanca): hay que añadirle esas funciones a la lista. No es de este paso.
+  Anti-caché `?v=146` / `cache-v146`, `_BUILD=146`.
