@@ -387,7 +387,7 @@ log(await page.isVisible('#f6-obs'), 'El acta abre');
 
 const plegado = await page.evaluate(() => {
   const d = [...document.querySelectorAll('#modal-c details')]
-    .find(x => /Identidad y poblaciones especiales/i.test(x.querySelector('summary').textContent));
+    .find(x => /^Enfoque diferencial$/i.test(x.querySelector('summary').textContent));
   return d ? { existe: true, open: d.open, enDom: !!document.getElementById('f6-identitario') } : { existe: false };
 });
 log(plegado.existe && !plegado.open,
@@ -407,6 +407,14 @@ for (const v of ['Madre', 'Padre', 'Hermano', 'Hermana', 'Tío', 'Tía', 'Primo'
 log(['Madre', 'Padre', 'Hermano', 'Hermana', 'Tío', 'Tía', 'Primo', 'Prima', 'Hijo', 'Hija', 'Esposa', 'Esposo', 'Compañera sentimental', 'Compañero sentimental']
     .every(v => opciones.includes(v)),
   'El catálogo trae los catorce vínculos que dictó el usuario', opciones.length + ' opciones');
+// 2026-10-25: agrupado por grados de consanguinidad, con abogado.
+const grupos = await page.$$eval('#f6-com-parentesco optgroup', els => els.map(g => g.label));
+log(['1.er grado de consanguinidad', '2.º grado de consanguinidad', '3.er grado de consanguinidad', '4.º grado de consanguinidad'].every(g => grupos.includes(g)),
+  'El parentesco se agrupa por grados de consanguinidad', grupos.join(' | '));
+log(opciones.includes('Abogado') && opciones.includes('Abogada'), 'Y trae el abogado');
+const ruido = await page.evaluate(() => document.getElementById('modal-c').innerText);
+log(!/Lo que ya trae el sistema|303.1|Se imprime junto al nombre|presentó su documento/i.test(ruido),
+  'Sin ruido: ni «lo que ya trae el sistema», ni el aviso del 303.1, ni la vista previa, ni la pregunta larga');
 log(opciones.includes('OTRO'), '⚠️ Y la salida para el vínculo que no encaja: la ley no cierra la lista');
 log(!(await page.isVisible('#f6-com-parentescoOtro')), 'El campo libre está oculto mientras no se elija «Otro»');
 await page.selectOption('#f6-com-parentesco', 'OTRO');

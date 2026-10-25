@@ -1890,6 +1890,13 @@ body.cu-on{overflow:hidden}
 .oj-mas[open]>summary::before{transform:rotate(135deg)}
 .oj-mas>summary small{font-weight:400;color:var(--text-3)}
 .oj-mas[open]>summary{margin-bottom:10px}
+/* «Enfoque diferencial» del acta FPJ-6: un renglón con canto propio, para que se
+   vea como una sección y no como una nota, sin llegar a ser una tarjeta. */
+.oj-mas.f6-enfoque{border:1px solid var(--border);border-radius:var(--r-m);
+  background:var(--surface-2);padding:10px 12px;margin:14px 0 6px}
+.oj-mas.f6-enfoque>summary{font-size:15px;font-weight:600;color:var(--text);padding:2px 0}
+.oj-mas.f6-enfoque>summary::before{border-color:var(--acc)}
+.oj-mas.f6-enfoque[open]>summary{margin-bottom:12px}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MEJORA 3 — el formulario deja de parecer un documento de papel
@@ -3152,7 +3159,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 149;
+var _BUILD = 150;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -9774,11 +9781,24 @@ function f6Estructura(personaId) {
     comunica: { nombre:'', parentesco:'', parentescoOtro:'', tipoDoc:'CC', numDoc:'', expEn:'', tel:'', hora:'' },
     presentoDoc:'', obs:'', updated:0 };
 }
-/* Catálogo de parentesco del art. 303.1 del C.P.P., el que dictó el usuario. La
-   última opción abre un campo libre: la ley no cierra la lista y hay vínculos
-   que no encajan en ninguna de estas (un amigo, un vecino, un abogado). */
-var F6_PARENTESCO = ['Madre','Padre','Hermano','Hermana','Tío','Tía','Primo','Prima',
-  'Hijo','Hija','Esposa','Esposo','Compañera sentimental','Compañero sentimental'];
+/* Catálogo de parentesco del art. 303.1 del C.P.P., agrupado por GRADOS DE
+   CONSANGUINIDAD (C.C. arts. 35-47: se cuentan las generaciones hasta el tronco
+   común), más el cónyuge o compañero, la afinidad, el parentesco civil
+   (adopción) y el abogado (2026-10-25, pedido del usuario). La última opción del
+   selector abre un campo libre: la ley no cierra la lista.
+   ⚠️ Lo que se GUARDA y se imprime es solo el vínculo («Padre»), nunca el grado:
+   el grado ordena la lista, y las actas ya guardadas leen el mismo texto. */
+var F6_PARENTESCO_GRUPOS = [
+  ['1.er grado de consanguinidad', ['Madre','Padre','Hijo','Hija']],
+  ['2.º grado de consanguinidad',  ['Hermano','Hermana','Abuelo','Abuela','Nieto','Nieta']],
+  ['3.er grado de consanguinidad', ['Tío','Tía','Sobrino','Sobrina','Bisabuelo','Bisabuela']],
+  ['4.º grado de consanguinidad',  ['Primo','Prima']],
+  ['Cónyuge o compañero',          ['Esposa','Esposo','Compañera sentimental','Compañero sentimental']],
+  ['Afinidad',                     ['Suegro','Suegra','Yerno','Nuera','Cuñado','Cuñada']],
+  ['Parentesco civil (adopción)',  ['Madre adoptante','Padre adoptante','Hijo adoptivo','Hija adoptiva']],
+  ['Otro vínculo',                 ['Abogado','Abogada']]
+];
+var F6_PARENTESCO = F6_PARENTESCO_GRUPOS.reduce(function(a, g) { return a.concat(g[1]); }, []);
 // El vínculo que se imprime: el del catálogo, o el que se haya escrito a mano.
 function f6ParentescoTexto(com) {
   com = com || {};
@@ -10769,23 +10789,18 @@ function f6Abrir(id, idx) {
   var faltan = f6Faltantes(c, cap);
   var menor = f6EsMenor(c);
 
-  function kv(k, v) {
-    return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>';
-  }
-  var yaTiene =
-    kv('Fecha y hora', (m.fecha.d && m.fecha.m && m.fecha.a ? m.fecha.d + '/' + m.fecha.m + '/' + m.fecha.a : '—') + (m.hora ? ' · ' + m.hora : '')) +
-    kv('Lugar', m.lugar) +
-    kv('Nombres y apellidos', m.nombres) +
-    kv('Identificación', m.doc) +
-    kv('Fecha de nacimiento', m.fnac) +
-    kv('Lugar de nacimiento', m.lnac) +
-    kv('Nombre de los padres', m.padres) +
-    kv('Estado civil', m.ecivil) +
-    kv('Ocupación u oficio', m.ocup) +
-    kv('Dirección y teléfono', m.dirTel) +
-    kv('Correo electrónico', m.correo) +
-    kv(m.nuncFuente === 'RADICADO' ? 'Radicado del proceso' : 'NUNC', m.nunc) +
-    kv('Delito', m.delito);
+  /* ⚠️ Sin el bloque «Lo que ya trae el sistema» (2026-10-25, pedido del
+     usuario): en esta acta no aportaba nada y era ruido. Los datos siguen
+     saliendo del caso igual; solo dejaron de enseñarse aquí. */
+  var parOpts = F6_PARENTESCO_GRUPOS.map(function(g) {
+    return '<optgroup label="' + escAttr(g[0]) + '">' + g[1].map(function(o) {
+      return '<option value="' + escAttr(o) + '"' + (acta.comunica.parentesco === o ? ' selected' : '') + '>' + escHtml(o) + '</option>';
+    }).join('') + '</optgroup>';
+  }).join('');
+  // Un vínculo guardado que ya no está en el catálogo se sigue viendo, no se pierde.
+  var parAct = acta.comunica.parentesco || '';
+  if (parAct && parAct !== 'OTRO' && F6_PARENTESCO.indexOf(parAct) < 0)
+    parOpts = '<option value="' + escAttr(parAct) + '" selected>' + escHtml(parAct) + '</option>' + parOpts;
 
   openModal(
     '<div class="mh"><h2>Acta de derechos — FPJ-6</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
@@ -10798,13 +10813,11 @@ function f6Abrir(id, idx) {
         '<button class="btn bs bbl" style="margin-bottom:14px" onclick="closeModal();editCase(\'' + id + '\')">Editar la captura</button>'
       : '') +
 
-    '<details class="oj-mas"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
-    yaTiene + '</details>' +
-
+    /* El título de sección basta: la pregunta larga encima del selector era
+       ruido (2026-10-25). La etiqueta queda solo para lectores de pantalla. */
     '<div class="st">Documento de identificación</div>' +
-    '<div class="fg"><label class="fl">¿' + (menor ? 'La persona aprehendida' : 'El capturado') +
-    ' presentó su documento de identificación físico?</label>' +
-    '<select class="fs" id="f6-presento">' +
+    '<div class="fg"><select class="fs" id="f6-presento" aria-label="¿' +
+    (menor ? 'La persona aprehendida' : 'El capturado') + ' presentó su documento de identificación físico?">' +
     ['', 'SI', 'NO'].map(function(o) {
       var lbl = o === 'SI' ? 'Sí, lo presentó' : o === 'NO' ? 'No lo presentó' : 'No informa';
       return '<option value="' + o + '"' + ((acta.presentoDoc || '') === o ? ' selected' : '') + '>' + lbl + '</option>';
@@ -10824,8 +10837,8 @@ function f6Abrir(id, idx) {
        marcó el usuario, y se responde en todos los procedimientos.
        ⚠️ Se abre solo si la persona ya trae alguno de esos datos: un bloque
        cerrado que esconde algo diligenciado es un dato invisible. */
-    '<details class="oj-mas"' + (f6TieneIdentidad(cap) ? ' open' : '') + '>' +
-    '<summary>Identidad y poblaciones especiales — nombre identitario, LGBTI, pertenencia étnica, redes</summary>' +
+    '<details class="oj-mas f6-enfoque"' + (f6TieneIdentidad(cap) ? ' open' : '') + '>' +
+    '<summary>Enfoque diferencial</summary>' +
     '<div class="fg"><label class="fl">Nombre identitario (personas trans)</label>' +
     '<input class="fi" id="f6-identitario" value="' + escAttr(cap.nombreIdentitario) + '"></div>' +
 
@@ -10854,7 +10867,6 @@ function f6Abrir(id, idx) {
     '</details>' +
 
     '<div class="st">Persona a quien se comunica ' + (menor ? 'la aprehensión' : 'la captura') + '</div>' +
-    '<p class="oj-hint" style="margin-top:-2px">Derecho del art. 303.1 del C.P.P.</p>' +
     /* Obs. 7 — el acta imprime el vínculo junto al nombre y el documento con su
        tipo y lugar de expedición. Antes salía el nombre a secas y un número sin
        decir de qué documento se trataba. */
@@ -10868,17 +10880,12 @@ function f6Abrir(id, idx) {
     lcAtribs(
     '<div class="fg"><label class="fl">Parentesco con ' + (menor ? 'el aprehendido' : 'el capturado') + '</label>' +
     '<select class="fs" id="f6-com-parentesco" onchange="f6RefrescarParentesco()">' +
-    '<option value="">—</option>' +
-    F6_PARENTESCO.map(function(o) {
-      return '<option value="' + escAttr(o) + '"' + (acta.comunica.parentesco === o ? ' selected' : '') + '>' + escHtml(o) + '</option>';
-    }).join('') +
+    '<option value="">—</option>' + parOpts +
     '<option value="OTRO"' + (acta.comunica.parentesco === 'OTRO' ? ' selected' : '') + '>Otro — lo escribo</option>' +
     '</select></div>' +
     '<div class="fg" id="f6-par-otro-wrap"' + (acta.comunica.parentesco === 'OTRO' ? '' : ' style="display:none"') + '>' +
     '<label class="fl">¿Cuál es el vínculo?</label>' +
-    '<input class="fi" id="f6-com-parentescoOtro" value="' + escAttr(acta.comunica.parentescoOtro) + '" placeholder="Ej: amigo, vecina, abogado"></div>' +
-    '<p class="oj-hint">Se imprime junto al nombre: «' + escHtml(mayus(acta.comunica.nombre) || 'NOMBRE APELLIDO') +
-    ' — ' + escHtml(f6ParentescoTexto(acta.comunica) || 'Madre') + '».</p>' +
+    '<input class="fi" id="f6-com-parentescoOtro" value="' + escAttr(acta.comunica.parentescoOtro) + '" placeholder="Ej: amigo, vecina, padrino"></div>' +
     '<div class="fr3"><div class="fg"><label class="fl">Tipo doc</label>' +
     '<select class="fs" id="f6-com-tipoDoc">' +
     ['CC','TI','CE','DE','Pasaporte'].map(function(o) {
@@ -10896,10 +10903,6 @@ function f6Abrir(id, idx) {
 
     '<div class="st">Observaciones</div>' +
     '<div class="fg"><textarea class="ft" id="f6-obs">' + escHtml(acta.obs) + '</textarea></div>' +
-
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>Las firmas y la huella van en blanco: se estampan a mano.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="f6Generar()">Generar acta</button>' +
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
@@ -11922,8 +11925,6 @@ function ccPintar(c) {
   var its = ccElementos(c), cu = ccCustodia(c), gs = ccGrupos(c);
   var nunc = f6Nunc(c), fecha = ccFechaProc(c), co = ccCompanero();
 
-  function kv(k, v) { return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>'; }
-
   var repHtml = its.length > 1
     ? '<div class="st">¿Cómo se reparten los elementos?</div>' +
       '<div class="flx g8" style="flex-wrap:wrap;margin-bottom:10px">' +
@@ -11947,12 +11948,6 @@ function ccPintar(c) {
       escHtml(its.length + (its.length === 1 ? ' elemento recolectado' : ' elementos recolectados')) +
       ' · ' + escHtml(fmtDate(c.fechaProc)) + '</p>' +
 
-    '<details class="oj-mas"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
-      kv(nunc.fuente === 'RADICADO' ? 'Radicado' : 'NUNC', nunc.digitos ? nunc.digitos + ' (el consecutivo lo asigna el SPOA)' : '') +
-      kv('Fecha del procedimiento', fecha) +
-      kv('Descripción', ccDescLineas({ items:its }).join('\n')) +
-    '</details>' +
-
     repHtml +
 
     '<div class="st">¿Quién halló, recolectó y embaló los elementos?</div>' +
@@ -11962,14 +11957,9 @@ function ccPintar(c) {
        que es lo que dice el botón de debajo. Se conserva el único caso que el
        funcionario no puede deducir: que si el trabajo se repartió, va una fila
        por persona. */
-    '<p class="oj-hint" style="margin-top:-2px">Si lo hicieron funcionarios distintos, agrega una fila por cada uno.</p>' +
     '<div id="cc-funcs">' + funcs + '</div>' +
     (cu.funcionarios.length < FPJ8_G.filas.length
       ? '<button type="button" class="btn bs bsm" onclick="ccAgregarFunc()">+ Agregar funcionario</button>' : '') +
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-      'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-      '<span>La casilla FIRMA queda en blanco: se firma con bolígrafo sobre el papel. La fecha sí sale impresa, ' +
-      'en el formato AAAA-MM-DD del propio formulario.</span></p>' +
 
     '<input type="hidden" id="cc-fecha" value="' + escAttr(fecha) + '">' +
     '<div class="st">Generar</div>' +
@@ -12045,7 +12035,7 @@ async function ccGuardar() {
     toast(_lcMsgGuardado(e, 'la cadena de custodia'), 6000);
     return null;
   }
-  return DB.getCase(_ccCtx.id);
+  return DB.getCase(c.id) || c;  // ⚠️ _ccCtx ya puede ser null: el autoguardado lo suelta sin esperar
 }
 function ccAutoguardar() {
   if (!_ccCtx || !document.getElementById('cc-fecha')) return;
@@ -12146,19 +12136,9 @@ function rtAbrir(id, empId) {
      valores había puesto la app y cuáles escribió el funcionario. */
   _rtCtx = { id:id, empId:empId, origen:m.dil.origen || 'PERFIL' };
 
-  function kv(k, v) { return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>'; }
-
   openModal(
     '<div class="mh"><h2>Rótulo de EMP y EF — FPJ-7</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' + escHtml(lcEmpLinea(it) || 'Sin descripción') + '</p>' +
-
-    '<details class="oj-mas"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
-      kv('NUNC', m.nunc || '—') +
-      kv('Fecha de recolección', m.fecha ? (m.fecha.slice(0,4) + '-' + m.fecha.slice(4,6) + '-' + m.fecha.slice(6,8)) : '—') +
-      kv('Número del EMP y EF', m.numero + (g && g.grupo.items.length > 1 ? ' de ' + g.grupo.items.length + ' en la cadena ' + g.grupo.n : '')) +
-      kv('Descripción', m.desc) +
-      kv('Se le encontró a', m.persona) +
-    '</details>' +
 
     '<div class="st">4. Hallazgo</div>' +
     '<div class="fr">' +
@@ -12171,7 +12151,6 @@ function rtAbrir(id, empId) {
     '<div class="st">3. Fecha y hora de recolección</div>' +
     '<div class="fg"><label class="fl">Hora</label><input type="time" class="fi" id="rt-hora" value="' +
       escAttr(m.hora.length === 4 ? m.hora.slice(0,2) + ':' + m.hora.slice(2) : '') + '"></div>' +
-    '<p class="oj-hint">Viene de la hora de la captura.</p>' +
 
     /* La dirección del hallazgo es el PADRE; la ubicación precisa —«en la
        pretina del pantalón»— solo tiene sentido dentro de ella. */
@@ -12193,15 +12172,9 @@ function rtAbrir(id, empId) {
 
     '<div class="st">7. Rótulo diligenciado por</div>' +
     '<div id="rt-firmante">' + rtFirmanteHtml(m.dil) + '</div>' +
-    '<p class="oj-hint">Se propone quien suscribe su cadena de custodia.</p>' +
     /* ⚠️ El índice de la fila de la cadena se conserva: es de donde sale el
        valor por defecto de un rótulo que todavía no tiene firmante propio. */
     '<input type="hidden" id="rt-dil" value="' + (r.dil || 0) + '">' +
-
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-      'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-      '<span>La descripción se transcribe del numeral 7 del informe, palabra por palabra, y la casilla FIRMA ' +
-      'queda en blanco para firmarla a mano.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="rtGenerar()">Generar rótulo</button>' +
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
@@ -12217,8 +12190,7 @@ function rtFirmanteHtml(f) {
     ['COMPANERO', 'Mi compañero de patrulla' + (co && co.nombre ? ' (' + co.nombre + ')' : ' — sin registrar')],
     ['OTRO', 'Otro funcionario']
   ];
-  return '<div class="fg"><label class="fl">¿Quién firma el rótulo?</label>' +
-    '<select class="fs" id="rt-fun-origen" onchange="rtCambiarFirmante()">' +
+  return '<div class="fg"><select class="fs" id="rt-fun-origen" aria-label="¿Quién firma el rótulo?" onchange="rtCambiarFirmante()">' +
     opts.map(function (o) {
       return '<option value="' + o[0] + '"' + (f.origen === o[0] ? ' selected' : '') + '>' +
         escHtml(o[1]) + '</option>';
@@ -12276,7 +12248,7 @@ async function rtGuardar() {
     toast(_lcMsgGuardado(e, 'el rótulo'), 6000);
     return null;
   }
-  return DB.getCase(_rtCtx.id);
+  return DB.getCase(c.id) || c;  // ⚠️ _rtCtx ya puede ser null: el autoguardado lo suelta sin esperar
 }
 function rtAutoguardar() {
   if (!_rtCtx || !document.getElementById('rt-ubic')) return;
@@ -12964,8 +12936,7 @@ function aiFirmanteHtml(f) {
     ['COMPANERO', 'Mi compañero de patrulla' + (co && co.nombre ? ' (' + co.nombre + ')' : ' — sin registrar')],
     ['OTRO', 'Otro funcionario']
   ];
-  return '<div class="fg"><label class="fl">¿Quién firma el acta?</label>' +
-    '<select class="fs" id="ai-fun-origen" onchange="aiCambiarFirmante()">' +
+  return '<div class="fg"><select class="fs" id="ai-fun-origen" aria-label="¿Quién firma el acta?" onchange="aiCambiarFirmante()">' +
     opts.map(function (o) {
       return '<option value="' + o[0] + '"' + (d.origen === o[0] ? ' selected' : '') + '>' +
         escHtml(o[1]) + '</option>';
@@ -12979,18 +12950,13 @@ function aiFirmanteHtml(f) {
     '<input class="fi" id="ai-fun-ent" onblur="aiRefrescarAviso()" value="' + escAttr(d.entidad) + '" placeholder="Tu institución"></div>' +
     '<div class="fg"><label class="fl">Cargo</label>' +
     '<input class="fi" id="ai-fun-car" value="' + escAttr(d.cargo) + '"></div>' +
-    '</div>' +
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>La entidad es la que el acta imprime en «el suscrito funcionario adscrito a». ' +
-    'Se guarda en tu perfil la primera vez y no se vuelve a preguntar.</span></p>';
+    '</div>';
 }
 function aiAvisoFirmanteHtml(c) {
   var a = aiAvisosFirmante(c);
   if (!a.length) return '';
   return '<div class="oj-alert"><b>Saldrá en blanco</b>El acta imprime ' +
-    escHtml(a.join(' y ')) + ' y todavía no está en tu perfil. Puedes escribirlo aquí — ' +
-    'se guarda y no se vuelve a preguntar — o dejarlo en blanco y diligenciarlo a mano.</div>';
+    escHtml(a.join(' y ')) + '. Escríbelo aquí o complétalo a mano.</div>';
 }
 /* Cambiar de origen trae los datos del nuevo funcionario, pero NO pisa lo que
    el usuario haya escrito a mano — solo lo que seguía siendo del origen
@@ -13022,23 +12988,6 @@ function aiAbrir(id, idx) {
   _aiCtx = { id: id, origen: f.origen || 'PERFIL' };
   var m = aiMapa(c), faltan = aiFaltantes(c);
 
-  function kv(k, v) {
-    return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>';
-  }
-  var yaTiene =
-    kv('N° Caso (NUNC)', m.nunc) +
-    kv('Departamento y municipio', [m.depto, m.muni].filter(Boolean).join(' · ')) +
-    kv('Fecha y hora', [m.fechaCab, m.hora].filter(Boolean).join(' · ')) +
-    kv('Nombres y apellidos', m.capNombre) +
-    kv('Identificación', [m.tipoDoc, m.capDoc, m.expEn ? 'de ' + m.expEn : ''].filter(Boolean).join(' ')) +
-    kv('Natural de', m.lugNac) +
-    kv('Grado de estudio', m.escol) +
-    kv('Estado civil', m.ecivil) +
-    kv('Ocupación', m.ocup) +
-    kv('Hijo de', m.padres) +
-    kv('Residencia y teléfono', [m.dirRes, m.tel ? 'Tel: ' + m.tel : ''].filter(Boolean).join(' — ')) +
-    kv('Motivo de la incautación', m.motivo);
-
   openModal(
     '<div class="mh"><h2>Acta de incautación de elementos</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">' + escHtml(m.capNombre || 'Sin nombre') +
@@ -13051,13 +13000,9 @@ function aiAbrir(id, idx) {
       : '') +
 
     '<div class="st">Elementos incautados</div>' +
-    '<p class="oj-hint" style="margin-top:0">Los del numeral 7 del informe, con su misma redacción.</p>' +
     '<div class="lc-emp-prev">' + (m.elementos.length
       ? m.elementos.map(function (l) { return '<div class="lc-emp-l">' + escHtml(l) + '</div>'; }).join('')
       : '<div class="lc-emp-l">Sin elementos registrados</div>') + '</div>' +
-
-    '<details class="oj-mas" style="margin-top:14px"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
-    yaTiene + '</details>' +
 
     '<div class="st">Firma de la policía judicial</div>' +
     '<div id="ai-firmante">' + aiFirmanteHtml(f) + '</div>' +
@@ -13066,13 +13011,8 @@ function aiAbrir(id, idx) {
     '<div id="ai-firmante-aviso">' + aiAvisoFirmanteHtml(c) + '</div>' +
 
     '<div class="st">Observaciones</div>' +
-    '<div class="fg"><textarea class="ft" id="ai-obs" placeholder="Opcional. Se escribe sobre los renglones del formato.">' +
+    '<div class="fg"><textarea class="ft" id="ai-obs" placeholder="Opcional">' +
     escHtml(acta.obs) + '</textarea></div>' +
-
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>El motivo de la incautación sale siempre como «' + escHtml(AI_MOTIVO) + '». Las dos firmas, ' +
-    'la huella y el «No. Expediente CAD» se dejan en blanco: el acta se imprime para firmarse a mano.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="aiGenerar()">Generar acta</button>' +
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'
@@ -13758,8 +13698,7 @@ function feEntregaHtml(f) {
     ['COMPANERO', 'Mi compañero de patrulla' + (co && co.nombre ? ' (' + co.nombre + ')' : ' — sin registrar')],
     ['OTRO', 'Otro funcionario']
   ];
-  return '<div class="fg"><label class="fl">¿Quién hace la entrega?</label>' +
-    '<select class="fs" id="fe-ent-origen" onchange="feCambiarEntrega()">' +
+  return '<div class="fg"><select class="fs" id="fe-ent-origen" aria-label="¿Quién hace la entrega?" onchange="feCambiarEntrega()">' +
     opts.map(function (o) {
       return '<option value="' + o[0] + '"' + (d.origen === o[0] ? ' selected' : '') + '>' +
         escHtml(o[1]) + '</option>';
@@ -13773,19 +13712,14 @@ function feEntregaHtml(f) {
     '<div class="fr">' +
       lcCampo('Teléfono / Celular', lcInput('fe-ent-tel', d.telefono, '', { extra:' inputmode="tel"' })) +
       lcCampo('Correo electrónico', lcInput('fe-ent-cor', d.correo, '', { extra:' inputmode="email"' })) +
-    '</div>' +
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>El teléfono y el correo del compañero de patrulla se guardan en tu perfil ' +
-    'y no se vuelven a preguntar.</span></p>';
+    '</div>';
 }
 /* El bloque de «quién recibe». La víctima del caso viene propuesta; se puede
    elegir otra víctima o teclear a otra persona. */
 function feRecibeHtml(c, e) {
   var vs = (c.victimas || []), d = feRecibeDatos(c);
   var esOtro = d.tipo === 'OTRO';
-  var sel = '<div class="fg"><label class="fl">¿A quién se le entregan los elementos?</label>' +
-    '<select class="fs" id="fe-rec-tipo" onchange="feCambiarRecibe()">' +
+  var sel = '<div class="fg"><select class="fs" id="fe-rec-tipo" aria-label="¿A quién se le entregan los elementos?" onchange="feCambiarRecibe()">' +
     vs.map(function (v, i) {
       return '<option value="V' + i + '"' + (!esOtro && (e.recibeIdx | 0) === i ? ' selected' : '') + '>' +
         escHtml('Víctima — ' + (fullName(v) || 'sin nombre')) + '</option>';
@@ -13807,8 +13741,7 @@ function feAvisoHtml(c) {
   var a = feAvisos(c);
   if (!a.length) return '';
   return '<div class="oj-alert"><b>Saldrá en blanco</b>El acta imprime ' +
-    escHtml(a.join(', ')) + ' y todavía no está diligenciado. Puedes escribirlo aquí ' +
-    'o dejarlo en blanco y completarlo a mano.</div>';
+    escHtml(a.join(', ')) + '. Escríbelo aquí o complétalo a mano.</div>';
 }
 function feCambiarEntrega() {
   var caja = document.getElementById('fe-entrega'); if (!caja) return;
@@ -13879,17 +13812,6 @@ function feAbrir(id) {
   _feCtx = { id:id, origen:(e.entrega && e.entrega.origen) || 'PERFIL' };
   var m = feMapa(c), n = feElementos(c).length;
 
-  function kv(k, v) {
-    return '<div class="oj-kv"><span>' + escHtml(k) + '</span><span>' + escHtml(v || '—') + '</span></div>';
-  }
-  var yaTiene =
-    kv('N° Noticia Criminal (NUNC)', m.nunc) +
-    kv('Departamento y municipio', [m.depto, m.muni].filter(Boolean).join(' · ')) +
-    kv('Fecha y hora', [[m.ano, m.mes, m.dia].filter(Boolean).join('-'),
-        m.horaCasillas ? m.horaCasillas.slice(0, 2) + ':' + m.horaCasillas.slice(2) : ''].filter(Boolean).join(' · ')) +
-    kv('Autoridad que ordena la entrega', m.autoridad) +
-    kv('Dirección de la autoridad', m.dirAutoridad);
-
   openModal(
     '<div class="mh"><h2>Acta de entrega de elementos</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="oj-hint" style="margin-top:0">FPJ-30 · <span id="fe-elem-res">' + n +
@@ -13905,12 +13827,10 @@ function feAbrir(id) {
     '<div class="st">Actos urgentes u orden a policía judicial</div>' +
     ojwChk('fe-au', e.actosUrgentes, 'Actos Urgentes') +
     ojwChk('fe-opj', e.ordenPJ, 'Orden a Policía Judicial') +
-    '<p class="oj-hint">Lo que marques sale con una X en su casilla. Sin marcar, queda en blanco.</p>' +
 
     '<div class="st">Autoridad que ordena la entrega</div>' +
     lcCampo('Dirección', lcInput('fe-dir', m.dirAutoridad, 'Dirección del despacho',
-      { extra:' onblur="feRefrescarAviso()"' }),
-      'Viene del despacho al que se dejó la captura. Se puede cambiar solo para esta acta.') +
+      { extra:' onblur="feRefrescarAviso()"' })) +
 
     '<div class="st">Elementos que se entregan</div>' +
     '<div id="fe-elementos">' + feElementosHtml(c) + '</div>' +
@@ -13922,18 +13842,10 @@ function feAbrir(id) {
     '<div id="fe-recibe">' + feRecibeHtml(c, e) + '</div>' +
 
     '<div class="st">Observaciones</div>' +
-    '<div class="fg"><textarea class="ft" id="fe-obs" placeholder="Opcional. Se escribe en los renglones del apartado 3.">' +
+    '<div class="fg"><textarea class="ft" id="fe-obs" placeholder="Opcional">' +
     escHtml(e.obs) + '</textarea></div>' +
 
     '<div id="fe-aviso">' + feAvisoHtml(c) + '</div>' +
-
-    '<details class="oj-mas" style="margin-top:14px"><summary>Lo que ya trae el sistema — no hay que escribirlo</summary>' +
-    yaTiene + '</details>' +
-
-    '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>' +
-    '<span>Las dos firmas y la huella se dejan en blanco: se estampan a mano ' +
-    'sobre el formato impreso.</span></p>' +
 
     '<button class="btn bp bbl" style="margin-top:6px" onclick="feGenerar()">Generar acta</button>' +
     '<button class="btn bs bbl" style="margin-top:8px" onclick="closeModal()">Guardar y cerrar</button>'

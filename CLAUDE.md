@@ -8207,3 +8207,36 @@ buzón contra los emuladores. Rama `enviar-a`.
   tope de 3 y apagar), `verify_envio_buzon` (36, el envío pasa por la barra y la selección),
   `verify_cambios_buzon`, `verify_prueba` [V3]/[V4], `verify_csp`. `privacy.html` §5, §7, §9 y §11,
   `store-listing.md` y `PUBLICAR.md` dicen «Enviar a».
+
+## El acta de derechos, sin ruido (2026-10-25)
+Pedido del usuario con un pantallazo del formulario del FPJ-6 marcado en 7 recuadros. Solo cambia el
+formulario (`f6Abrir`); el `.docx` del acta no se tocó (`verify_fpj6` 140/140).
+- Se conserva la línea «nombre · captura del …». **Se retiran**: el bloque «Lo que ya trae el
+  sistema» (solo en ESTA acta; el rótulo y el acta de incautación lo conservan), la pregunta larga
+  sobre el documento físico (queda el título «Documento de identificación» y el selector, con la
+  pregunta como `aria-label`), el aviso «Derecho del art. 303.1 del C.P.P.» y la vista previa «Se
+  imprime junto al nombre».
+- El desplegable de poblaciones especiales pasa a llamarse **«Enfoque diferencial»** (`.f6-enfoque`:
+  canto, fondo `--surface-2`, 15 px/600, caret en acento). Sigue plegado y se abre solo si trae datos.
+- **Parentesco por grados de consanguinidad** (`F6_PARENTESCO_GRUPOS`, con `<optgroup>`): 1.º padres e
+  hijos · 2.º hermanos, abuelos, nietos · 3.º tíos, sobrinos, bisabuelos · 4.º primos · cónyuge o
+  compañero · afinidad · parentesco civil · **abogado/abogada** · «Otro — lo escribo». Se guarda e
+  imprime solo el vínculo, no el grado; `F6_PARENTESCO` se deriva de los grupos y un valor guardado
+  que ya no esté en el catálogo se sigue mostrando.
+- Suites: `verify_mejora5` 81 (grupos, abogado y ausencia del ruido), `verify_fpj6` [11] mide ahora
+  que el bloque ya no está, `verify_jerarquia` pasa los dos avisos a «se retiró» (sigue 65/66 por el
+  fallo preexistente de Ajustes). Anti-caché `?v=150` / `cache-v150`, `_BUILD=150`.
+- **El mismo criterio en los otros cuatro formularios del expediente** (pedido del usuario): cadena de
+  custodia, rótulo, acta de incautación y acta de entrega. Se conserva la línea de arriba (de quién /
+  cuántos elementos / fecha). **Se retiran**: «Lo que ya trae el sistema» en los cuatro; las notas que
+  explican cómo se imprime algo («la casilla FIRMA queda en blanco…», «se transcribe del numeral 7…»,
+  «sale con una X…», «se guarda en tu perfil…», «Viene de la hora de la captura», «Se propone quien
+  suscribe…», «Viene del despacho…», «Si lo hicieron funcionarios distintos…») y la del FPJ-6 «Las
+  firmas y la huella van en blanco»; y la pregunta que repetía el título de su sección («¿Quién firma
+  el rótulo/el acta?», «¿Quién hace la entrega?», «¿A quién se le entregan…?»: queda como
+  `aria-label`). Los placeholders de observaciones quedan en «Opcional». El aviso «Saldrá en blanco»
+  **se conserva** (es una advertencia real) pero en una línea. `verify_custodia` [C] mide ahora que el
+  bloque ya no está (111/111).
+- ⚠️ **Fallo PREEXISTENTE corregido de paso**: `ccGuardar` y `rtGuardar` leían `_ccCtx`/`_rtCtx`
+  DESPUÉS del `await`, cuando el autoguardado de `closeModal` ya los había puesto a null: se guardaba
+  bien pero quedaba un `TypeError` en consola al cerrar el formulario. Ahora devuelven `DB.getCase(c.id)`.

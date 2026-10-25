@@ -202,9 +202,12 @@ await page.evaluate(id => abrirCadenaCustodia(id), idCaso);
 await page.waitForTimeout(350);
 log(await page.isVisible('#cc-funcs'), 'El formulario de la cadena de custodia abre desde el expediente');
 
-const yaTrae = await page.$eval('#modal-c details', d => d.textContent);
-log(/0500160001202601/.test(yaTrae) && /2026-08-20/.test(yaTrae) && /Samsung/.test(yaTrae),
-  'Enseña lo que ya trae del caso: NUNC, fecha y la descripción del numeral 7');
+/* 2026-10-25: el bloque «Lo que ya trae el sistema» se retiró de los formularios
+   del expediente por pedido del usuario (ruido). Los datos siguen saliendo del
+   caso; la descripción de cada elemento sigue a la vista en el reparto. */
+const yaTrae = await page.$eval('#modal-c', m => m.innerText);
+log(!/Lo que ya trae el sistema/i.test(yaTrae) && /20\/08\/2026/.test(yaTrae),
+  'Sin ruido: dice cuántos elementos y la fecha, sin repetir lo que ya trae el caso');
 
 const preHre = await page.$$eval('#cc-funcs [data-c="h"],#cc-funcs [data-c="r"],#cc-funcs [data-c="e"]',
   els => els.map(e => e.checked));

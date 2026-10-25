@@ -151,9 +151,11 @@ const controles = await page.$$eval('#modal-c input, #modal-c select, #modal-c t
 log(controles.length <= 11,
   'El formulario pide solo lo que el sistema NO tiene', controles.length + ' controles: ' + controles.join(', '));
 
-const yaTiene = await page.$eval('#modal-c details', d => d.textContent);
-log(/Restrepo/i.test(yaTiene) && /71234567/.test(yaTiene) && /03\/08\/2026/.test(yaTiene) && /Hurto/i.test(yaTiene),
-  'El acta enseña lo que ya trae del caso: nombre, documento, fecha y delito');
+/* 2026-10-25: el bloque «Lo que ya trae el sistema» se retiró del acta por
+   pedido del usuario (ruido). Queda la línea de quién y de qué captura, arriba. */
+const cabeza = await page.$eval('#modal-c', m => m.innerText);
+log(/Restrepo/i.test(cabeza) && /03\/08\/2026/.test(cabeza) && !/Lo que ya trae el sistema/i.test(cabeza),
+  'El acta dice de quién y de qué captura es, sin repetir lo que ya trae el caso');
 
 /* Diligenciar SOLO lo que falta.
    ⚠️ Desde la Mejora 5 (obs. 6) el bloque de poblaciones especiales viaja

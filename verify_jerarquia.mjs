@@ -419,17 +419,18 @@ const fueron = [
   ['Dónde exactamente estaba el elemento al hallarlo', 'lo que el placeholder ya ejemplifica'],
   ['El número sale de la cadena; la cantidad, del numeral 7', 'la procedencia de un campo deshabilitado'],
   ['Cada cadena es un documento aparte', 'la explicación del reparto que se ve encima'],
-  ['La vereda, la zona y la localidad llegan puestas', 'el párrafo que agrupaba lo que ahora agrupa la jerarquía']
+  ['La vereda, la zona y la localidad llegan puestas', 'el párrafo que agrupaba lo que ahora agrupa la jerarquía'],
+  // 2026-10-25: el usuario los retiró del acta de derechos por ruido.
+  ['Derecho del art. 303.1 del C.P.P.', 'el aviso del art. 303.1 en el acta (pedido del usuario)'],
+  ['Se imprime junto al nombre', 'la vista previa del parentesco en el acta (pedido del usuario)']
 ];
 fueron.forEach(([t, q]) => log(fuente.indexOf(t) === -1, 'Se retiró ' + q));
 
 /* ⚠️ Y lo que NO se puede retirar: fundamento legal, advertencias y vistas
    previas de lo que va a salir impreso. */
 const quedan = [
-  ['Derecho del art. 303.1 del C.P.P.', 'el fundamento legal de un campo'],
   ['El archivo de capturas sale sin cifrar', 'la advertencia de datos sensibles'],
   ['4 últimos son el año', '⚠️ que el año se actualiza solo: evita corregirlo a mano cada enero'],
-  ['Se imprime junto al nombre', 'la vista previa de lo que va impreso'],
   ['Si generas, el informe deja constancia de que la orden figuraba vencida', 'la advertencia de la orden vencida']
 ];
 quedan.forEach(([t, q]) => log(fuente.indexOf(t) !== -1, 'Se conserva ' + q));
