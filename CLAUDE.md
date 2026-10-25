@@ -6403,7 +6403,8 @@ Elegido por el usuario tras la retirada: **RevenueCat**, y **solo en Android** p
   una persona concreta**, más validación de recibos en su servidor sin montar ninguno. ⚠️ Solo recibe
   recibos de compra y un identificador de app: **no ve capturas, personas ni documentos**, que es lo
   que lo hace compatible con la regla de Habeas Data de este proyecto.
-- ⚠️ **La app solo pregunta «¿tiene el derecho `premium`?»**, nunca por un producto concreto: así
+- ⚠️ **La app solo pregunta «¿tiene el derecho `flagrante_pro`?»** (identificador real del
+  entitlement en RevenueCat, 2026-10-23; ver PUBLICAR.md §6), nunca por un producto concreto: así
   añadir mañana un plan trimestral no toca una línea de código.
 
 **Envoltorio Android: PREPARADO Y VERIFICADO** (`lexcapture-android`, que no es un repositorio git).
@@ -7619,6 +7620,17 @@ que la propia suite arranca y apaga: ninguna comprobación toca un proyecto real
   queda ilegible; lo del teléfono no se toca). ⚠️ **La URL de acción de Firebase TIENE que ser la
   app** (PUBLICAR.md, paso 4): en la página de Google se escribiría la contraseña real.
   `index.html` conserva ahora los parámetros y el ancla al redirigir.
+  ⚠️ **(2026-10-24, build 142) En el proyecto real NO se puede**: `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`
+  por consola y por API, también en Blaze; y `handleCodeInApp` + `continueUrl` no evitan la página
+  de Google (medido con un enlace generado por API, sin enviar correo). Salida: **contraseña
+  temporal** (`CU_ACCION_EN_APP = false`, pantalla `temporal`, `cuConTemporal`). En la página de
+  Google se escribe una temporal que Firebase conoce tal cual; la app entra con ella y en el acto
+  la cambia por la llave derivada de la nueva (que no puede ser la temporal), y la DEK pide el
+  código. ⚠️ Se prueba ANTES como contraseña normal (si alguien escribe ahí la de siempre, entra sin
+  que Firebase la vea), y **nunca** se intenta «en crudo» desde la pantalla de iniciar sesión: un
+  error de tecleo de la contraseña real le llegaría a Firebase. `auth.languageCode = 'es'` para que
+  el correo y la página salgan en español. `verify_cuenta` 62/62 (E9-E15 nuevos; E1-E8 fuerzan
+  `CU_ACCION_EN_APP = true`).
 - **Los datos del equipo tienen dueño** (`_cuenta.uid`): la primera cuenta que entra se queda con
   ellos (también lo que había antes de la cuenta). Otra cuenta no los ve: «Este equipo es de otra
   cuenta» → entrar con la dueña o borrarlos. Cerrar sesión **no borra** salvo que se pida (aviso: en

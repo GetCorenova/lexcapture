@@ -14,6 +14,34 @@
 
 ## 0. LO SIGUIENTE QUE HAY QUE HACER
 
+### ▶ Estado al 2026-10-24 — empezar por aquí
+1. **Play rechazó el versionCode 5** por «Afirmaciones engañosas: falta el enlace a la fuente
+   de información gubernamental». Corrección = solo la ficha: la descripción nueva de
+   `store-listing.md` (AVISO al principio + FUENTES OFICIALES con enlaces .gov.co comprobados
+   + documentos públicos por la Ley 1712 de 2014; 3 915/4 000 caracteres). ✅ **Pegada y
+   enviada a revisión el 2026-10-24** junto con los otros 7 cambios de la configuración
+   inicial (declaración «apps gubernamentales» = No, comprobado). Sin apelación.
+   **Pendiente: el resultado de la revisión.** Si se aprueba → promover a prueba cerrada e
+   inscribir a los 12 probadores el mismo día (§0, paso 4).
+2. **Firebase en Blaze** (facturación de la cuenta Google nd6753540, compartida con
+   getcorenova). Alerta de presupuesto de 10 000 COP creada. Secreto `PRUEBA_HMAC` v2,
+   funciones y reglas **desplegadas** (ver la F3 más abajo).
+3. ✅ **Play Integrity vinculado el 2026-10-24** al proyecto Flagrante (837685454525), límite
+   10 000/día; respuestas por defecto (PLAY_RECOGNIZED + MEETS_DEVICE_INTEGRITY, que es lo que exige
+   `prueba.js`). ✅ Formulario de Device Recall enviado el 2026-10-24
+   (como getcorenova; caso de uso: prueba gratuita). Si Google lo aprueba escribe a ese
+   correo; entonces activarlo en Play Integrity API → Administrar → Cambiar respuestas.
+4. ✅ **Resuelto sin la URL de acción (build 142).** Reintentado por API el 2026-10-24: sigue
+   `EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`; y pedir el enlace con `handleCodeInApp` + `continueUrl`
+   **no** lo evita (medido: la página de Google sigue pidiendo la contraseña). Hecho el **flujo de
+   contraseña temporal**: en la página de Google se escribe una temporal, y en la app (pantalla
+   «Termina en la app») se entra con ella y se cambia en el acto por la llave derivada de la
+   nueva; después pide el código. `CU_ACCION_EN_APP = false`; si algún día se libera la
+   plantilla, se pone en `true` y el enlace vuelve a abrir la app. `verify_cuenta` 62/62.
+   `CU_FB` ya se puede commitear.
+5. Siguiente fase de código: **F5 compras** (RevenueCat + Play Billing, §6). En el mismo
+   paquete, poner el AVISO y las fuentes oficiales también dentro de la app (Ajustes → Info).
+
 En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 
 | # | Acción | Quién |
@@ -52,6 +80,11 @@ instalación» y la app funciona como antes. Para encenderla:
    `https://getcorenova.github.io/lexcapture/LexCapture_v8.html`.
    ⚠️ **Obligatorio.** Con la página de Google, quien restablece la contraseña la escribe
    allí, Firebase recibe la contraseña real y la cuenta deja de abrir desde la app.
+   ⏳ **2026-10-24: sigue bloqueado** (`EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED`, también por la
+   API de Identity Toolkit), **también ya en Blaze**. Hoy vale
+   `https://flagrante.firebaseapp.com/__/auth/action`. ✅ Ya no bloquea: la app tiene el flujo
+   de contraseña temporal (build 142, ver §0 punto 4). Si algún día se libera, poner la URL y
+   `CU_ACCION_EN_APP = true`.
 5. **Authentication → Configuración → Dominios autorizados**: añadir `getcorenova.github.io`.
 6. **Configuración del proyecto → Tus apps → Web (`</>`)**, sin Hosting → pasar al chat
    el bloque `firebaseConfig` **entero** (`apiKey`, `authDomain`, `projectId`, `appId` **y
@@ -72,10 +105,13 @@ Integrity simulado). ⚠️ **La F3 NO se publica sola**: cierra la app al día 
 compra llega en la F5. Publicarla antes dejaría a los usuarios sin forma de pagar.
 Lo que hace falta, además de lo de la cuenta:
 
-1. **Firebase → Actualizar al plan Blaze** y, en Google Cloud → Facturación →
+1. ✅ **Blaze activo (2026-10-24)**: cuenta de facturación «Flagrante» (013442-035B5A-912A0D),
+   **propiedad de la cuenta Google nd6753540** y compartida con getcorenova como «Usuario de la
+   cuenta de facturación» (en getcorenova Google Payments da OR-CBAT-14). El presupuesto y el tope
+   se configuran desde nd6753540. Antes: en Google Cloud → Facturación →
    Presupuestos, una **alerta** (p. ej. 10 USD). Las funciones no corren sin Blaze.
-2. **Google Cloud (el MISMO proyecto de Firebase) → APIs → habilitar «Google Play
-   Integrity API»**.
+2. ✅ **Google Cloud (el MISMO proyecto de Firebase) → APIs → habilitar «Google Play
+   Integrity API»** — hecho por API el 2026-10-24.
 3. **Play Console → Protegido por Play → Play Integrity API → Vincular el proyecto de
    Cloud** (el de Firebase). Sin esto el token no se puede descifrar en el servidor.
 4. **Device Recall (beta)**: pedirlo en el formulario de interés
@@ -84,10 +120,12 @@ Lo que hace falta, además de lo de la cuenta:
    activado**. ⚠️ Activarlo borra las respuestas de prueba que hubiera configuradas.
    Mientras no esté, el respaldo por ANDROID_ID ya impide repetir la prueba (no tras
    restablecer de fábrica).
-5. **El secreto del respaldo**: `npx firebase functions:secrets:set PRUEBA_HMAC` con un
+5. ✅ **Secreto creado (2026-10-24, versión 2; la 1 se destruyó)**; copia en `../keystore-RESGUARDAR/flagrante-PRUEBA_HMAC-PRIVADO.txt` (nunca al repo). Antes: `npx firebase functions:secrets:set PRUEBA_HMAC` con un
    valor largo al azar. ⚠️ **No cambiarlo nunca**: con otro secreto, todos los teléfonos
    que ya usaron la prueba quedarían «nuevos».
-6. **Desplegar** (lo hace el asistente tras `npx firebase login`):
+6. ✅ **Desplegado el 2026-10-24**: `miDerecho`, `iniciarPrueba`, `alBorrarUsuario` + reglas, con
+   política de limpieza de imágenes (1 día) en southamerica-east1. ⚠️ En Windows el primer
+   despliegue falla por tiempo: usar `FUNCTIONS_DISCOVERY_TIMEOUT=60`. Antes: **Desplegar** (lo hace el asistente tras `npx firebase login`):
    `cd firebase/functions && npm install` y luego
    `npx firebase deploy --only functions,firestore:rules`.
 7. La app de Android que se suba tiene que traer el complemento de Play Integrity
@@ -318,8 +356,29 @@ documentos), **falla ABIERTO** (si no se puede comprobar el derecho, deja pasar)
 **nunca** bloquea una captura empezada, ni leer, ni editar, ni exportar el
 respaldo. El plazo del artículo 28 son 36 horas: dejar a un policía sin su FPJ-5
 cuesta infinitamente más que una mensualidad sin cobrar. La app pregunta «¿tiene el
-derecho premium?», nunca por un producto concreto.
+derecho `flagrante_pro`?», nunca por un producto concreto.
 ⚠️ **En la web de escritorio no existe Play Billing**: cobrar ahí es otra decisión.
+
+### RevenueCat — lo ya configurado (2026-10-23)
+- Proyecto **Flagrante**, app de Play Store `com.getcorenova.flagrante`
+  (App ID `app0a5deea47b`).
+- **Clave pública del SDK (Android):** `goog_vKJzoidrLNxFALSmhtZbOEvvcOa`. Es pública
+  (va dentro de la app); la de «Test Store» (`test_…`) es solo para pruebas y no se usa.
+- **Credenciales de servicio:** cuenta `revenuecat@flagrante.iam.gserviceaccount.com`
+  (roles Administrador de Pub/Sub y Visualizador de Monitoring), invitada en Play
+  Console con los tres permisos de la cuenta (ver info de la app · datos financieros ·
+  gestionar pedidos y suscripciones). Su clave JSON está en
+  `../keystore-RESGUARDAR/flagrante-revenuecat-PRIVADA.json` — **nunca al repo ni al chat**.
+  Subida a RevenueCat el 2026-10-23; Google tarda hasta 36 h en validarla («Check again»).
+- **Entitlement:** identificador **`flagrante_pro`** (nombre visible «Flagrante Pro»;
+  el identificador no se puede renombrar). La app consulta SOLO este entitlement, nunca
+  un producto concreto. Oferta **`default`** con 2 paquetes (mensual y anual).
+- ⚠️ **Revisar al crear las suscripciones en Play**: los 2 productos que el asistente de
+  RevenueCat dejó enlazados al entitlement tienen que coincidir con los IDs reales de
+  Play (`lexcapture_premium` con sus planes base mensual/anual), o el entitlement no se
+  concederá nunca.
+- **Pendiente:** conectar *Google developer notifications* (tema de Pub/Sub) cuando las
+  credenciales salgan en verde.
 
 ---
 

@@ -23,6 +23,14 @@ Productividad (Productivity)
 > que la app no tiene es motivo de rechazo por ficha engañosa. **Se reponen cuando
 > cada una exista de verdad, y entonces hay que actualizar también Seguridad de
 > los datos y la Clasificación del contenido.**
+> ⚠️ **2026-10-24 — rechazo por «Afirmaciones engañosas: falta el enlace a la fuente de
+> información gubernamental».** Por eso la descripción ABRE con la renuncia de
+> responsabilidad y lleva la sección FUENTES OFICIALES con enlaces .gov.co, todos
+> comprobados ese día (HTTP 200). No quitar ninguna de las dos piezas. Si un enlace
+> muere (la Fiscalía ya movió los PDF una vez), sustituirlo por uno vigente antes de la
+> siguiente revisión.
+AVISO: Flagrante es una aplicación privada e independiente. No representa ni está afiliada, respaldada o autorizada por la Fiscalía General de la Nación, la Policía Nacional ni ninguna otra entidad pública. No es un canal oficial y no reemplaza los sistemas ni los trámites de ninguna entidad. Las normas y formatos que usa provienen de las fuentes oficiales citadas al final de esta descripción.
+
 Flagrante es una herramienta de trabajo en campo para digitalizar el registro de capturas y aprehensiones según el procedimiento penal colombiano (Ley 906 de 2004). Está pensada para usarse con el teléfono en la mano, sin conexión a internet.
 
 Reemplaza el llenado manual en papel: se diligencia una sola vez y la aplicación produce los documentos del procedimiento con esos mismos datos.
@@ -52,7 +60,16 @@ Toda la información se guarda cifrada (AES-256) en el propio dispositivo y la a
 TRABAJO EN PAREJA
 Dos equipos se vinculan mostrando un código en pantalla y se pasan las personas y las capturas ya registradas, directamente entre los dos teléfonos por la misma red wifi, sin pasar por ningún servidor. También se pueden pasar por archivo cifrado.
 
-Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado.
+FUENTES OFICIALES
+Las normas y los formatos de Policía Judicial (FPJ) que usa la aplicación son documentos públicos: la Fiscalía los publica en su sitio oficial y cualquier persona puede consultarlos y obtenerlos (Ley 1712 de 2014, acceso a la información pública: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=56882). Flagrante no los altera: los rellena sobre el archivo original. Consulta siempre la versión vigente:
+• Ley 906 de 2004, Código de Procedimiento Penal: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=14787
+• Ley 1098 de 2006, Código de la Infancia y la Adolescencia: https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=22106
+• Constitución Política de 1991 (artículo 28, término de 36 horas): https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=4125
+• Formatos de Policía Judicial (FPJ), Fiscalía General de la Nación: https://www.fiscalia.gov.co/policia-judicial/
+• Manual Único de Policía Judicial: https://www.fiscalia.gov.co/media-portalweb-prd/Manual-CTI-Unico-de-Policia-Judicial.pdf
+• Manual del Sistema de Cadena de Custodia: https://www.fiscalia.gov.co/media-portalweb-prd/MANUAL-DEL-SISTEMA-DE-CADENA-DE-CUSTODIA.pdf
+
+Flagrante es una herramienta de productividad personal. No está afiliada, respaldada ni distribuida por ninguna institución: cada usuario configura sus propios datos de entidad, unidad, despacho y encabezado. Las decisiones del procedimiento y el contenido de cada documento son responsabilidad del funcionario que lo firma.
 
 ## Datos de contacto
 - Correo: getcorenova@gmail.com

@@ -1286,6 +1286,8 @@ body.cu-on{overflow:hidden}
 .cu-card .fg{margin-bottom:2px}
 .cu-h{font-size:22px;font-weight:700;line-height:1.25;color:var(--text);margin:0}
 .cu-p{font-size:14px;line-height:1.5;color:var(--text-2);margin:0}
+.cu-pasos{font-size:14px;line-height:1.5;color:var(--text-2);margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.cu-pasos b{color:var(--text)}
 .mc .cu-p{margin-bottom:14px}
 .cu-c{text-align:center}
 .cu-pie{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--text-2);margin:4px 4px 0}
@@ -3136,7 +3138,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 140;
+var _BUILD = 142;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -24325,9 +24327,14 @@ function lcColaCopia() {
    (Configuración del proyecto → Tus apps → App web). No es secreta: la protegen
    las reglas de Firestore y, en la F3, App Check. `messagingSenderId` es el
    NÚMERO del proyecto: Play Integrity lo pide para dar el token de la prueba. */
-var CU_FB = { apiKey: '', authDomain: '', projectId: '', appId: '', messagingSenderId: '' };
+var CU_FB = { apiKey: 'AIzaSyDV85QDPDUiJZpj2PQ4S0eHPAav0chte58', authDomain: 'flagrante.firebaseapp.com', projectId: 'flagrante', appId: '1:837685454525:web:742cb87be63356ef5139d4', messagingSenderId: '837685454525' };
 /* Las funciones del servidor viven en la misma región que la base de datos. */
 var CU_REGION = 'southamerica-east1';
+/* ¿El enlace de «olvidé la contraseña» abre ESTA app? Solo si en la consola se
+   fijó la URL de acción (PUBLICAR.md, paso 4). En el proyecto real Firebase no
+   deja cambiarla (EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED), así que el enlace abre la
+   página de Google y allí se escribe una contraseña TEMPORAL: ver cuConTemporal. */
+var CU_ACCION_EN_APP = false;
 var CU_KDF_IT = 600000;
 /* Lo que Firebase recibe empieza siempre por mayúscula, minúscula, número y
    símbolo: así pasa cualquier política de contraseñas que se active en la consola. */
@@ -24375,7 +24382,10 @@ function cuSdk() {
     var em = cuEmulador();
     var app = FB.initializeApp(cuConfig(), 'flagrante');
     var auth = FB.initializeAuth(app, { persistence: [FB.indexedDBLocalPersistence, FB.inMemoryPersistence] });
-    var db = FB.initializeFirestore(app, { localCache: FB.memoryLocalCache() });
+    /* Correos y página del enlace en español: sin esto el restablecimiento sale
+       en inglés («Reset your password») y la pantalla «temporal» no se entiende. */
+    auth.languageCode = 'es';
+    var db =FB.initializeFirestore(app, { localCache: FB.memoryLocalCache() });
     var fns = FB.getFunctions(app, CU_REGION);
     if (em) {
       FB.connectAuthEmulator(auth, em.auth, { disableWarnings: true });
@@ -24585,6 +24595,34 @@ async function cuRestablecer(oob, correo, clave) {
   return _cuTrasEntrar(cred.user, cuNormCorreo(correo), k.env);
 }
 
+/* Restablecer con la página de Google: allí el usuario escribió una contraseña
+   TEMPORAL, que Firebase conoce tal cual — por eso es de un solo uso y no puede
+   ser la nueva. Se entra con ella, se cambia en el acto por la llave derivada de
+   la nueva y la DEK, que sigue envuelta con la anterior, pide el código.
+   ⚠️ Se prueba ANTES como contraseña normal: si alguien escribe aquí su
+   contraseña de siempre (no restableció nada), entra sin que Firebase la vea.
+   ⚠️ Nunca se intenta «en crudo» desde la pantalla de iniciar sesión: un error de
+   tecleo de la contraseña real le llegaría a Firebase. Solo desde esta pantalla. */
+async function cuConTemporal(correo, temporal, nueva) {
+  correo = cuNormCorreo(correo);
+  if (temporal === nueva) throw _cuErr('cu/temporal-igual');
+  var fb = await cuSdk();
+  var kT = await cuDerivar(correo, temporal);
+  try {
+    var c0 = await FB.signInWithEmailAndPassword(fb.auth, correo, kT.auth);
+    return _cuTrasEntrar(c0.user, correo, kT.env);
+  } catch (e) {
+    if (!/wrong-password|invalid-credential|invalid-login-credentials/.test((e && e.code) || '')) throw e;
+  }
+  var cred = await FB.signInWithEmailAndPassword(fb.auth, correo, temporal);
+  var k = await cuDerivar(correo, nueva);
+  /* Si esto falla, la temporal sigue sirviendo y se puede repetir. Si falla
+     después, la nueva ya vale y al entrar con ella se pide el código. */
+  try { await FB.updatePassword(cred.user, k.auth); }
+  catch (e) { await FB.signOut(fb.auth).catch(function () {}); throw e; }
+  return _cuTrasEntrar(cred.user, correo, k.env);
+}
+
 /* El usuario de Firebase de esta sesión, recién autenticado con la contraseña
    que acaba de escribir (cambiar la contraseña o borrar la cuenta lo exigen). */
 async function _cuUsuarioVivo(k) {
@@ -24728,7 +24766,8 @@ var CU_MSG = {
   'cu/codigo-mal': 'Ese código no corresponde a esta cuenta.',
   'cu/llaves-cambiaron': 'Las llaves de tu cuenta cambiaron en otro equipo. Cierra sesión y vuelve a entrar.',
   'cu/sin-nube': 'Vuelve a iniciar sesión para esto.',
-  'cu/sin-pendiente': 'Vuelve a iniciar sesión.'
+  'cu/sin-pendiente': 'Vuelve a iniciar sesión.',
+  'cu/temporal-igual': 'La contraseña nueva no puede ser la temporal: esa la vio la página de Google.'
 };
 function cuMsgError(e) {
   var c = (e && e.code) || '';
@@ -24747,9 +24786,10 @@ function cuMsgError(e) {
 
 /* ── El enlace del correo ───────────────────────────────────────────────────
    Firebase manda los enlaces de verificación y de restablecimiento a la URL de
-   acción que se fija en la consola (ver PUBLICAR.md). ⚠️ El restablecimiento NO
-   puede usar la página de Google: allí se escribe la contraseña real y Firebase
-   la recibiría — y esta app le manda otra cosa. */
+   acción que se fija en la consola (ver PUBLICAR.md). ⚠️ En la página de Google
+   NUNCA se escribe la contraseña real: Firebase la recibiría. Si el enlace abre
+   esta app (CU_ACCION_EN_APP) se atiende aquí; si abre la de Google, allí va una
+   contraseña temporal y se termina en la pantalla «temporal» (cuConTemporal). */
 function cuLeerAccion() {
   try {
     var q = new URLSearchParams(location.search), m = q.get('mode'), o = q.get('oobCode');
@@ -24902,11 +24942,29 @@ function cuMostrar(p, d) {
     h = _cuVolver('entrar') +
       '<h2 class="cu-h">Restablecer contraseña</h2><p class="cu-p">Te enviaremos un enlace. Ten a mano tu código de recuperación.</p>' +
       '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarOlvido()" novalidate>' +
-        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR) +
+        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR + (d.correo ? ' value="' + escAttr(d.correo) + '"' : '')) +
         '<div class="cu-err" id="cu-err" hidden></div>' +
         '<div class="cu-ok-msg" id="cu-info" hidden></div>' +
         '<button class="btn bp bbl" id="cu-ok" type="submit">Enviar enlace</button>' +
+        (CU_ACCION_EN_APP ? '' : '<button type="button" class="cu-link" onclick="cuMostrar(\'temporal\',{correo:_cuVal(\'cu-correo\')})">Ya puse la contraseña temporal</button>') +
       '</form>';
+  } else if (p === 'temporal') {
+    /* El enlace abrió la página de Google (CU_ACCION_EN_APP falso). */
+    h = _cuVolver('olvido') +
+      '<h2 class="cu-h">Termina en la app</h2>' +
+      '<ol class="cu-pasos"><li>Abre el enlace que te llegó al correo.</li>' +
+        '<li>En esa página escribe una contraseña <b>temporal</b>, no la de siempre.</li>' +
+        '<li>Vuelve aquí y elige tu contraseña nueva.</li></ol>' +
+      '<form class="cu-card" onsubmit="event.preventDefault();cuEnviarTemporal()" novalidate>' +
+        '<div class="cu-ok-msg" id="cu-info"' + (d.enviado ? '' : ' hidden') + '>' + (d.enviado ? 'Si hay una cuenta con ese correo, te llegó el enlace. Revisa también el spam.' : '') + '</div>' +
+        _cuCampo('cu-correo', 'Correo electrónico', 'email', CU_CORREO_ATR + (d.correo ? ' value="' + escAttr(d.correo) + '"' : '')) +
+        _cuCampo('cu-temp', 'Contraseña temporal', 'password', 'autocomplete="off"', 'La que escribiste en la página del enlace.') +
+        _cuCampo('cu-clave', 'Contraseña nueva', 'password', 'autocomplete="new-password"', 'Mínimo 10 caracteres, con letras y números.') +
+        _cuCampo('cu-clave2', 'Repítela', 'password', 'autocomplete="new-password"') +
+        '<div class="cu-err" id="cu-err" hidden></div>' +
+        '<button class="btn bp bbl" id="cu-ok" type="submit">Guardar contraseña</button>' +
+      '</form>' +
+      '<p class="cu-pie">' + CU_IC.candado + '<span>La contraseña nueva nunca sale de este equipo. La temporal deja de servir aquí.</span></p>';
   } else if (p === 'codigo') {
     h = '<div class="cu-ic-grande">' + CU_IC.llave + '</div>' +
       '<h2 class="cu-h cu-c">Tu código de recuperación</h2>' +
@@ -25081,7 +25139,27 @@ function cuEnviarOlvido() {
   _cuHacer('Enviando…', async function () {
     var fb = await cuSdk();
     await FB.sendPasswordResetEmail(fb.auth, cuNormCorreo(correo));
+    if (!CU_ACCION_EN_APP) { cuMostrar('temporal', { correo: cuNormCorreo(correo), enviado: true }); return; }
     _cuInfo('Si hay una cuenta con ese correo, te llegó un enlace. Ábrelo en este teléfono o en un computador.');
+  });
+}
+function cuEnviarTemporal() {
+  var correo = _cuVal('cu-correo'), t = _cuVal('cu-temp'), c1 = _cuVal('cu-clave'), c2 = _cuVal('cu-clave2');
+  if (!cuCorreoValido(correo)) { _cuError('Escribe un correo válido.'); return; }
+  if (!t) { _cuError('Escribe la contraseña temporal.'); return; }
+  var m = _cuValidarNueva(c1, c2); if (m) { _cuError(m); return; }
+  if (t === c1) { _cuError(CU_MSG['cu/temporal-igual']); return; }
+  _cuHacer('Guardando…', async function () {
+    var r;
+    try { r = await cuConTemporal(correo, t, c1); }
+    catch (e) {
+      if (e && e.code === 'cu/otra-cuenta') { cuMostrar('otraCuenta'); return; }
+      if (/wrong-password|invalid-credential|invalid-login-credentials|user-not-found/.test((e && e.code) || '')) {
+        _cuError('La contraseña temporal no coincide. Es la que escribiste en la página del enlace.'); return;
+      }
+      throw e;
+    }
+    _cuTrasPantalla(r);
   });
 }
 function cuCopiarCodigo() {
