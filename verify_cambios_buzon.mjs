@@ -303,13 +303,13 @@ log(!(await caso(A, 'no-esta')) && (await bandeja(A)).length === 0 && (await buz
 await editar(B, 'cas-1', c => { c.testigos = [{ id: 'tes-1', priNom: 'PEDRO', priApe: 'RUIZ' }]; });
 await esperar(async () => (await pendienteUpd(A, 'cas-1')).length === 1, 30000);
 const pant = await A.page.evaluate(() => {
-  go('compartir');
+  evGestionar('c');
   const c = document.getElementById('bz-pendientes');
-  const malos = []; document.querySelectorAll('#cp-pane .bz-de, #cp-pane .bz-nom, #cp-pane p').forEach(e => { if (e.innerText.length > 110) malos.push(e.innerText); });
-  const t = document.getElementById('cp-pane').innerText.toLowerCase();
+  const malos = []; document.querySelectorAll('#ev-gest .bz-de, #ev-gest .bz-nom, #ev-gest p').forEach(e => { if (e.innerText.length > 110) malos.push(e.innerText); });
+  const t = document.getElementById('ev-gest').innerText.toLowerCase();
   return { txt: c ? c.innerText : '', malos: malos.concat(['firebase', 'firestore', 'servidor', 'uid', 'buzón', 'base'].filter(w => t.includes(w))) };
 });
-log(/Cambios de PT Luz Marín/.test(pant.txt) && /Agregó el testigo PEDRO RUIZ/.test(pant.txt), '[K1] En «Por revisar» se ve quién cambió qué', pant.txt.replace(/\n/g, ' · '));
+log(/Cambios de Luz MARÍN/.test(pant.txt) && /Agregó el testigo PEDRO RUIZ/.test(pant.txt), '[K1] En «Por revisar» se ve quién cambió qué', pant.txt.replace(/\n/g, ' · '));
 log(!pant.malos.length, '[K2] Textos cortos y sin palabras técnicas', JSON.stringify(pant.malos));
 const exp = await A.page.evaluate(() => { abrirDossierCaso('cas-1'); const e = document.querySelector('.bz-exp-cam'); return e ? e.innerText : ''; });
 log(/hizo cambios/.test(exp) && /Revisar los cambios/.test(exp), '[K3] Y en el expediente de la captura', exp.replace(/\n/g, ' · '));

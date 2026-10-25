@@ -571,6 +571,43 @@ body.nat::after{bottom:0;height:var(--sab)}
 .exp-sync.bz-exp-cam{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
 .exp-sync.bz-exp-cam .dot{background:var(--warn)}
 .exp-sync.bz-exp-cam .btn{margin-top:8px}
+/* «Enviar a» (2026-10-25): encima de Capturas y de Personas. Verde = vinculado
+   y listo (decisión del usuario); la selección se hace sobre la misma lista. */
+.ev-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:-4px 0 12px;min-width:0}
+.ev-row .ord-btn{margin-left:auto;flex:0 0 auto}
+.ev-row.sel .ord-btn{display:none}
+.ev-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;flex:0 1 auto}
+.ev-bar.ev-solo{margin-top:12px}
+.ev-bar:empty{display:none}
+.ev-lbl{flex:0 0 auto;font-size:13px;font-weight:600;color:var(--text-2)}
+.ev-chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 11px;border-radius:999px;
+  font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;
+  background:var(--surface);border:1px solid var(--border);color:var(--text-2)}
+.ev-chip.ok{background:color-mix(in srgb,var(--ok) 14%,var(--surface));border-color:color-mix(in srgb,var(--ok) 45%,transparent);color:var(--ok)}
+.ev-chip.mal{color:var(--err);border-color:color-mix(in srgb,var(--err) 40%,transparent)}
+.ev-chip.acc{color:var(--acc);border-color:color-mix(in srgb,var(--acc) 40%,transparent)}
+.ev-chip svg{width:15px;height:15px;stroke-width:2}
+.ev-pt{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 auto}
+.ev-est{font-weight:500;font-size:12px;color:var(--text-3)}
+.ev-ges{flex:0 0 auto;width:34px;height:34px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;
+  background:transparent;border:1px solid var(--border);color:var(--text-2);cursor:pointer;padding:0}
+.ev-ges svg{width:17px;height:17px;stroke-width:1.8}
+.ev-sel{flex:1;display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;padding:10px 12px;border-radius:12px;
+  background:var(--surface);box-shadow:var(--sh-1);border:1px solid color-mix(in srgb,var(--ok) 45%,transparent)}
+.ev-sel-t{flex:1 1 180px;min-width:0;font-size:14px;color:var(--text)}
+.ev-sel-t b{font-weight:700}
+.ev-sel-t span{display:block;font-size:12px;color:var(--text-3);margin-top:1px}
+.ev-sel-acc{display:flex;gap:6px;flex-wrap:wrap}
+.ev-sel .btn{min-height:34px;padding:6px 14px;margin:0}
+.ev-on .cc,.ev-on.prow{position:relative;cursor:pointer}
+.ev-chk{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:50%;
+  border:2px solid var(--border-strong);background:var(--surface);z-index:2}
+.prow .ev-chk{top:50%;margin-top:-11px}
+.ev-si .ev-chk{background:var(--ok);border-color:var(--ok)}
+.ev-si .ev-chk::after{content:'';position:absolute;left:6px;top:2px;width:6px;height:11px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.ev-si .cc,.ev-si.prow{outline:2px solid var(--ok);outline-offset:-2px}
+.ev-tog.on{background:var(--ok)}
+.bz-it .ev-tog{margin-right:2px}
 .bz-punto{position:absolute;top:3px;left:calc(50% + 8px);width:10px;height:10px;border-radius:50%;background:var(--acc);border:2px solid var(--brand)}
 
 /* Lector de códigos. Pantalla completa, con un marco que dice dónde apuntar. */
@@ -2184,17 +2221,11 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div class="sb-item on" data-screen="capturas" onclick="go('capturas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
     Capturas
+    <span class="bz-cnt" id="bz-cnt-nav" style="display:none" aria-label="Te enviaron algo por revisar"></span>
   </div>
   <div class="sb-item" data-screen="personas" onclick="go('personas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>
     Personas
-  </div>
-  <!-- ⚠️ Función APARTE, no una acción de una captura: lo que se pasa al
-       compañero son sobre todo personas que todavía no están en ninguna. -->
-  <div class="sb-item" data-screen="compartir" onclick="go('compartir')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg>
-    Modo compartir
-    <span class="bz-cnt" id="bz-cnt-nav" style="display:none" aria-label="Por revisar"></span>
   </div>
   <div class="sb-sec">Análisis</div>
 
@@ -2240,9 +2271,12 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         <button class="fc on" onclick="filterCasos('all',this)">Todas</button>
         <button class="fc" onclick="filterCasos('FLAG',this)">Flagrancia</button>
         <button class="fc" onclick="filterCasos('OJ',this)">Ord. Judicial</button>
-        <!-- Orden de la lista. La etiqueta y el icono los pinta renderOrdenBtn()
-             según lo que el usuario haya elegido; nace oculto para no anunciar
-             un orden mientras no haya nada que ordenar. -->
+      </div>
+      <!-- «Enviar a» (2026-10-25): los vinculados en verde y, a la derecha, el
+           orden de la lista. Lo pinta evPintar(). El orden nace oculto para no
+           anunciar un orden mientras no haya nada que ordenar. -->
+      <div class="ev-row" id="ev-row-capturas">
+        <div class="ev-bar" id="ev-capturas"></div>
         <button class="ord-btn" id="ord-capturas" onclick="lcAbrirOrden('capturas')" hidden></button>
       </div>
       <div id="cl"></div>
@@ -2716,28 +2750,13 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
       <input class="desp-search" id="p-search" type="search" placeholder="Buscar por nombre o cédula…" oninput="renderPersonas()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-p-search-nofill" data-form-type="other" data-lpignore="true">
+      <div class="ev-bar ev-solo" id="ev-personas"></div>
       <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:8px;flex-wrap:wrap">
         <button class="ord-btn" id="ord-personas" onclick="lcAbrirOrden('personas')" style="flex-shrink:0" title="Ordenar"></button>
         <button class="ord-btn" id="f-calidad" onclick="lcAbrirCalidad('personas')" style="flex-shrink:0" title="Filtrar por calidad"></button>
       </div>
       <div id="pl"></div>
     </div>
-  </section>
-
-  <!-- ====== MODO COMPARTIR ======
-       Una función aparte, con su propia entrada en el panel lateral: lo que se
-       comparte —sobre todo PERSONAS— no pertenece a ninguna captura concreta, y
-       la mayoría de las veces todavía no está en ninguna. Desde el 2026-10-25 se
-       comparte con la CUENTA del compañero (buzón cifrado) o por archivo; el
-       vínculo por wifi se retiró. -->
-  <section id="screen-compartir" class="screen">
-    <header class="topbar">
-      <div class="ttl">
-        <h1>Modo compartir</h1>
-        <span class="sub" id="cp-sub">Pásale al compañero las personas y capturas que ya tienes</span>
-      </div>
-    </header>
-    <div class="pane stack" id="cp-pane"></div>
   </section>
 
 </main>
@@ -2766,6 +2785,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <nav id="bottombar">
   <button class="bn-item on" data-screen="capturas" onclick="go('capturas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+    <span class="bz-punto" id="bz-punto" style="display:none"></span>
     Capturas
   </button>
   <button class="bn-item" data-screen="personas" onclick="go('personas')">
@@ -2782,7 +2802,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   </button>
   <button class="bn-item" onclick="openSheet()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-    <span class="bz-punto" id="bz-punto" style="display:none"></span>
     Más
   </button>
 </nav>
@@ -2794,10 +2813,6 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="sheet-item" onclick="closeSheet();go('perfil')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>
     <div class="body"><div class="ti">Perfil</div><div class="de">Funcionario activo</div></div>
-  </button>
-  <button class="sheet-item" onclick="closeSheet();ptAbrirCompartir()">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="19" r="2.6"/><path d="M8.4 10.8l7.2-4.1M8.4 13.2l7.2 4.1"/></svg></div>
-    <div class="body"><div class="ti">Modo compartir <span class="bz-cnt" id="bz-cnt-mas" style="display:none" aria-label="Por revisar"></span></div><div class="de">Pasarle personas y capturas al compañero</div></div>
   </button>
   <button class="sheet-item" onclick="closeSheet();go('despachos')">
     <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
@@ -2917,7 +2932,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas','compartir'];
+var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -2927,6 +2942,7 @@ function go(name) {
   /* F3: sin derecho de uso no se navega (ver «DERECHO DE USO»). Antes de abrir
      la sesión no se sabe nada todavía: el arranque decide después. */
   if (_lcListo && !lcGuardia()) return;
+  evAlNavegar(name);
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('on'); });
   var el = document.getElementById('screen-' + name);
   if (el) el.classList.add('on');
@@ -2936,7 +2952,6 @@ function go(name) {
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
   if (name === 'dossierwa') renderDossierWA();
-  if (name === 'compartir') renderCompartir();
   if (name === 'ajustes') { loadAjustesFields(); renderAjCuenta(); }
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
@@ -3137,7 +3152,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 148;
+var _BUILD = 149;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -4680,6 +4695,7 @@ function renderCases() {
     return;
   }
   renderDraftSlot();          // captura sin terminar, si la hay
+  evPintar('c');              // «Enviar a» (o la selección en curso)
   var all = DB.getCases();
   var sub = document.getElementById('cap-sub');
   if (sub) sub.textContent = all.length + ' captura' + (all.length===1?'':'s') + lcColaCopia();
@@ -4691,7 +4707,7 @@ function renderCases() {
   else if (_caseFilter === 'OJ') cases = all.filter(function(c){ return c.tipo==='OJ'; });
   var el = document.getElementById('cl'); if (!el) return;
   if (!cases.length) {
-    el.innerHTML = '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"></path></svg></div><h3>Sin capturas aún</h3><p>Registra tu primera captura tocando el botón + abajo</p><button class="cta" onclick="go(\'nueva\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nueva Captura</button></div>';
+    el.innerHTML = evAvisos('c') + '<div class="empty"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"></path></svg></div><h3>Sin capturas aún</h3><p>Registra tu primera captura tocando el botón + abajo</p><button class="cta" onclick="go(\'nueva\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg>Nueva Captura</button></div>';
     return;
   }
   /* Se ordena por lo MISMO que se ve en la tarjeta: el nombre del capturado.
@@ -4701,7 +4717,7 @@ function renderCases() {
     nombre: function(c){ return (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : ''; }
   });
   var now = Date.now();
-  var bzAviso = (typeof bzAvisoCapturas === 'function') ? bzAvisoCapturas() : '';
+  var bzAviso = evAvisos('c');   // lo que llegó por revisar y los cambios del compañero
   el.innerHTML = bzAviso + cases.map(function(c) {
     var cap = (c.capturados&&c.capturados[0]) ? fullName(c.capturados[0]) : 'Sin capturado';
     var nCap = c.capturados ? c.capturados.length : 0;
@@ -4720,7 +4736,8 @@ function renderCases() {
        salir—, y en la lista de un teléfono ese toque se hace sin querer. El
        expediente es la vista de CONSULTA equivalente: no cambia un dato, y desde
        ahí (o desde el menú ⋮) se edita a propósito. */
-    return '<div class="cc-wrap"><div class="cc" onclick="abrirDossierCaso(\''+c.id+'\')">'+
+    /* En la selección de «Enviar a» el toque marca la tarjeta en vez de abrirla. */
+    return '<div class="cc-wrap'+evCls('c',c.id)+'" data-ev="'+escAttr(c.id)+'"><div class="cc" onclick="'+evClick('c',c.id,'abrirDossierCaso')+'">'+evChk('c')+
       '<div class="cc-top">'+
         '<div class="cc-badges"><span class="badge '+tbadge+'">'+tipoLbl+'</span>'+urgBadge+syncBadge+testBadge+'</div>'+
         '<div class="cc-name">'+cap+extra+'</div>'+
@@ -4728,10 +4745,11 @@ function renderCases() {
       '</div>'+
       '<div class="cc-bottom">'+
         '<span class="cc-date">'+(fmtDate(c.fechaProc)||'Sin fecha')+'</span>'+
-        moreBtn('openCaseSheet', c.id)+
+        (evSelK('c') ? '' : moreBtn('openCaseSheet', c.id))+
       '</div>'+
     '</div><div class="cc-lbar" style="background:'+barColor+'"></div></div>';
   }).join('');
+  evPintar('c');
 }
 
 /* Insignia de una captura compartida con un compañero — PUNTO ÚNICO: la pintan
@@ -6428,6 +6446,7 @@ function renderPersonas() {
   // control sigue haciendo falta.
   renderOrdenBtn('personas', all.length);
   renderCalidadBtn('personas', all.length);
+  evPintar('p');
   // Sin `fecha`: las personas no llevan marca de alta y no se les añade ninguna
   // — su posición en el arreglo ya es el orden en que se registraron.
   pp = lcOrdenar(pp, 'personas', { nombre: fullName });
@@ -6436,14 +6455,14 @@ function renderPersonas() {
   if (!pp.length) {
     // Distinguir "no hay nada guardado" de "el filtro no encontró nada": si hay
     // personas registradas pero el buscador las oculta, hay que decirlo y ofrecer salida.
-    el.innerHTML = q
+    el.innerHTML = evAvisos('p') + (q
       ? '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div><p>Sin resultados para «'+escHtml(q)+'»</p><p style="font-size:13px;color:var(--txD);margin-top:4px">'+all.length+' persona(s) registrada(s) están ocultas por la búsqueda.</p><button class="btn bs bsm" style="margin-top:12px" onclick="resetPersonSearch()">Limpiar búsqueda</button></div>'
-      : '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div><p>No hay personas registradas</p></div>';
+      : '<div class="empty"><div class="eic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div><p>No hay personas registradas</p></div>');
     return;
   }
-  el.innerHTML = pp.map(function(p) {
+  el.innerHTML = evAvisos('p') + pp.map(function(p) {
     var badgeCls = personRoleCls(p);
-    return '<div class="prow" onclick="editPerson(\''+p.id+'\')">'+
+    return '<div class="prow'+evCls('p',p.id)+'" data-ev="'+escAttr(p.id)+'" onclick="'+evClick('p',p.id,'editPerson')+'">'+evChk('p')+
       '<div class="prow-av '+badgeCls.replace('b-','av-')+'">'+escHtml(personInitials(p))+'</div>'+
       '<div class="prow-body">'+
         '<div class="prow-name">'+escHtml(fullName(p))+'</div>'+
@@ -6452,11 +6471,12 @@ function renderPersonas() {
           '<span class="prow-doc">'+escHtml((p.tipoDoc||'')+' '+(p.numDoc||''))+'</span>'+
         '</div>'+
       '</div>'+
-      '<button class="prow-more" onclick="event.stopPropagation();openPersonSheet(\''+p.id+'\')" title="Más opciones" aria-label="Más opciones">'+
+      (evSelK('p') ? '' : '<button class="prow-more" onclick="event.stopPropagation();openPersonSheet(\''+p.id+'\')" title="Más opciones" aria-label="Más opciones">'+
         '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="19" r="1.9"/></svg>'+
-      '</button>'+
+      '</button>')+
     '</div>';
   }).join('');
+  evPintar('p');
 }
 
 function personRoleCls(p) {
@@ -22600,19 +22620,14 @@ function ptQrSvg(bytes, lado) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   MODO COMPARTIR · LA PANTALLA
+   EL LECTOR DE CÓDIGOS Y SUS ICONOS
 
-   ⚠️ ES UNA FUNCIÓN APARTE, NO UNA ACCIÓN DE UNA CAPTURA. Vive en el panel
-   lateral, junto a Capturas y Personas, porque lo que se comparte no pertenece a
-   un procedimiento concreto: la mayoría de las veces son PERSONAS que el
-   compañero acaba de registrar y que todavía no están en ninguna captura.
-
-   Una sola pantalla, de arriba abajo: mis compañeros · lo que llegó por revisar
-   · lo enviado · qué marcar · «Enviar a …» · y el archivo, que no necesita cuenta
-   ni señal. ⚠️ NI UNA PALABRA TÉCNICA EN PANTALLA.
+   La pantalla «Modo compartir» se retiró el 2026-10-25 (decisión del usuario):
+   enviar es ahora el botón «Enviar a» de Capturas y Personas (ver «ENVIAR A», al
+   final del buzón). Aquí quedan el lector de códigos —lo usan vincular y el
+   código de patrulla del Perfil— y los iconos de las opciones.
 ═══════════════════════════════════════════════════════════════════════════ */
 
-var _ptSel = { p: {}, c: {} };  // qué está marcado para enviar o guardar en archivo
 var _ptScanRaf = null, _ptScanStream = null, _ptScanCb = null;
 
 var PT_IC = {
@@ -22622,100 +22637,6 @@ var PT_IC = {
   recibir:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 17v-5M9.5 14.5 12 17l2.5-2.5"/></svg>'
 };
 
-function ptAbrirCompartir() { go('compartir'); }
-
-function renderCompartir() {
-  var pane = document.getElementById('cp-pane');
-  if (!pane) return;
-  var bz = (typeof bzActiva === 'function' && bzActiva());
-  if (bz && _bzUi === 'codigo') { pane.innerHTML = bzUiCodigo(); return; }
-  var h = bz ? bzUiCompaneros() + bzUiPendientes() + bzUiEnviados() : '';
-  h += _ptUiGrupo('p', 'Personas', 'Capturados, víctimas y testigos que ya registraste');
-  h += _ptUiGrupo('c', 'Capturas', 'El procedimiento completo, con todo lo que lleve dentro');
-  if (bz) h += bzUiEnvio();
-  pane.innerHTML = h + _ptUiArchivo();
-}
-
-/* ⚠️ El archivo NO se esconde detrás de un fallo: está a la vista siempre. Es la
-   vía que no necesita cuenta, señal ni cámara. */
-function _ptUiArchivo() {
-  return '<div class="card cp-alt"><div class="st">Por archivo</div>' +
-    '<p class="txd txs">Sin señal o sin compañero agregado: se guarda un archivo con clave y se lo pasas por donde quieras.</p>' +
-    '<div class="pt-paso">' +
-      '<button class="pt-op" onclick="ptUiExportar()">' +
-        '<div class="lic">' + PT_IC.archivo + '</div>' +
-        '<div><div class="ti">Guardar un archivo para el compañero</div>' +
-        '<div class="de">Con lo que tengas marcado arriba</div></div></button>' +
-      '<button class="pt-op" onclick="ptImportarArchivo()">' +
-        '<div class="lic">' + PT_IC.recibir + '</div>' +
-        '<div><div class="ti">Recibir un archivo</div>' +
-        '<div class="de">El que te pasó el compañero</div></div></button>' +
-    '</div></div>';
-}
-
-function _ptUiGrupo(k, titulo, pista) {
-  var lista = _ptRegistros(k);
-  var h = '<div class="card"><div class="st">' + titulo + '</div>';
-  if (!lista.length) return h + '<p class="txd txs">Todavía no tienes ninguna.</p></div>';
-  h += '<p class="txd txs">' + pista + '</p>' +
-       '<div class="cp-tools"><button class="btn bs cp-mini" onclick="ptUiMarcarTodo(\'' + k + '\')">' +
-       (_ptContar(k) === lista.length ? 'Quitar las marcas' : 'Marcar todas') + '</button></div>' +
-       '<div class="cp-list">';
-  lista.forEach(function (it) {
-    var m = !!_ptSel[k][it.id];
-    h += '<label class="cp-it' + (m ? ' on' : '') + '">' +
-         '<input type="checkbox" data-k="' + k + '" data-id="' + escAttr(it.id) + '"' + (m ? ' checked' : '') +
-         ' onchange="ptUiMarcar(\'' + k + '\',this.dataset.id,this.checked)">' +
-         '<span class="cp-b"><span class="cp-ti">' + escHtml(it.ti) + '</span>' +
-         '<span class="cp-de">' + escHtml(it.de) + '</span></span></label>';
-  });
-  return h + '</div></div>';
-}
-
-/* ── LOS REGISTROS QUE SE PUEDEN ENVIAR ──────────────────────────────────── */
-function _ptRegistros(k) {
-  var out = [];
-  if (k === 'p') {
-    /* Al revés que en el registro: el último que se diligenció es justamente el
-       que se quiere pasar, así que va primero y no al final de la lista. */
-    DB.getPersons().slice().reverse().forEach(function (p) {
-      if (!p || !p.id) return;
-      var doc = ((p.tipoDoc || 'CC') + ' ' + (p.numDoc || '')).trim();
-      out.push({ id: p.id, ti: ptNombreDe(p), de: p.numDoc ? doc : 'Sin identificación registrada' });
-    });
-  } else {
-    DB.getCases().slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); })
-      .forEach(function (c) {
-        if (!c || !c.id) return;
-        var t = (c.tipo === 'OJ' || c.ojv === 2) ? 'Orden judicial' : (c.tipo === 'CESPA' ? 'CESPA' : 'URI');
-        out.push({ id: c.id, ti: ptEtiquetaCaso(c), de: t + ' · ' + (c.fechaProc || '').slice(0, 10) });
-      });
-  }
-  return out;
-}
-function _ptContar(k) { return Object.keys(_ptSel[k]).filter(function (i) { return _ptSel[k][i]; }).length; }
-
-function ptUiMarcar(k, id, on) {
-  if (on) _ptSel[k][id] = true; else delete _ptSel[k][id];
-  renderCompartir();
-}
-function ptUiMarcarTodo(k) {
-  var lista = _ptRegistros(k), todas = _ptContar(k) === lista.length;
-  _ptSel[k] = {};
-  if (!todas) lista.forEach(function (it) { _ptSel[k][it.id] = true; });
-  renderCompartir();
-}
-
-/* ⚠️ El archivo se arma con lo MISMO que está marcado para enviar al compañero:
-   una sola selección para las dos vías. */
-async function ptUiExportar() {
-  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
-  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
-  if (!personas.length && !casos.length) { toast('Marca arriba lo que quieras pasarle al compañero.'); return; }
-  await ptExportarArchivo(personas, casos);
-  _ptSel = { p: {}, c: {} };
-  renderCompartir();
-}
 
 /* ── EL LECTOR ─────────────────────────────────────────────────────────────
    Overlay propio y no el de las fotos de cédula: aquel tiene botón de disparo y
@@ -22727,12 +22648,12 @@ async function ptUiExportar() {
 function _ptCamMotivo(err) {
   var n = (err && err.name) || '';
   if (n === 'NotAllowedError' || n === 'SecurityError')
-    return 'La cámara está bloqueada. Permítela para esta aplicación en los ajustes del teléfono, o usa «Compartir por archivo».';
+    return 'La cámara está bloqueada. Permítela para esta aplicación en los ajustes del teléfono, o usa «Enviar a» → «Por archivo».';
   if (n === 'NotFoundError' || n === 'OverconstrainedError')
-    return 'No se encontró la cámara trasera de este equipo. Usa «Compartir por archivo».';
+    return 'No se encontró la cámara trasera de este equipo. Usa «Enviar a» → «Por archivo».';
   if (n === 'NotReadableError')
     return 'Otra aplicación está usando la cámara. Ciérrala e inténtalo de nuevo.';
-  return 'No se pudo abrir la cámara. Usa «Compartir por archivo».';
+  return 'No se pudo abrir la cámara. Usa «Enviar a» → «Por archivo».';
 }
 function ptScanAbrir(pista, cb) {
   _ptScanCb = cb;
@@ -23056,7 +22977,7 @@ async function ptAbrirArchivoConClave() {
     if (!aceptado) { toast('No se importó nada.'); return; }
     var res = await ptAplicarPaquete(r, decision);
     if (!res.ok) { toast(res.motivo); return; }
-    renderCompartir();
+    bzRepintar();
     if (typeof ptAlRecibir === 'function') { try { ptAlRecibir(res.p, res.c); } catch (e2) {} }
   });
 }
@@ -24056,7 +23977,7 @@ function cuMostrar(p, d) {
       '<div class="cu-card">' +
         '<div class="cu-aj-k">Clave para abrirla</div>' +
         '<div class="cu-codigo" id="dr-clave">' + escHtml(d.pin.slice(0, 3) + ' ' + d.pin.slice(3)) + '</div>' +
-        '<p class="cu-p">Anótala: sin ella el archivo no se abre. Se importa en Modo compartir → Recibir un archivo.</p>' +
+        '<p class="cu-p">Anótala: sin ella el archivo no se abre. Se importa con «Enviar a» → «Recibir un archivo».</p>' +
         '<button type="button" class="btn bp bbl" onclick="cuContinuar()">Listo</button>' +
       '</div>';
   } else if (p === 'eliminar') {
@@ -25204,6 +25125,8 @@ async function nbRonda() {
     console.warn('[Flagrante] nube', e);
   } finally {
     _nbCorriendo = false;
+    /* Lo que trajo la nube puede ser la lista de vinculados que el buzón esperaba. */
+    try { if (Object.keys(_bzDesconocidos).length) bzReintentarDesconocidos(); } catch (e) {}
     nbPintar();
   }
 }
@@ -25365,7 +25288,7 @@ function lcCompEscanear(){
     var d=lcCompLeer(bytes);
     if(!d){
       if(typeof bzLeerCodigo==='function'&&bzLeerCodigo(bytes))
-        toast('Ese es el código de Modo compartir. En su teléfono: Perfil → Compañero de patrulla → «Mostrar mi código».',5000);
+        toast('Ese es el código para vincular «Enviar a». En su teléfono: Perfil → Compañero de patrulla → «Mostrar mi código».',5000);
       else toast('Ese código no es el de un compañero de Flagrante.');
       /* Se cierra el lector: devolviendo false se volvería a leer el mismo
          código en el fotograma siguiente y el aviso se repetiría sin fin. */
@@ -25429,12 +25352,15 @@ var BZ_INVIT_VIDA = 86400000;        // un código se recuerda un día (por si n
 var BZ_MAGIA = [70, 76, 71, 49];     // «FLG1»: distinto del código del vínculo por wifi
 var BZ_NOM_MAX = 40;                 // bytes del nombre dentro del código
 var BZ_TIPOS = ['contacto', 'hola', 'env', 'acuse']; // lo que esta versión sabe atender
+var BZ_MAX = 3;                      // vinculados como mucho (decisión del usuario)
 var _bzId = null;                    // {uid, dek, nube, priv, privB64, pubB64, pubRaw, huella}
 var _bzIdP = null;
 var _bzInvit = [];                   // [{tok, exp}]: los códigos enseñados que siguen vivos
 var _bzUnsub = null, _bzCola = Promise.resolve(), _bzCanal = {}, _bzGen = 0, _bzVistos = {};
 var _bzUi = '';                      // '' · 'codigo'
 var _bzCodigo = null, _bzReloj = null;
+var _bzDesconocidos = {}, _bzDescReloj = null; // mensajes de quien este equipo aún no reconoce
+var BZ_DESC_ESPERA = 30000;
 
 function bzActiva() { return cuActiva() && cuSesion(); }
 function bzClaveLocal(uid) { return 'bz|' + uid; }
@@ -25638,6 +25564,8 @@ async function bzAgregarDesdeCodigo(bytes) {
   var id = await bzIdentidad();
   if (!id) return { ok: false, motivo: 'no se pudo procesar: revisa la señal e inténtalo de nuevo.' };
   if (c.uid === id.uid) return { ok: false, motivo: 'es el tuyo: escanea el del compañero.' };
+  if (!bzContacto(c.uid) && bzContactos().length >= BZ_MAX)
+    return { ok: false, motivo: 'no se usó: ya tienes ' + BZ_MAX + ' vinculados. Quita uno para vincular a otro.' };
   try { await _bzImportarPub(c.pub); } catch (e) { return { ok: false, motivo: 'no es el de un compañero de Flagrante.' }; }
   var antes = bzContacto(c.uid);
   await _bzGuardarContacto({ uid: c.uid, nom: c.nom, pub: _b64FromBytes(c.pub), huella: await bzHuella(c.pub),
@@ -25678,7 +25606,7 @@ async function bzEscuchar() {
     snap.docChanges().forEach(function (ch) {
       /* Al borrarse se olvida: un mensaje que se vuelva a crear con el mismo
          identificador es otro mensaje y hay que atenderlo. */
-      if (ch.type === 'removed') { delete _bzVistos[ch.doc.id]; _bzOlvidarMid(ch.doc.id); return; }
+      if (ch.type === 'removed') { delete _bzVistos[ch.doc.id]; delete _bzDesconocidos[ch.doc.id]; _bzOlvidarMid(ch.doc.id); return; }
       var mid = ch.doc.id, d = ch.doc.data();
       if (_bzVistos[mid]) return;
       _bzVistos[mid] = 1;
@@ -25700,7 +25628,19 @@ async function _bzProcesar(mid, d, gen) {
   if (!d || d.v !== 1 || typeof d.de !== 'string' || typeof d.t !== 'string' || typeof d.ct !== 'string') return borrar();
   if (d.t === 'contacto') return _bzSolicitud(mid, d, ts, borrar);
   var con = bzContacto(d.de);
-  if (!con) return borrar();               // de quien no es compañero: no se abre
+  if (!con) {
+    /* ⚠️ De quien no es vinculado: se borra sin abrirse. Pero ESTE equipo puede
+       no tener todavía al vinculado (la lista viaja por la nube y el otro equipo
+       de la cuenta la sube unos segundos después): borrar en el acto se llevaba
+       un envío legítimo también del otro equipo, que ya lo tenía por revisar.
+       Se espera BZ_DESC_ESPERA, reintentando, antes de darlo por desconocido. */
+    var esp = _bzDesconocidos[mid];
+    if (!esp) esp = _bzDesconocidos[mid] = { d: d, desde: Date.now() };
+    if (Date.now() - esp.desde < BZ_DESC_ESPERA) { _bzProgramarDesconocidos(); return; }
+    delete _bzDesconocidos[mid];
+    return borrar();
+  }
+  delete _bzDesconocidos[mid];
   if (BZ_TIPOS.indexOf(d.t) < 0) return;   // de un compañero, pero de una versión más nueva
   var carga = await _bzAbrir(con, d.t, mid, d.ct);
   if (!carga) {
@@ -25717,7 +25657,7 @@ async function _bzProcesar(mid, d, gen) {
     await _bzGuardarContacto(Object.assign({}, con, { confirmado: con.confirmado || Date.now(), roto: false, nom: nom || con.nom }));
     await borrar();
     bzRepintar();
-    toast((nom || con.nom || 'El compañero') + ' confirmó: ya pueden pasarse personas y capturas', 4000);
+    toast(bzNomCorto(nom || con.nom) + ' confirmó: ya se pueden enviar personas y capturas', 4000);
   }
 }
 /* Una solicitud de quien escaneó mi código. Se prueba con cada código vivo que
@@ -25741,6 +25681,10 @@ async function _bzSolicitud(mid, d, ts, borrar) {
   var pubRaw;
   try { pubRaw = _cuDeB64(String(carga.pub || '')); await _bzImportarPub(pubRaw); } catch (e) { return borrar(); }
   if (carga.uid !== d.de || pubRaw.length !== 65) return borrar();
+  /* Dos personas pudieron escanear el mismo código: pasado el tope no se vincula. */
+  if (!bzContacto(d.de) && bzContactos().length >= BZ_MAX) {
+    await borrar(); toast('No se vinculó a nadie más: ya tienes ' + BZ_MAX + ' vinculados.', 4500); return;
+  }
   _bzInvit.splice(usado, 1);
   await _bzGuardarLocal();
   var con = { uid: d.de, nom: String(carga.nom || '').slice(0, 80), pub: _b64FromBytes(pubRaw), huella: await bzHuella(pubRaw),
@@ -25751,7 +25695,22 @@ async function _bzSolicitud(mid, d, ts, borrar) {
   catch (e) { console.warn('[Flagrante] compañeros: la confirmación no salió', e); }
   if (_bzUi === 'codigo') { _bzUi = ''; _bzCodigo = null; }
   bzRepintar();
-  toast((con.nom || 'El compañero') + ' quedó agregado como compañero', 4000);
+  toast(bzNomCorto(con.nom) + ' quedó vinculado: ya se pueden enviar personas y capturas', 4000);
+}
+
+/* Lo que se dejó en espera se vuelve a mirar: cada pocos segundos y cada vez que
+   la nube trae algo (puede ser la lista de vinculados). */
+function _bzProgramarDesconocidos() {
+  if (_bzDescReloj) return;
+  _bzDescReloj = setTimeout(function () { _bzDescReloj = null; bzReintentarDesconocidos(); }, 5000);
+}
+function bzReintentarDesconocidos() {
+  var gen = _bzGen;
+  Object.keys(_bzDesconocidos).forEach(function (mid) {
+    var x = _bzDesconocidos[mid];
+    _bzCola = _bzCola.then(function () { return _bzProcesar(mid, x.d, gen); })
+      .catch(function (e) { console.warn('[Flagrante] buzón: un mensaje no se pudo atender', e); });
+  });
 }
 
 /* ── Arrancar y parar (con la nube) ─────────────────────────────────────── */
@@ -25763,7 +25722,8 @@ function bzArrancar() {
 function bzDetener() {
   if (_bzUnsub) { try { _bzUnsub(); } catch (e) {} }
   _bzUnsub = null; _bzGen++; _bzId = null; _bzCanal = {}; _bzVistos = {}; _bzInvit = [];
-  _bzUi = ''; _bzCodigo = null;
+  _bzUi = ''; _bzCodigo = null; _evSel = null; _bzDesconocidos = {};
+  if (_bzDescReloj) { clearTimeout(_bzDescReloj); _bzDescReloj = null; }
   if (_bzReloj) { clearInterval(_bzReloj); _bzReloj = null; }
   if (_bzLimpieza) { clearInterval(_bzLimpieza); _bzLimpieza = null; }
   _bzSalida = []; _bzBandeja = []; _bzPartes = {}; _bzHecho = {}; _bzLocalUid = '';
@@ -25774,39 +25734,49 @@ document.addEventListener('visibilitychange', function () {
   if (document.visibilityState === 'visible' && bzActiva()) { bzEscuchar(); bzVaciarSalida(); }
 });
 
-/* ── Lo que se ve, en «Modo compartir» ──────────────────────────────────── */
+/* ── Lo que se ve: el panel de «Enviar a» (ver «ENVIAR A», al final) ────── */
 function bzRepintar() {
-  try { if (_on('compartir')) renderCompartir(); } catch (e) {}
+  try {
+    /* El código en pantalla se cierra solo cuando el otro ya lo escaneó. */
+    if (document.getElementById('bz-qr') && _bzUi !== 'codigo') evGestionar();
+    else evGestionRepintar();
+  } catch (e) {}
+  try { if (_on('capturas')) renderCases(); } catch (e) {}
+  try { if (_on('personas')) renderPersonas(); } catch (e) {}
 }
 function bzUiCompaneros() {
-  var l = bzContactos();
-  var h = '<div class="card" id="bz-companeros"><div class="st">Mis compañeros</div>';
-  if (!l.length) h += '<p class="txd txs">Agrégalo una sola vez, estando juntos. Después se pasan cosas desde cualquier lugar.</p>';
+  var l = bzContactos(), lleno = l.length >= BZ_MAX;
+  var h = '<div class="card" id="bz-companeros"><div class="st">Vinculados (' + l.length + ' de ' + BZ_MAX + ')</div>';
+  if (!l.length) h += '<p class="txd txs">Se vincula una sola vez, estando juntos. Después se envían cosas desde cualquier lugar.</p>';
   else {
     h += '<div class="bz-lista">';
     l.forEach(function (c) {
-      var est = c.roto ? 'Las llaves cambiaron: vuelvan a agregarse'
-        : (c.confirmado ? 'Código de seguridad ' + (c.huella || '') : 'Esperando su confirmación');
-      h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">' + escHtml(c.nom || 'Compañero sin nombre') + '</div>' +
+      var est = c.roto ? 'Las llaves cambiaron: vuelvan a vincularse'
+        : (!c.confirmado ? 'Esperando su confirmación'
+        : (c.off ? 'Apagado: no sale en «Enviar a»' : 'Código de seguridad ' + (c.huella || '')));
+      var on = !c.off;
+      h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">' + escHtml(bzNomCorto(c.nom)) + '</div>' +
            '<div class="bz-de' + (c.roto ? ' mal' : '') + '">' + escHtml(est) + '</div></div>' +
+           '<button class="sec-tog ev-tog' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '"' +
+           ' aria-label="Mostrar en «Enviar a»" title="Mostrar en «Enviar a»" data-uid="' + escAttr(c.uid) + '" onclick="bzUiActivar(this.dataset.uid)"></button>' +
            '<button class="btn bs cp-mini" data-uid="' + escAttr(c.uid) + '" onclick="bzUiQuitar(this.dataset.uid)">Quitar</button></div>';
     });
     h += '</div>';
   }
-  h += '<div class="pt-paso">' +
+  if (lleno) return h + '<p class="txd txs">Ya tienes ' + BZ_MAX + ' vinculados: quita uno para vincular a otro.</p></div>';
+  return h + '<div class="pt-paso">' +
     '<button class="pt-op" onclick="bzUiMostrar()"><div class="lic">' + PT_IC.mostrar + '</div>' +
-    '<div><div class="ti">Mostrar mi código</div><div class="de">El compañero lo escanea y quedan agregados</div></div></button>' +
+    '<div><div class="ti">Vincular: mostrar mi código</div><div class="de">El otro lo escanea y quedan vinculados</div></div></button>' +
     '<button class="pt-op" onclick="bzUiEscanear()"><div class="lic">' + PT_IC.escanear + '</div>' +
-    '<div><div class="ti">Escanear el del compañero</div><div class="de">Si el código lo está mostrando él</div></div></button>' +
+    '<div><div class="ti">Escanear un código</div><div class="de">Si quien te invita te muestra el suyo</div></div></button>' +
     '</div></div>';
-  return h;
 }
 function bzUiCodigo() {
   var quedan = _bzCodigo ? Math.max(0, BZ_COD_MS - (Date.now() - _bzCodigo.ts)) : 0;
   var svg = _bzCodigo ? ptQrSvg(_bzCodigo.bytes, 320) : '';
   return '<div class="cp-code">' +
     '<div class="cc-hd"><div class="cc-ti">Enséñale este código</div>' +
-    '<div class="cc-de">El compañero abre «Modo compartir» y toca «Escanear el del compañero».</div></div>' +
+    '<div class="cc-de">En su Flagrante: «Enviar a» → «Escanear un código».</div></div>' +
     '<div class="pt-qr">' + (svg || '<div class="cc-mal">No se pudo dibujar el código aquí.</div>') + '</div>' +
     '<div class="cc-pie"><span class="cc-pt' + (quedan > 0 ? ' viva' : '') + '"></span>' +
     '<span id="bz-cuenta">' + _bzCuentaTxt(quedan) + '</span></div></div>' +
@@ -25819,13 +25789,19 @@ function _bzCuentaTxt(q) {
   var m = Math.floor(q / 60000), s = Math.floor((q % 60000) / 1000);
   return 'Válido ' + m + ':' + (s < 10 ? '0' : '') + s + ' más';
 }
+function _bzLleno() {
+  if (bzContactos().length < BZ_MAX) return false;
+  toast('Ya tienes ' + BZ_MAX + ' vinculados: quita uno para vincular a otro.', 4000);
+  return true;
+}
 async function bzUiMostrar() {
-  if (!navigator.onLine) { toast('Necesitas señal para agregar un compañero.', 3500); return; }
+  if (!navigator.onLine) { toast('Necesitas señal para vincular.', 3500); return; }
+  if (_bzLleno()) return;
   var c = await bzNuevoCodigo();
   if (!c) { toast('No se pudo preparar tu código. Revisa la señal e inténtalo de nuevo.', 4000); return; }
   _bzCodigo = c; _bzUi = 'codigo';
   bzEscuchar();
-  renderCompartir();
+  openPanel('Vincular', '<div id="bz-qr">' + bzUiCodigo() + '</div>');
   if (_bzReloj) clearInterval(_bzReloj);
   _bzReloj = setInterval(function () {
     var el = document.getElementById('bz-cuenta');
@@ -25836,35 +25812,44 @@ async function bzUiMostrar() {
 function bzUiCerrarCodigo() {
   _bzUi = ''; _bzCodigo = null;
   if (_bzReloj) { clearInterval(_bzReloj); _bzReloj = null; }
-  renderCompartir();
+  evGestionar();
 }
 function bzUiEscanear() {
-  if (!navigator.onLine) { toast('Necesitas señal para agregar un compañero.', 3500); return; }
-  ptScanAbrir('Apunta al código que muestra el compañero', async function (bytes) {
-    if (!bzLeerCodigo(bytes)) { toast('Ese código no es el de un compañero de Flagrante.'); return false; }
-    _ptScanEstado('Agregando al compañero…');
+  if (!navigator.onLine) { toast('Necesitas señal para vincular.', 3500); return; }
+  if (_bzLleno()) return;
+  ptScanAbrir('Apunta al código que te muestran', async function (bytes) {
+    if (!bzLeerCodigo(bytes)) { toast('Ese código no es para vincular Flagrante.'); return false; }
+    _ptScanEstado('Vinculando…');
     var r = await bzAgregarDesdeCodigo(bytes);
     if (!r.ok) { toast('Ese código ' + r.motivo, 4000); return true; }
-    toast((r.nom || 'El compañero') + ' quedó agregado. Falta que su teléfono lo confirme.', 4000);
+    toast(bzNomCorto(r.nom) + ' quedó vinculado. Falta que su teléfono lo confirme.', 4000);
     bzRepintar();
     return true;
   });
 }
+/* Encender o apagar: apagado solo deja de salir en «Enviar a». */
+async function bzUiActivar(uid) {
+  var c = bzContacto(uid); if (!c) return;
+  await _bzGuardarContacto(Object.assign({}, c, { off: !c.off }));
+  if (_evSel && _evSel.dest === uid) _evSel = null;
+  bzRepintar();
+}
 function bzUiQuitar(uid) {
   var c = bzContacto(uid); if (!c) return;
   openModal(
-    '<div class="mh"><h2>Quitar compañero</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
-    '<p class="txd txs">' + escHtml(c.nom || 'Este compañero') + ' ya no podrá enviarte nada. Lo que te pasó se queda aquí.</p>' +
+    '<div class="mh"><h2>Quitar vinculado</h2><button class="mx" onclick="evGestionar()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+    '<p class="txd txs">' + escHtml(bzNomCorto(c.nom)) + ' ya no podrá enviarte nada. Lo que te pasó se queda aquí.</p>' +
     '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
-      '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
+      '<button class="btn bs" onclick="evGestionar()">Cancelar</button>' +
       '<button class="btn bp" data-uid="' + escAttr(uid) + '" onclick="bzUiQuitarSi(this.dataset.uid)">Quitar</button>' +
     '</div>');
 }
 async function bzUiQuitarSi(uid) {
-  closeModal();
   await bzQuitarContacto(uid);
-  renderCompartir();
-  toast('Compañero quitado');
+  if (_evSel && _evSel.dest === uid) _evSel = null;
+  evGestionar();
+  bzRepintar();
+  toast('Vinculado quitado');
 }
 
 /* ═══ COMPARTIR ENTRE CUENTAS · PASO 2: EL ENVÍO (2026-10-24) ═════════════════
@@ -26076,7 +26061,7 @@ async function _bzEnvParte(mid, ts, con, carga, borrar) {
     if (P.k === 'upd') return _bzRecibirCambios(con, _bzTxt(buf), P, mids, k);
     ab = ptAbrirPaquete(_bzTxt(buf));
   }
-  var nom = con.nom || 'Tu compañero';
+  var nom = bzNomCorto(con.nom);
   if (!ab.ok || !(ab.personas.length + ab.casos.length)) {
     await _bzCerrar({ k: k, e: P.e, de: con.uid, mids: mids }, 'mal', 0);
     toast('Te llegó algo de ' + nom + ' que este equipo no pudo leer. ' + (ab.ok ? '' : (ab.motivo || '')), 6000);
@@ -26085,7 +26070,7 @@ async function _bzEnvParte(mid, ts, con, carga, borrar) {
   _bzBandeja = _bzBandeja.filter(function (x) { return x.k !== k; });
   _bzBandeja.push({ k: k, tipo: 'reg', e: P.e, de: con.uid, nom: con.nom || '', ts: P.ts, abierto: ab, mids: mids });
   bzPintarAvisos(); bzRepintar();
-  toast('Te llegó de ' + nom + ': ' + _bzResumen(ab.personas.length, ab.casos.length) + '. Revísalo en Modo compartir.', 6000);
+  toast('Te llegó de ' + nom + ': ' + _bzResumen(ab.personas.length, ab.casos.length) + '. Revísalo en Capturas.', 6000);
 }
 /* El acuse de lo que se envió desde AQUÍ. Si no es de este equipo (lo envió otro
    de la misma cuenta) se deja para él, una semana como mucho. */
@@ -26098,7 +26083,7 @@ async function _bzAcuse(ts, con, carga, borrar) {
   await _bzGuardarSalida();
   await borrar();
   bzRepintar();
-  var nom = con.nom || 'El compañero', n = carga.n | 0;
+  var nom = con.nom ? bzNomCorto(con.nom) : 'El compañero', n = carga.n | 0;
   if (carga.r === 'ok') toast(n ? nom + ' importó ' + n + ' registro' + (n === 1 ? '' : 's') : nom + ' ya tenía todo lo que le enviaste', 5000);
   else if (carga.r === 'no') toast(nom + ' no importó lo que le enviaste. Lo tuyo no cambió.', 5000);
   else toast('A ' + nom + ' no le llegó bien lo que le enviaste. Vuelve a enviárselo.', 5000);
@@ -26136,11 +26121,12 @@ function _bzLimpiarPartes() {
 /* ── Lo que se ve ───────────────────────────────────────────────────────── */
 function bzPintarAvisos() {
   var n = (bzActiva() ? _bzBandeja.length : 0);
-  ['bz-cnt-nav', 'bz-cnt-mas'].forEach(function (id) {
+  ['bz-cnt-nav'].forEach(function (id) {
     var el = document.getElementById(id);
     if (el) { el.textContent = n > 9 ? '9+' : String(n); el.style.display = n ? '' : 'none'; }
   });
   var p = document.getElementById('bz-punto'); if (p) p.style.display = n ? '' : 'none';
+  try { evPintarBarras(); } catch (e) {}
 }
 function bzUiPendientes() {
   var llegando = Object.keys(_bzPartes).map(function (k) { return _bzPartes[k]; });
@@ -26149,14 +26135,14 @@ function bzUiPendientes() {
           '<p class="txd txs">Nada se guarda hasta que lo aceptes.</p><div class="bz-lista">';
   _bzBandeja.slice().sort(function (a, b) { return b.ts - a.ts; }).forEach(function (x) {
     if (x.tipo === 'upd') { h += _bzUiCambioFila(x); return; }
-    h += '<div class="bz-it bz-rec"><div class="bz-b"><div class="bz-nom">De ' + escHtml(x.nom || 'tu compañero') + '</div>' +
+    h += '<div class="bz-it bz-rec"><div class="bz-b"><div class="bz-nom">De ' + escHtml(bzNomCorto(x.nom)) + '</div>' +
          '<div class="bz-de">' + escHtml(_bzResumen(x.abierto.personas.length, x.abierto.casos.length) + ' · ' + _bzHace(x.ts)) + '</div></div>' +
          '<div class="bz-acc"><button class="btn bs cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiDescartar(this.dataset.k)">Descartar</button>' +
          '<button class="btn bp cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiRevisar(this.dataset.k)">Revisar</button></div></div>';
   });
   llegando.forEach(function (P) {
     var c = bzContacto(P.de);
-    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">De ' + escHtml((c && c.nom) || 'tu compañero') + '</div>' +
+    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">De ' + escHtml(bzNomCorto(c && c.nom)) + '</div>' +
          '<div class="bz-de">Llegando… ' + Object.keys(P.partes).length + ' de ' + P.n + '</div></div></div>';
   });
   return h + '</div></div>';
@@ -26169,45 +26155,30 @@ function bzUiEnviados() {
     var est = x.estado === 'fallo' ? 'No se pudo enviar: ' + (x.motivo || 'inténtalo de nuevo')
       : x.estado === 'enviado' ? 'Esperando que lo revise'
       : (navigator.onLine ? 'Enviando…' : 'Sin señal: sale cuando vuelva');
-    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">A ' + escHtml(x.nom || 'tu compañero') + '</div>' +
+    h += '<div class="bz-it"><div class="bz-b"><div class="bz-nom">A ' + escHtml(bzNomCorto(x.nom)) + '</div>' +
          '<div class="bz-de' + (x.estado === 'fallo' ? ' mal' : '') + '">' + escHtml(_bzResumen(x.p, x.c) + ' · ' + est) + '</div></div>' +
          (x.estado !== 'cola' ? '<button class="btn bs cp-mini" data-e="' + escAttr(x.e) + '" onclick="bzUiQuitarEnviado(this.dataset.e)">Quitar</button>' : '') +
          '</div>';
   });
   return h + '</div></div>';
 }
-/* El envío: un botón por compañero confirmado. Las casillas de qué mandar son
-   las de la pantalla (`_ptUiGrupo`), las mismas del archivo. */
-function bzUiEnvio() {
-  var l = bzContactos().filter(function (c) { return c.confirmado && !c.roto; });
-  if (!l.length) return '';
-  var n = _ptContar('p') + _ptContar('c'), h = '';
-  h += '<div class="bz-env">';
-  l.forEach(function (c) {
-    var nom = escHtml(c.nom || 'el compañero');
-    h += '<button class="btn bp bbl" data-uid="' + escAttr(c.uid) + '" onclick="bzUiEnviar(this.dataset.uid)"' + (n && !_bzEnviando ? '' : ' disabled') + '>' +
-         'Enviar a ' + nom + (n ? ' (' + n + ')' : '') + '</button>';
-  });
-  return h + '</div>';
-}
-async function bzUiEnviar(uid) {
+/* El envío: lo marcado en la lista (ver «ENVIAR A»), a un vinculado. */
+async function bzUiEnviar(uid, personas, casos) {
   if (_bzEnviando) return;
   var con = bzContacto(uid); if (!con) return;
-  var personas = DB.getPersons().filter(function (p) { return p && _ptSel.p[p.id]; });
-  var casos = DB.getCases().filter(function (c) { return c && _ptSel.c[c.id]; });
-  _bzEnviando = true; renderCompartir();
+  var k = _evSel ? _evSel.k : _evDesde;
+  _bzEnviando = true; evPintar(k);
   var r;
-  try { r = await bzEnviarRegistros(uid, personas, casos); } finally { _bzEnviando = false; }
-  if (!r.ok) { renderCompartir(); toast('No se pudo enviar: ' + r.motivo, 4500); return; }
-  _ptSel = { p: {}, c: {} };
-  renderCompartir();
-  toast(navigator.onLine ? 'Enviando a ' + (con.nom || 'tu compañero') + '…'
-                         : 'Sin señal: se envía a ' + (con.nom || 'tu compañero') + ' cuando vuelva', 4000);
+  try { r = await bzEnviarRegistros(uid, personas || [], casos || []); } finally { _bzEnviando = false; }
+  if (!r.ok) { evPintar(k); toast('No se pudo enviar: ' + r.motivo, 4500); return; }
+  _evSel = null; _evRender(k);
+  toast(navigator.onLine ? 'Enviando a ' + bzNomCorto(con.nom) + '…'
+                         : 'Sin señal: se envía a ' + bzNomCorto(con.nom) + ' cuando vuelva', 4000);
 }
 function bzUiRevisar(k) {
   var it = _bzBandeja.find(function (x) { return x.k === k; });
   if (!it) return;
-  ptConfirmarImportacion(it.abierto, it.nom || 'tu compañero', async function (si, decision) {
+  ptConfirmarImportacion(it.abierto, bzNomCorto(it.nom), async function (si, decision) {
     if (!si) return;                       // «Ahora no»: sigue por revisar
     if (!_bzBandeja.some(function (x) { return x.k === k; })) { toast('Otro equipo tuyo ya lo atendió.', 4000); return; }
     var r = await ptAplicarPaquete(it.abierto, decision);
@@ -26215,7 +26186,7 @@ function bzUiRevisar(k) {
     var n = r.p.nuevos + r.p.actualizados + (r.p.fundidos || 0) + r.c.nuevos + r.c.actualizados;
     await bzVincularCasos(it.de, it.abierto.casos);
     await _bzCerrar(it, 'ok', n);
-    if (n) ptAlRecibir(r.p, r.c); else toast('Ya tenías todo lo que te envió ' + (it.nom || 'tu compañero') + '.', 4000);
+    if (n) ptAlRecibir(r.p, r.c); else toast('Ya tenías todo lo que te envió ' + (bzNomCorto(it.nom)) + '.', 4000);
   }, { no: 'Ahora no' });
 }
 function bzUiDescartar(k) {
@@ -26223,7 +26194,7 @@ function bzUiDescartar(k) {
   if (!it) return;
   openModal(
     '<div class="mh"><h2>Descartar</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
-    '<p class="txd txs">No se guarda nada de lo que te envió ' + escHtml(it.nom || 'tu compañero') + '. Se le avisa que no lo importaste.</p>' +
+    '<p class="txd txs">No se guarda nada de lo que te envió ' + escHtml(bzNomCorto(it.nom)) + '. Se le avisa que no lo importaste.</p>' +
     '<div class="flx g8" style="flex-wrap:wrap;margin-top:12px">' +
       '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
       '<button class="btn bp" data-k="' + escAttr(k) + '" onclick="bzUiDescartarSi(this.dataset.k)">Descartar</button>' +
@@ -26238,7 +26209,7 @@ async function bzUiDescartarSi(k) {
 async function bzUiQuitarEnviado(e) {
   _bzSalida = _bzSalida.filter(function (x) { return x.e !== e; });
   await _bzGuardarSalida();
-  renderCompartir();
+  bzRepintar();
 }
 
 /* ═══ COMPARTIR ENTRE CUENTAS · PASO 3: LOS CAMBIOS VUELVEN, CON AUTORIZACIÓN ═══
@@ -26378,7 +26349,7 @@ async function _bzRecibirCambios(con, o, P, mids, k) {
   if (!calc.lineas.length && !calc.conf.length) return _bzCerrar(nuevo, 'ok', 0, true);
   _bzBandeja.push(nuevo);
   bzPintarAvisos(); bzRepintar(); _bzRepintarCapturas();
-  if (!prev) toast((con.nom || 'Tu compañero') + ' hizo cambios en la captura de ' + ptEtiquetaCaso(L) +
+  if (!prev) toast((con.nom ? bzNomCorto(con.nom) : 'Tu compañero') + ' hizo cambios en la captura de ' + ptEtiquetaCaso(L) +
                    '. Revísalos antes de aplicarlos.', 6000);
 }
 
@@ -26534,7 +26505,7 @@ function _bzUiCambioFila(x) {
   var c = DB.getCase(x.id), calc = _bzCalcular(x);
   var res = calc.lineas[0] || (calc.conf.length ? 'Cambió datos que tú también editaste' : '');
   var mas = calc.lineas.length + calc.conf.length - 1;
-  return '<div class="bz-it bz-rec"><div class="bz-b"><div class="bz-nom">Cambios de ' + escHtml(x.nom || 'tu compañero') + '</div>' +
+  return '<div class="bz-it bz-rec"><div class="bz-b"><div class="bz-nom">Cambios de ' + escHtml(bzNomCorto(x.nom)) + '</div>' +
     '<div class="bz-de">Captura de ' + escHtml(c ? ptEtiquetaCaso(c) : 'una captura') + ' · ' + _bzHace(x.ts) + '</div>' +
     '<div class="bz-de">' + escHtml(res + (mas > 0 ? ' y ' + mas + ' más' : '')) + '</div></div>' +
     '<div class="bz-acc"><button class="btn bp cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiRevisarCambios(this.dataset.k)">Revisar</button></div></div>';
@@ -26547,7 +26518,7 @@ function bzUiRevisarCambios(k) {
   if (!c.lineas.length && !c.conf.length) { _bzCerrar(x, 'ok', 0, true); toast('Ya tenías esos cambios.', 3500); return; }
   _bzEleccion = {};
   var menor = _bzEsMenor(c.Lc), MAX = 10;
-  var h = '<div class="mh"><h2>Cambios de ' + escHtml(x.nom || 'tu compañero') + '</h2>' +
+  var h = '<div class="mh"><h2>Cambios de ' + escHtml(bzNomCorto(x.nom)) + '</h2>' +
     '<button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
     '<p class="txd txs">En la captura de <b>' + escHtml(ptEtiquetaCaso(c.Lc)) + '</b>. Nada se aplica hasta que lo autorices.</p>';
   if (c.lineas.length) {
@@ -26640,7 +26611,7 @@ function bzBadgeCaso(c) {
   if (_bzCambiosDe(c.id).length) return '<span class="badge b-bzcam">Cambios por revisar</span>';
   var us = bzCompartidaCon(c);
   if (!us.length) return '';
-  var noms = us.map(function (u) { return (bzContacto(u) || {}).nom || 'un compañero'; }).join(', ');
+  var noms = us.map(function (u) { return bzNomCorto((bzContacto(u) || {}).nom); }).join(', ');
   return '<span class="badge b-bzc" title="' + escAttr('Compartida con ' + noms) + '">Compartida</span>';
 }
 /* El aviso breve en Capturas. */
@@ -26648,7 +26619,7 @@ function bzAvisoCapturas() {
   if (!bzActiva()) return '';
   var l = _bzCambiosDe(), quien = [];
   if (!l.length) return '';
-  l.forEach(function (x) { var n = x.nom || 'tu compañero'; if (quien.indexOf(n) < 0) quien.push(n); });
+  l.forEach(function (x) { var n = bzNomCorto(x.nom); if (quien.indexOf(n) < 0) quien.push(n); });
   var casos = {}; l.forEach(function (x) { casos[x.id] = 1; });
   var n = Object.keys(casos).length;
   return '<div class="bz-aviso" onclick="bzUiVerCambios()"><span class="bz-av-pt"></span><div class="bz-av-b">' +
@@ -26658,22 +26629,231 @@ function bzAvisoCapturas() {
 function bzUiVerCambios() {
   var l = _bzCambiosDe();
   if (l.length === 1) bzUiRevisarCambios(l[0].k);
-  else go('compartir');
+  else evGestionar();
 }
 function bzExpHtml(caso) {
   if (!caso || !bzActiva()) return '';
   var l = _bzCambiosDe(caso.id);
   if (l.length) {
     var x = l[0], calc = _bzCalcular(x);
-    return '<div class="exp-sync bz-exp-cam"><span class="dot"></span><div><b>' + escHtml(x.nom || 'Tu compañero') + ' hizo cambios</b>' +
+    return '<div class="exp-sync bz-exp-cam"><span class="dot"></span><div><b>' + escHtml(x.nom ? bzNomCorto(x.nom) : 'Tu compañero') + ' hizo cambios</b>' +
       escHtml(calc.lineas[0] || 'Cambió datos que tú también editaste') + '.' +
       '<div><button class="btn bp cp-mini" data-k="' + escAttr(x.k) + '" onclick="bzUiRevisarCambios(this.dataset.k)">Revisar los cambios</button></div></div></div>';
   }
   var us = bzCompartidaCon(caso);
   if (!us.length) return '';
-  var noms = us.map(function (u) { return (bzContacto(u) || {}).nom || 'un compañero'; });
+  var noms = us.map(function (u) { return bzNomCorto((bzContacto(u) || {}).nom); });
   return '<div class="exp-sync"><span class="dot"></span><div><b>Compartida con ' + escHtml(_bzJunta(noms)) + '</b>' +
     'Lo que guardes le llega para que lo revise.</div></div>';
+}
+
+/* ═══ «ENVIAR A» (2026-10-25) ═══════════════════════════════════════════════
+   Sustituye a la pantalla «Modo compartir» (decisión del usuario): enviar es un
+   botón de Capturas y de Personas, no un destino del menú. Encima de cada lista:
+   «Enviar a:» y los vinculados EN VERDE, con su nombre y primer apellido. Tocar
+   uno abre la SELECCIÓN sobre la misma lista: se marcan las tarjetas y
+   «Enviar». Sin ninguno vinculado dice «Vincular».
+
+   Todo lo demás vive en un solo panel (`evGestionar`): vincular —el usuario
+   MUESTRA su código y el invitado lo lee—, encender, apagar o quitar, lo que
+   llegó por revisar, lo enviado y el archivo con clave.
+
+   ⚠️ El transporte, el cifrado, la revisión antes de importar y los cambios que
+   vuelven con autorización son los del buzón (`bz*`), sin tocar: esto solo
+   cambia por dónde se entra. Vincular no depende del plan (prueba o pagado): el
+   buzón no lo exige.
+   ⚠️ Máximo BZ_MAX vinculados. «Apagado» (`off`, viaja con la configuración a
+   los demás equipos de la cuenta) solo lo saca de la barra: sigue vinculado y
+   sigue pudiendo enviarte. */
+
+var _evSel = null;     // {k:'c'|'p', dest: uid | 'archivo', ids:{}}
+var _evDesde = 'c';    // desde qué lista se abrió el panel
+
+var EV_IC = {
+  vincular:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 6 6v1"/><path d="M19 8v6M16 11h6"/></svg>',
+  grupo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>'
+};
+
+/* Nombre y PRIMER APELLIDO («David NELSON»), sin el grado. El perfil guarda el
+   nombre completo en un solo campo, así que se deduce: con cuatro palabras o más
+   el primer apellido es la penúltima; con dos o tres, la segunda. */
+var _evGrados = null;
+function _evQuitarGrado(t) {
+  if (!_evGrados) {
+    _evGrados = {};
+    (typeof LC_GRADOS !== 'undefined' ? LC_GRADOS : []).forEach(function (g) {
+      _evGrados['a|' + lcNormNom(g.ab).replace(/ /g, '')] = 1;
+      _evGrados['n|' + lcNormNom(g.g)] = 1;
+    });
+  }
+  for (var n = 3; n >= 1; n--) if (t.length > n && _evGrados['n|' + lcNormNom(t.slice(0, n).join(' '))]) return t.slice(n);
+  if (t.length > 1 && _evGrados['a|' + lcNormNom(t[0]).replace(/ /g, '')]) return t.slice(1);
+  return t;
+}
+function bzNomCorto(nom) {
+  var t = _evQuitarGrado(String(nom || '').replace(/\s+/g, ' ').trim().split(' ').filter(Boolean));
+  if (!t.length) return 'tu compañero';
+  var cap = function (x) { x = x.toLowerCase(); return x.charAt(0).toUpperCase() + x.slice(1); };
+  if (t.length === 1) return cap(t[0]);
+  return cap(t[0]) + ' ' + (t.length >= 4 ? t[t.length - 2] : t[1]).toUpperCase();
+}
+
+/* ── La selección sobre la lista ────────────────────────────────────────── */
+function evSelK(k) { return (_evSel && _evSel.k === k) ? _evSel : null; }
+function evCls(k, id) { var s = evSelK(k); return s ? ' ev-on' + (s.ids[id] ? ' ev-si' : '') : ''; }
+function evChk(k) { return evSelK(k) ? '<span class="ev-chk" aria-hidden="true"></span>' : ''; }
+function evClick(k, id, fn) { return evSelK(k) ? "evMarcar('" + k + "','" + id + "')" : fn + "('" + id + "')"; }
+function _evRender(k) { if (k === 'p') renderPersonas(); else renderCases(); }
+function _evLista(k) { return document.getElementById(k === 'p' ? 'pl' : 'cl'); }
+function _evVisibles(k) {
+  var l = _evLista(k); if (!l) return [];
+  return [].map.call(l.querySelectorAll('[data-ev]'), function (e) { return e.getAttribute('data-ev'); });
+}
+/* Salir de la lista cancela la selección: volver y encontrarla a medias confunde. */
+function evAlNavegar(name) {
+  if (_evSel && name !== (_evSel.k === 'p' ? 'personas' : 'capturas')) _evSel = null;
+}
+function evElegir(k, uid) {
+  var c = bzContacto(uid);
+  if (!c) return;
+  if (c.roto || !c.confirmado) { evGestionar(k); return; }
+  _evSel = { k: k, dest: uid, ids: {} };
+  _evRender(k);
+}
+function evMarcar(k, id) {
+  var s = evSelK(k); if (!s) return;
+  if (s.ids[id]) delete s.ids[id]; else s.ids[id] = true;
+  var l = _evLista(k), el = null;
+  if (l) [].forEach.call(l.querySelectorAll('[data-ev]'), function (e) { if (e.getAttribute('data-ev') === id) el = e; });
+  if (el) el.classList.toggle('ev-si', !!s.ids[id]);
+  evPintar(k);
+}
+function evMarcarTodo(k) {
+  var s = evSelK(k); if (!s) return;
+  var vis = _evVisibles(k), todas = vis.length && vis.every(function (i) { return s.ids[i]; });
+  s.ids = {};
+  if (!todas) vis.forEach(function (i) { s.ids[i] = true; });
+  _evRender(k);
+}
+function evCancelar() { var k = _evSel ? _evSel.k : 'c'; _evSel = null; _evRender(k); }
+async function evEnviar() {
+  var s = _evSel; if (!s || _bzEnviando) return;
+  var personas = s.k === 'p' ? DB.getPersons().filter(function (p) { return p && s.ids[p.id]; }) : [];
+  var casos = s.k === 'c' ? DB.getCases().filter(function (c) { return c && s.ids[c.id]; }) : [];
+  if (!personas.length && !casos.length) { toast('Marca al menos una.'); return; }
+  if (s.dest === 'archivo') {
+    await ptExportarArchivo(personas, casos);
+    _evSel = null; _evRender(s.k);
+    return;
+  }
+  await bzUiEnviar(s.dest, personas, casos);
+}
+
+/* ── La barra ───────────────────────────────────────────────────────────── */
+function evPintarBarras() { evPintar('c'); evPintar('p'); }
+function evPintar(k) {
+  var el = document.getElementById(k === 'p' ? 'ev-personas' : 'ev-capturas');
+  if (!el) return;
+  var s = evSelK(k);
+  if (k === 'c') { var row = document.getElementById('ev-row-capturas'); if (row) row.classList.toggle('sel', !!s); }
+  if (!_sessionKey) { el.innerHTML = ''; return; }
+  el.innerHTML = s ? _evSelHtml(k, s) : _evBarHtml(k);
+}
+/* En la barra solo van los vinculados LISTOS, en verde. Los que esperan su
+   confirmación o tienen que volver a vincularse se ven en el panel. */
+function _evBarHtml(k) {
+  var todos = bzActiva() ? bzContactos().filter(function (c) { return !c.off; }) : [];
+  var l = todos.filter(function (c) { return c.confirmado && !c.roto; });
+  var h = '<span class="ev-lbl">Enviar a:</span>';
+  l.forEach(function (c) {
+    h += '<button class="ev-chip ok" data-uid="' + escAttr(c.uid) + '" title="' + escAttr(c.nom || '') + '"' +
+         ' onclick="evElegir(\'' + k + '\',this.dataset.uid)"><span class="ev-pt"></span>' + escHtml(bzNomCorto(c.nom)) + '</button>';
+  });
+  if (!l.length) h += '<button class="ev-chip acc" onclick="evGestionar(\'' + k + '\')">' + EV_IC.vincular +
+    (todos.length ? 'Esperando confirmación' : 'Vincular') + '</button>';
+  else h += '<button class="ev-ges" onclick="evGestionar(\'' + k + '\')" aria-label="Vinculados y archivo" title="Vinculados y archivo">' + EV_IC.grupo + '</button>';
+  return h;
+}
+function _evSelHtml(k, s) {
+  var n = Object.keys(s.ids).length, arch = s.dest === 'archivo';
+  var c = arch ? null : bzContacto(s.dest);
+  var vis = _evVisibles(k), todas = vis.length && vis.every(function (i) { return s.ids[i]; });
+  var que = k === 'p' ? 'las personas' : 'las capturas';
+  return '<div class="ev-sel">' +
+    '<div class="ev-sel-t">' + (arch ? 'Guardar en un <b>archivo con clave</b>' : 'Enviar a <b>' + escHtml(bzNomCorto(c && c.nom)) + '</b>') +
+    '<span>' + (n ? n + ' marcada' + (n === 1 ? '' : 's') : 'Toca ' + que + ' que quieras ' + (arch ? 'guardar' : 'enviar')) + '</span></div>' +
+    '<div class="ev-sel-acc">' +
+      '<button class="btn bs cp-mini" onclick="evMarcarTodo(\'' + k + '\')">' + (todas ? 'Ninguna' : 'Todas') + '</button>' +
+      '<button class="btn bs cp-mini" onclick="evCancelar()">Cancelar</button>' +
+      '<button class="btn bp cp-mini" onclick="evEnviar()"' + (n && !_bzEnviando ? '' : ' disabled') + '>' +
+        (arch ? 'Guardar' : 'Enviar') + (n ? ' (' + n + ')' : '') + '</button>' +
+    '</div></div>';
+}
+
+/* ── Los avisos encima de la lista ──────────────────────────────────────── */
+function evAvisos(k) {
+  var h = '';
+  try { h += bzAvisoBandeja(); } catch (e) {}
+  if (k === 'c') { try { h += bzAvisoCapturas(); } catch (e) {} }
+  return h;
+}
+function bzAvisoBandeja() {
+  if (!bzActiva()) return '';
+  var l = _bzBandeja.filter(function (x) { return x.tipo === 'reg'; });
+  if (!l.length) return '';
+  var quien = [], p = 0, c = 0;
+  l.forEach(function (x) {
+    var n = bzNomCorto(x.nom); if (quien.indexOf(n) < 0) quien.push(n);
+    p += x.abierto.personas.length; c += x.abierto.casos.length;
+  });
+  return '<div class="bz-aviso ev-llego" data-k="' + escAttr(l.length === 1 ? l[0].k : '') + '" onclick="evVerLlegado(this.dataset.k)">' +
+    '<span class="bz-av-pt"></span><div class="bz-av-b">' +
+    '<b>' + escHtml(_bzJunta(quien)) + ' te envió ' + escHtml(_bzResumen(p, c)) + '</b>' +
+    '<span>Nada se guarda hasta que lo revises</span></div><span class="bz-av-ir">Revisar</span></div>';
+}
+function evVerLlegado(k) { if (k) bzUiRevisar(k); else evGestionar(); }
+
+/* ── El panel ───────────────────────────────────────────────────────────── */
+function evGestionar(k) {
+  if (k) _evDesde = k;
+  openPanel('Enviar a', '<div id="ev-gest">' + evGestionHtml() + '</div>');
+}
+function evGestionRepintar() {
+  var g = document.getElementById('ev-gest');
+  if (g) g.innerHTML = evGestionHtml();
+}
+function evGestionHtml() {
+  var h = '';
+  if (!bzActiva()) {
+    h += '<div class="card"><div class="st">Vincular</div><p class="txd txs">' +
+      (cuActiva() ? 'Inicia sesión con tu cuenta para vincular a otros funcionarios.'
+                  : 'Vincular necesita la cuenta de Flagrante (app de Android). Aquí puedes pasar registros por archivo.') +
+      '</p></div>';
+  } else h += bzUiPendientes() + bzUiCompaneros() + bzUiEnviados();
+  return h + _evUiArchivo();
+}
+/* ⚠️ El archivo NO se esconde detrás de un fallo: es la vía que no necesita
+   cuenta, señal ni cámara. Se marca qué va dentro en la misma lista. */
+function _evUiArchivo() {
+  return '<div class="card cp-alt"><div class="st">Por archivo</div>' +
+    '<p class="txd txs">Sin señal o sin vincular: se guarda un archivo con clave y se lo pasas por donde quieras.</p>' +
+    '<div class="pt-paso">' +
+      '<button class="pt-op" onclick="evArchivo()">' +
+        '<div class="lic">' + PT_IC.archivo + '</div>' +
+        '<div><div class="ti">Guardar un archivo</div>' +
+        '<div class="de">Eliges en la lista qué va dentro</div></div></button>' +
+      '<button class="pt-op" onclick="closeModal();ptImportarArchivo()">' +
+        '<div class="lic">' + PT_IC.recibir + '</div>' +
+        '<div><div class="ti">Recibir un archivo</div>' +
+        '<div class="de">El que te pasaron</div></div></button>' +
+    '</div></div>';
+}
+function evArchivo() {
+  closeModal();
+  var pant = _evDesde === 'p' ? 'personas' : 'capturas';
+  if (!_on(pant)) go(pant);
+  _evSel = { k: _evDesde, dest: 'archivo', ids: {} };
+  _evRender(_evDesde);
 }
 
 // NOTA: el SW solo funciona en HTTPS o localhost.
