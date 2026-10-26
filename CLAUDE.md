@@ -8300,30 +8300,45 @@ de Android y servicio de App Check simulados con `page.route`).
   abre `content-firebaseappcheck.googleapis.com`; `verify_csp` [C5] admite guion en el host.
 - Pasos de consola para encenderlo: `PUBLICAR.md`, «F6 — App Check».
 
-## El CÓMO del dossier es un resumen (2026-10-26)
+## El CÓMO del dossier es una frase sobre cómo se capturó (2026-10-26)
 Pedido del usuario con un pantallazo del dossier: el CÓMO copiaba entero el relato del paso 8
-(«Narración de los hechos»), que es del FPJ-5 y repite lo que el dossier ya dice en otras
-secciones. *«Lo que se busca es una información muy puntual de cómo sucedieron los hechos.»*
-Método elegido por el usuario entre cuatro: **reglas en el teléfono** (sin IA, sin red, ningún
-dato sale del equipo). Se descartaron la IA en la nube (manda nombres de capturados y menores a
-un tercero; contradice la política de privacidad) y la IA del teléfono (pocos equipos, exige un
-`.aab` nuevo, español no garantizado). Verificado con `verify_resumen_como.mjs` (**35 checks**).
-- **`lcResumenComo(caso)`** (junto a `dosDelito`) **solo QUITA**: la fecha y la hora (CUÁNDO),
-  el grado, el nombre y «adscrito a …» del funcionario (Conocieron el caso; de paso se va el
-  «CAI … CAI …» repetido de los relatos viejos del simulador), las frases del hallazgo **solo si
-  hay EMP** (incautaciones), el cierre «se capturó en flagrancia» (QUÉ), derechos y puesta a
-  disposición. Las personas se nombran por su rol («al capturado», «la víctima», «el testigo»;
-  «el aprehendido» con `dosEsMenor`). Máximo 3 frases / 350 caracteres, frases enteras.
-  ⚠️ Lo único que pone la app son esas palabras de rol: [11] lo mide palabra por palabra.
-- `_lcResFrases` parte en frases sin cortar en abreviaturas (Art., No., C.P., S.I.) ni en «.38».
-- **Paso 8**: campo «Resumen para el dossier» (`#w-narrRes`) que se propone solo al escribir la
-  narración (`lcResPropuesta`); al editarlo (`data-manual`) la app deja de proponer, y «Volver a
-  proponer» lo recalcula. `collectStep` guarda `narracion.resumen` y `narracion.resumenManual`.
+(«Narración de los hechos»), que es del FPJ-5 y en casos reales puede pasar de tres páginas.
+*«La idea es perder tramitar cómo fue que esa persona fue capturada»*, en una frase y nunca más
+de 120 palabras. Ejemplo del usuario: «Fue capturado tras ser alertado por la víctima a quien
+acababa de hurtar». Método elegido por el usuario: **reglas en el teléfono** (sin IA, sin red,
+ningún dato sale del equipo). Se descartaron la IA en la nube (manda nombres de capturados y
+menores a un tercero; contradice la política de privacidad) y la IA del teléfono (pocos equipos,
+exige un `.aab` nuevo, español no garantizado). Verificado con `verify_resumen_como.mjs`
+(**39 checks**).
+- ⚠️ **Primer pase descartado (build 154)**: un resumen EXTRACTIVO, que quitaba fecha, hora,
+  funcionario y nombres del relato y dejaba sus frases. El usuario lo vio en el teléfono y no
+  servía: seguía saliendo «El suscrito, en patrullaje por Colón, fue alertado por la víctima
+  quien señaló que…». Recortar frases no produce una frase nueva; hay que **redactarla**.
+- **`lcResumenComo(caso)`** redacta UNA frase con plantillas a partir de dos datos:
+  - la **modalidad** de la captura (`LC_RES_MODOS`), que son las hipótesis de flagrancia del
+    **art. 301 C.P.P.** (mod. Ley 1453/2011): señalado por la víctima o un testigo · sorprendido
+    en el acto · tras persecución · con objetos del delito · identificado por cámaras · en el
+    vehículo en que huía. `lcResDetectar` la busca con palabras clave en TODO el relato
+    normalizado (`LC_RES_DETECTA`, en orden de prioridad), así que da igual que sea largo;
+  - el **delito** (primera conducta) → verbo (`LC_RES_VERBO`: hurto → hurtar/hurtaba, lesiones,
+    violencia intrafamiliar, extorsión, homicidio). Sin verbo o sin víctima, la frase nombra el
+    delito o el EMP (`_lcResObjeto`, con `_dosEmpClase`; para armas y sustancias se mira la
+    descripción entera: «bolsa con marihuana» → marihuana).
+  - Concordancia por número y `lcSexo` de los capturados; «aprehendido/a» con `dosEsMenor`;
+    orden judicial → «Fue capturado en cumplimiento de la orden judicial.»
+  - ⚠️ **Sin modalidad reconocida no se afirma ninguna**: «Fue capturado en flagrancia por hurto.»
+  - ⚠️ «**señalado** por la víctima» y no «alertado» (decisión del usuario): el sujeto de la frase
+    es el capturado, y a él no lo alertaron.
+- **Paso 8**: bajo «Resumen para el dossier», el selector **«¿Cómo fue la captura?»**
+  (`#w-narrModo`), preseleccionado por la detección mientras el funcionario no lo cambie; cambiarlo
+  rehace el resumen. El resumen (`#w-narrRes`) se propone solo y, al editarlo, la app deja de
+  proponer; «Volver a proponer» lo rehace con la modalidad elegida. `collectStep` guarda
+  `narracion.resumen/resumenManual/modo/modoManual`.
 - **Dossier** (`genSeccionContent`, `'narracion'`): con `resumenManual` imprime lo escrito; si
-  no, **calcula al imprimir** (capturas viejas, simulador, OJ), sin tocar lo guardado.
-- El FPJ-5 sigue imprimiendo `narracion.texto` entero: idéntico con o sin resumen ([33]).
-- `verify_mejora8` [VII] medía que el CÓMO saliera ENTERO; ahora mide lo que sigue vigente:
-  frases enteras, sin «...». En verde: resumen 35 · mejora8 72 · mejora3 51 ·
-  dossier_historico 29 · expediente 13 · menú+expediente 16 · simulador 41 · mejora1 157 ·
-  multipersona · jerarquia 67 · mejora5 81 · fpj5 tipografía 48.
-- Anti-caché `?v=154` / `cache-v154`, `_BUILD=154`. Para la app de Play hace falta un `.aab` nuevo.
+  no, calcula la frase al imprimir (capturas viejas, simulador, OJ), sin tocar lo guardado.
+- El FPJ-5 sigue imprimiendo `narracion.texto` entero: idéntico con o sin resumen.
+- Adaptados: `verify_mejora8` [66] (frase entera, sin «...») y `verify_mejora3` [41] (en OJ el
+  CÓMO no queda vacío). En verde: resumen 39 · mejora8 72 · mejora3 51 · dossier_historico 29 ·
+  expediente 13 · menú+expediente 16 · simulador 41 · mejora1 157 · multipersona · jerarquia 67 ·
+  mejora5 81 · fpj5 tipografía 48.
+- Anti-caché `?v=155` / `cache-v155`, `_BUILD=155`. Para la app de Play hace falta un `.aab` nuevo.

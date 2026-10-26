@@ -405,8 +405,10 @@ log(!/^—, Barrio —/.test(donde) && /CL 52 # 50-31, Barrio La Candelaria, Med
    aunque el oficio lo firme un solo funcionario—, solo cómo se escribe. */
 log(/\*Conocieron el caso\*\nCAI Parque Bolivar, Patrulla 32\nS\.I NELSON DAVID DAVID\nP\.T JUAN CORDOBA/.test(p8.dos),
   'El dossier sigue registrando la patrulla completa, aunque el oficio lo firme uno solo');
-log(/\*CÓMO\*\nRelato del procedimiento escrito por el funcionario\./.test(p8.dos),
-  'Y CÓMO trae el relato del funcionario, que antes se quedaba fuera');
+/* ⚠️ 2026-10-26: el CÓMO es una frase sobre cómo se capturó (lcResumenComo);
+   lo que este check protege —que en OJ no se quede vacío— sigue vigente. */
+log(/\*CÓMO\*\nFue (capturad|aprehendid)\w+ en cumplimiento de la orden judicial\./.test(p8.dos),
+  'Y CÓMO ya no se queda fuera: dice cómo se capturó');
 log(/\*ES DEJADO A DISPOSICIÓN\*\n[^\n]*SPOA: 4196993675034202654534/.test(p8.dos),
   'La puesta a disposición y el SPOA se siguen imprimiendo igual');
 log(!/\?\?/.test(p8.viejo) && /CL 52 # 50-31/.test(p8.viejo),
