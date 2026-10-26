@@ -416,8 +416,8 @@ sec('VII · LO QUE NO PODÍA ROMPERSE');
    corte a media palabra ni termine en «...». */
 d = await dossier(CASO());
 const rel = bloque(d, 'CÓMO').join('\n');
-log(rel.length > 0 && !/\.\.\.$/.test(rel) && /\.$/.test(rel) && /inmediaciones/.test(rel),
-  '⚠️ El CÓMO sale en frases enteras: no se corta a media palabra', rel.length + ' caracteres');
+log(/^Fue(ron)? \S+/.test(rel) && !/\.\.\.$/.test(rel) && /\.$/.test(rel),
+  '⚠️ El CÓMO sale como una frase entera: no se corta a media palabra', rel);
 
 /* El modelo no cambia: el dossier es solo presentación. */
 const modelo = await page.evaluate(c => {
