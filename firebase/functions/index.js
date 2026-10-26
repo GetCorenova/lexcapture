@@ -49,6 +49,13 @@ const HMAC = defineSecret('PRUEBA_HMAC');
    la ve el servidor; la del teléfono es la pública (`goog_…`). */
 const RC_SK = defineSecret('REVENUECAT_SK');
 const EMULADOR = process.env.FUNCTIONS_EMULATOR === 'true';
+/* F6 · App Check. Mientras esté en false, las funciones aceptan llamadas SIN
+   token de App Check (como hasta ahora). Se pone en true SOLO después de que la
+   app de Android registrada en Firebase dé tokens válidos en un teléfono real
+   (Consola → App Check → Métricas: «solicitudes verificadas» cerca del 100 %),
+   y hay que volver a desplegar. En el emulador nunca se exige. */
+const APP_CHECK_OBLIGATORIO = false;
+const CALL = (o) => Object.assign({ enforceAppCheck: APP_CHECK_OBLIGATORIO && !EMULADOR }, o);
 const { PAQUETE, DIA, PRUEBA_DIAS, desechable, hashSolicitud, hashDispositivo, yyyymm,
         revisarVeredicto, recallUsado } = require('./prueba');
 const { estadoRC, debeConsultar, cambioRC } = require('./compras');
@@ -168,14 +175,14 @@ async function derechoAlDia(uid, ahora, forzar) {
 
 /* `forzar`: preguntar a RevenueCat aunque el plan pagado tenga días por delante
    (justo después de comprar, o al tocar «Ya pagué: revisar»). */
-exports.miDerecho = onCall({ memory: '256MiB', timeoutSeconds: 15, secrets: [RC_SK] }, async (req) => {
+exports.miDerecho = onCall(CALL({ memory: '256MiB', timeoutSeconds: 15, secrets: [RC_SK] }), async (req) => {
   const uid = uidDe(req);
   const ahora = Date.now();
   const forzar = !!(req.data && req.data.forzar);
   return salida(await derechoAlDia(uid, ahora, forzar), ahora);
 });
 
-exports.iniciarPrueba = onCall({ memory: '256MiB', timeoutSeconds: 30, secrets: [HMAC] }, async (req) => {
+exports.iniciarPrueba = onCall(CALL({ memory: '256MiB', timeoutSeconds: 30, secrets: [HMAC] }), async (req) => {
   const uid = uidDe(req);
   const ahora = Date.now();
   const ref = db.doc('entitlements/' + uid);

@@ -153,11 +153,40 @@ suben con el mismo `npx firebase deploy --only firestore:rules` de la cuenta.
 - ⚠️ **Lo que sobra en Google Cloud tras retirar Drive** (opcional, no rompe nada si se
   deja): la **Drive API** y los dos **clientes OAuth** (web y Android) del proyecto
   `Flagrante`. La app ya no los usa.
-- ⚠️ **App Check** se dejó para la F6: hace falta registrar la app con la huella SHA-256
-  de Play Console y una clave de reCAPTCHA Enterprise para la web.
+- ⚠️ **App Check**: ver «F6 — App Check», justo debajo. (Ya no hace falta reCAPTCHA
+  para la web: la web de GitHub abre sin cuenta y no habla con Firebase.)
 - La versión nativa **cambió de complementos**: salen `@capacitor/browser` y
   `@capacitor/app` (solo los usaba Drive). Va en el mismo **versionCode 6** de la F3,
   que todavía no se ha subido.
+
+### F6 — App Check (rama `f6-appcheck`, build 153) **[USUARIO]**
+
+El código está hecho y **APAGADO** (`CU_APPCHECK.androidAppId` vacío en la app y
+`APP_CHECK_OBLIGATORIO = false` en `firebase/functions/index.js`). Solo en la app de
+Android: pide un reto a App Check, Google Play da un token clásico de integridad con ese
+reto y se canjea por un token de App Check que el SDK adjunta a Auth, Firestore y las
+funciones. `verify_appcheck.mjs` 31/31 (con Play y el servicio simulados).
+
+Para encenderlo, **en este orden** (no saltarse el 5: forzar antes de medir deja fuera
+de la nube a teléfonos que no pasan):
+1. **Necesita que la app ya esté en Play** (la huella sale de ahí). Play Console →
+   Prueba y lanza → **Integridad de la app** → Firma de apps → copiar el **SHA-256** del
+   certificado de la clave de firma de apps (el de Google, no el de subida).
+2. Firebase → Configuración del proyecto → **Agregar app → Android** · paquete
+   `com.getcorenova.flagrante` · pegar el SHA-256. **No** hace falta descargar
+   `google-services.json`. Pasar al asistente el **ID de la app** (`1:837685454525:android:…`).
+3. Firebase → **App Check** → Apps → la de Android → **Play Integrity** → Registrar
+   (el proyecto de Play Integrity ya está vinculado, 837685454525).
+4. El asistente pone el ID en `CU_APPCHECK`, compila un versionCode nuevo y se sube a
+   **prueba interna**.
+5. Firebase → App Check → **APIs** → mirar las métricas de Auth, Firestore y Cloud
+   Functions unos días: «Solicitudes verificadas» cerca del 100 %.
+6. Solo entonces: **Aplicar** en Auth y Firestore (consola) y el asistente pone
+   `APP_CHECK_OBLIGATORIO = true` y vuelve a desplegar las funciones.
+- ⚠️ Si la clave web (`CU_FB.apiKey`) se restringe en Google Cloud, tiene que admitir la
+  **Firebase App Check API**, o el canje responde 403 (`ac/exchangePlayIntegrityToken-403`).
+- ⚠️ El token clásico de Play Integrity tiene su propio cupo diario (10 000), aparte del
+  estándar de la prueba gratuita; App Check lo renueva cada hora por teléfono.
 
 ---
 
