@@ -41,9 +41,11 @@ const conexiones = (dir['connect-src'] || []).filter(x => x !== "'self'");
    cloudfunctions.net. El comodín no abre más que firestore.googleapis.com, que
    ya es de todos los proyectos de Firebase: la protección real es que el código
    de la app solo habla con el proyecto de `CU_FB`. */
-log(conexiones.every(u => /^https:\/\/([a-z0-9]+\.)?(googleapis\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))
+/* F6 (2026-10-25): App Check canjea su token en content-firebaseappcheck, que
+   lleva guion: por eso [a-z0-9-]. */
+log(conexiones.every(u => /^https:\/\/([a-z0-9-]+\.)?(googleapis\.com)\//.test(u + (u.endsWith('/') ? '' : '/'))
                        || u === 'https://*.cloudfunctions.net'),
-    '[C5] las únicas conexiones fuera de la app son las de Firebase (cuenta, nube y funciones del servidor)', conexiones.join(' '));
+    '[C5] las únicas conexiones fuera de la app son las de Firebase (cuenta, nube, funciones del servidor y App Check)', conexiones.join(' '));
 log(!/frame-ancestors/.test(csp), '[C6] no pide en <meta> lo que el navegador ignora ahí (frame-ancestors)');
 /* Que la <meta> vaya ANTES de cualquier script: una política declarada después
    no protege lo que ya corrió. */

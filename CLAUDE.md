@@ -8275,3 +8275,27 @@ ninguna entidad pública, no es canal oficial, el documento es responsabilidad d
 - Si un enlace muere, cambiarlo aquí **y** en `store-listing.md`.
 - Mirado en los dos temas a 384 px. En verde: jerarquía 67 · mejora7 67 · csp 11 · tema 51 ·
   mejora6b 66/67 ([53] preexistente). Anti-caché `?v=152` / `cache-v152`, `_BUILD=152`.
+
+## App Check (F6, 2026-10-25) — hecho y APAGADO
+Rama `f6-appcheck`, build 153. Verificado con `verify_appcheck.mjs` (**31 checks**, nuevo: complemento
+de Android y servicio de App Check simulados con `page.route`).
+- **Solo en la app de Android.** La web de GitHub abre sin cuenta y localhost usa los emuladores
+  (que no exigen App Check), así que no hace falta reCAPTCHA.
+- **Proveedor propio** (`acToken`, `CustomProvider`): el envoltorio es un WebView con el SDK web, no
+  el SDK de Android. `generatePlayIntegrityChallenge` → el complemento pide un token **CLÁSICO** de
+  Play Integrity con el reto como nonce (`Integridad.clasico`, nuevo en `IntegridadPlugin.java`;
+  `token`, el estándar de la prueba, no cambió) → `exchangePlayIntegrityToken {playIntegrityToken}`
+  → `{token, ttl:"3600s"}` → `{token, expireTimeMillis}`. URL tomada del SDK web
+  (`content-firebaseappcheck.googleapis.com/v1/projects/{id}/apps/{appId}:método?key=`), contra
+  la app de **Android** registrada en Firebase.
+- ⚠️ **Lo que no se pudo medir aquí**: que Google acepte el token. La documentación REST no se pudo
+  leer entera; el formato es el del SDK web y el del proveedor de Play Integrity de Android. Se mide
+  en un teléfono de la pista interna, con las métricas de App Check, ANTES de forzar.
+- `acIniciar(app)` corre justo después de `initializeApp` y antes de Auth/Firestore. Apagado mientras
+  `CU_APPCHECK.androidAppId` esté vacío. Si un token falla, el SDK manda la petición igual: con la
+  aplicación forzosa apagada no se rompe nada.
+- Servidor: `APP_CHECK_OBLIGATORIO = false` + `CALL()` en las dos `onCall` (`enforceAppCheck`, nunca
+  en el emulador). Desplegarlo así no cambia nada.
+- `vendor/firebase.js` exporta `initializeAppCheck` y `CustomProvider` (625 KB). CSP: `connect-src`
+  abre `content-firebaseappcheck.googleapis.com`; `verify_csp` [C5] admite guion en el host.
+- Pasos de consola para encenderlo: `PUBLICAR.md`, «F6 — App Check».

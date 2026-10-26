@@ -16,7 +16,7 @@
      F4: `img-src` admite UNA imagen de Google (cleardot.gif): con la que el
      canal de Firestore comprueba si hay red cuando la conexión se corta. Sin
      ella, cada corte de señal llena la consola de avisos de la política. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com/images/cleardot.gif; font-src 'self' data:; connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com/images/cleardot.gif; font-src 'self' data:; connect-src 'self' https://content-firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3178,7 +3178,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 152;
+var _BUILD = 153;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -23149,6 +23149,9 @@ function cuSdk() {
   }).then(function () {
     var em = cuEmulador();
     var app = FB.initializeApp(cuConfig(), 'flagrante');
+    /* F6: App Check ANTES que Auth y Firestore, para que su primera petición ya
+       lleve el token. Apagado salvo en la app de Android con CU_APPCHECK puesto. */
+    acIniciar(app);
     var auth = FB.initializeAuth(app, { persistence: [FB.indexedDBLocalPersistence, FB.inMemoryPersistence] });
     /* Correos y página del enlace en español: sin esto el restablecimiento sale
        en inglés («Reset your password») y la pantalla «temporal» no se entiende. */
@@ -23170,6 +23173,74 @@ async function _cuUsuarioListo() {
   var a = (await cuSdk()).auth;
   if (a.authStateReady) await a.authStateReady();
   return a.currentUser;
+}
+
+/* ── F6 · App Check (2026-10-25) ────────────────────────────────────────────
+   Que lo que llega a Firestore, Auth y las funciones venga de ESTA app y no de
+   un script con la configuración copiada (la configuración web no es secreta).
+
+   Solo en la app de Android. La web de GitHub abre sin cuenta (no habla con
+   Firebase) y en localhost se usan los emuladores, que no exigen App Check.
+
+   Proveedor PROPIO, porque el envoltorio es un WebView con el SDK web, no el SDK
+   de Android: 1) se pide un reto al servicio de App Check, 2) el complemento
+   nativo pide a Google Play un token de integridad CLÁSICO con ese reto como
+   nonce, 3) se canjea por un token de App Check. Es lo mismo que hace el
+   proveedor de Play Integrity del SDK de Android, contra la app de Android
+   registrada en Firebase (su appId va en CU_APPCHECK.androidAppId).
+
+   ⚠️ APAGADO mientras androidAppId esté vacío. Encenderlo NO bloquea nada por sí
+   solo: bloquea cuando en la consola se activa la «aplicación forzosa» de cada
+   servicio y en el servidor APP_CHECK_OBLIGATORIO (firebase/functions/index.js).
+   Eso se hace DESPUÉS de ver en las métricas que los teléfonos reales sí dan
+   tokens válidos — PUBLICAR.md, «F6 — App Check». Si un token no se consigue, el
+   SDK manda la petición igual (sin token): con la aplicación forzosa apagada,
+   todo sigue funcionando. */
+var CU_APPCHECK = { androidAppId: '' };
+var AC_BASE = 'https://content-firebaseappcheck.googleapis.com/v1';
+var _acActivo = false;
+function acNativo() {
+  try {
+    var C = window.Capacitor;
+    return !!(C && C.isNativePlatform && C.isNativePlatform() && C.getPlatform && C.getPlatform() === 'android' &&
+              C.Plugins && C.Plugins.Integridad && typeof C.Plugins.Integridad.clasico === 'function');
+  } catch (e) { return false; }
+}
+function acDisponible() { return !!(CU_APPCHECK.androidAppId && !cuEmulador() && acNativo() && FB.initializeAppCheck); }
+function acIniciar(app) {
+  if (_acActivo) return true;
+  if (!acDisponible()) return false;
+  try {
+    FB.initializeAppCheck(app, { provider: new FB.CustomProvider({ getToken: acToken }), isTokenAutoRefreshEnabled: true });
+    _acActivo = true;
+  } catch (e) { console.warn('App Check no arrancó', e); }
+  return _acActivo;
+}
+/* Una llamada al servicio de App Check. Responde JSON o falla con el estado. */
+async function _acPost(metodo, cuerpo) {
+  var o = cuConfig();
+  var url = AC_BASE + '/projects/' + encodeURIComponent(o.projectId) + '/apps/' + encodeURIComponent(CU_APPCHECK.androidAppId) +
+            ':' + metodo + '?key=' + encodeURIComponent(o.apiKey);
+  var r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpo || {}) });
+  if (!r.ok) throw _cuErr('ac/' + metodo + '-' + r.status);
+  return r.json();
+}
+/* «3600s» → milisegundos. Lo que no sea una duración válida, una hora. */
+function acTtlMs(t) {
+  var m = /^([\d.]+)s$/.exec(String(t || ''));
+  var n = m ? Number(m[1]) * 1000 : NaN;
+  return isFinite(n) && n > 0 ? n : 3600000;
+}
+async function acToken() {
+  var reto = await _acPost('generatePlayIntegrityChallenge', {});
+  if (!reto || !reto.challenge) throw _cuErr('ac/sin-reto');
+  var t;
+  try { t = await window.Capacitor.Plugins.Integridad.clasico({ nonce: reto.challenge, proyecto: String(cuConfig().messagingSenderId || '') }); }
+  catch (e) { var x = _cuErr('ac/integridad'); x.detalle = (e && (e.code || e.message)) || ''; throw x; }
+  if (!t || !t.token) throw _cuErr('ac/integridad');
+  var r = await _acPost('exchangePlayIntegrityToken', { playIntegrityToken: t.token });
+  if (!r || !r.token) throw _cuErr('ac/sin-token');
+  return { token: r.token, expireTimeMillis: Date.now() + acTtlMs(r.ttl) };
 }
 
 /* ── Correo y contraseña ────────────────────────────────────────────────── */

@@ -26,3 +26,7 @@ export {
 } from 'firebase/firestore';
 /* F3: las funciones del servidor (la prueba gratuita y el derecho de uso). */
 export { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/functions';
+/* F6: App Check. En la app de Android, un proveedor PROPIO (`CustomProvider`)
+   canjea un token de Play Integrity por uno de App Check (ver acToken en la app);
+   el SDK lo adjunta solo a Firestore, Auth y las funciones. */
+export { initializeAppCheck, CustomProvider } from 'firebase/app-check';
