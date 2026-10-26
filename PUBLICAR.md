@@ -42,8 +42,8 @@
 5. ✅ **F5 compras hecha en código (rama `f5-compras`, build 143, sin fusionar ni publicar).**
    `verify_compras` 30/30. `.aab` **versionCode 6** compilado y firmado (7,45 MB) con
    `BILLING` y RevenueCat 13.7.3. Lo que falta, en este orden (§6, «F5 — tareas»):
-   a. **[USUARIO]** crear el secreto `REVENUECAT_SK` (clave secreta `sk_…` de RevenueCat).
-   b. El asistente despliega las funciones (`miDerecho` ahora pregunta a RevenueCat).
+   a. ✅ Secreto `REVENUECAT_SK` creado (versión 2 activa).
+   b. ✅ Funciones y reglas desplegadas el 2026-10-25 (miDerecho con RevenueCat + buzón de compañeros).
    c. **[USUARIO]** subir el versionCode 6 a **prueba interna** (no a producción) y crear la
       suscripción en Play; enlazar los productos en RevenueCat; probar con un probador con licencia.
    ✅ El AVISO y las fuentes oficiales ya están dentro de la app (Ajustes → Info, build 152,
