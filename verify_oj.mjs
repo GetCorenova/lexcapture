@@ -1197,7 +1197,9 @@ log(limpio.escudo.embebido && limpio.escudo.sinCampo,
    retiró en 2026-08-13 —aquel repetía el nombre de la unidad— sino como el campo
    propio del DISTRITO, que es lo que el formato imprime en su línea 4 y lo único
    que no se pedía en ninguna parte. */
-log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep,aj-oj-asunto',
+/* ⚠️ 2026-10-25: «Asunto del oficio» se retiró de Ajustes (no cumplía ninguna
+   función); el asunto sale de su valor por defecto. */
+log(limpio.campos.join(',') === 'aj-oj-min,aj-oj-inst,aj-oj-uni,aj-oj-dep',
   'El membrete se queda solo con lo que el documento imprime Y no se pide en otra parte',
   limpio.campos.join(', '));
 

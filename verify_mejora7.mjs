@@ -112,7 +112,8 @@ const aj = await page.evaluate(() => ({
   diamante3: !!document.getElementById('aj-diamante3')
 }));
 
-log(aj.secciones.length === 4, '[A1] Ajustes pasa de cinco secciones a cuatro', aj.secciones.join(' · '));
+/* ⚠️ 2026-10-25: de cuatro a tres — «Copia de seguridad» se retiró (pedido del usuario). */
+log(aj.secciones.length === 3 && !aj.secciones.some(s => /copia/i.test(s)), '[A1] Ajustes pasa de cinco secciones a cuatro, y a tres sin «Copia de seguridad»', aj.secciones.join(' · '));
 log(!aj.secciones.some(s => /dossier/i.test(s)) && !aj.dossierSec,
   '[A2] Punto 10: «Dossier» desaparece como opcion dentro de Ajustes');
 log(!aj.patrulla && !aj.cai,
@@ -129,8 +130,8 @@ log(aj.verde3 && aj.diamante3,
 const orden = await page.evaluate(() => {
   const ids = ['aj-oj-min','aj-oj-inst','aj-web','aj-oj-uni',
                'aj-oj-dep','aj-ind-dis','aj-diamante3','aj-rango',
-               'aj-estacion','aj-ind-est','aj-verde3','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor',
-               'aj-oj-asunto'];
+               'aj-estacion','aj-ind-est','aj-verde3','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor'];
+  /* ⚠️ «Asunto del oficio» se retiró el 2026-10-25 por instrucción del usuario. */
   const campos = [...document.querySelectorAll('#aj-body-unidad-sec input,#aj-body-unidad-sec select')]
     .map(e => e.id).filter(Boolean);
   const t = id => { const i = document.getElementById(id); const l = i && i.closest('.fg') && i.closest('.fg').querySelector('.fl'); return l ? l.textContent.trim() : ''; };
@@ -139,7 +140,7 @@ const orden = await page.evaluate(() => {
            st: [...document.querySelectorAll('#aj-body-unidad-sec .st')].map(e => e.textContent.trim()) };
 });
 log(orden.real.join(',') === orden.esperado.join(','),
-  '[A6] Los campos van en el ORDEN de la maqueta: sector · institucion+web · unidad · DISTRITO · ESTACION · asunto',
+  '[A6] Los campos van en el ORDEN de la maqueta: sector · institucion+web · unidad · DISTRITO · ESTACION',
   orden.real.join(' → '));
 log(orden.real.indexOf('aj-web') === orden.real.indexOf('aj-oj-inst') + 1,
   '[A7] El sitio web va PEGADO a la institucion, como marca la flecha del documento');
@@ -173,8 +174,8 @@ const arbol = await page.evaluate(() => {
 });
 const de = id => (arbol.out.find(x => x.id === id) || {}).de;
 const esPadre = id => { const x = arbol.out.find(y => y.id === id); return !!x && x.de === null && x.p; };
-log(['aj-oj-min','aj-oj-inst','aj-oj-uni','aj-oj-dep','aj-estacion','aj-oj-asunto'].every(esPadre),
-  '[A8e] Los seis campos que el usuario marco como PADRE son de nivel superior');
+log(['aj-oj-min','aj-oj-inst','aj-oj-uni','aj-oj-dep','aj-estacion'].every(esPadre),
+  '[A8e] Los cinco campos que el usuario marco como PADRE son de nivel superior');
 log(de('aj-web') === 'aj-oj-inst',
   '[A8f] El sitio web cuelga de la institucion', de('aj-web'));
 log(de('aj-ind-dis') === 'aj-oj-dep' && de('aj-diamante3') === 'aj-oj-dep' && de('aj-rango') === 'aj-oj-dep',
@@ -191,17 +192,17 @@ sec('A · EL CARET: > cerrado, ⌄ abierto');
    180 ms del giro devuelve el valor INTERPOLADO —al empezar, la identidad— y el
    check habria pasado por el motivo equivocado. Paso justo por ahi. */
 const leerCaret = () => page.evaluate(() => {
-  const arr = document.getElementById('aj-arr-datos-sec');
-  const body = document.getElementById('aj-body-datos-sec');
+  const arr = document.getElementById('aj-arr-info-sec');
+  const body = document.getElementById('aj-body-info-sec');
   const svg = arr && arr.querySelector('svg');
   return { open: arr.classList.contains('open'), vis: body.style.display !== 'none',
            rot: svg ? getComputedStyle(svg).transform : '', svg: !!svg, texto: arr.textContent.trim() };
 });
 const cerrado = await leerCaret();
-await page.evaluate(() => toggleAjSec('datos-sec'));
+await page.evaluate(() => toggleAjSec('info-sec'));
 await page.waitForTimeout(450);
 const abierto = await leerCaret();
-await page.evaluate(() => toggleAjSec('datos-sec'));
+await page.evaluate(() => toggleAjSec('info-sec'));
 await page.waitForTimeout(450);
 const otraVez = await leerCaret();
 const caret = { cerrado, abierto, otraVez };

@@ -125,15 +125,15 @@ sec('A · PUNTO 3 — el caret: > cerrado, ⌄ abierto, en TODOS los desplegable
 await page.evaluate(() => go('ajustes'));
 await page.waitForTimeout(350);
 const caretAj = await page.evaluate(() => {
-  const arr = document.getElementById('aj-arr-datos-sec');
+  const arr = document.getElementById('aj-arr-info-sec');
   const svg = arr.querySelector('svg');
   const cerrado = getComputedStyle(svg).transform;
-  toggleAjSec('datos-sec');
+  toggleAjSec('info-sec');
   return { cerrado, abiertoClase: arr.classList.contains('open'), hayPath: !!svg.querySelector('path') };
 });
 await page.waitForTimeout(300);
 const caretAj2 = await page.evaluate(() =>
-  getComputedStyle(document.querySelector('#aj-arr-datos-sec svg')).transform);
+  getComputedStyle(document.querySelector('#aj-arr-info-sec svg')).transform);
 log(caretAj.hayPath && (caretAj.cerrado === 'none' || /matrix\(1, 0, 0, 1/.test(caretAj.cerrado)),
   '[Ajustes] Cerrado, el chevron apunta a la derecha (>)', caretAj.cerrado);
 log(caretAj.abiertoClase && /matrix\(-?0?\.?\d*, 1, -1,/.test(caretAj2),
@@ -171,7 +171,7 @@ log(caretOJ && caretOJ.t0 !== caretOJ2,
 
 /* Comportamiento pedido: cerrada → clic → abierta → clic → cerrada. */
 const ciclo = await page.evaluate(() => {
-  const id = 'datos-sec';
+  const id = 'info-sec';
   const body = document.getElementById('aj-body-' + id);
   const est = () => body.style.display !== 'none';
   go('ajustes');
@@ -422,14 +422,16 @@ const fueron = [
   ['La vereda, la zona y la localidad llegan puestas', 'el párrafo que agrupaba lo que ahora agrupa la jerarquía'],
   // 2026-10-25: el usuario los retiró del acta de derechos por ruido.
   ['Derecho del art. 303.1 del C.P.P.', 'el aviso del art. 303.1 en el acta (pedido del usuario)'],
-  ['Se imprime junto al nombre', 'la vista previa del parentesco en el acta (pedido del usuario)']
+  ['Se imprime junto al nombre', 'la vista previa del parentesco en el acta (pedido del usuario)'],
+  // 2026-10-25: Ajustes sin «Asunto del oficio» ni «Copia de seguridad» (pedido del usuario).
+  ['Se reemplazan automáticamente en el oficio', 'la nota de los marcadores del asunto del oficio'],
+  ['El archivo de capturas sale sin cifrar', 'la copia en .json sin cifrar, con su sección']
 ];
 fueron.forEach(([t, q]) => log(fuente.indexOf(t) === -1, 'Se retiró ' + q));
 
 /* ⚠️ Y lo que NO se puede retirar: fundamento legal, advertencias y vistas
    previas de lo que va a salir impreso. */
 const quedan = [
-  ['El archivo de capturas sale sin cifrar', 'la advertencia de datos sensibles'],
   ['4 últimos son el año', '⚠️ que el año se actualiza solo: evita corregirlo a mano cada enero'],
   ['Si generas, el informe deja constancia de que la orden figuraba vencida', 'la advertencia de la orden vencida']
 ];

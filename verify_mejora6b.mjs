@@ -285,8 +285,9 @@ const aj = await page.evaluate(() => ({
    Ajustes por instrucción del usuario, así que las cinco de esta observación son
    ahora cuatro. Lo que el check protege —que Ajustes no vuelva a llenarse de
    secciones— no se relaja, y se le añade que la que se fue no volvió. */
-log(aj.secciones.length === 4 && !aj.secciones.some(s => /dossier/i.test(s)),
-  '[37] Ajustes pasa de diez secciones a cinco, y con la Mejora 7 a cuatro', aj.secciones.join(' · '));
+/* ⚠️ 2026-10-25: y a tres — «Copia de seguridad» se retiró (pedido del usuario). */
+log(aj.secciones.length === 3 && !aj.secciones.some(s => /dossier|copia/i.test(s)),
+  '[37] Ajustes pasa de diez secciones a cinco, con la Mejora 7 a cuatro y luego a tres', aj.secciones.join(' · '));
 log(!aj.papel, '[38] Obs. 9: la seccion «Documentos» (tamano del papel) ya no existe');
 log(!aj.regionales, '[39] Obs. 16: «Perfiles Regionales» tampoco');
 log(!aj.fiscalia, '[40] Obs. 14: la fiscalia destinataria sale de Despachos, no de Ajustes');

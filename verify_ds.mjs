@@ -105,7 +105,9 @@ const ajHdr = await page.$$eval('.aj-sec-hdr', els => els.length);
    secciones a CINCO (Mejora 6, 2.º documento, obs. 17). Lo que este check
    protege no cambia y no se relaja — que NINGÚN encabezado se quede sin su icono
    SVG, porque el Design System v2 no admite emojis en la interfaz. */
-log(ajSvg === ajHdr && ajHdr >= 4, 'Cada encabezado de Ajustes tiene su SVG', ajSvg + '/' + ajHdr);
+/* ⚠️ 2026-10-25: de 4 a 3 — «Copia de seguridad» se retiró (sin cuenta quedan
+   Apariencia, Mi unidad e Info). */
+log(ajSvg === ajHdr && ajHdr >= 3, 'Cada encabezado de Ajustes tiene su SVG', ajSvg + '/' + ajHdr);
 await page.screenshot({ path: OUT('11_ajustes_dark') });
 
 // 11. Personas

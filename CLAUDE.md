@@ -3417,7 +3417,7 @@ y 4 viven en el envoltorio nativo.
 | A1 | Localidad/zona/vereda hardcodeadas en datalists | MEDIA |
 | A2 | NUNC con prefijo Medellín hardcodeado | ✅ RESUELTO (2026-08-28): vive en cada despacho del usuario |
 | S2 | innerHTML con datos de usuario sin escapar en atributos `value=""` (perfiles, secciones del dossier). Los 4 `<textarea>` del wizard ya se escapan (Fase H) | BAJA |
-| S3 | Backup de capturas (`exportarCapturas`) se exporta en JSON plano sin cifrar — ya muestra advertencia explícita al usuario (Fase H), pero no cifra el archivo | BAJA |
+| S3 | Backup de capturas en JSON sin cifrar | ✅ RESUELTO (2026-10-25): la exportación se retiró; queda el `.lexc` con clave |
 
 ## Auditoría integral y apariencia (2026-08-28) — modo Sistema, tokens de estado y dos fugas de color
 Auditoría de arquitectura, UX, redundancia de datos y sistema visual, **medida sobre el código** (no
@@ -8240,3 +8240,24 @@ formulario (`f6Abrir`); el `.docx` del acta no se tocó (`verify_fpj6` 140/140).
 - ⚠️ **Fallo PREEXISTENTE corregido de paso**: `ccGuardar` y `rtGuardar` leían `_ccCtx`/`_rtCtx`
   DESPUÉS del `await`, cuando el autoguardado de `closeModal` ya los había puesto a null: se guardaba
   bien pero quedaba un `TypeError` en consola al cerrar el formulario. Ahora devuelven `DB.getCase(c.id)`.
+
+## Ajustes sin «Asunto del oficio» ni «Copia de seguridad» (2026-10-25)
+Pedido del usuario con un pantallazo de Ajustes marcado en dos recuadros: el asunto «solo genera
+ruido» y la copia de seguridad «después de todas las actualizaciones no tiene sentido». Ajustes
+queda con **Apariencia · Mi unidad · Info** (+ Cuenta con sesión).
+- **Asunto del oficio**: fuera el campo `aj-oj-asunto` y su nota de marcadores. El asunto sale de
+  `cfg.ojAsunto` (valor por defecto); un equipo que lo había cambiado sigue imprimiendo el suyo.
+  ⚠️ `saveAjustes` ya no lo escribe (`v()` devolvería '').
+- **Copia de seguridad**: retirada entera con sus cinco funciones (`exportarConfig`,
+  `importarConfig`, `exportarCapturas`, `importarCapturas`, `limpiarDatos`) y `nbPermitirBorrarTodo`,
+  que solo usaba la última. Con la cuenta los datos viajan cifrados a la nube; el `.json` salía sin
+  cifrar (issue S3, que deja de existir). Para sacar una copia queda «Exportar mis datos» (`.lexc`
+  con clave): en la pantalla de plan vencido y ahora también como botón dentro de «Eliminar mi
+  cuenta», cuyo texto remitía a la sección retirada. Borrar el equipo: Ajustes → Cuenta.
+  ⚠️ Sin cuenta (la web de GitHub) ya no hay botón para borrar todo: se borran los datos del sitio
+  desde el navegador.
+- Suites: `verify_mejora7` 67/67, `verify_mejora6b` 66/67 (queda solo [53], preexistente),
+  `verify_jerarquia` **67/67** (su fallo preexistente era justo la nota de los marcadores),
+  `verify_oj` 187, `verify_ds` 8/9 (preexistente). El caret se mide ahora sobre el acordeón «Info».
+  En verde además: tema 51 · csp 11 · expediente 13 · almacén 13 · personas 25 · cuenta 62 ·
+  prueba 71 · nube 39. Anti-caché `?v=151` / `cache-v151`, `_BUILD=151`.

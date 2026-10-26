@@ -2519,9 +2519,8 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
                                    el dossier y en el bloque de contacto, y la
                                    ciudad encabezaba además la fecha del oficio.
          · Dossier               = lo que solo usa el mensaje de WhatsApp.
-         · Copia de seguridad    = Config + Datos. Las dos eran «exportar e
-                                   importar un .json»; separarlas obligaba a
-                                   recordar en cuál estaba cada botón.
+         · Copia de seguridad    = Config + Datos. ⚠️ Retirada el 2026-10-25:
+                                   con la nube cifrada ya no tenía sentido.
          · Info                  (sin cambios)
 
        Se fueron enteras, por instrucción del usuario:
@@ -2686,8 +2685,10 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
                perfil y su compañero de patrulla, ya registrados en Perfil. -->
           <p class="aj-nota" id="aj-con-auto"></p>
 
-          <div class="fg" style="margin-top:22px"><label class="fl fl-p">Asunto del oficio</label><input class="fi" id="aj-oj-asunto" placeholder="Deja a disposición {{TERMINO}} por orden judicial No. {{ORD_NUMERO}}"></div>
-          <p class="aj-nota">Se reemplazan automáticamente en el oficio: {{TERMINO}}, {{ORD_NUMERO}}, {{REQ_NOMBRE}}, {{RADICADO}}, {{DESPACHO}}.</p>
+          <!-- ⚠️ AQUÍ VIVÍA «ASUNTO DEL OFICIO» y se retiró por instrucción del
+               usuario (2026-10-25): «no cumple ninguna función». El asunto lo
+               compone la app con su valor por defecto (cfg.ojAsunto) y, si un
+               equipo lo había cambiado, el oficio sigue imprimiendo el suyo. -->
         </div>
       </div>
 
@@ -2709,28 +2710,14 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
            `dosDiamante3`, `patrullaNum`, `patrullaUnidad`) ni cambió una coma de
            lo que el dossier imprime. -->
 
-      <!-- 3. Copia de seguridad — config y capturas, que antes eran dos secciones -->
-      <div class="aj-section">
-        <div class="aj-sec-hdr" onclick="toggleAjSec('datos-sec')">
-          <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Copia de seguridad</span><span class="aj-sec-arr" id="aj-arr-datos-sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
-        </div>
-        <div class="aj-sec-body" id="aj-body-datos-sec" style="display:none;padding-top:12px">
-          <div class="st" style="margin-top:0">Configuración</div>
-          <div class="flx g8">
-            <button class="btn bs" onclick="exportarConfig()" style="flex:1">Exportar</button>
-            <button class="btn bs" onclick="document.getElementById('imp-cfg').click()" style="flex:1">Importar</button>
-          </div>
-          <input type="file" id="imp-cfg" accept=".json" style="display:none" onchange="importarConfig(event)">
-          <div class="st">Capturas y personas</div>
-          <div class="flx g8 mb8">
-            <button class="btn bs" onclick="exportarCapturas()" style="flex:1">Exportar</button>
-            <button class="btn bs" onclick="document.getElementById('imp-cap').click()" style="flex:1">Importar</button>
-          </div>
-          <input type="file" id="imp-cap" accept=".json" style="display:none" onchange="importarCapturas(event)">
-          <p class="aj-nota">El archivo de capturas sale sin cifrar: contiene datos sensibles.</p>
-          <button class="btn bd bbl" onclick="limpiarDatos()" style="margin-top:4px">Limpiar todos los datos</button>
-        </div>
-      </div>
+      <!-- ⚠️ AQUÍ VIVÍA «COPIA DE SEGURIDAD» y se retiró entera por instrucción
+           del usuario (2026-10-25). Desde la cuenta, las capturas, las personas y
+           los ajustes viajan solos y cifrados a la nube (F4); exportar un .json
+           SIN cifrar (issue S3) dejaba de tener sentido. Se fueron sus cinco
+           funciones (exportar/importar configuración y capturas, y «Limpiar todos
+           los datos»). Para sacar una copia: «Exportar mis datos» (.lexc con
+           clave), en «Eliminar mi cuenta» y en la pantalla de plan vencido, o
+           «Enviar a → Por archivo». Borrar el equipo: Ajustes → Cuenta. -->
 
       <!-- 4. Info -->
       <div class="aj-section">
@@ -3159,7 +3146,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 150;
+var _BUILD = 151;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -16299,69 +16286,9 @@ function lcAccToggle(id) {
   if(arr) arr.classList.toggle('open',!open);
 }
 
-function exportarConfig() {
-  var cfg=DB.getConfig();
-  var blob=new Blob([JSON.stringify(cfg,null,2)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='lc_config_'+new Date().toISOString().slice(0,10)+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1000);
-  toast('Config exportada — comparte solo por canales oficiales ✓', 3500);
-}
-
-function importarConfig(ev) {
-  var file=ev.target.files[0]; if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var cfg=JSON.parse(e.target.result);
-      if(typeof cfg!=='object'||Array.isArray(cfg)){toast('Archivo inválido');return;}
-      DB.saveConfig(cfg); loadAjustesFields();
-      toast('Config importada ✓');
-    }catch(err){toast('Error al leer el archivo');}
-  };
-  reader.readAsText(file); ev.target.value='';
-}
-
-function exportarCapturas() {
-  var cases=DB.getCases(); var persons=DB.getPersons();
-  var data={capturas:cases,personas:persons,version:8,exportado:new Date().toISOString()};
-  var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');a.href=url;a.download='lc_capturas_'+new Date().toISOString().slice(0,10)+'.json';
-  document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url);},1000);
-  toast('⚠️ Backup sin cifrar ('+cases.length+' registros) — protege este archivo, contiene datos sensibles', 4500);
-}
-
-function importarCapturas(ev) {
-  var file=ev.target.files[0]; if(!file) return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      var data=JSON.parse(e.target.result);
-      var cases=Array.isArray(data)?data:(data.capturas||[]);
-      var persons=data.personas||[];
-      if(!Array.isArray(cases)){toast('Formato inválido');return;}
-      var existIds={}; DB.getCases().forEach(function(c){existIds[c.id]=true;});
-      var newCases=cases.filter(function(c){return c.id&&!existIds[c.id];});
-      newCases.forEach(function(c){DB.saveCase(c);});
-      var existPIds={}; DB.getPersons().forEach(function(p){existPIds[p.id]=true;});
-      persons.filter(function(p){return p.id&&!existPIds[p.id];}).forEach(function(p){DB.savePerson(p);});
-      toast('Importados: '+newCases.length+' casos nuevos'); renderCases();
-    }catch(err){toast('Error al leer el archivo');}
-  };
-  reader.readAsText(file); ev.target.value='';
-}
-
-function limpiarDatos() {
-  var nube = typeof nbActiva === 'function' && nbActiva();
-  if(!confirm(nube ? '¿Eliminar TODOS los casos y personas, de este equipo Y DE TU CUENTA (todos tus equipos)? Esta acción no se puede deshacer.'
-                   : '¿Eliminar TODOS los casos y personas? Esta acción no se puede deshacer.')) return;
-  /* F4: es la única vez que un equipo sin capturas ni personas borra también las
-     de la nube (ver la guarda de `nbPendientes`). */
-  if (nube) nbPermitirBorrarTodo();
-  DB.saveCases([]); DB.savePersons([]);
-  renderCases(); toast('Datos eliminados');
-}
+/* ⚠️ Aquí vivían exportarConfig · importarConfig · exportarCapturas ·
+   importarCapturas · limpiarDatos. Se retiraron con la sección «Copia de
+   seguridad» de Ajustes (2026-10-25): no les quedaba ninguna puerta. */
 
 /* ⚠️ AQUÍ VIVÍAN LOS PERFILES REGIONALES y se retiraron por instrucción del
    usuario (2026-08-28, obs. 16): «esto no es necesario, no cumple ninguna
@@ -16404,7 +16331,6 @@ function loadAjustesFields() {
        corregirlo — el oficio sigue imprimiendo lo mismo hasta que lo haga. */
     'aj-oj-dep':cfg.ojDependencia||'',
     'aj-ind-dis':cfg.indicativoDistrito,'aj-ind-est':cfg.indicativoEstacion,
-    'aj-oj-asunto':cfg.ojAsunto,
     /* ⚠️ Obs. 11 — vuelven a ser texto plano. `lcRefTexto` resuelve una
        referencia `{pid}` guardada por la versión anterior, así que un equipo que
        la usó ve su nombre y no pierde nada; al guardar queda ya como texto. */
@@ -16510,7 +16436,7 @@ function saveAjustes() {
     cfg.ojUnidad=v('aj-oj-uni');
     /* ⚠️ `ojDependencia` y `ojCiudad` NO se escriben aquí: son el nombre y la
        ciudad de la unidad, que se piden arriba en esta misma sección. */
-    cfg.ojAsunto=v('aj-oj-asunto')||cfg.ojAsunto;
+    /* ⚠️ `ojAsunto` ya no tiene campo (2026-10-25): no se escribe aquí. */
     /* ⚠️ `ojFiscalia*` y `ojJornada*` tampoco: sus campos se retiraron (obs. 14).
        La fiscalía destinataria sale del registro de Despachos y la jornada hábil
        usa 08:00–17:00 en el motor. Las claves se conservan como respaldo. */
@@ -24177,7 +24103,8 @@ function cuAjCerrarOk(borrar) {
 function cuAjEliminar() {
   _cuModal('Eliminar mi cuenta',
     '<p class="cu-p">Se borran tu cuenta, lo que tenga en la nube y la información de este equipo. No se puede deshacer.</p>' +
-    '<p class="cu-p">Si quieres conservar algo, exporta antes una copia (Copia de seguridad).</p>' +
+    '<p class="cu-p">Si quieres conservar algo, sácalo antes con «Exportar mis datos».</p>' +
+    '<button type="button" class="btn bs bbl" onclick="closeModal();drExportar()" style="margin-bottom:12px">Exportar mis datos</button>' +
     _cuCampo('cu-clave', 'Contraseña', 'password', 'autocomplete="current-password"'),
     'cuAjEliminarOk', 'Eliminar mi cuenta', true);
 }
@@ -25115,7 +25042,6 @@ document.addEventListener('visibilitychange', function () {
 /* «Eliminar todos los datos» en Ajustes: es la única vez que este equipo, sin
    capturas ni personas, puede borrarlas también de la nube (ver la guarda en
    `nbPendientes`). */
-function nbPermitirBorrarTodo() { _nbBorrarTodo = true; }
 
 /* «Empezar de cero» sin código: lo que hay en la nube ya no lo abre nadie (la
    llave era otra). Se borra, y la base con ello: todo lo de este equipo se vuelve
