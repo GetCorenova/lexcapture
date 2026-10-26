@@ -46,8 +46,8 @@
    b. El asistente despliega las funciones (`miDerecho` ahora pregunta a RevenueCat).
    c. **[USUARIO]** subir el versionCode 6 a **prueba interna** (no a producción) y crear la
       suscripción en Play; enlazar los productos en RevenueCat; probar con un probador con licencia.
-   Pendiente en el mismo paquete o el siguiente: el AVISO y las fuentes oficiales dentro de
-   la app (Ajustes → Info).
+   ✅ El AVISO y las fuentes oficiales ya están dentro de la app (Ajustes → Info, build 152,
+   2026-10-25). El versionCode 6 se RECOMPILA con el build 152 (el anterior llevaba el 143).
 
 En este orden. Lo marcado **[USUARIO]** no lo puede hacer el asistente.
 

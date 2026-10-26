@@ -8261,3 +8261,17 @@ queda con **Apariencia · Mi unidad · Info** (+ Cuenta con sesión).
   `verify_oj` 187, `verify_ds` 8/9 (preexistente). El caret se mide ahora sobre el acordeón «Info».
   En verde además: tema 51 · csp 11 · expediente 13 · almacén 13 · personas 25 · cuenta 62 ·
   prueba 71 · nube 39. Anti-caché `?v=151` / `cache-v151`, `_BUILD=151`.
+
+## Aviso y fuentes oficiales dentro de la app (2026-10-25)
+Pendiente desde el rechazo del versionCode 5 («falta el enlace a la fuente de información
+gubernamental»): la ficha ya lo llevaba y faltaba dentro de la app. **Ajustes → Info** ahora tiene
+el build (`#aj-build`, lo rellena `loadAjustesFields`), una línea de qué guarda la app (la anterior
+decía «localStorage», falso desde la F4), el **Aviso** (privada e independiente, sin afiliación a
+ninguna entidad pública, no es canal oficial, el documento es responsabilidad de quien lo firma), las
+**Fuentes oficiales** con los mismos 7 enlaces .gov.co de `store-listing.md` y el enlace a la
+**política de privacidad** (absoluto: en el envoltorio `privacy.html` no viaja en `www/`).
+- ⚠️ **Ninguna institución se nombra como afiliación**: la Fiscalía solo aparece como FUENTE de los
+  formatos. Cada frase en su `<p>` y por debajo de 110 caracteres (`verify_mejora6b` [47]).
+- Si un enlace muere, cambiarlo aquí **y** en `store-listing.md`.
+- Mirado en los dos temas a 384 px. En verde: jerarquía 67 · mejora7 67 · csp 11 · tema 51 ·
+  mejora6b 66/67 ([53] preexistente). Anti-caché `?v=152` / `cache-v152`, `_BUILD=152`.

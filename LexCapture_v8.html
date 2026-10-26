@@ -1784,6 +1784,12 @@ body.cu-on{overflow:hidden}
    demasiado largos y no se ven bien desde el celular»—. La regla que quedó es
    una sola frase, y solo cuando dice algo que el campo no dice ya. */
 .aj-nota{font-size:12px;line-height:1.45;color:var(--text-3);margin:-4px 0 12px}
+.aj-info-ver{font-size:14px;font-weight:600;color:var(--text);margin:0 0 8px}
+.aj-info-blk{margin-top:16px}
+.aj-info-blk .aj-nota{margin:0 0 6px}
+.aj-info-tit{font-size:13px;font-weight:700;color:var(--text-2);margin:0 0 6px}
+.aj-fuentes{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.aj-fuentes a{font-size:13px;line-height:1.4;color:var(--acc);text-decoration:underline;text-underline-offset:2px;word-break:break-word}
 
 
 /* ═══ SELECTOR DE TEMA (segmented control) ═══ */
@@ -2725,7 +2731,33 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
           <span class="aj-sec-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Info</span><span class="aj-sec-arr" id="aj-arr-info-sec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
         </div>
         <div class="aj-sec-body" id="aj-body-info-sec" style="display:none;padding-top:12px">
-          <p class="aj-nota">Aplicación de gestión de capturas · 100% offline · localStorage AES-256</p>
+          <p class="aj-info-ver">Flagrante · build <span id="aj-build"></span></p>
+          <p class="aj-nota">Funciona sin conexión. Los datos se guardan cifrados (AES-256) en este equipo.</p>
+          <!-- Aviso y fuentes oficiales: Play rechazó el versionCode 5 por «falta el enlace
+               a la fuente de información gubernamental» (2026-10-24). La ficha ya los lleva;
+               aquí van dentro de la app. Mismos enlaces que store-listing.md. ⚠️ Ninguna
+               institución nombrada como afiliación: solo como FUENTE de la norma. -->
+          <div class="aj-info-blk">
+            <p class="aj-info-tit">Aviso</p>
+            <p class="aj-nota">Flagrante es una aplicación privada e independiente.</p>
+            <p class="aj-nota">No está afiliada, respaldada ni autorizada por ninguna entidad pública.</p>
+            <p class="aj-nota">No es un canal oficial ni reemplaza los sistemas o trámites de ninguna entidad.</p>
+            <p class="aj-nota">El contenido de cada documento es responsabilidad del funcionario que lo firma.</p>
+          </div>
+          <div class="aj-info-blk">
+            <p class="aj-info-tit">Fuentes oficiales</p>
+            <p class="aj-nota">Las normas y los formatos que usa son documentos públicos. Consulta siempre la versión vigente:</p>
+            <ul class="aj-fuentes">
+              <li><a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=14787" target="_blank" rel="noopener">Ley 906 de 2004 — Código de Procedimiento Penal</a></li>
+              <li><a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=22106" target="_blank" rel="noopener">Ley 1098 de 2006 — Código de la Infancia y la Adolescencia</a></li>
+              <li><a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=4125" target="_blank" rel="noopener">Constitución Política de 1991 (art. 28)</a></li>
+              <li><a href="https://www.fiscalia.gov.co/policia-judicial/" target="_blank" rel="noopener">Formatos de Policía Judicial (FPJ) — Fiscalía General de la Nación</a></li>
+              <li><a href="https://www.fiscalia.gov.co/media-portalweb-prd/Manual-CTI-Unico-de-Policia-Judicial.pdf" target="_blank" rel="noopener">Manual Único de Policía Judicial</a></li>
+              <li><a href="https://www.fiscalia.gov.co/media-portalweb-prd/MANUAL-DEL-SISTEMA-DE-CADENA-DE-CUSTODIA.pdf" target="_blank" rel="noopener">Manual del Sistema de Cadena de Custodia</a></li>
+              <li><a href="https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=56882" target="_blank" rel="noopener">Ley 1712 de 2014 — acceso a la información pública</a></li>
+            </ul>
+          </div>
+          <ul class="aj-fuentes" style="margin-top:16px"><li><a href="https://getcorenova.github.io/lexcapture/privacy.html" target="_blank" rel="noopener">Política de privacidad</a></li></ul>
         </div>
       </div>
 
@@ -3146,7 +3178,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 151;
+var _BUILD = 152;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -16312,6 +16344,7 @@ function lcAccToggle(id) {
    trampa que ya costó un incidente con `ojDependencia` y con el NUNC. */
 function loadAjustesFields() {
   var cfg=DB.getConfig();
+  var vb=document.getElementById('aj-build'); if(vb) vb.textContent=_BUILD;
   /* El nombre de la unidad y su ciudad se muestran RESUELTOS: si el equipo los
      tenía escritos en una de las claves del oficio (membrete o custodia) y no
      en esta, el usuario los ve aquí y no los vuelve a teclear. */
