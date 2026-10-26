@@ -3178,7 +3178,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 153;
+var _BUILD = 154;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -5339,6 +5339,11 @@ function collectStep() {
     wc.narracion={fechaCapD:fc.d,fechaCapM:fc.m,fechaCapA:fc.a,horaCapH:hc.h,horaCapM:hc.mi,
       fechaDispD:fd.d,fechaDispM:fd.m,fechaDispA:fd.a,horaDispH:hd.h,horaDispM:hd.mi,
       texto:v('w-narrTxt'),emp:n0.emp||''};
+    /* El resumen del dossier: lo que haya en su campo y si el funcionario lo
+       escribió él (entonces la app deja de proponer). */
+    var elRes=document.getElementById('w-narrRes');
+    wc.narracion.resumen=elRes?elRes.value:(n0.resumen||'');
+    wc.narracion.resumenManual=elRes?elRes.dataset.manual==='1':!!n0.resumenManual;
     var fp=wc.fechaProc?wc.fechaProc.split('-'):['','',''];
     wc.fechaDia=fp[2]||''; wc.fechaMes=fp[1]||''; wc.fechaAno=fp[0]||'';
   } else if(stepName==='Servidor'){
@@ -7078,7 +7083,14 @@ function rStep6(){
       'Fecha','Hora')+
     '<div class="lc-dt-prev" id="w-prevdisp"></div>'+
     '<div class="st">Narración de los hechos</div>'+
-    '<div class="fg"><textarea class="ft" id="w-narrTxt" style="min-height:140px">'+escHtml(n.texto)+'</textarea></div>';
+    '<div class="fg"><textarea class="ft" id="w-narrTxt" style="min-height:140px" oninput="lcResPropuesta()">'+escHtml(n.texto)+'</textarea></div>'+
+    /* El CÓMO del dossier es un RESUMEN del relato, no el relato entero (ver
+       lcResumenComo). La app lo propone mientras el funcionario no lo toque. */
+    '<div class="st">Resumen para el dossier</div>'+
+    '<div class="fg"><textarea class="ft" id="w-narrRes" style="min-height:90px" data-manual="'+(n.resumenManual?'1':'0')+'" '+
+      'oninput="this.dataset.manual=\'1\'">'+escHtml(n.resumenManual?(n.resumen||''):lcResumenComo(wc))+'</textarea>'+
+      '<div class="oj-hint">La app lo propone de la narración; puedes corregirlo.</div>'+
+      '<button type="button" class="btn bs bsm" style="margin-top:8px" onclick="lcResPropuesta(true)">Volver a proponer</button></div>';
     /* Los EMP y EF salieron de aquí: tienen su propio paso, en el lugar que les
        da el formato (numeral 7, antes de Vehículos) — observación 9.
        ⚠️ Y aquí quedaba la nota que lo anunciaba (auditoría 2026-09-01, punto 2):
@@ -8277,6 +8289,117 @@ function dosEmpFrases(caso){
    imprimiendo en el numeral 2 — es el dossier el que no lo lleva.
    ⚠️ Solo se retira lo que se anuncia como artículo o código: nada que sea parte
    del nombre del delito. «Hurto calificado» no pierde una palabra. */
+/* ═══ EL CÓMO DEL DOSSIER: UN RESUMEN, NO EL RELATO (2026-10-26) ═════════════
+   «En el dossier lo que se busca es una información muy puntual de cómo
+   sucedieron los hechos, un resumen, sin que se plasme toda la narración.»
+   El relato del paso 8 es para el FPJ-5 y repite lo que el dossier ya dice en
+   otras secciones. Esto lo resume POR REGLAS, en el teléfono: sin IA, sin red,
+   y ningún dato sale del equipo (decisión del usuario).
+   ⚠️ SOLO QUITA, NUNCA AGREGA HECHOS: lo que sale son frases del propio relato,
+   sin la fecha y la hora (CUÁNDO), sin el grado, el nombre y la unidad del
+   funcionario (Conocieron el caso), con las personas nombradas por su rol
+   (QUIÉN / VÍCTIMA) y sin las frases que ya cubren otras secciones: el hallazgo
+   si hay EMP (Incautaciones), el cierre «se capturó en flagrancia» (QUÉ), los
+   derechos y la puesta a disposición. Lo único que la app pone son esas
+   palabras de rol (el capturado, la víctima, el testigo).
+   ⚠️ Es una PROPUESTA: el paso 8 la enseña en un campo editable y lo que el
+   funcionario escriba ahí manda. */
+var LC_RES_MAX = 350, LC_RES_FRASES = 3;
+function _lcResRx(nombre){
+  var t=String(nombre||'').trim().replace(/\s+/g,' ');
+  if(t.length<3) return null;
+  var mapa={a:'[aáAÁ]',e:'[eéEÉ]',i:'[iíIÍ]',o:'[oóOÓ]',u:'[uúüUÚÜ]',n:'[nñNÑ]'};
+  var p=t.normalize('NFD').replace(/[̀-ͯ]/g,'').split('').map(function(ch){
+    var l=ch.toLowerCase();
+    if(mapa[l]) return mapa[l];
+    if(ch===' ') return '\\s+';
+    return ch.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  }).join('');
+  return new RegExp('(^|[^\\wÁÉÍÓÚÑáéíóúñ])'+p+'(?=$|[^\\wÁÉÍÓÚÑáéíóúñ])','gi');
+}
+function _lcResNombres(p){
+  if(!p) return [];
+  var a=[fullName(p),
+    [p.priNom,p.segNom,p.priApe].filter(Boolean).join(' '),
+    [p.priNom,p.priApe,p.segApe].filter(Boolean).join(' '),
+    [p.priNom,p.priApe].filter(Boolean).join(' ')];
+  return a.filter(function(x,i){ return x&&x.split(' ').length>1&&a.indexOf(x)===i; });
+}
+/* Parte en frases sin cortar en abreviaturas (Art., No., C.P., S.I.) ni en
+   números que empiezan por punto («calibre .38»). */
+function _lcResFrases(t){
+  var s=String(t||'').replace(/\s+/g,' ').trim();
+  if(!s) return [];
+  s=s.replace(/\.(?=\d)/g,'\u0001')
+     .replace(/(^|[\s(])(art|arts|no|nro|núm|num|sr|sra|dr|dra|av|km|aprox|ej|etc|ud|uds|cra|cl|kr|cr|dg|tv|cll|mz)\./gi,'$1$2\u0001')
+     .replace(/(^|[\s(.\u0001])([A-ZÁÉÍÓÚÑ])\.(?=\s*[A-ZÁÉÍÓÚÑ]\.|\s*[a-záéíóúñ,;:]|\s*\d|$)/g,'$1$2\u0001')
+     .replace(/\b([A-ZÁÉÍÓÚÑ])\.(?=[A-ZÁÉÍÓÚÑ]\b)/g,'$1\u0001')
+     .replace(/\u0001([A-ZÁÉÍÓÚÑ])\./g,'\u0001$1\u0001');
+  var m=s.match(/[^.!?]+(?:[.!?]+|$)/g)||[];
+  return m.map(function(f){ return f.replace(/\u0001/g,'.').trim(); }).filter(Boolean);
+}
+function lcResumenComo(caso){
+  var nr=(caso&&caso.narracion)||{};
+  var frases=_lcResFrases(nr.texto);
+  if(!frases.length) return '';
+  var menor=dosEsMenor(caso);
+  var roles=[];
+  function rol(lista,palabra){
+    (lista||[]).forEach(function(p){ _lcResNombres(p).forEach(function(n){ roles.push({n:n,r:palabra}); }); });
+  }
+  rol(caso.capturados, menor?'el aprehendido':'el capturado');
+  rol(caso.victimas, 'la víctima');
+  rol(caso.testigos, 'el testigo');
+  roles.sort(function(a,b){ return b.n.length-a.n.length; });
+  var hayEmp=lcEmpDeCaso(caso).length>0;
+
+  function limpiar(f){
+    var s=f;
+    // CUÁNDO: «El día …, (siendo|a) las HH:MM horas,» / «Siendo las HH:MM horas (del día …),»
+    s=s.replace(/^(?:el\s+)?d[íi]a\s+[^,]{1,60},\s*(?:(?:siendo|a)\s+las?\s+[0-9]{1,2}(?:[:.h][0-9]{2})?\s*(?:horas?|hrs?\.?|h)?\s*,\s*)?/i,'');
+    s=s.replace(/^siendo\s+las?\s+[0-9]{1,2}(?:[:.h][0-9]{2})?\s*(?:horas?|hrs?\.?|h)?(?:\s+del\s+d[íi]a\s+[^,]{1,60})?\s*,\s*/i,'');
+    // Conocieron el caso: grado y nombre del funcionario, y «adscrito a …»
+    s=s.replace(/\b([Ee]l|[Ll]a)\s+(suscrit[oa]|funcionari[oa]|uniformad[oa]|patruller[oa])\s+(?:[A-ZÁÉÍÓÚÑ][^\s,]*\s*)+/g,'$1 $2 ');
+    s=s.replace(/,?\s*adscrit[oa]s?\s+(?:a|al)\s+[^,.;]+/gi,'');
+    // QUIÉN / VÍCTIMA: las personas por su rol
+    roles.forEach(function(x){ var rx=_lcResRx(x.n); if(rx) s=s.replace(rx,'$1'+x.r); });
+    s=s.replace(/\b([Aa])\s+el\s+/g,function(m,a){ return (a==='A'?'Al':'al')+' '; })
+       .replace(/\b([Dd])e\s+el\s+/g,function(m,d){ return (d==='D'?'Del':'del')+' '; });
+    s=s.replace(/\s+,/g,',').replace(/,\s*,/g,',').replace(/\s{2,}/g,' ')
+       .replace(/^[\s,;:]+/,'').trim();
+    if(!s) return '';
+    s=s.charAt(0).toUpperCase()+s.slice(1);
+    if(!/[.!?]$/.test(s)) s+='.';
+    return s;
+  }
+  function sobra(f){
+    if(hayEmp&&/\b(registr[oóa]\w*|se\s+(?:le\s+)?hall[óo]|se\s+(?:le\s+)?encontr[óo]|incaut\w*)/i.test(f)) return true;
+    if(f.length<=80&&/^(?:y\s+)?(?:se\s+(?:le\s+)?(?:captur|aprehend)\w*|(?:captura|aprehensi[óo]n)\s+en\s+flagrancia|se\s+(?:procedi[óo]|realiz[óo])\s+(?:a\s+)?(?:la\s+)?(?:captura|aprehensi[óo]n))/i.test(f)) return true;
+    if(/lectura\s+de\s+(?:sus\s+)?derechos|derechos\s+del\s+(?:capturado|aprehendido)|se\s+le\s+(?:leyeron|dieron\s+a\s+conocer|hicieron\s+saber|informaron)\s+(?:sus\s+|los\s+)?derechos|(?:dejad|puest)[oa]s?\s+a\s+disposici[óo]n/i.test(f)) return true;
+    return false;
+  }
+  var out=[], largo=0;
+  frases.forEach(function(f){
+    if(out.length>=LC_RES_FRASES||sobra(f)) return;
+    var l=limpiar(f);
+    if(!l) return;
+    if(out.length&&largo+1+l.length>LC_RES_MAX) return;
+    out.push(l); largo+=(out.length>1?1:0)+l.length;
+  });
+  if(!out.length){ var r=limpiar(frases[0]); if(r) out.push(r); }
+  return out.join(' ');
+}
+/* El campo del paso 8: mientras el funcionario no lo toque, sigue al relato. */
+function lcResPropuesta(forzar){
+  var el=document.getElementById('w-narrRes');
+  if(!el||!wc) return;
+  if(forzar) el.dataset.manual='0';
+  if(el.dataset.manual==='1') return;
+  var tx=document.getElementById('w-narrTxt');
+  var nr=Object.assign({},wc.narracion||{},{texto:tx?tx.value:''});
+  el.value=lcResumenComo(Object.assign({},wc,{narracion:nr}));
+}
+
 function dosDelito(nombre){
   return String(nombre||'')
     .replace(/[\s,;·|/-]*\(?\s*art[íi]?c?u?l?o?\.?\s*\d+[A-Za-z]?(?:\s*(?:y|,)\s*\d+[A-Za-z]?)*\s*\)?/ig,'')
@@ -8309,12 +8432,13 @@ function genSeccionContent(sec, caso, cfg) {
       if(!caps.length) return '—';
       return dosPersonas(caps, dosEsMenor(caso)?'Aprehendido':'Capturado');
     case 'narracion':
-      /* ⚠️ MEJORA 8 — el relato ya NO se recorta a 300 caracteres. Salía cortado
-         a media palabra («…se ubicó a And…») y ese «CÓMO» es justamente lo que
-         el comandante lee para saber qué pasó: un texto que desaparece sin
-         avisar es el peor resultado, y aquí no hay ninguna casilla que
-         proteger — es un mensaje de chat, no un formato de tamaño fijo. */
-      return (caso.narracion&&caso.narracion.texto)||'';
+      /* El CÓMO es un RESUMEN puntual del relato (lcResumenComo), no el relato
+         entero: el relato es del FPJ-5 y repite lo que el dossier ya dice en
+         otras secciones. Si el funcionario escribió su resumen, manda el suyo;
+         si no, se calcula al imprimir (también para capturas anteriores), sin
+         tocar lo guardado. ⚠️ Nunca se corta a media palabra (Mejora 8). */
+      var nr=caso.narracion||{};
+      return nr.resumenManual?(nr.resumen||''):lcResumenComo(caso);
     case 'victima':
       if(caso.sinVictima||caso.tipo==='OJ') return null;
       var vics=(caso.victimas||[]).filter(function(v){return v&&(fullName(v)||v.numDoc);});

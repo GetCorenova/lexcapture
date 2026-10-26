@@ -8299,3 +8299,31 @@ de Android y servicio de App Check simulados con `page.route`).
 - `vendor/firebase.js` exporta `initializeAppCheck` y `CustomProvider` (625 KB). CSP: `connect-src`
   abre `content-firebaseappcheck.googleapis.com`; `verify_csp` [C5] admite guion en el host.
 - Pasos de consola para encenderlo: `PUBLICAR.md`, «F6 — App Check».
+
+## El CÓMO del dossier es un resumen (2026-10-26)
+Pedido del usuario con un pantallazo del dossier: el CÓMO copiaba entero el relato del paso 8
+(«Narración de los hechos»), que es del FPJ-5 y repite lo que el dossier ya dice en otras
+secciones. *«Lo que se busca es una información muy puntual de cómo sucedieron los hechos.»*
+Método elegido por el usuario entre cuatro: **reglas en el teléfono** (sin IA, sin red, ningún
+dato sale del equipo). Se descartaron la IA en la nube (manda nombres de capturados y menores a
+un tercero; contradice la política de privacidad) y la IA del teléfono (pocos equipos, exige un
+`.aab` nuevo, español no garantizado). Verificado con `verify_resumen_como.mjs` (**35 checks**).
+- **`lcResumenComo(caso)`** (junto a `dosDelito`) **solo QUITA**: la fecha y la hora (CUÁNDO),
+  el grado, el nombre y «adscrito a …» del funcionario (Conocieron el caso; de paso se va el
+  «CAI … CAI …» repetido de los relatos viejos del simulador), las frases del hallazgo **solo si
+  hay EMP** (incautaciones), el cierre «se capturó en flagrancia» (QUÉ), derechos y puesta a
+  disposición. Las personas se nombran por su rol («al capturado», «la víctima», «el testigo»;
+  «el aprehendido» con `dosEsMenor`). Máximo 3 frases / 350 caracteres, frases enteras.
+  ⚠️ Lo único que pone la app son esas palabras de rol: [11] lo mide palabra por palabra.
+- `_lcResFrases` parte en frases sin cortar en abreviaturas (Art., No., C.P., S.I.) ni en «.38».
+- **Paso 8**: campo «Resumen para el dossier» (`#w-narrRes`) que se propone solo al escribir la
+  narración (`lcResPropuesta`); al editarlo (`data-manual`) la app deja de proponer, y «Volver a
+  proponer» lo recalcula. `collectStep` guarda `narracion.resumen` y `narracion.resumenManual`.
+- **Dossier** (`genSeccionContent`, `'narracion'`): con `resumenManual` imprime lo escrito; si
+  no, **calcula al imprimir** (capturas viejas, simulador, OJ), sin tocar lo guardado.
+- El FPJ-5 sigue imprimiendo `narracion.texto` entero: idéntico con o sin resumen ([33]).
+- `verify_mejora8` [VII] medía que el CÓMO saliera ENTERO; ahora mide lo que sigue vigente:
+  frases enteras, sin «...». En verde: resumen 35 · mejora8 72 · mejora3 51 ·
+  dossier_historico 29 · expediente 13 · menú+expediente 16 · simulador 41 · mejora1 157 ·
+  multipersona · jerarquia 67 · mejora5 81 · fpj5 tipografía 48.
+- Anti-caché `?v=154` / `cache-v154`, `_BUILD=154`. Para la app de Play hace falta un `.aab` nuevo.

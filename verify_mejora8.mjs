@@ -411,11 +411,13 @@ log(abrev.vacio === '', 'Y sin nombre no se imprime nada');
 /* ═══════════════════════════════════════════════════════════════════════════ */
 sec('VII · LO QUE NO PODÍA ROMPERSE');
 
-/* El relato completo: ya no se recorta a 300 caracteres. */
+/* ⚠️ 2026-10-26: el CÓMO pasó a ser un RESUMEN del relato (lcResumenComo,
+   verify_resumen_como.mjs). Lo que este check protegía sigue vigente: que no se
+   corte a media palabra ni termine en «...». */
 d = await dossier(CASO());
 const rel = bloque(d, 'CÓMO').join('\n');
-log(rel.length > 300 && !/\.\.\.$/.test(rel) && /halló el bolso de la afectada\.$/.test(rel),
-  '⚠️ El relato sale ENTERO: ya no se corta a media palabra', rel.length + ' caracteres');
+log(rel.length > 0 && !/\.\.\.$/.test(rel) && /\.$/.test(rel) && /inmediaciones/.test(rel),
+  '⚠️ El CÓMO sale en frases enteras: no se corta a media palabra', rel.length + ' caracteres');
 
 /* El modelo no cambia: el dossier es solo presentación. */
 const modelo = await page.evaluate(c => {
