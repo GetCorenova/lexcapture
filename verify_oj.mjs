@@ -204,10 +204,11 @@ await page.selectOption('#oj-r-sx', 'M');
 await page.fill('#oj-r-madre', 'MADRE DE PRUEBA');
 await page.fill('#oj-r-padre', 'PADRE DE PRUEBA');
 // La residencia usa el widget de dirección normalizada (consistencia con Mejora 1).
-await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10').catch(async () => {
-  await page.evaluate(() => lcDirModo('oj-r-rdir', 'libre'));
-  await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10');
-});
+// ⚠️ 2026-10-27: vive en su ventana (lcDirGrupo): se abre la tarjeta y se guarda.
+await page.click('#oj-r-rdir__card'); await page.waitForTimeout(220);
+await page.evaluate(() => lcDirModo('oj-r-rdir', 'libre'));
+await page.fill('#oj-r-rdir__libre', 'Carrera 100 # 5-10');
+await page.click('#dir-ov-ok'); await page.waitForTimeout(220);
 await page.fill('#oj-r-sen', 'Cicatriz en el antebrazo izquierdo');
 await page.selectOption('#oj-r-imet', 'BIOMETRICO');
 await page.click('button[onclick="ojGuardarRequerido()"]'); await page.waitForTimeout(220);
@@ -278,11 +279,13 @@ await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEac
 const fechaDil = hoy.toISOString().slice(0, 10);
 await page.fill('#oj-g-fec', fechaDil);
 await page.fill('#oj-g-hor', '07:11');
+await page.click('#oj-g-dir__card'); await page.waitForTimeout(220);   // la dirección vive en su ventana
 await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
 await page.fill('#oj-g-dir__libre', 'Calle 53 con carrera 51');
 await page.fill('#oj-g-bar', 'Barrio de Prueba');
 await page.fill('#oj-g-mun', 'Ciudad Prueba');
 await page.fill('#oj-g-dep', 'Departamento Prueba');
+await page.click('#dir-ov-ok'); await page.waitForTimeout(220);
 /* ⚠️ 2026-10-26 (punto 9): «Quién hizo la diligencia» salió del formulario —los
    funcionarios salen del perfil (titular y compañero)—. Se mide que el bloque ya
    no está y que un funcionario más del modelo sigue llegando al oficio. */
@@ -356,9 +359,12 @@ log(viaFis.n === 'FISCALIA URI DE PRUEBA' && viaFis.dir === 'Carrera 64C 67-300,
   viaFis.n + ' · ' + viaFis.dir);
 await page.evaluate(async () => { ojCambiarVia('JUZGADO'); await new Promise(r => setTimeout(r, 150)); });
 await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
-await page.fill('#oj-x-dir', 'Palacio de Justicia, oficina 301');
+await page.click('#oj-x-dir__card'); await page.waitForTimeout(220);   // la dirección vive en su ventana
+if (!(await page.isVisible('#oj-x-dir__libre'))) await page.evaluate(() => lcDirModo('oj-x-dir', 'libre'));
+await page.fill('#oj-x-dir__libre', 'Palacio de Justicia, oficina 301');
 await page.fill('#oj-x-mun', 'Ciudad Prueba');
 await page.fill('#oj-x-dep', 'Departamento Prueba');
+await page.click('#dir-ov-ok'); await page.waitForTimeout(220);
 const dirVuelve = await page.evaluate(() => { ojCollect(); return wc.oj.despacho.direccion; });
 log(dirVuelve === 'Palacio de Justicia, oficina 301',
   'La dirección del juzgado (que el formato no recoge) vuelve al despacho y queda reutilizable', dirVuelve);

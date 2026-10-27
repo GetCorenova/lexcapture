@@ -168,8 +168,9 @@ log(await page.inputValue('#w-dir') === 'CR 83 # 47A-91', 'El formato guiado com
 const prev = await page.textContent('#w-dir__body .lc-dir-prev');
 log(/CR 83 # 47A-91/.test(prev), 'Y la vista previa lo enseña antes de generar nada', prev.trim());
 
-/* Escritura libre: la conversión tiene que ser VISIBLE, no silenciosa. */
-await page.evaluate(() => lcDirModo('w-dir', 'libre'));
+/* Escritura libre: la conversión tiene que ser VISIBLE, no silenciosa.
+   ⚠️ 2026-10-27: los campos viven en la ventana de dirección; se abre antes. */
+await page.evaluate(() => { lcDirAbrir('w-dir'); lcDirModo('w-dir', 'libre'); });
 await page.waitForTimeout(200);
 await page.fill('#w-dir__libre', 'KR 83 # 47A-91, al lado del CAI');
 await page.evaluate(() => lcDirLibreCR('w-dir'));
@@ -179,6 +180,7 @@ log(vistoLibre === 'CR 83 # 47A-91, al lado del CAI',
   '⚠️ En escritura libre el CAMPO enseña la conversión al salir: nada silencioso', vistoLibre);
 log(await page.inputValue('#w-dir') === 'CR 83 # 47A-91, al lado del CAI',
   'Y el valor que se guarda es el mismo que se ve', await page.inputValue('#w-dir'));
+await page.evaluate(() => lcDirCerrar(true));
 await page.evaluate(() => { wc = null; go('capturas'); });
 await page.waitForTimeout(200);
 

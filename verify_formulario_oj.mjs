@@ -236,7 +236,7 @@ await nuevoOJ(2);
 const hor = await page.$eval('#oj-g-hor', e => ({ t: e.type, m: e.inputMode, ph: e.placeholder }));
 log(hor.t === 'text' && hor.m === 'numeric' && hor.ph === 'HH:MM', 'La hora es un campo numérico «HH:MM», no el reloj del sistema (a. m./p. m.)', JSON.stringify(hor));
 const prueba = async (teclas, esperado, etiqueta) => {
-  await page.fill('#oj-g-hor', ''); await page.click('#oj-g-hor'); await page.keyboard.type(teclas); await page.click('#oj-g-bar');
+  await page.fill('#oj-g-hor', ''); await page.click('#oj-g-hor'); await page.keyboard.type(teclas); await page.click('#wz-panels .st');   // salir del campo (el barrio vive en la ventana de dirección)
   const v = await page.inputValue('#oj-g-hor');
   log(v === esperado, etiqueta, v);
 };
@@ -244,7 +244,7 @@ await prueba('1741', '17:41', 'Se escribe de corrido: «1741» → 17:41');
 await prueba('930', '09:30', '«930» → 09:30');
 await prueba('2359', '23:59', '«2359» → 23:59');
 await prueba('17', '17:00', '«17» → 17:00');
-await page.fill('#oj-g-hor', ''); await page.click('#oj-g-hor'); await page.keyboard.type('174'); await page.click('#oj-g-bar');
+await page.fill('#oj-g-hor', ''); await page.click('#oj-g-hor'); await page.keyboard.type('174'); await page.click('#wz-panels .st');
 log(await page.$eval('#oj-g-hor', e => e.classList.contains('fi-err')), 'Una hora a medias («17:4») se marca en rojo; una imposible ni se deja escribir');
 await prueba('0805', '08:05', 'Corregida, deja de estar en rojo');
 log(!(await page.$eval('#oj-g-hor', e => e.classList.contains('fi-err'))), '…sin la marca');

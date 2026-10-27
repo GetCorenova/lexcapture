@@ -53,6 +53,10 @@ const nuevoOJ = async (paso) => {
   await page.evaluate(p => wizGoto(p), paso); await page.waitForTimeout(350);
 };
 const escribe = async (id, txt) => {
+  /* 2026-10-27: si el campo es de una dirección, vive en su ventana (lcDirGrupo): se abre. */
+  const grp = await page.evaluate(i => { const el = document.getElementById(i), c = el && el.closest('.lc-dirc-campos');
+    return c && !document.getElementById('dir-ov').contains(c) ? c.id.replace(/__campos$/, '') : ''; }, id);
+  if (grp) { await page.evaluate(x => lcDirAbrir(x), grp); await page.waitForTimeout(200); }
   await page.fill('#' + id, '');
   await page.click('#' + id); await page.keyboard.type(txt); await page.waitForTimeout(120);
 };
