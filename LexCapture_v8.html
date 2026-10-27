@@ -3182,7 +3182,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 157;
+var _BUILD = 158;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -6282,43 +6282,12 @@ function rStep2(){
    vacío y 33 departamentos posibles: le ofrece los que existen de verdad, en un
    toque. Y lo que elija se APRENDE (`lcGeoRecordar`), así que a su jurisdicción
    se le pregunta una vez, no una por captura. */
-function lcGeoHomonimosHtml(muni,depto){
-  var ds=lcGeoDeptos(muni);
-  if(!ds.length) return '';                       // fuera del catálogo: no se opina
-  var act=lcGeoNorm(depto);
-  var coherente=act&&ds.some(function(d){return lcGeoNorm(d)===act;});
-  if(coherente) return '';
-  if(!act&&ds.length<2) return '';                // sin ambigüedad, ya lo rellena lcGeoCompletar
-  /* ⚠️ Un departamento INCOMPATIBLE con el municipio tampoco se pisa en
-     silencio: `lcGeoCompletar` nunca sobrescribe lo que escribió el usuario —y
-     esa regla se queda—, pero dejar «Antioquia» debajo de «Bogotá D.C.» porque
-     antes se tecleó a mano imprimiría una jurisdicción falsa en el informe. Se
-     muestra el conflicto y se corrige en un toque; decidir sigue siendo del
-     usuario. */
-  var msg=ds.length>1
-    ? 'Hay <b>'+ds.length+'</b> municipios con ese nombre. ¿Cuál es?'
-    : (act?'<b>'+escHtml(muni)+'</b> no está en «'+escHtml(depto)+'».':'¿Cuál es su departamento?');
-  return '<div class="lc-geo-hom"><span>'+msg+'</span>'+
-    ds.map(function(d){
-      return '<button type="button" class="lc-geo-op" onclick="lcGeoElegirDepto(\''+escAttr(d).replace(/'/g,"\\'")+'\')">'+escHtml(d)+'</button>';
-    }).join('')+'</div>';
-}
-function lcGeoHomonimos(){
-  var box=document.getElementById('w-geo-hom'); if(!box) return;
-  var m=(document.getElementById('w-muni')||{}).value||'';
-  var d=(document.getElementById('w-depto')||{}).value||'';
-  box.innerHTML=lcGeoHomonimosHtml(m,d);
-}
-function lcGeoElegirDepto(dep){
-  var em=document.getElementById('w-muni'), ed=document.getElementById('w-depto');
-  if(!ed) return;
-  ed.value=dep; ed.dataset.lcAuto='';          // lo eligió el usuario, no la app
-  if(em&&em.value) lcGeoRecordar(em.value,dep);
-  lcGeoHomonimos();
-  /* El municipio ya está resuelto ⇒ la jurisdicción también: el despacho del
-     paso siguiente se recalcula ahora, no cuando alguien llegue a mirarlo. */
-  collectStep();
-}
+/* ⚠️ Desde 2026-10-26 el aviso es el mismo en todos los pares municipio /
+   departamento de la app (`_lcGeoAvisoHtml`, junto al catálogo). Estas tres
+   funciones quedan como nombres del lugar de los hechos. */
+function lcGeoHomonimosHtml(muni,depto){ return _lcGeoAvisoHtml('w-muni',muni,depto); }
+function lcGeoHomonimos(){ var el=document.getElementById('w-muni'); if(el) lcGeoAviso(el); }
+function lcGeoElegirDepto(dep){ lcGeoElegir('w-muni',dep); }
 
 function rStep3(){return rMultiPerson('capturados',wc.tipo==='CESPA'?'Aprehendido':'Capturado',true);}
 function rStep4(){
@@ -15566,10 +15535,82 @@ function lcGeoNorm(s){
   return String(s||'').trim().toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g,'');   // «Medellín» = «medellin»
 }
-// Lo que el usuario ya diligenció una vez para su zona.
+/* ── Municipio ⇒ departamento: el error de «Bogotá ⇒ Amazonas» (2026-10-26) ──
+   Reportado en campo: «Bogotá» con «Amazonas» debajo. Tres causas, las tres
+   corregidas aquí, en el motor que usan TODOS los formularios:
+   1. «Bogotá» (como lo escribe todo el mundo) no estaba en el catálogo, que
+      solo traía «Bogotá D.C.». Un municipio no reconocido no recalculaba nada y
+      el departamento del municipio anterior se quedaba debajo del nuevo.
+      ⇒ Nombres de uso común (`LC_GEO_ALIAS`) y comparación sin puntos ni comas.
+   2. Ese par equivocado se podía APRENDER (`geoPropios`) y lo aprendido mandaba
+      sobre el catálogo: una vez guardado, el error se repetía para siempre.
+      ⇒ El catálogo manda; lo aprendido solo resuelve lo que el catálogo no sabe
+      o un homónimo, y lo que contradice el catálogo se ignora y no se guarda.
+   3. Al cambiar de municipio, un departamento del municipio anterior solo se
+      corregía si lo había puesto la app EN ESA MISMA PANTALLA; tras repintar el
+      formulario quedaba «como escrito por el usuario» y no se tocaba.
+      ⇒ Cambiar el municipio recalcula el departamento si el que hay no le
+      corresponde, y un par incompatible siempre se ve con su corrección.
+   ⚠️ Bogotá ⇒ «Cundinamarca» por decisión del usuario (es como se diligencia en
+   campo); «Bogotá D.C.» como departamento se sigue aceptando sin aviso. */
+var LC_GEO_ALIAS = {
+  'bogota':'Bogotá D.C.', 'bogota d c':'Bogotá D.C.', 'bogota distrito capital':'Bogotá D.C.',
+  'santa fe de bogota':'Bogotá D.C.', 'santafe de bogota':'Bogotá D.C.',
+  'santa fe de bogota dc':'Bogotá D.C.', 'santafe de bogota dc':'Bogotá D.C.',
+  'cartagena de indias':'Cartagena', 'san jose de cucuta':'Cúcuta', 'santiago de cali':'Cali',
+  'san juan de pasto':'Pasto', 'mompos':'Mompox', 'santa cruz de mompox':'Mompox',
+  'santa cruz de mompos':'Mompox', 'santiago de tolu':'Tolú', 'san andres de tumaco':'Tumaco',
+  'guadalajara de buga':'Buga', 'villa de san diego de ubate':'Ubaté',
+  'san sebastian de mariquita':'Mariquita', 'el espinal':'Espinal',
+  'santafe de antioquia':'Santa Fe de Antioquia', 'puerto inirida':'Inírida',
+  'carmen de viboral':'El Carmen de Viboral', 'don matias':'Donmatías', 'entrerios':'Entrerríos',
+  'barranca':'Barrancabermeja'
+};
+// Departamento que se propone y departamentos aceptados, cuando no es el del catálogo.
+var LC_GEO_PREF = { 'Bogotá D.C.':{dep:'Cundinamarca', ok:['Cundinamarca','Bogotá D.C.']} };
+// Formas cortas de los departamentos (para no avisar de un falso conflicto).
+var LC_DEP_ALIAS = {
+  'valle':'Valle del Cauca', 'norte santander':'Norte de Santander', 'guajira':'La Guajira',
+  'san andres':'Archipiélago de San Andrés, Providencia y Santa Catalina',
+  'san andres y providencia':'Archipiélago de San Andrés, Providencia y Santa Catalina',
+  'san andres providencia y santa catalina':'Archipiélago de San Andrés, Providencia y Santa Catalina',
+  'archipielago de san andres':'Archipiélago de San Andrés, Providencia y Santa Catalina',
+  'bogota':'Bogotá D.C.', 'bogota distrito capital':'Bogotá D.C.'
+};
+// Sin tildes, sin mayúsculas, sin puntos ni comas: «Bogotá, D.C.» = «bogota dc».
+function _lcGeoBase(s){
+  return lcGeoNorm(s).replace(/\./g,'').replace(/[,;]/g,' ').replace(/\s+/g,' ').trim();
+}
+var _lcGeoAliasIdx=null;
+// Clave de un MUNICIPIO, con los nombres de uso común ya resueltos.
+function lcGeoClave(s){
+  var k=_lcGeoBase(s); if(!k) return '';
+  if(!_lcGeoAliasIdx){
+    _lcGeoAliasIdx={};
+    for(var a in LC_GEO_ALIAS) _lcGeoAliasIdx[_lcGeoBase(a)]=_lcGeoBase(LC_GEO_ALIAS[a]);
+  }
+  return _lcGeoAliasIdx[k]||k;
+}
+// Clave de un DEPARTAMENTO.
+function lcGeoDepClave(s){
+  var k=_lcGeoBase(s); if(!k) return '';
+  for(var a in LC_DEP_ALIAS) if(_lcGeoBase(a)===k) return _lcGeoBase(LC_DEP_ALIAS[a]);
+  return k;
+}
+// Lo que el usuario ya diligenció una vez para su zona. ⚠️ Se filtra al leer:
+// un par que contradice el catálogo (p. ej. «bogota ⇒ Amazonas», guardado por
+// el error de antes) no se usa nunca más.
 function lcGeoAprendidos(){
   var cfg=DB.getConfig();
-  return (cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
+  var crudo=(cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
+  var out={};
+  for(var k in crudo){
+    var d=String(crudo[k]||'').trim(), kk=lcGeoClave(k);
+    if(!kk||!d) continue;
+    if(lcGeoCompatible(k,d)===false) continue;
+    out[kk]=d;
+  }
+  return out;
 }
 /* Índice normalizado del catálogo, construido una sola vez.
    ⚠️ Con 1 085 municipios, recorrer `LC_GEO` normalizando cada clave en cada
@@ -15579,19 +15620,36 @@ var _lcGeoIdx=null;
 function _lcGeoIndice(){
   if(_lcGeoIdx) return _lcGeoIdx;
   _lcGeoIdx={};
-  for(var nombre in LC_GEO) _lcGeoIdx[lcGeoNorm(nombre)]={nom:nombre,dep:LC_GEO[nombre]};
+  for(var nombre in LC_GEO){
+    var p=LC_GEO_PREF[nombre];
+    _lcGeoIdx[_lcGeoBase(nombre)]=p?{nom:nombre,dep:p.dep,ok:p.ok}:{nom:nombre,dep:LC_GEO[nombre]};
+  }
   return _lcGeoIdx;
 }
+function _lcGeoEntrada(muni){ var k=lcGeoClave(muni); return k?_lcGeoIndice()[k]||null:null; }
+// Los departamentos que el catálogo acepta para ese municipio.
+function _lcGeoAceptados(e){ return e.ok||(Array.isArray(e.dep)?e.dep:[e.dep]); }
+/* ¿Ese departamento corresponde a ese municipio? true / false, o null si el
+   catálogo no conoce el municipio (no se opina). */
+function lcGeoCompatible(muni,depto){
+  var e=_lcGeoEntrada(muni), d=lcGeoDepClave(depto);
+  if(!e||!d) return null;
+  return _lcGeoAceptados(e).some(function(x){ return lcGeoDepClave(x)===d; });
+}
 /* Departamento de un municipio, o '' si no se sabe o es ambiguo.
-   Lo aprendido por el usuario tiene prioridad: conoce su territorio mejor que
-   una tabla embebida, y resuelve además los homónimos de su región. */
+   ⚠️ EL CATÁLOGO MANDA. Lo aprendido solo resuelve lo que el catálogo no conoce
+   (veredas, corregimientos) o un homónimo, y solo si es uno de sus
+   departamentos: así un error guardado una vez no se repite para siempre. */
 function lcGeoDepto(muni){
-  var k=lcGeoNorm(muni); if(!k) return '';
-  var mios=lcGeoAprendidos();
-  if(mios[k]) return mios[k];
+  var k=lcGeoClave(muni); if(!k) return '';
   var e=_lcGeoIndice()[k];
-  if(!e) return '';
-  return Array.isArray(e.dep)?'':e.dep;      // homónimo: no se adivina
+  if(e&&!Array.isArray(e.dep)) return e.dep;
+  var m=lcGeoAprendidos()[k]||'';
+  if(!e) return m;
+  if(!m) return '';                                  // homónimo: no se adivina
+  var dm=lcGeoDepClave(m), hit='';
+  e.dep.forEach(function(x){ if(!hit&&lcGeoDepClave(x)===dm) hit=x; });
+  return hit;
 }
 /* Los departamentos donde existe ese municipio. Con uno solo la app ya
    autocompleta; con varios el formulario los ofrece en un toque en vez de
@@ -15599,36 +15657,109 @@ function lcGeoDepto(muni){
    ⚠️ Ofrecerlos NO es adivinar: elegir sigue siendo un acto del usuario, y lo
    que elija se aprende (`lcGeoRecordar`), así que se pregunta una vez. */
 function lcGeoDeptos(muni){
-  var k=lcGeoNorm(muni); if(!k) return [];
-  var e=_lcGeoIndice()[k];
+  var e=_lcGeoEntrada(muni);
   if(!e) return [];
   return Array.isArray(e.dep)?e.dep.slice():[e.dep];
 }
 // Se aprende del par que el usuario diligencia a mano; no se guarda basura ni
 // se pisa lo que ya se sabía (lo último que escriba el usuario manda).
+// ⚠️ Nunca un par que contradiga el catálogo.
 function lcGeoRecordar(muni,depto){
-  var k=lcGeoNorm(muni), d=String(depto||'').trim();
+  var k=lcGeoClave(muni), d=String(depto||'').trim();
   if(!k||!d||k.length<3) return;
-  var cfg=DB.getConfig(), mios=(cfg.geoPropios&&typeof cfg.geoPropios==='object')?cfg.geoPropios:{};
-  if(mios[k]===d) return;
+  if(lcGeoCompatible(muni,d)===false) return;
+  var cfg=DB.getConfig(), mios=lcGeoAprendidos();
+  if(mios[k]===d&&cfg.geoPropios&&cfg.geoPropios[k]===d) return;
   mios[k]=d; cfg.geoPropios=mios; DB.saveConfig(cfg);
 }
+/* Persona nacida fuera de Colombia: el catálogo no opina (un «San Cristóbal» de
+   Venezuela no es el de Bolívar). */
+function _lcGeoExtranjero(el){
+  var pa=el&&el.dataset&&el.dataset.pais&&document.getElementById(el.dataset.pais);
+  return !!(pa&&String(pa.value||'').trim()&&lcGeoNorm(pa.value)!=='colombia'&&pa.dataset.lcAuto!=='1');
+}
+function _lcGeoPoner(dep,valor){
+  dep.value=valor; dep.dataset.lcAuto=valor?'1':'';
+  if(valor){ dep.classList.add('fi-auto'); setTimeout(function(){ dep.classList.remove('fi-auto'); },1200); }
+}
 /* Inferencia: se llama desde el `oninput` del municipio (mientras el usuario
-   escribe o elige de la lista), que es cuando el foco sigue en el municipio. */
+   escribe o elige de la lista), que es cuando el foco sigue en el municipio.
+   ⚠️ El usuario está CAMBIANDO el municipio, así que el departamento que hay
+   pertenece al anterior: si no corresponde al nuevo, se recalcula aunque lo
+   hubiera escrito él. Un departamento que sí corresponde no se toca. */
 function lcGeoCompletar(el,idDepto){
-  var dep=document.getElementById(idDepto); if(!dep) return;
-  var muni=(el&&el.value||'').trim();
-  if(!muni) return;
-  lcAutoRellenar(dep,lcGeoDepto(muni));
+  var dep=document.getElementById(idDepto); if(!dep||!el) return;
+  var muni=String(el.value||'').trim();
+  if(muni&&!_lcGeoExtranjero(el)){
+    var d=lcGeoDepto(muni), ds=lcGeoDeptos(muni), comp=lcGeoCompatible(muni,dep.value);
+    if(d){ if(!dep.value||comp===false||(comp===null&&dep.dataset.lcAuto==='1')) _lcGeoPoner(dep,d); }
+    else if(ds.length>1){ if(dep.value&&comp===false) _lcGeoPoner(dep,''); }   // homónimo: se pregunta
+    else if(dep.dataset.lcAuto==='1') _lcGeoPoner(dep,'');                     // desconocido: se retira lo de la app
+  } else if(!muni&&dep.dataset.lcAuto==='1') _lcGeoPoner(dep,'');
+  lcGeoAviso(el);
 }
 /* Aprendizaje: se llama desde el `onblur`. Si el departamento lo puso el
    usuario (no la app), ese par pasa a ser catálogo de su jurisdicción. */
 function lcGeoAprender(el,idDepto){
   var dep=document.getElementById(idDepto); if(!dep) return;
   var muni=(el&&el.value||'').trim();
-  if(!muni||!dep.value||dep.dataset.lcAuto==='1') return;
+  if(!muni||!dep.value||dep.dataset.lcAuto==='1'||_lcGeoExtranjero(el)) return;
   lcGeoRecordar(muni,dep.value);
 }
+/* El aviso, en TODOS los pares municipio/departamento de la app (antes solo en
+   el lugar de los hechos de flagrancia): homónimo ⇒ sus departamentos en un
+   toque; departamento que no corresponde ⇒ se dice y se corrige en un toque. */
+function _lcGeoAvisoHtml(muniId,muni,depto){
+  var ds=lcGeoDeptos(muni);
+  if(!ds.length) return '';                       // fuera del catálogo: no se opina
+  var comp=lcGeoCompatible(muni,depto);
+  if(comp===true) return '';
+  if(!String(depto||'').trim()&&ds.length<2) return '';   // lo rellena lcGeoCompletar
+  var msg=ds.length>1&&!String(depto||'').trim()
+    ? 'Hay <b>'+ds.length+'</b> municipios con ese nombre. ¿De qué departamento?'
+    : '<b>'+escHtml(muni)+'</b> no está en «'+escHtml(depto)+'». ¿Cuál es?';
+  return '<div class="lc-geo-hom"><span>'+msg+'</span>'+
+    ds.map(function(d){
+      return '<button type="button" class="lc-geo-op" onclick="lcGeoElegir(\''+escAttr(muniId).replace(/'/g,"\\'")+'\',\''+
+        escAttr(d).replace(/'/g,"\\'")+'\')">'+escHtml(d)+'</button>';
+    }).join('')+'</div>';
+}
+function _lcGeoCaja(el){
+  var id=el.id==='w-muni'?'w-geo-hom':el.id+'-geo';
+  var box=document.getElementById(id); if(box) return box;
+  var dep=document.getElementById(el.dataset.dep); if(!dep) return null;
+  var a=el.parentElement; while(a&&!a.contains(dep)) a=a.parentElement;
+  if(!a) return null;
+  var ref;
+  if(a.matches('.fr,.fr3')) ref=a;
+  else { ref=dep; while(ref.parentElement&&ref.parentElement!==a) ref=ref.parentElement; }
+  box=document.createElement('div'); box.id=id;
+  ref.parentNode.insertBefore(box,ref.nextSibling);
+  return box;
+}
+function lcGeoAviso(el){
+  if(!el||!el.id||!el.dataset||!el.dataset.dep) return;
+  var dep=document.getElementById(el.dataset.dep); if(!dep) return;
+  var html=_lcGeoExtranjero(el)?'':_lcGeoAvisoHtml(el.id,String(el.value||'').trim(),dep.value);
+  var box=html?_lcGeoCaja(el):document.getElementById(el.id==='w-muni'?'w-geo-hom':el.id+'-geo');
+  if(box&&box.innerHTML!==html) box.innerHTML=html;
+}
+function lcGeoElegir(muniId,dep){
+  var em=document.getElementById(muniId); if(!em) return;
+  var ed=document.getElementById(em.dataset.dep); if(!ed) return;
+  ed.value=dep; ed.dataset.lcAuto='';          // lo eligió el usuario, no la app
+  if(em.value) lcGeoRecordar(em.value,dep);
+  lcGeoAviso(em);
+  /* En el lugar de los hechos el municipio decide la jurisdicción: el despacho
+     del paso siguiente se recalcula ahora. */
+  if(muniId==='w-muni'&&typeof collectStep==='function') collectStep();
+}
+// Escribir en el departamento actualiza el aviso de su municipio.
+document.addEventListener('input',function(e){
+  var t=e.target; if(!t||!t.id||(t.dataset&&t.dataset.dep)) return;
+  var m=document.querySelector('[data-dep="'+t.id.replace(/"/g,'')+'"]');
+  if(m) lcGeoAviso(m);
+},true);
 /* ── El departamento SIEMPRE sale del municipio (2026-10-26, punto 3) ────────
    La inferencia vivía solo en el `input` del municipio, así que un municipio
    que llegaba ya escrito —un despacho traído del registro, una captura abierta
@@ -15642,12 +15773,19 @@ function lcGeoAprender(el,idDepto){
    ⚠️ Lo que escribió el usuario no se pisa nunca, y un homónimo (Barbosa) no se
    adivina: sigue preguntándose. */
 function lcGeoCanon(muni){
-  var e=_lcGeoIndice()[lcGeoNorm(muni)];
+  // Solo ortografía («medellin» → «Medellín»); un nombre de uso común
+  // («Bogotá», «Cartagena de Indias») se respeta tal como lo escribió.
+  var e=_lcGeoIndice()[_lcGeoBase(muni)];
   return e?e.nom:String(muni||'').replace(/\s+/g,' ').trim();
 }
 function _lcGeoPonerDep(el){
-  var dep=document.getElementById(el.dataset.dep); if(!dep||dep.value) return;
-  var d=lcGeoDepto(el.value); if(!d) return;
+  var dep=document.getElementById(el.dataset.dep); if(!dep||_lcGeoExtranjero(el)) return;
+  var d=lcGeoDepto(el.value);
+  /* Un departamento que ya es el del catálogo queda marcado como puesto por la
+     app: al repintar se perdía la marca y un cambio de municipio posterior ya
+     no lo recalculaba. */
+  if(dep.value){ if(d&&lcGeoCompatible(el.value,dep.value)===true&&lcGeoDepClave(dep.value)===lcGeoDepClave(d)) dep.dataset.lcAuto='1'; return; }
+  if(!d) return;
   dep.value=d; dep.dataset.lcAuto='1';
   var pa=el.dataset.pais&&document.getElementById(el.dataset.pais);
   if(pa&&!pa.value){ pa.value='Colombia'; pa.dataset.lcAuto='1'; }
@@ -15655,6 +15793,7 @@ function _lcGeoPonerDep(el){
 function lcGeoBarrer(root){
   (root||document).querySelectorAll('input[data-dep]').forEach(function(el){
     if(String(el.value||'').trim()) _lcGeoPonerDep(el);
+    lcGeoAviso(el);
   });
 }
 document.addEventListener('focusout',function(e){
@@ -15663,8 +15802,8 @@ document.addEventListener('focusout',function(e){
   var c=lcGeoCanon(el.value); if(c!==el.value) el.value=c;
   /* ⚠️ Si el foco va justo al departamento no se escribe en él: lo que se
      teclee se concatenaría con la sugerencia (lección de la Ola 2). */
-  if(e.relatedTarget&&e.relatedTarget.id===el.dataset.dep) return;
-  _lcGeoPonerDep(el);
+  if(!(e.relatedTarget&&e.relatedTarget.id===el.dataset.dep)) _lcGeoPonerDep(el);
+  lcGeoAviso(el);
 },true);
 // En el modelo: los pares municipio/departamento de un caso, antes de pintarlo.
 function lcGeoCompletarPar(o,km,kd){
@@ -15723,7 +15862,7 @@ document.addEventListener('focusin',_lcSelAuto,true);
 document.addEventListener('click',_lcSelAuto,true);
 function lcGeoDatalist(){
   var vistos={}, out=[];
-  Object.keys(LC_GEO).forEach(function(n){ if(!vistos[lcGeoNorm(n)]){vistos[lcGeoNorm(n)]=1; out.push(n);} });
+  Object.keys(LC_GEO).forEach(function(n){ if(!vistos[_lcGeoBase(n)]){vistos[_lcGeoBase(n)]=1; out.push(n);} });
   var mios=lcGeoAprendidos();
   Object.keys(mios).forEach(function(k){ if(!vistos[k]){ vistos[k]=1; out.push(k.replace(/(^|\s)\w/g,function(m){return m.toUpperCase();})); } });
   return out.sort();
@@ -15782,7 +15921,7 @@ function lcNacPartes(p){
     muni=q[0]||''; depto=q[1]||''; pais=q[2]||'';
   }
   if(muni&&!depto) depto=lcGeoDepto(muni)||'';
-  if(!pais&&depto&&lcGeoDeptoLista().some(function(d){return lcGeoNorm(d)===lcGeoNorm(depto);})) pais='Colombia';
+  if(!pais&&depto&&lcGeoDeptoLista().some(function(d){return lcGeoDepClave(d)===lcGeoDepClave(depto);})) pais='Colombia';
   return {muni:muni,depto:depto,pais:pais};
 }
 // La línea de una sola casilla (apartado 4 del FPJ-5, acta, dossier).
@@ -15819,10 +15958,9 @@ function lcNacCampos(pre,p){
    puso la propia app (`data-lc-auto`). */
 function lcNacAuto(pre){
   var el=document.getElementById(pre+'-nacMuni'); if(!el) return;
-  var muni=(el.value||'').trim(); if(!muni) return;
-  var dep=lcGeoDepto(muni);
-  lcAutoRellenar(document.getElementById(pre+'-nacDepto'),dep);
-  if(dep) lcAutoRellenar(document.getElementById(pre+'-nacPais'),'Colombia');
+  lcGeoCompletar(el,pre+'-nacDepto');
+  var muni=(el.value||'').trim(); if(!muni||_lcGeoExtranjero(el)) return;
+  if(lcGeoDepto(muni)) lcAutoRellenar(document.getElementById(pre+'-nacPais'),'Colombia');
 }
 function lcNacAprender(pre){ lcGeoAprender(document.getElementById(pre+'-nacMuni'),pre+'-nacDepto'); }
 // Lee los tres campos y compone además la línea de una sola casilla.
@@ -16103,12 +16241,12 @@ function lcDespachoEsDefecto(d,cfg){
 function lcDespJurisdiccion(tipo,lugar,cfg){
   cfg=cfg||DB.getConfig();
   var slot=tipo==='CESPA'?'CESPA':'URI';
-  var muni=lcGeoNorm((lugar&&lugar.muni)||'');
+  var muni=lcGeoClave((lugar&&lugar.muni)||'');
   var mismos=[], otros=[];
   lcDespachos(cfg).forEach(function(d){
     var def=lcDespClaseDef(lcDespClase(d));
     if(!def||def.slot!==slot) return;
-    var m=lcGeoNorm(d.municipio||'');
+    var m=lcGeoClave(d.municipio||'');
     if(!muni||!m||m===muni) mismos.push(d); else otros.push(d);
   });
   return {mismos:mismos, otros:otros, slot:slot, muni:(lugar&&lugar.muni)||''};
@@ -16168,7 +16306,7 @@ function lcJurisdiccionTexto(l){
   l=l||{};
   var m=String(l.muni||'').trim(), d=String(l.depto||'').trim();
   if(!m) return d;
-  if(!d||lcGeoNorm(m)===lcGeoNorm(d)) return m;
+  if(!d||lcGeoClave(m)===lcGeoDepClave(d)) return m;
   return m+', '+d;
 }
 /* Aplica la resolución al caso en curso. Se llama al recolectar el paso del

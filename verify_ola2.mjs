@@ -94,12 +94,16 @@ await page.waitForTimeout(150);
 log(await page.inputValue('#oj-d-dep') === 'Valle del Cauca',
   'Corregir el municipio recalcula el departamento que puso la app');
 
-// Pero nunca pisa lo que escribió el usuario
+// ⚠️ Cambió el 2026-10-27 («Bogotá ⇒ Amazonas»): al CAMBIAR el municipio, un
+// departamento que no le corresponde es del municipio anterior y se recalcula,
+// aunque lo hubiera escrito el usuario. Lo que escribe DESPUÉS no se pisa: se avisa.
 await page.fill('#oj-d-dep', 'ESCRITO A MANO');
 await page.fill('#oj-d-mun', 'Medellín');
 await page.waitForTimeout(150);
-log(await page.inputValue('#oj-d-dep') === 'ESCRITO A MANO',
-  '⚠️ Nunca pisa un departamento escrito por el usuario');
+await page.fill('#oj-d-dep', 'ESCRITO A MANO');
+await page.waitForTimeout(150);
+log(await page.inputValue('#oj-d-dep') === 'ESCRITO A MANO' && /no está en/.test(await page.textContent('#oj-d-mun-geo')),
+  '⚠️ Nunca pisa un departamento escrito por el usuario después del municipio: lo avisa');
 
 // Y lo que el usuario escribe encima de la sugerencia NO se concatena
 await page.fill('#oj-d-dep', '');

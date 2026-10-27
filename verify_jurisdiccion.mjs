@@ -158,8 +158,10 @@ log(!/value="'\+\(l\.depto\|\|'Antioquia'\)\+'"/.test(fuente) && !/l\.muni\|\|'M
 // Homónimo: se ofrece, no se adivina.
 await page.fill('#w-muni', 'Barbosa');
 await page.waitForTimeout(250);
-log(await page.inputValue('#w-depto') === 'Huila',
-  'Con un homónimo la app no pisa lo que ya había (solo se pisa a sí misma)');
+// ⚠️ Cambió el 2026-10-27: Huila era del municipio anterior; bajo Barbosa no
+// corresponde, así que se retira y se pregunta (antes se quedaba debajo).
+log(await page.inputValue('#w-depto') === '',
+  'Con un homónimo, el departamento del municipio anterior se retira y se pregunta');
 await page.evaluate(() => { document.getElementById('w-depto').value = ''; lcGeoHomonimos(); });
 await page.waitForTimeout(150);
 const opsHom = await page.$$eval('#w-geo-hom .lc-geo-op', els => els.map(e => e.textContent.trim()));
@@ -215,8 +217,9 @@ log(/Hay 2 despachos de este tipo en Bogotá D\.C\./.test(blk),
 log(ops.length === 2 && ops.includes('URI Bogotá Kennedy'),
   'Y se muestra la lista de los que hay allí, no la de todo el registro', ops.join(' / '));
 log(!ops.includes('URI Medellín'), 'La URI de otro municipio no se ofrece como si fuera de este');
-log(/Jurisdicción del hecho: Bogotá D.C.[^,]/.test(blk),
-  'Bogotá no sale dos veces: donde el municipio ES el departamento se nombra una sola vez');
+// ⚠️ Desde el 2026-10-27 Bogotá ⇒ Cundinamarca (decisión del usuario).
+log(/Jurisdicción del hecho: Bogotá D.C., Cundinamarca/.test(blk) && !/Bogotá D.C., Bogotá/.test(blk),
+  'Bogotá sale con Cundinamarca, y el municipio no se repite como departamento');
 log(/El NUNC que hay abajo es el de .?URI Medellín.?, de otra jurisdicción/.test(blk),
   '⚠️ Y se avisa de que el NUNC que quedó es el de la jurisdicción anterior: no se borra, se dice de quién es');
 // No se deja avanzar sin elegir.

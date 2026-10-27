@@ -8444,3 +8444,41 @@ flagrancia donde aplica). Misma regla de «Formularios sin saturación». Verifi
 - Suites adaptadas sin bajar lo que protegen: `verify_oj`, `verify_despachos`, `verify_mejora1`,
   `verify_resumen_como`. Anti-caché `?v=157` / `cache-v157`, `_BUILD=157`. Para la app de Play hace
   falta un `.aab` nuevo.
+
+## Municipio ⇒ departamento: el error de «Bogotá ⇒ Amazonas» (2026-10-27, build 158)
+Reportado en campo con un pantallazo de la autoridad solicitante del formulario de orden judicial:
+«Bogotá» con «Amazonas» debajo. Corregido en el motor común (`lcGeo*`), que usan TODOS los pares
+municipio/departamento: lugar de los hechos, lugar de nacimiento de las personas, registro de
+despachos y los cinco del módulo de orden judicial. Verificado con `verify_geo_muni.mjs`
+(**48 checks**, nuevo) y mirando el aviso en los dos temas.
+- **Tres causas, las tres corregidas**: (1) «Bogotá» —como lo escribe todo el mundo— no estaba en
+  el catálogo (solo «Bogotá D.C.»), así que no se recalculaba nada y quedaba el departamento del
+  municipio anterior; (2) ese par equivocado se podía APRENDER (`geoPropios`, también por
+  `ojAprenderGeo`, que aprende cada par al recolectar) y lo aprendido mandaba sobre el catálogo;
+  (3) tras repintar el formulario el departamento perdía la marca «lo puso la app» y un cambio de
+  municipio ya no lo corregía.
+- **`lcGeoClave`** (municipio) y **`lcGeoDepClave`** (departamento): sin tildes, mayúsculas, puntos
+  ni comas («Bogotá, D.C.» = «bogota dc»), con nombres de uso común (`LC_GEO_ALIAS`: Bogotá, Santa
+  Fe de Bogotá, Cartagena de Indias, San José de Cúcuta, Santiago de Cali, Mompós…) y formas cortas
+  de departamento (`LC_DEP_ALIAS`: Valle, Guajira, San Andrés…). ⚠️ `lcGeoNorm` NO cambió: la usan
+  también los delitos y el buscador de personas.
+- ⚠️ **Bogotá ⇒ Cundinamarca por decisión del usuario** (`LC_GEO_PREF`), y «Bogotá D.C.» como
+  departamento se sigue aceptando sin aviso. La lista de 33 departamentos no cambió.
+- **El catálogo manda** (`lcGeoDepto`): lo aprendido solo resuelve lo que el catálogo no conoce o
+  un homónimo, y solo con uno de sus departamentos. `lcGeoAprendidos` filtra al leer lo que
+  contradice el catálogo y `lcGeoRecordar` no lo guarda: un «bogota ⇒ Amazonas» ya guardado deja
+  de usarse y se limpia en el siguiente guardado.
+- **Cambiar el municipio recalcula el departamento** (`lcGeoCompletar`) si el que hay no le
+  corresponde, aunque lo hubiera escrito el usuario: es del municipio anterior. Homónimo ⇒ se
+  retira y se pregunta; desconocido ⇒ se retira solo lo que puso la app. ⚠️ Un departamento escrito
+  DESPUÉS del municipio no se pisa: se avisa. ⚠️ Persona nacida fuera de Colombia (país distinto)
+  ⇒ el catálogo no opina (`_lcGeoExtranjero`: «San Cristóbal» de Táchira no es el de Bolívar).
+- **El aviso es el mismo en todos los formularios** (`lcGeoAviso`, `_lcGeoAvisoHtml`, caja
+  `<id-municipio>-geo` que se inserta sola tras el par; en flagrancia sigue siendo `#w-geo-hom`):
+  homónimo ⇒ sus departamentos en un toque; par incompatible ⇒ «X no está en Y» con la corrección
+  en un toque (`lcGeoElegir`). Se pinta al abrir el formulario (`lcGeoBarrer`), al escribir en
+  cualquiera de los dos campos y al salir del municipio. Antes solo existía en el lugar de los hechos.
+- Los despachos se comparan por `lcGeoClave`: uno registrado como «Bogotá» se ofrece para una
+  captura en «Bogotá D.C.».
+- Adaptados (eran el comportamiento corregido): `verify_jurisdiccion` [19] y [33], `verify_ola2` [10].
+- Anti-caché `?v=158` / `cache-v158`, `_BUILD=158`. Para la app de Play hace falta un `.aab` nuevo.
