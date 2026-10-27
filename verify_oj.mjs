@@ -294,10 +294,12 @@ await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
 const reloj = await page.evaluate(() => ({
   enPaso: /Término de 36 horas/.test(document.getElementById('wz-panels').textContent),
   calcula: !!ojPlazo36(wc).vence,
-  enRevision: /36 h/.test(ojPlazoBarraHtml())
+  // ⚠️ 2026-10-26: la barra de la revisión también se retiró (era información
+  // repetida); el término se imprime en el oficio y avisa como V24/V25.
+  barra: typeof ojPlazoBarraHtml !== 'undefined'
 }));
-log(!reloj.enPaso && reloj.calcula && reloj.enRevision,
-  'El reloj de 36 horas se calcula y se ve en la revisión, no en el paso de materialización');
+log(!reloj.enPaso && reloj.calcula && !reloj.barra,
+  'El reloj de 36 horas se calcula (va al oficio) sin ocupar pantalla en el paso ni en la revisión');
 
 /* ⚠️ Mejora 3 (obs. 4 y 5): el bloque «Actuación policial» y el de elementos
    incautados desaparecieron. Queda el relato y la comprobación de los anexos. */
@@ -323,13 +325,17 @@ log(await page.isVisible('#oj-x-nom'), 'Paso 4 · revisión y puesta a disposici
 await page.evaluate(() => document.querySelectorAll('#wz-panels details').forEach(d => d.open = true));
 
 /* ── Mejora 2, obs. 1: ¿a quién se remite el informe? ─────────────────────── */
-const viaUI = await page.evaluate(() => ({
-  botones: [...document.querySelectorAll('.oj-via')].map(b => b.querySelector('b').textContent),
-  marcada: (document.querySelector('.oj-via.on') || {}).textContent || '',
-  via: wc.oj.destino.via
-}));
+// ⚠️ 2026-10-26: es una lista desplegable (antes, dos botones grandes).
+const viaUI = await page.evaluate(() => {
+  const sel = document.getElementById('oj-x-via');
+  return {
+    botones: sel ? [...sel.options].filter(o => o.value).map(o => o.textContent) : [],
+    marcada: sel ? sel.options[sel.selectedIndex].textContent : '',
+    via: wc.oj.destino.via
+  };
+});
 log(viaUI.botones.join(',') === 'Fiscalía,Juzgado',
-  'La app pregunta a quién va dirigido el informe: Fiscalía o Juzgado', viaUI.botones.join(' / '));
+  'La app pregunta a quién va dirigido el informe, en una lista: Fiscalía o Juzgado', viaUI.botones.join(' / '));
 log(viaUI.via === 'JUZGADO' && /Juzgado/.test(viaUI.marcada),
   'Y la propone según la regla: captura por condena → el juzgado que libró la orden', viaUI.via);
 const sugerido = await page.inputValue('#oj-x-nom');
@@ -356,22 +362,28 @@ log(dirVuelve === 'Palacio de Justicia, oficina 301',
   'La dirección del juzgado (que el formato no recoge) vuelve al despacho y queda reutilizable', dirVuelve);
 // Encabezado, custodia y firma llegan solos desde Ajustes: el usuario que sí
 // configuró su equipo no vuelve a escribirlos.
-log((await page.inputValue('#oj-e-uni')) === 'UNIDAD DE PRUEBA' &&
-    (await page.inputValue('#oj-e-dep')) === 'DEPENDENCIA DE PRUEBA',
-  'La unidad y la dependencia se cargan de Ajustes');
-log((await page.inputValue('#oj-c-est')) === 'Estación de Prueba Custodia' &&
-    (await page.inputValue('#oj-c-cor')) === 'custodia@prueba.test',
-  'El lugar de custodia se carga de Ajustes y se puede cambiar aquí');
-log((await page.inputValue('#oj-f-nom')) === 'Nombre Firmante' &&
-    (await page.inputValue('#oj-f-car')) === 'Integrante patrulla de vigilancia',
-  'La firma se carga del perfil activo');
-/* ⚠️ Mejora 3 (obs. 7): el fundamento de la propuesta pasó a un plegable dentro
-   del bloque del destinatario — es justificación, no acción, y era parte de lo
-   que sepultaba la decisión. Sigue citado y a un toque. */
+/* ⚠️ 2026-10-26: el bloque «Encabezado, custodia y firma» salió de la revisión
+   (está en Ajustes y en Perfil). Lo que se mide ahora es que siguen llegando
+   SOLOS al caso, sin pasar por el formulario. */
+const delEquipo = await page.evaluate(() => {
+  ojCollect();
+  const e = wc.oj.encabezado, cu = wc.oj.custodia, fi = wc.oj.firma;
+  return { uni: e.unidad, dep: e.dependencia, est: cu.estacion, cor: cu.correo, nom: fi.nombre, car: fi.cargo,
+    campos: ['oj-e-uni', 'oj-c-est', 'oj-f-nom'].filter(id => !!document.getElementById(id)) };
+});
+log(delEquipo.campos.length === 0, 'Paso 4 · sin membrete, custodia ni firma en el formulario', delEquipo.campos.join(',') || 'ninguno');
+log(delEquipo.uni === 'UNIDAD DE PRUEBA' && delEquipo.dep === 'DEPENDENCIA DE PRUEBA',
+  'La unidad y la dependencia llegan de Ajustes');
+log(delEquipo.est === 'Estación de Prueba Custodia' && delEquipo.cor === 'custodia@prueba.test',
+  'El lugar de custodia llega de Ajustes');
+log(delEquipo.nom === 'Nombre Firmante' && delEquipo.car === 'Integrante patrulla de vigilancia',
+  'La firma llega del perfil activo');
+/* ⚠️ 2026-10-26: «Por qué se propone este destinatario» se retiró del
+   formulario; la regla aplicada se sigue guardando en el caso (abajo). */
 const panel7 = await page.textContent('#wz-panels');
-log(/Por qué se propone este destinatario/.test(panel7) && /C-042 de 2018/.test(panel7),
-  'La propuesta muestra su fundamento legal citado, a un toque del destinatario');
-log(/Faltan datos obligatorios/.test(panel7) === false, 'Sin validaciones duras pendientes al completar el formulario');
+log(!/Por qué se propone este destinatario/.test(panel7),
+  'El formulario no repite el fundamento del destinatario propuesto');
+log(/Faltan datos/.test(panel7) === false, 'Sin validaciones duras pendientes al completar el formulario');
 
 /* ─────────── 5. Guardado y espejo para las pantallas compartidas ─────────── */
 await page.click('button[onclick="wizSave()"]');
@@ -394,6 +406,10 @@ log(guardado.docSinPuntos === '1234567890', 'El número de documento se guarda s
 log(!!guardado.vigencia, 'La vigencia calculada se persiste con el caso', guardado.vigencia);
 log(/^R4-/.test(guardado.regla), 'La regla aplicada queda registrada para trazabilidad', guardado.regla);
 
+// ⚠️ 2026-10-26: guardar abre el expediente de la captura (el oficio se genera ahí).
+log(await page.evaluate(() => document.getElementById('screen-dossier').classList.contains('on') && _dosCasoId === DB.getCases()[0].id),
+  'Guardar abre el expediente de la captura, donde está el oficio');
+await page.evaluate(() => go('capturas'));
 const listaTxt = await page.textContent('#cl');
 log(/PRIMERAPELLIDO/.test(listaTxt), 'La captura aparece en la lista sin tocar el código de flagrancia');
 
@@ -740,7 +756,8 @@ const incompleto = await page.evaluate((id) => {
   const duras = ojDuras(DB.getCase(id));
   return {
     id: id, abierto: document.getElementById('modal').classList.contains('open'),
-    lineas: (txt.match(/Paso \d/g) || []).length, duras: duras.length,
+    // ⚠️ 2026-10-26: agrupadas por paso; se cuenta cada falta, no cada grupo.
+    lineas: document.querySelectorAll('#modal-c .oj-av-it').length, duras: duras.length,
     primerPaso: duras[0].paso, descargas: window.__dl
   };
 }, semilla.id);
@@ -902,12 +919,13 @@ const paso7 = await page.evaluate(async () => {
   return {
     // ⚠️ La app NO pide logo: el escudo del formato viene embebido.
     pideLogo: !!document.getElementById('oj-e-logo-file'),
-    blurDep: (document.getElementById('oj-e-dep') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0,
-    blurCust: (document.getElementById('oj-c-est') || {}).outerHTML.indexOf('ojCompletarEstacion') >= 0
+    // ⚠️ 2026-10-26: los campos de estación salieron de la revisión (están en
+    // Ajustes); el tipo de dependencia lo completa el oficio al imprimir (arriba).
+    campos: ['oj-e-dep', 'oj-c-est'].filter(id => !!document.getElementById(id)).length
   };
 });
 log(paso7.pideLogo === false, 'La pantalla de revisión NO pide logo: el escudo del formato viene embebido y se pone solo');
-log(paso7.blurDep && paso7.blurCust, 'Los dos campos de estación completan el tipo al salir del campo');
+log(paso7.campos === 0, 'Ni vuelve a pedir la dependencia ni la estación: vienen de Ajustes');
 
 const cargado = await page.evaluate(async () => {
   const c = ojNuevoCaso();

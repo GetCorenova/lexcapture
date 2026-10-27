@@ -399,7 +399,8 @@ console.log('\n══ Lo que NO podia romperse ══');
 const intacto = await page.evaluate(() => ({
   // Los motores que son el activo del modulo, sin tocar.
   vigencia: typeof ojVigencia === 'function',
-  plazo: typeof ojPlazo36 === 'function' && typeof ojPlazoBarraHtml === 'function',
+  // ⚠️ 2026-10-26: la barra de la revisión se retiró; el cálculo del término sigue.
+  plazo: typeof ojPlazo36 === 'function',
   destino: typeof ojResolverDestino === 'function',
   jornada: (DB.getConfig().ojJornadaIni || '') === '08:00',
   // El escudo del oficio se sigue poniendo solo.

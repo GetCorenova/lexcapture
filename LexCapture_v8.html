@@ -1833,20 +1833,20 @@ body.cu-on{overflow:hidden}
 .oj-sem.ok{background:var(--ok-bg);color:var(--ok)}
 .oj-sem.alerta{background:var(--warn-bg);color:var(--warn)}
 .oj-sem.urgente,.oj-sem.vencido{background:var(--errB);color:var(--danger)}
-/* Selector de destinatario del informe: Fiscalía / Juzgado (Mejora 2, obs. 1).
-   Botones grandes, no un <select>: es UNA decisión y cambia el encabezado del
-   documento, así que tiene que verse cuál está elegida sin desplegar nada. */
-.oj-vias{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.oj-via{
-  flex:1 1 140px;min-width:130px;text-align:left;cursor:pointer;
-  background:var(--surface-3);border:1.5px solid var(--border);border-radius:var(--radius-sm);
-  padding:10px 12px;color:var(--text-2);transition:border-color var(--d2) var(--ease),background var(--d2) var(--ease)
-}
-.oj-via b{display:block;font-size:14px;font-weight:600;color:var(--text)}
-.oj-via small{display:block;font-size:12px;line-height:1.35;color:var(--text-3);margin-top:2px}
-.oj-via.on{background:var(--ojB);border-color:var(--oj)}
-.oj-via.on b{color:var(--oj-2)}
-.oj-via:active{background:var(--pressed)}
+/* Aviso de UNA línea (vigencia de la orden, 2026-10-26): texto y, si hace falta,
+   un botón a la derecha. Sustituye a los cuadros de cuatro renglones. */
+.oj-aviso{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:var(--radius-sm);
+  padding:9px 12px;margin-bottom:10px;font-size:13px;line-height:1.45;border:1px solid;color:var(--text)}
+.oj-aviso>span{flex:1 1 180px}
+.oj-aviso .btn{flex:none;min-height:32px}
+.oj-aviso.dura{background:var(--errB);border-color:var(--danger)}
+.oj-aviso.dura b{color:var(--danger)}
+.oj-aviso.blanda{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.oj-aviso.blanda b{color:var(--warn)}
+.oj-aviso.ok{background:var(--ok-bg);border-color:color-mix(in srgb,var(--ok) 35%,transparent)}
+.oj-aviso.ok b{color:var(--ok)}
+/* A quién se remite el informe: lista desplegable (2026-10-26, antes dos botones). */
+.oj-via-sel{margin-bottom:12px;font-weight:600}
 .oj-kv{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)}
 .oj-kv:last-child{border-bottom:0}
 .oj-kv span:first-child{color:var(--text-3);flex:0 0 auto}
@@ -1947,14 +1947,19 @@ body.cu-on{overflow:hidden}
 .oj-estado-it{padding:6px 13px 0;font-size:13px;line-height:1.5;color:var(--text)}
 .oj-estado-it:last-child{padding-bottom:12px}
 
-/* El plazo constitucional, en un renglón (el cuadro completo vive en el paso 3). */
-.oj-plazo{
-  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
-  padding:9px 13px;border-radius:var(--radius-sm);border:1px solid var(--border);
-  background:var(--surface-2);font-size:13px;color:var(--text-2);margin-bottom:10px;
-}
-.oj-plazo.dura{border-color:var(--danger);background:var(--errB)}
-.oj-plazo.blanda{border-color:color-mix(in srgb,var(--warn) 35%,transparent);background:var(--warn-bg)}
+/* Faltas y advertencias agrupadas por el sitio donde se corrigen (2026-10-26):
+   un subtítulo por grupo con su botón «Ir» y una frase por aviso. */
+.oj-estado>summary small{font-size:12px;font-weight:400;color:var(--text-3)}
+.oj-av{padding:0 13px 10px}
+.oj-av-gr{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--border) 70%,transparent)}
+.oj-av-gr:first-child{border-top:0;padding-top:2px}
+.oj-av-hd{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  font-size:12px;font-weight:600;color:var(--text-2);margin-bottom:4px}
+.oj-av-ir{flex:none;border:1px solid var(--border);background:var(--surface-1);color:var(--text);
+  border-radius:999px;font:inherit;font-size:12px;font-weight:600;padding:4px 12px;min-height:30px;cursor:pointer}
+.oj-av-ir:active{background:var(--pressed)}
+.oj-av-it{position:relative;padding:3px 0 3px 14px;font-size:13px;line-height:1.45;color:var(--text)}
+.oj-av-it::before{content:"";position:absolute;left:3px;top:10px;width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.45}
 
 /* Destinatario del informe: el bloque por el que existe la pantalla. Se le da
    el peso visual que tiene en el procedimiento — borde de acento del módulo,
@@ -1967,7 +1972,6 @@ body.cu-on{overflow:hidden}
   font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;
   display:flex;align-items:center;
 }
-.oj-dest .oj-vias{margin-bottom:12px}
 .oj-dest-box{
   background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-sm);
   padding:12px 14px;margin-bottom:10px;
@@ -3178,7 +3182,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 155;
+var _BUILD = 156;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -7105,6 +7109,15 @@ function rStep6(){
        es la misma clase de ruido que la nota de verificación del módulo OJ. */
 }
 
+/* ── Paso «Servidor» ────────────────────────────────────────────────────────
+   ⚠️ Resumido el 2026-10-26 (mismo criterio que la revisión de orden judicial):
+   los siete datos del servidor son los del PERFIL, así que pedirlos otra vez en
+   cada captura era ruido. Arriba se ve en una tarjeta quién firma el informe; los
+   campos siguen en el DOM, plegados en «Corregir para este informe» (abierto si
+   falta el nombre), con los MISMOS ids que lee `collectStep` — plegar no es
+   borrar. El FPJ-5 sale igual.
+   El botón «Generar oficio» de las capturas de orden judicial del formato
+   anterior también se fue: el oficio sale del expediente, como en el módulo. */
 function rStep7(){
   var cfg=DB.getConfig();
   var defServ=lcServidorDefecto(cfg);      // incluye la entidad por defecto del perfil
@@ -7113,41 +7126,50 @@ function rStep7(){
      con el campo vacío si el equipo ya la configuró (observación 10). */
   if(s&&!s.entidad&&defServ.entidad) s=Object.assign({},s,{entidad:defServ.entidad});
   var hasPerfiles=cfg.perfiles&&cfg.perfiles.length;
-  var ojHtml='';
-  if(wc&&wc.tipo==='OJ'){
-    /* Una salida única, la misma que la tarjeta de la captura y la de envío.
-       El oficio lo genera siempre el módulo con su formato oficial: por eso se
-       retiró la vía de «Disposición» por plantilla subida, que para este mismo
-       caso ofrecía un SEGUNDO documento con el formato anterior — dos papeles
-       distintos para un mismo procedimiento es exactamente lo que un despacho
-       judicial no debe recibir. */
-    ojHtml='<div class="st" style="margin-top:16px">Documentos OJ</div>'+
-      '<button class="btn bp bbl" onclick="ojDescargarOficio(wc)">Generar oficio de puesta a disposición</button>';
-  }
   return '<div class="st" style="margin-top:0">Servidor que efectúa la captura</div>'+
-    (hasPerfiles?'<button class="btn bs bsm mb16" onclick="loadPerfilServ()">Cargar perfil activo</button>':
-     (cfg.servidor&&cfg.servidor.nombre?'<button class="btn bs bsm mb16" onclick="loadDefServ()">Usar datos guardados</button>':''))+
-    /* ⚠️ EL SERVIDOR ES EL PADRE (auditoría 2026-09-01): su nombre encabeza y
-       los seis restantes son atributos SUYOS —su grado, su cédula, su entidad,
-       su cargo, su teléfono y su correo—. En la lista plana anterior «Entidad»
-       podía leerse como la del caso y no como la del funcionario que firma. */
-    '<div class="fg"><label class="fl fl-p">Nombres y apellidos</label><input class="fi" id="w-sNombre" value="'+escAttr(s.nombre)+'"></div>'+
-    lcAtribs(
-      '<div class="fr"><div class="fg"><label class="fl">Grado</label>'+lcGradoInput('w-sGrado',s.grado)+'</div>'+
-      '<div class="fg"><label class="fl">Identificación</label><input class="fi mono" id="w-sId" value="'+escAttr(s.ident)+'"></div></div>'+
-      '<div class="fg"><label class="fl">Entidad</label><input class="fi" id="w-sEntidad" placeholder="Nombre de la institución" value="'+escAttr(s.entidad)+'"></div>'+
-      '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="w-sCargo" value="'+escAttr(s.cargo)+'"></div>'+
-      '<div class="fr"><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="w-sTel" value="'+escAttr(s.tel)+'"></div>'+
-      '<div class="fg"><label class="fl">Correo</label><input class="fi" id="w-sCorreo" value="'+escAttr(s.correo)+'"></div></div>'
-    )+
-    ojHtml;
+    '<div id="w-serv-res">'+lcServResumenHtml(s)+'</div>'+
+    '<details class="oj-mas oj-dest-mas"'+(s.nombre?'':' open')+' oninput="lcServResumenPintar()">'+
+      '<summary>Corregir para este informe <small>— solo afecta a esta captura</small></summary>'+
+      (hasPerfiles?'<button class="btn bs bsm mb16" onclick="loadPerfilServ()">Cargar perfil activo</button>':
+       (cfg.servidor&&cfg.servidor.nombre?'<button class="btn bs bsm mb16" onclick="loadDefServ()">Usar datos guardados</button>':''))+
+      /* ⚠️ EL SERVIDOR ES EL PADRE (auditoría 2026-09-01): su nombre encabeza y
+         los seis restantes son atributos SUYOS. */
+      '<div class="fg"><label class="fl fl-p">Nombres y apellidos</label><input class="fi" id="w-sNombre" value="'+escAttr(s.nombre)+'"></div>'+
+      lcAtribs(
+        '<div class="fr"><div class="fg"><label class="fl">Grado</label>'+lcGradoInput('w-sGrado',s.grado)+'</div>'+
+        '<div class="fg"><label class="fl">Identificación</label><input class="fi mono" id="w-sId" value="'+escAttr(s.ident)+'"></div></div>'+
+        '<div class="fg"><label class="fl">Entidad</label><input class="fi" id="w-sEntidad" placeholder="Nombre de la institución" value="'+escAttr(s.entidad)+'"></div>'+
+        '<div class="fg"><label class="fl">Cargo</label><input class="fi" id="w-sCargo" value="'+escAttr(s.cargo)+'"></div>'+
+        '<div class="fr"><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="w-sTel" value="'+escAttr(s.tel)+'"></div>'+
+        '<div class="fg"><label class="fl">Correo</label><input class="fi" id="w-sCorreo" value="'+escAttr(s.correo)+'"></div></div>'
+      )+
+    '</details>';
+}
+/* Tarjeta de quién firma: el mismo patrón «dato resuelto con su procedencia» del
+   destinatario del oficio (`.oj-dest-box`). */
+function lcServResumenHtml(s){
+  s=s||{};
+  if(!s.nombre) return '<div class="oj-dest-box falta">Sin servidor: créalo en Perfil o escríbelo abajo.</div>';
+  var p=ojPerfilActivo(DB.getConfig());
+  var dePerfil=p.nombre&&lcNormNom(p.nombre)===lcNormNom(s.nombre);
+  var linea=[s.cargo,s.entidad].filter(Boolean).join(' · ');
+  return '<div class="oj-dest-box">'+
+    '<div class="oj-dest-nom">'+escHtml([s.grado,s.nombre].filter(Boolean).join(' '))+'</div>'+
+    (linea?'<div class="oj-dest-dir">'+escHtml(linea)+'</div>':'')+
+    '<div class="oj-dest-src">'+(dePerfil?'De tu perfil':'Escrito para esta captura')+'</div>'+
+  '</div>';
+}
+function lcServResumenPintar(){
+  var d=document.getElementById('w-serv-res'); if(!d) return;
+  var v=function(id){ var e=document.getElementById(id); return e?e.value.trim():''; };
+  d.innerHTML=lcServResumenHtml({nombre:v('w-sNombre'),grado:v('w-sGrado'),cargo:v('w-sCargo'),entidad:v('w-sEntidad')});
 }
 
 function loadDefServ(){
   var s=DB.getConfig().servidor||{};
   [['sGrado','grado'],['sId','ident'],['sNombre','nombre'],['sEntidad','entidad'],['sCargo','cargo'],['sTel','tel'],['sCorreo','correo']].forEach(function(m){
     var el=document.getElementById('w-'+m[0]); if(el&&s[m[1]]) el.value=s[m[1]];
-  }); toast('Datos cargados');
+  }); lcServResumenPintar(); toast('Datos cargados');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -13119,7 +13141,7 @@ async function abrirActaIncautacion(id) {
 }
 /* El bloque de «quién firma». Se repinta SOLO a sí mismo al cambiar de origen:
    volver a renderizar el modal entero borraría las observaciones que el
-   funcionario esté escribiendo (misma regla que `ojRefrescarFirmaWiz`). */
+   funcionario esté escribiendo (misma regla que `rtCambiarFirmante`). */
 function aiFirmanteHtml(f) {
   var co = ccCompanero(), p = ccPerfilActivo(), d = aiFirmanteDatos(f);
   var opts = [
@@ -15181,9 +15203,6 @@ async function fwGuardar(id){
   try{ await DB.saveFirma(id,f); }
   catch(e){ toast('No se pudo guardar la firma — inténtalo de nuevo'); return false; }
   closeModal(); renderPerfilScreen();
-  // Se puede firmar SIN salir del procedimiento: si el wizard está abierto, su
-  // bloque de firma refleja el trazo nuevo al instante.
-  try{ ojRefrescarFirmaWiz(); }catch(_){}
   toast('Firma guardada ✓');
   return true;
 }
@@ -15192,7 +15211,6 @@ async function fwEliminar(id){
   try{ await DB.delFirma(id); }
   catch(e){ toast('No se pudo eliminar la firma — inténtalo de nuevo'); return; }
   closeModal(); renderPerfilScreen();
-  try{ ojRefrescarFirmaWiz(); }catch(_){}
   toast('Firma eliminada');
 }
 /* Firma que le corresponde a un oficio concreto.
@@ -15222,24 +15240,6 @@ function lcFirmaDe(nombre,cfg){
   if(reg) return null;
   var act=ojPerfilActivo(cfg);
   return act.id?DB.getFirma(act.id):null;
-}
-/* ¿De quién es la firma que va a salir y por qué? Lo usa el paso de revisión
-   para enseñarlo ANTES de generar: una firma que se pone sola tiene que verse,
-   o es indistinguible de una que no se puso. */
-function lcFirmaResuelta(nombre,cfg){
-  cfg=cfg||DB.getConfig();
-  var f=lcFirmaDe(nombre,cfg), act=ojPerfilActivo(cfg), n=lcNormNom(nombre);
-  var reg=null;
-  if(n) (cfg.perfiles||[]).forEach(function(p){ if(!reg&&lcNormNom(p.nombre)===n) reg=p; });
-  return {
-    firma:f,
-    perfil:act,
-    hayPerfil:!!act.id,
-    // El nombre impreso es el del dueño del equipo (aunque esté tecleado distinto).
-    propia:!!f&&(!reg||reg.id===act.id),
-    // Otro perfil de este equipo: firma la suya o queda en blanco, nunca la del dueño.
-    otroPerfil:!!reg&&reg.id!==act.id?reg:null
-  };
 }
 function lcNormNom(s){
   return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'')
@@ -15427,6 +15427,7 @@ function loadPerfilServ() {
      lcServidorDefecto, para que el botón y el prellenado no discrepen. */
   var ent=document.getElementById('w-sEntidad');
   if(ent) ent.value=p.entidad||(cfg.servidor&&cfg.servidor.entidad)||ent.value||cfg.ojInstitucion||'';
+  lcServResumenPintar();
   toast('Perfil cargado ✓');
 }
 
@@ -16558,13 +16559,9 @@ function renderAjConocieron(cfg){
   el.textContent='Se toman de Perfil (titular y compañero de patrulla).';
 }
 
-/* Completa el tipo de dependencia AL SALIR DEL CAMPO, no en silencio al
-   imprimir: el usuario ve exactamente lo que va a salir y puede corregirlo. */
-function ojCompletarEstacion(el,caps){
-  if(!el) return;
-  var v=ojEstacionLabel(el.value,caps);
-  if(v&&v!==el.value) el.value=v;
-}
+/* ⚠️ ojCompletarEstacion se retiró (2026-10-26): completaba el tipo de
+   dependencia en los campos de estación de la revisión, que salieron del
+   formulario. El oficio lo sigue completando al imprimir (ojEstacionLabel). */
 
 function saveAjustes() {
   function v(id){var el=document.getElementById(id);return el?el.value:'';}
@@ -17796,77 +17793,81 @@ function ojCambiarVia(v){
 function ojValidar(c){
   var v=[], o=c.oj.orden, d=c.oj.despacho, pr=c.oj.proceso, r=c.oj.requerido,
       dl=c.oj.diligencia, ac=c.oj.actuacion, de=c.oj.destino;
-  function add(id,nivel,paso,msg){ v.push({id:id,nivel:nivel,paso:paso,msg:msg}); }
+  /* `ir` dice DÓNDE se corrige cuando no es un paso del formulario: 'ajustes'
+     o 'perfil' (V26–V31, desde que su bloque salió de la revisión). */
+  function add(id,nivel,paso,msg,ir){ v.push({id:id,nivel:nivel,paso:paso,msg:msg,ir:ir||''}); }
   var vig=ojVigencia(o);
+  /* ⚠️ Mensajes de una frase, de 110 caracteres como mucho (2026-10-26): se leen
+     agrupados bajo el sitio donde se corrigen, así que no repiten el paso ni
+     citan el fundamento entero. */
 
   /* ── Numeral 2 · datos del proceso judicial ──
      ⚠️ V01 pasó de DURA a BLANDA con Mejora 2. La verificación de vigencia se
-     conserva intacta (ojVigencia) y la orden vencida se advierte por partida
-     triple —cuadro rojo en el paso, banner en la revisión y confirmación
-     obligatoria antes de generar (ojConfirmarVigencia)—, pero ya no puede
-     bloquear: al retirarse el apartado de prórroga (obs. 4) un bloqueo duro
-     dejaba al funcionario sin ninguna salida y sin poder documentar por escrito
-     el procedimiento que acaba de realizar. */
+     conserva intacta (ojVigencia) y la orden vencida se advierte en el paso 2,
+     en la revisión y en la confirmación obligatoria antes de generar
+     (ojConfirmarVigencia), pero ya no puede bloquear: al retirarse el apartado
+     de prórroga (obs. 4) un bloqueo duro dejaba al funcionario sin ninguna
+     salida y sin poder documentar por escrito el procedimiento realizado. */
   if(!o.numero) add('V02','DURA',OJ_PANT.orden,'Falta el número de la orden de captura.');
-  if(!o.fechaExpedicion) add('V03','DURA',OJ_PANT.orden,'Falta la fecha de expedición de la orden: sin ella no se puede calcular su vigencia.');
+  if(!o.fechaExpedicion) add('V03','DURA',OJ_PANT.orden,'Falta la fecha de expedición de la orden: sin ella no se calcula su vigencia.');
   if(!o.finalidad) add('V04','DURA',OJ_PANT.orden,'Falta el motivo de la captura: de él dependen el destinatario y la ruta procesal.');
-  else if(o.finalidad==='OTRA'&&!o.finalidadOtra) add('V04b','DURA',OJ_PANT.orden,'Elegiste «Otro motivo»: escribe cuál, tal como lo expresa la orden. Es lo que imprime el numeral 2 del informe.');
-  if(vig.estado==='VENCIDA') add('V01','BLANDA',OJ_PANT.orden,'⚠️ La orden está VENCIDA (venció el '+ojFechaCorta(vig.hasta)+'). Capturar con orden vencida obliga a la libertad inmediata (CSJ AP4491-2016): da aviso inmediato y por escrito a la autoridad que la libró y a la Fiscalía.');
+  else if(o.finalidad==='OTRA'&&!o.finalidadOtra) add('V04b','DURA',OJ_PANT.orden,'Elegiste «Otro motivo»: escribe cuál, tal como lo expresa la orden.');
+  if(vig.estado==='VENCIDA') add('V01','BLANDA',OJ_PANT.orden,'La orden figura VENCIDA desde el '+ojFechaCorta(vig.hasta)+'.');
   else if(vig.estado==='CANCELADA') add('V01b','DURA',OJ_PANT.orden,'La orden figura CANCELADA: no puede sustentar una puesta a disposición.');
-  else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',OJ_PANT.orden,'La orden figura SUSPENDIDA: verifica su estado con el despacho antes de generar el informe.');
+  else if(vig.estado==='SUSPENDIDA') add('V01c','DURA',OJ_PANT.orden,'La orden figura SUSPENDIDA: verifica su estado con el despacho.');
   else if(vig.estado==='POR_VENCER') add('V01d','BLANDA',OJ_PANT.orden,'La orden vence en '+vig.dias+' día(s) ('+ojFechaCorta(vig.hasta)+').');
   /* ⚠️ V17 («sin hora de verificación») se retiró con Mejora 3 (obs. 2): la hora
      de la verificación ya no se teclea, se deriva de la diligencia — advertir de
      un dato que la app pone sola es ruido puro. */
   // Autoridad solicitante = despacho que libró la orden (numeral 2, dato 8).
-  if(!d.nombre) add('V05','DURA',OJ_PANT.despacho,'Falta la autoridad solicitante (el despacho que libró la orden): es el dato 8 del numeral 2 del informe.');
+  if(!d.nombre) add('V05','DURA',OJ_PANT.despacho,'Falta la autoridad solicitante (el despacho que libró la orden).');
   if(!(pr.delitos||[]).length) add('V07','BLANDA',OJ_PANT.proceso,'No se registró ningún delito: el art. 298 CPP exige que la orden lo indique.');
   if(!pr.radicado) add('V18','BLANDA',OJ_PANT.proceso,'Falta el SPOA (radicado del proceso) transcrito de la orden.');
 
-  // Paso 4 — el requerido
+  // El requerido
   if(!r.priNom||!r.priApe) add('V08','DURA',OJ_PANT.requerido,'Falta el nombre completo del requerido.');
-  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') add('V09','DURA',OJ_PANT.requerido,'Falta el número de documento del requerido. Si no portaba documento, marca «Sin documento» e indica el método de identificación.');
-  if(!r.identidadMetodo) add('V10','BLANDA',OJ_PANT.requerido,'No se indicó cómo se confirmó la identidad. Es la verificación central en una captura por orden judicial (riesgo de homonimia).');
+  if(!r.numDoc&&r.tipoDoc!=='SIN_DOC') add('V09','DURA',OJ_PANT.requerido,'Falta el número de documento. Si no lo portaba, marca «Sin documento».');
+  if(!r.identidadMetodo) add('V10','BLANDA',OJ_PANT.requerido,'No se indicó cómo se confirmó la identidad (riesgo de homonimia).');
   var edad=ojEdadEnHechos(c);
-  if(edad!==null&&edad<14) add('V11','DURA',OJ_PANT.requerido,'El requerido tenía '+edad+' años al momento de los hechos: es menor de 14 y no es responsable penalmente. No procede este informe; corresponde ruta de protección.');
-  else if(ojEsAdolescente(c)) add('V12','BLANDA',OJ_PANT.requerido,'El requerido era adolescente al momento de los hechos: el documento usa «aprehensión» y el destino es el sistema de adolescentes. Debe avisarse a la defensoría de familia.');
+  if(edad!==null&&edad<14) add('V11','DURA',OJ_PANT.requerido,'Tenía '+edad+' años en los hechos: menor de 14, no es responsable penalmente. Corresponde ruta de protección.');
+  else if(ojEsAdolescente(c)) add('V12','BLANDA',OJ_PANT.requerido,'Era adolescente en los hechos: se usa «aprehensión». Avisa a la defensoría de familia.');
 
-  // Paso 5 — la materialización
-  if(!dl.fecha||!dl.hora) add('V13','DURA',OJ_PANT.diligencia,'Falta la fecha o la hora de la '+ojTermino(c).acc+': de ahí arranca el término de 36 horas del art. 28 C.P.');
+  // La materialización
+  if(!dl.fecha||!dl.hora) add('V13','DURA',OJ_PANT.diligencia,'Falta la fecha o la hora de la '+ojTermino(c).acc+': de ahí corre el término de 36 horas.');
   if(!dl.lugarDireccion) add('V14','DURA',OJ_PANT.diligencia,'Falta el lugar exacto de la '+ojTermino(c).acc+'.');
-  if(!(dl.funcionarios||[]).length) add('V15','DURA',OJ_PANT.diligencia,'Registra al menos un funcionario que participó en la diligencia.');
+  if(!(dl.funcionarios||[]).length) add('V15','DURA',OJ_PANT.diligencia,'Registra al menos un funcionario de la diligencia.');
 
   /* ── La actuación ──
      ⚠️ Mejora 3 (obs. 4 y 5): V16/V16b (lectura de derechos) y V20 (rótulo de
      cadena de custodia) desaparecen. La lectura de derechos ya no es una casilla
      que el funcionario tenga que marcar —se deriva, y el acta viaja como anexo
-     marcado solo (ojAnexosAuto)—, así que bloquear el oficio por ella era pedir
-     un clic para desbloquear algo que la app ya daba por cierto. Y en una
-     captura por orden judicial no hay incautación que rotular. */
-  if(!(ac.anexos||[]).length) add('V21','BLANDA',OJ_PANT.actuacion,'No se marcó ningún anexo. El acta de derechos y la copia de la orden viajan con el oficio.');
+     marcado solo (ojAnexosAuto)—, y en una captura por orden judicial no hay
+     incautación que rotular. */
+  if(!(ac.anexos||[]).length) add('V21','BLANDA',OJ_PANT.actuacion,'No se marcó ningún anexo.');
 
-  // Paso 4 — la disposición (revisión)
-  if(!de.via) add('V32','DURA',OJ_PANT.disposicion,'Falta indicar a quién se remite el informe: a la Fiscalía o a un juzgado. De eso depende el encabezado del oficio.');
+  // La disposición (revisión)
+  if(!de.via) add('V32','DURA',OJ_PANT.disposicion,'Falta elegir a quién se remite el informe: Fiscalía o Juzgado.');
   if(!de.nombre) add('V22','DURA',OJ_PANT.disposicion,
     de.via==='FISCALIA'
-      ? 'Falta el nombre de la fiscalía destinataria. Se configura una sola vez en Ajustes → Oficio de orden judicial → Fiscalía destinataria.'
-      : 'Falta el destinatario confirmado del informe.');
-  if(de.via==='JUZGADO'&&!de.direccion) add('V33','BLANDA',OJ_PANT.disposicion,'Falta la dirección del juzgado destinatario: el oficio la imprime bajo su nombre. El formato de la orden no la trae, por eso se pide aquí — y queda guardada con el despacho.');
-  // Encabezado y firma: sin ellos el oficio sale sin membrete o sin quien lo suscriba.
+      ? 'Falta la fiscalía destinataria: regístrala en Despachos como predeterminada.'
+      : 'Falta el destinatario del informe.');
+  if(de.via==='JUZGADO'&&!de.direccion) add('V33','BLANDA',OJ_PANT.disposicion,'Falta la dirección del juzgado: se imprime bajo su nombre y queda guardada con el despacho.');
+  /* Membrete, firma y custodia: sin ellos el oficio sale sin encabezado, sin
+     quien lo suscriba o sin el bloque de contacto. Se corrigen en Ajustes
+     (Mi unidad) y en Perfil: llegan solos al caso (`ojPrellenarDeCfg`). */
   var en=c.oj.encabezado||{}, fi=c.oj.firma||{}, cu=c.oj.custodia||{};
-  // El membrete son cuatro líneas: con una vacía, el oficio ya no es el formato.
-  if(!en.ministerio) add('V30','DURA',OJ_PANT.disposicion,'Falta la línea 1 del encabezado (ministerio o sector al que pertenece la unidad).');
-  if(!en.institucion) add('V31','DURA',OJ_PANT.disposicion,'Falta la línea 2 del encabezado (nombre de la institución).');
-  if(!en.unidad) add('V26','DURA',OJ_PANT.disposicion,'Falta la unidad del encabezado (metropolitana, departamento o dirección). Configúrala en Ajustes o diligénciala en este paso.');
-  if(!en.dependencia) add('V27','DURA',OJ_PANT.disposicion,'Falta la estación o dependencia del encabezado.');
-  if(!fi.nombre) add('V28','DURA',OJ_PANT.disposicion,'Falta quién firma el oficio: cárgalo del perfil activo o diligéncialo en este paso.');
-  // El bloque de contacto del final del oficio sale de estos mismos datos.
-  if(!cu.estacion&&!cu.direccion) add('V29','DURA',OJ_PANT.disposicion,'Falta dónde queda el '+ojTermino(c).sust+'. Con eso el oficio arma la constancia de custodia y el bloque de contacto del final.');
-  if(de.sugeridoNombre&&de.nombre&&de.nombre!==de.sugeridoNombre&&!de.motivoCambio)
-    add('V23','BLANDA',OJ_PANT.disposicion,'Cambiaste el destinatario propuesto: indica el motivo para dejarlo trazable en el expediente.');
+  if(!en.ministerio) add('V30','DURA',OJ_PANT.disposicion,'Falta el sector del encabezado.','ajustes');
+  if(!en.institucion) add('V31','DURA',OJ_PANT.disposicion,'Falta la institución del encabezado.','ajustes');
+  if(!en.unidad) add('V26','DURA',OJ_PANT.disposicion,'Falta la unidad del encabezado.','ajustes');
+  if(!en.dependencia) add('V27','DURA',OJ_PANT.disposicion,'Falta el distrito o la dependencia del encabezado.','ajustes');
+  if(!cu.estacion&&!cu.direccion) add('V29','DURA',OJ_PANT.disposicion,'Falta la estación y su dirección: de ahí salen la custodia y el bloque de contacto.','ajustes');
+  if(!fi.nombre) add('V28','DURA',OJ_PANT.disposicion,'Falta quién firma el oficio: crea tu perfil de funcionario.','perfil');
+  /* ⚠️ V23 (motivo del cambio de destinatario) se retiró el 2026-10-26 con la
+     constancia de entrega, que era donde se escribía: una advertencia sin
+     dónde corregirla no informa, estorba. */
   var plazo=ojPlazo36(c);
-  if(plazo.semaforo==='VENCIDO') add('V24','BLANDA',OJ_PANT.disposicion,'El término de 36 horas ya venció ('+plazo.vence+'). Deja constancia de la causa en novedades.');
-  else if(plazo.semaforo==='URGENTE') add('V25','BLANDA',OJ_PANT.disposicion,'Quedan menos de 6 horas del término constitucional (vence el '+plazo.vence+').');
+  if(plazo.semaforo==='VENCIDO') add('V24','BLANDA',OJ_PANT.disposicion,'El término de 36 horas venció el '+plazo.vence+'. Deja constancia de la causa en el relato.');
+  else if(plazo.semaforo==='URGENTE') add('V25','BLANDA',OJ_PANT.disposicion,'Quedan menos de 6 horas del término (vence el '+plazo.vence+').');
   return v;
 }
 function ojDuras(c){ return ojValidar(c).filter(function(x){return x.nivel==='DURA';}); }
@@ -18155,21 +18156,10 @@ function ojWizConfig(){
 }
 
 // ── Paso 1 · La orden judicial ──
-/* Cuadro de vigencia. Se conserva EXACTAMENTE el mismo cálculo (`ojVigencia`);
-   lo que cambia con Mejora 2 es que la orden vencida se anuncia como una
-   advertencia imposible de no ver, y que ya no se ofrece registrar prórrogas
-   como salida (obs. 3 y 4). */
-function ojVigBoxHtml(){
-  var vig=ojVigencia(wc.oj.orden);
-  if(!vig.hasta) return '<div class="oj-alert info"><b>Vigencia — se calcula sola</b>Escribe la fecha de expedición y la app calcula hasta cuándo rige la orden (art. 298 CPP: un año, o seis meses si se expidió antes del 24/06/2011).</div>';
-  var cls={VIGENTE:'ok',PRORROGADA:'ok',POR_VENCER:'blanda',VENCIDA:'dura',CANCELADA:'dura',SUSPENDIDA:'dura'}[vig.estado]||'info';
-  var txt;
-  if(vig.estado==='VENCIDA') txt='La orden venció el '+ojFechaCorta(vig.hasta)+' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden vencida obliga a la libertad inmediata: da aviso inmediato y por escrito a la autoridad que la libró y a la Fiscalía. Podrás generar el informe, pero se te pedirá confirmarlo.';
-  else if(vig.estado==='CANCELADA'||vig.estado==='SUSPENDIDA') txt='La orden está marcada como '+ojLbl('estadoOrden',vig.estado).toLowerCase()+'. Verifica su estado con el despacho antes de continuar.';
-  else txt='Vigente hasta el '+ojFechaCorta(vig.hasta)+' ('+vig.dias+' día(s) restantes, vigencia de '+vig.meses+' meses'+((wc.oj.orden.prorrogas||[]).length?' + prórroga registrada':'')+').';
-  return '<div class="oj-alert '+cls+'"><b>Vigencia de la orden — '+escHtml(ojLbl('estadoOrden',vig.estado)||'Sin calcular')+'</b>'+escHtml(txt)+
-    '<div class="oj-fund">Art. 298 CPP (mod. Ley 1453 de 2011, art. 56) · CSJ AP4491-2016</div></div>';
-}
+/* Vigencia de la orden, junto a la fecha de expedición. Se conserva EXACTAMENTE
+   el mismo cálculo (`ojVigencia`); desde el 2026-10-26 se dice en una línea,
+   con el mismo texto que la revisión (`ojAvisoVigHtml`). */
+function ojVigBoxHtml(){ return ojAvisoVigHtml(ojVigencia(wc.oj.orden),false); }
 function ojRefrescarVigencia(){
   wc.oj.orden.fechaExpedicion=ojV('oj-o-fexp');
   var box=document.getElementById('oj-vig-box'); if(box) box.innerHTML=ojVigBoxHtml();
@@ -18278,14 +18268,6 @@ function ojStep1(){
        lo que desaparece es el párrafo, no la función. */
     '';
 }
-/* Nota de «esto lo pone la app»: sustituye a un bloque de campos que se retiró.
-   Se ve una vez, ocupa un renglón y evita que el funcionario busque en el
-   formulario un dato que el informe ya trae. */
-function ojNotaDerivada(txt){
-  return '<p class="oj-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
-    'stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'+escHtml(txt)+'</p>';
-}
-
 /* ── Registro de despachos ─────────────────────────────────────────────────
    Alimenta DOS sitios: la autoridad solicitante del numeral 2 y el
    destinatario del oficio cuando se remite a un juzgado (que en la práctica es
@@ -18671,7 +18653,8 @@ function ojUsarPersona(id){
 /* ⚠️ ojReloj36Html se retiró (2026-08-28, obs. 6): era el cuadro del término de
    36 horas que abría el paso 3 y no queda ninguna vía que lo pinte. El cálculo
    sigue intacto en ojPlazo36 —que es el que se imprime en el oficio— y su forma
-   compacta, ojPlazoBarraHtml, sigue en la revisión. */
+   compacta salió también de la revisión el 2026-10-26 (queda como advertencia
+   V24/V25 cuando vence o le quedan menos de 6 horas). */
 /* ⚠️ `ojGPS` y el campo de coordenadas se eliminaron con Mejora 3 (obs. 3): no
    salen en ninguna fila del formato y el relato las citaba como un paréntesis
    que nadie pide. Un caso guardado con coordenadas las sigue imprimiendo. */
@@ -18685,7 +18668,7 @@ function ojStep5(){
   /* ⚠️ Sin el cuadro del término de 36 horas (2026-08-28, obs. 6). Ocupaba
      media pantalla en el paso donde se registran la fecha y la hora, y lo que
      decía era un cálculo derivado de esos dos campos: nada que decidir. El
-     reloj no se pierde — sigue en la revisión (`ojPlazoBarraHtml`, una línea)
+     reloj no se pierde — avisa en la revisión cuando vence o urge (V24/V25)
      y se imprime en el oficio, que es donde tiene efecto. */
   return '<div class="st" style="margin-top:0">3. Materialización de la '+escHtml(t.acc)+'</div>'+
 
@@ -18807,193 +18790,111 @@ function ojStep6(){
     '</details>';
 }
 /* ── Paso 4 · REVISIÓN Y PUESTA A DISPOSICIÓN ───────────────────────────────
-   ⚠️ MEJORA 3 (obs. 7) — «es una información sumamente importante y relevante
-   […] y queda visualmente perdida en su totalidad».
-   Diagnóstico: la decisión que da sentido a esta pantalla —a quién se remite el
-   informe— quedaba en el sexto lugar de la lectura, detrás del reloj de las 36
-   horas, de una lista de diez faltantes con dos renglones cada una y de un
-   cuadro de fundamento legal. Todo lo de arriba era ESTADO (informa) y lo de
-   abajo, ACCIÓN (decide): el orden estaba invertido.
-   Ahora: el destinatario abre la pantalla y es lo único que se ve entero; el
-   estado se resume en una barra que se despliega si interesa; y el resto
-   (constancia de entrega, membrete, firma) sigue plegado como estaba. */
+   ⚠️ REVISIÓN SIN SATURACIÓN (2026-10-26). La pantalla se queda con lo que el
+   funcionario DECIDE o tiene que CORREGIR: el aviso de orden vencida (una
+   línea), a quién se remite el informe y las faltas y advertencias agrupadas
+   por el sitio donde se corrigen.
+   Se retiraron, por instrucción del usuario: el fundamento del destinatario
+   propuesto, la barra de las 36 horas (se imprime en el oficio y queda como
+   advertencia), el resumen del informe, la constancia de entrega, el bloque de
+   membrete, custodia y firma (vive en Ajustes y Perfil y llega solo por
+   `ojPrellenarDeCfg`) y el botón de generar (el oficio sale del expediente,
+   que se abre al guardar).
+   ⚠️ Las claves del modelo se conservan: una captura guardada con constancia de
+   entrega o con un membrete propio los sigue imprimiendo igual, y
+   `ojCollectDisposicion` no las toca porque sus campos ya no están en pantalla. */
 function ojStep7(){
+  /* Lo que se configuró en Ajustes o en Perfil DESPUÉS de abrir la captura entra
+     aquí. Solo rellena lo vacío: nunca pisa lo que el caso ya traía. */
+  ojPrellenarDeCfg(wc);
   var d=wc.oj.destino, s=ojAplicarSugerencia(wc);
-  var vals=ojValidar(wc), duras=vals.filter(function(v){return v.nivel==='DURA';}), blandas=vals.filter(function(v){return v.nivel!=='DURA';});
-  /* Cada falta lleva su propio botón: tocarla abre el paso donde se diligencia.
-     Antes era texto plano al final de ocho pantallas de scroll — el funcionario
-     leía «falta el número de la orden» y tenía que volver a mano.
-     ⚠️ Y ahora va PLEGADO: diez faltas eran cuatro pantallas de scroll entre el
-     funcionario y la única decisión de este paso. La barra dice cuántas son y de
-     qué color, que es lo que hay que saber para decidir si abrirla. */
-  var lista=function(arr,cls,titulo,abierto){
-    if(!arr.length) return '';
-    return '<details class="oj-estado '+cls+'"'+(abierto?' open':'')+'>'+
-      '<summary><b>'+escHtml(titulo)+'</b><span>'+arr.length+'</span></summary>'+
-      arr.map(function(v){
-        return '<div class="oj-estado-it">· '+escHtml(v.msg)+
-          ' <button class="btn bs bsm" style="margin-left:2px;min-height:30px;padding:4px 10px;font-size:12px" '+
-          'onclick="wizGoto('+v.paso+')">Ir al paso '+(v.paso+1)+' · '+escHtml(OJ_STEPS[v.paso])+'</button></div>';
-      }).join('')+'</details>';
-  };
-  var e=wc.oj.encabezado, cu=wc.oj.custodia, fi=wc.oj.firma, t=ojTermino(wc);
-  var faltaEnc=(!e.ministerio||!e.institucion||!e.unidad||!e.dependencia);
-  var vig=ojVigencia(wc.oj.orden);
-  /* La orden vencida ya no bloquea, pero tampoco pasa desapercibida: banner
-     rojo arriba de la revisión, además del cuadro del paso 2 y de la
-     confirmación que hay que aceptar antes de generar (obs. 3). */
-  var avisoVig = vig.estado==='VENCIDA'
-    ? '<div class="oj-alert dura"><b>Atención — la orden figura vencida</b>'+
-      'Venció el '+escHtml(ojFechaCorta(vig.hasta))+' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden '+
-      'vencida obliga a la libertad inmediata: da aviso inmediato y por escrito a la autoridad que la libró y a '+
-      'la Fiscalía. Si aun así necesitas dejar constancia escrita, se te pedirá confirmarlo al generar.'+
-      '<div class="oj-fund">Art. 298 CPP · CSJ AP4491-2016</div>'+
-      '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="wizGoto('+OJ_PANT.orden+')">Revisar la fecha de expedición</button></div>'
-    : '';
+  var vals=ojValidar(wc);
+  var duras=vals.filter(function(v){ return v.nivel==='DURA'; });
+  // V01 lo dice el aviso de arriba: repetirlo en la lista es ruido.
+  var blandas=vals.filter(function(v){ return v.nivel!=='DURA'&&v.id!=='V01'; });
   return '<div class="st" style="margin-top:0">Revisión y puesta a disposición</div>'+
-    avisoVig+
-    // 1 · La decisión. Lo primero y lo más grande de la pantalla.
+    ojAvisoVigHtml(ojVigencia(wc.oj.orden),true)+
     ojDestinatarioHtml(d,s)+
-    // 2 · El estado del expediente, en una línea que se despliega.
-    lista(duras,'dura','Faltan datos obligatorios',false)+
-    ojPlazoBarraHtml()+
-    ojResumenHtml(wc)+
-
-    /* La entrega se diligencia AL ENTREGAR, que es después de imprimir el
-       oficio: por eso va plegada y no estorba mientras se prepara el documento.
-       Desde la Ola 3 sí se imprime (constancia de entrega en la narración). */
-    '<details class="oj-blk oj-mas"'+(d.fechaEntrega||d.recibeNombre?' open':'')+'>'+
-      '<summary>Constancia de entrega <small>— se diligencia al entregar; se imprime en el oficio</small></summary>'+
-      ojwR(
-        ojwF('Fecha de entrega',ojwDt('oj-x-fec',d.fechaEntrega)),
-        ojwF('Hora de entrega',ojwHr('oj-x-hor',d.horaEntrega))
-      )+
-      ojwR(
-        ojwF('Quién recibe',ojwIn('oj-x-rec',d.recibeNombre,'Nombre')),
-        ojwF('Cargo',ojwIn('oj-x-rcar',d.recibeCargo,'Cargo'))
-      )+
-      ojwF('Motivo del cambio de destinatario',ojwIn('oj-x-mot',d.motivoCambio,'Solo si te apartas de la propuesta'),'Queda registrado en el caso para que la decisión sea trazable meses después.')+
-    '</details>'+
-
-    /* Encabezado del oficio (selecciones 1 y 2). Normalmente ya viene de Ajustes;
-       si el equipo no está configurado se pide aquí y no se vuelve a preguntar. */
-    /* ⚠️ Membrete, custodia y firma son propiedades del EQUIPO, no del caso: 14
-       campos de configuración que se colaron en la ruta crítica de cada captura.
-       Se piden UNA vez (si faltan, el bloque nace abierto y con alerta) y desde
-       la segunda captura viajan plegados — se ven, se pueden corregir por caso,
-       pero dejan de costar dos pantallas de scroll en cada procedimiento. */
-    '<details class="oj-blk oj-mas"'+(faltaEnc?' open':'')+'>'+
-      '<summary>Encabezado, custodia y firma <small>— '+(faltaEnc?'FALTAN DATOS: se piden una sola vez':'ya configurados en este equipo')+'</small></summary>'+
-      '<div class="st" style="margin-top:0">Membrete del oficio</div>'+
-      /* ⚠️ Los cuatro párrafos de ayuda de este bloque se resumieron o retiraron
-         (2026-08-28, obs. 10 y 13). Los campos ya vienen diligenciados de
-         Ajustes; explicar aquí de dónde salen, qué pasa si se cambian, cómo
-         completa la app el tipo de dependencia y que el escudo «ya viene
-         cargado» eran cinco renglones de texto delante de un bloque que en la
-         mayoría de las capturas no hay ni que abrir. */
-      (faltaEnc
-        ? '<div class="oj-alert dura"><b>Falta el encabezado</b>Se pide una sola vez: queda como valor por defecto.</div>'
-        : '')+
-      /* ⚠️ MISMO DATO, MISMO NOMBRE QUE EN AJUSTES (auditoría 2026-09-01).
-         Estos cuatro campos escriben en las MISMAS claves que la sección «Mi
-         unidad» de Ajustes (ojMinisterio · ojInstitucion · ojUnidad ·
-         ojDependencia), y hasta ahora se pedían con dos vocabularios distintos:
-         allí por su nombre («Sector», «Institución», «Unidad», «Distrito de
-         policía…») y aquí por su número de renglón («Línea 1 — ministerio o
-         sector»…). El funcionario que configuró Ajustes no reconocía sus propios
-         campos al llegar a la revisión.
-         ⚠️ Y la línea 4 seguía diciendo «estación o dependencia» cuando el 2.º
-         pase de la Mejora 7 separó el DISTRITO de la ESTACIÓN precisamente
-         porque el membrete imprime el distrito. Aquí decía lo contrario que
-         Ajustes sobre el mismo campo. */
-      ojwF('Sector',ojwIn('oj-e-min',e.ministerio,'Ministerio al que pertenece'),'',!e.ministerio)+
-      ojwF('Institución',ojwIn('oj-e-ins',e.institucion,'Tu institución'),'',!e.institucion)+
-      ojwF('Unidad',ojwIn('oj-e-uni',e.unidad,'Metropolitana, departamento o dirección'),'',!e.unidad)+
-      ojwF('Distrito de policía, seccional, dirección, grupo, etc.',ojwIn('oj-e-dep',e.dependencia,'Distrito tres de policía',{extra:' onblur="ojCompletarEstacion(this,true)"'}),'',!e.dependencia)+
-
-    /* Lugar de custodia (selección 7): se imprime como constancia dentro de la
-       narración. No siempre es la misma estación, por eso se puede cambiar aquí. */
-      /* ⚠️ La unidad de custodia es el PADRE y los seis campos siguientes son
-         sus atributos: su dirección, su barrio, su ciudad, su teléfono, su
-         correo y su web. Se pedían los siete al mismo nivel, en una lista de
-         etiquetas donde «Dirección» y «Ciudad» podían leerse como del caso.
-         Es la misma estructura que Ajustes ya dibuja para la estación. */
-      '<div class="st">¿Dónde queda el '+escHtml(t.sust)+'?</div>'+
-      ojwP('Estación o unidad de custodia',ojwIn('oj-c-est',cu.estacion,'Escribe solo el nombre: La Candelaria',{extra:' onblur="ojCompletarEstacion(this,false)"'}),'',!cu.estacion&&!cu.direccion)+
-      lcAtribs(
-        ojwF('Dirección',ojwIn('oj-c-dir',cu.direccion,'Ej: Calle 48 # 55–50'),'',!cu.estacion&&!cu.direccion)+
-        ojwR(
-          ojwF('Barrio',ojwIn('oj-c-bar',cu.barrio,'Ej: La Candelaria')),
-          ojwF('Ciudad',ojwIn('oj-c-ciu',cu.ciudad,'Ej: Medellín',{extra:' list="dl-muni"'}))
-        )+
-        /* La vista previa se queda: no es una explicación, es exactamente el
-           renglón que va a salir impreso. */
-        '<p class="oj-hint" style="margin:-4px 0 10px"><i>'+
-          escHtml(ojCustodiaDireccion(cu)||'CL 48 # 55 - 50, barrio La Candelaria, Medellín')+'</i></p>'+
-        ojwR(
-          ojwF('Teléfono',ojwIn('oj-c-tel',cu.telefono,'Ej: 312 732 4069',{mono:true})),
-          ojwF('Correo electrónico',ojwIn('oj-c-cor',cu.correo,'Correo de la unidad'))
-        )+
-        ojwF('Sitio web institucional',ojwIn('oj-c-web',cu.web,'Última línea del bloque de contacto'))
-      )+
-
-    /* Firma (selección 8): del perfil activo, o a mano si no hay perfil. */
-      '<div class="st">Quién firma el oficio</div>'+
-      (fi.nombre?'':'<div class="oj-alert blanda"><b>Sin perfil activo</b>Diligencia aquí quién firma.</div>')+
-      '<button class="btn bs bbl bsm" style="margin-bottom:12px" onclick="ojCargarFirmaPerfil()">Cargar datos del perfil activo</button>'+
-      /* ⚠️ El firmante es el PADRE: quien suscribe. Su grado, su cargo, su
-         celular y su correo cuelgan de él — y así queda claro que el bloque
-         entero describe a UNA persona, no cinco datos sueltos del oficio.
-         El nombre encabeza porque es de lo que depende todo lo demás: la firma
-         manuscrita se busca por él (lcFirmaDe). */
-      ojwP('Nombres y apellidos',ojwIn('oj-f-nom',fi.nombre,'Nombre completo',{extra:' onblur="ojRefrescarFirmaWiz()"'}),'',!fi.nombre)+
-      lcAtribs(
-        '<div id="oj-firma-wiz">'+ojFirmaWizHtml(fi.nombre)+'</div>'+
-        ojwR(
-          ojwF('Grado',lcGradoInput('oj-f-gra',fi.grado)),
-          ojwF('Cargo',ojwIn('oj-f-car',fi.cargo,'Ej: Integrante patrulla'))
-        )+
-        ojwR(
-          ojwF('Teléfono',ojwIn('oj-f-tel',fi.telefono,'Ej: 310 449 8111',{mono:true})),
-          ojwF('Correo institucional',ojwIn('oj-f-cor',fi.correo,'Correo del funcionario'))
-        )
-      )+
-    '</details>'+
-
-    lista(blandas,'blanda','Advertencias',false)+
-    (duras.length?'':'<div class="oj-alert ok"><b>Listo</b>El informe reúne los datos exigibles.</div>')+
-    '<button class="btn boj bbl" onclick="ojGenerarDesdeWizard()" style="margin-top:6px">Generar oficio de puesta a disposición</button>'+
-    '<p class="oj-hint" style="margin-top:8px">Generar el oficio guarda antes el caso.</p>';
+    ojAvisosHtml(duras,'dura')+
+    ojAvisosHtml(blandas,'blanda');
 }
-/* El reloj de las 36 horas, en una línea. En el paso 3 va como cuadro completo
-   (es donde se registra la hora de la que arranca); aquí basta el estado. */
-function ojPlazoBarraHtml(){
-  var p=ojPlazo36(wc);
-  if(!p.vence) return '';
-  var cls={OK:'ok',ALERTA:'blanda',URGENTE:'dura',VENCIDO:'dura'}[p.semaforo]||'info';
-  var horas=Math.floor(Math.abs(p.horas)), mins=Math.round((Math.abs(p.horas)-horas)*60);
-  return '<div class="oj-plazo '+cls+'"><span class="oj-sem '+cls+'">36 h · '+escHtml(p.semaforo)+'</span>'+
-    '<span>'+(p.horas<0?'Venció hace ':'Quedan ')+horas+' h '+mins+' min — '+escHtml(p.vence)+'</span></div>';
+/* La vigencia de la orden en UNA línea: el paso 2 (junto a la fecha de
+   expedición) y la revisión usan el mismo texto. Antes eran cuatro renglones
+   repetidos en tres sitios; la consecuencia legal completa queda en la
+   confirmación que se pide al generar (`ojConfirmarVigencia`).
+   ⚠️ El cálculo (`ojVigencia`) no se tocó. */
+function ojAvisoVigHtml(vig,conBoton){
+  var cls, txt;
+  if(!vig.hasta) return conBoton?'':'<p class="oj-hint">La vigencia se calcula con la fecha de expedición (art. 298 CPP).</p>';
+  if(vig.estado==='VENCIDA'){
+    cls='dura'; txt='<b>La orden figura vencida</b> desde el '+escHtml(ojFechaCorta(vig.hasta))+
+      '. Obliga a la libertad inmediata (art. 298 CPP).';
+  } else if(vig.estado==='CANCELADA'||vig.estado==='SUSPENDIDA'){
+    cls='dura'; txt='<b>La orden figura '+escHtml(ojLbl('estadoOrden',vig.estado).toLowerCase())+
+      '</b>. Verifica su estado con el despacho.';
+  } else if(conBoton){
+    return '';                       // en la revisión solo se avisa lo que está mal
+  } else if(vig.estado==='POR_VENCER'){
+    cls='blanda'; txt='<b>Vence pronto</b>: el '+escHtml(ojFechaCorta(vig.hasta))+' ('+vig.dias+' día(s)).';
+  } else {
+    cls='ok'; txt='<b>Vigente</b> hasta el '+escHtml(ojFechaCorta(vig.hasta))+' · '+vig.dias+' día(s).';
+  }
+  return '<div class="oj-aviso '+cls+'"><span>'+txt+'</span>'+
+    (conBoton?'<button class="btn bs bsm" onclick="wizGoto('+OJ_PANT.orden+')">Revisar fecha</button>':'')+
+  '</div>';
 }
-/* Resumen de lo que va a salir impreso, para revisar sin volver paso a paso.
-   Plegado: es una comprobación, no una tarea. */
-function ojResumenHtml(c){
-  var r=c.oj.requerido, o=c.oj.orden, p=c.oj.proceso, g=c.oj.diligencia, t=ojTermino(c);
-  var kv=[
-    [t.Sust,ojNombreRequerido(r)+(ojDocRequerido(r)?' · '+ojDocRequerido(r):'')],
-    ['Orden',(o.numero?'No. '+o.numero:'')+(o.fechaExpedicion?' del '+ojFechaCorta(o.fechaExpedicion):'')],
-    ['Delito(s)',ojDelitosTexto(c)],
-    ['Autoridad solicitante',c.oj.despacho.nombre||''],
-    ['SPOA',p.radicado||''],
-    [t.Acc,ojFechaHora(g.fecha,g.hora)],
-    ['Lugar',ojLugarTexto(g)],
-    ['Firma',[c.oj.firma.grado,c.oj.firma.nombre].filter(Boolean).join(' ')]
-  ].filter(function(x){ return (x[1]||'').trim(); });
-  if(!kv.length) return '';
-  return '<details class="oj-blk oj-mas">'+
-    '<summary>Resumen del informe <small>— lo que va a salir impreso</small></summary>'+
-    kv.map(function(x){ return '<div class="oj-kv"><span>'+escHtml(x[0])+'</span><span>'+escHtml(x[1])+'</span></div>'; }).join('')+
+/* ── Faltas y advertencias, ordenadas ───────────────────────────────────────
+   Antes eran una lista corrida de frases de dos renglones, cada una con su
+   botón «Ir al paso N · …». Ahora se agrupan por el SITIO donde se corrigen
+   —un paso del formulario, Ajustes o Perfil—, en el orden del formulario, con
+   un solo botón por grupo y frases cortas. Lo usan la revisión y el diálogo de
+   faltantes al generar, que no pueden discrepar.
+   ⚠️ V26–V31 (membrete, custodia y firma) se corrigen en Ajustes o en Perfil
+   desde que su bloque salió del formulario: por eso llevan `ir`. */
+function ojAvisoDestino(v){
+  if(v.ir==='ajustes') return {k:'ajustes',lbl:'Ajustes · Mi unidad',orden:90};
+  if(v.ir==='perfil') return {k:'perfil',lbl:'Perfil',orden:91};
+  return {k:'p'+v.paso,lbl:'Paso '+(v.paso+1)+' · '+OJ_STEPS[v.paso],paso:v.paso,orden:v.paso};
+}
+function ojAvisosGrupos(arr){
+  var orden=[], g={};
+  arr.forEach(function(v){
+    var d=ojAvisoDestino(v);
+    if(!g[d.k]){ g[d.k]={d:d,items:[]}; orden.push(d.k); }
+    g[d.k].items.push(v);
+  });
+  return orden.map(function(k){ return g[k]; }).sort(function(a,b){ return a.d.orden-b.d.orden; });
+}
+/* `irFn(d)` devuelve el JS del botón de cada grupo; por defecto, el del
+   formulario abierto. */
+function ojAvisosHtml(arr,nivel,irFn,abierto){
+  if(!arr.length) return '';
+  irFn=irFn||function(d){
+    return d.paso===undefined?"ojIrConfig('"+d.k+"')":'wizGoto('+d.paso+')';
+  };
+  var cuerpo=ojAvisosGrupos(arr).map(function(gr){
+    var ir=irFn(gr.d);
+    return '<div class="oj-av-gr">'+
+      '<div class="oj-av-hd"><span>'+escHtml(gr.d.lbl)+'</span>'+
+        (ir?'<button type="button" class="oj-av-ir" onclick="'+ir+'">Ir</button>':'')+'</div>'+
+      gr.items.map(function(v){ return '<div class="oj-av-it">'+escHtml(v.msg)+'</div>'; }).join('')+
+    '</div>';
+  }).join('');
+  var titulo=nivel==='dura'?'Faltan datos':'Advertencias';
+  var nota=nivel==='dura'?'impiden generar el oficio':'no impiden generar';
+  return '<details class="oj-estado '+nivel+'"'+(abierto?' open':'')+'>'+
+    '<summary><b>'+titulo+'</b><span>'+arr.length+'</span><small>'+nota+'</small></summary>'+
+    '<div class="oj-av">'+cuerpo+'</div>'+
   '</details>';
+}
+/* Ajustes y Perfil quedan fuera del formulario: se sale guardando el borrador,
+   que se retoma desde Capturas con lo configurado ya puesto. */
+function ojIrConfig(dest){
+  ojCollect();
+  wizGuardarBorrador(true).then(function(ok){
+    wc=null; go(dest); renderDraftSlot();
+    if(ok) toast('Borrador guardado — al volver, retómalo desde Capturas',5000);
+  });
 }
 /* Anexos deducibles de lo que ya se registró: el informe y la copia de la orden
    viajan SIEMPRE; el acta de derechos, si consta que se leyeron; el acta de
@@ -19037,12 +18938,13 @@ var OJ_VIAS=[
 function ojDestinatarioHtml(d,s){
   var via=d.via||'';
   var esAdo=(s.via==='ADOLESCENTES')||via==='ADOLESCENTES';
-  var opciones=OJ_VIAS.filter(function(v){ return v[0]!=='ADOLESCENTES'||esAdo; }).map(function(v){
-    var on=(via===v[0]);
-    return '<button type="button" class="oj-via'+(on?' on':'')+'" aria-pressed="'+on+'" '+
-      'onclick="ojCambiarVia(\''+v[0]+'\')">'+
-      '<b>'+escHtml(v[1])+'</b><small>'+escHtml(v[2])+'</small></button>';
-  }).join('');
+  /* ⚠️ Lista desplegable desde 2026-10-26 (pedido del usuario): eran dos
+     botones grandes con su explicación debajo. La vía elegida se sigue viendo
+     sin desplegar nada, y la tarjeta de abajo dice a quién va el oficio. */
+  var opciones=(via?'':'<option value="" selected disabled>Elige Fiscalía o Juzgado</option>')+
+    OJ_VIAS.filter(function(v){ return v[0]!=='ADOLESCENTES'||esAdo; }).map(function(v){
+      return '<option value="'+v[0]+'"'+(via===v[0]?' selected':'')+'>'+escHtml(v[1])+'</option>';
+    }).join('');
   var fis=ojFiscaliaCfg();
   /* ⚠️ Los CUATRO campos del encabezado se pintan SIEMPRE, cualquiera que sea
      la vía (incluso sin elegir). Dos razones: el funcionario tiene que poder
@@ -19061,7 +18963,7 @@ function ojDestinatarioHtml(d,s){
       (d.nombre?'Elegir otra fiscalía':'Elegir fiscalía de los despachos registrados')+'</button>';
     if(fis.nombre) fuente='Del despacho predeterminado de fiscalía';
     else aviso='<div class="oj-alert dura"><b>No hay una fiscalía registrada</b>'+
-        'Regístrala en Despachos y márcala como predeterminada: se carga sola en las próximas capturas.'+
+        'Regístrala en Despachos como predeterminada.'+
         '<button class="btn bs bsm" style="margin-top:8px;min-height:32px" onclick="go(\'despachos\')">Ir a Despachos</button></div>';
   } else if(via==='JUZGADO'){
     etiqueta='Juzgado destinatario';
@@ -19078,9 +18980,8 @@ function ojDestinatarioHtml(d,s){
     accion='<button class="btn bp bbl bsm" style="margin-bottom:10px" onclick="ojSelectorDestino(\'CESPA\')">Elegir de los registrados</button>';
     fuente='Sistema de responsabilidad penal para adolescentes · Ley 1098 de 2006';
   } else {
+    // Sin vía, la propia lista dice «Elige Fiscalía o Juzgado»: no hace falta otro aviso.
     etiqueta='Autoridad ante la que se deja a disposición';
-    aviso='<div class="oj-alert blanda"><b>Elige a quién se remite</b>De esta decisión dependen el encabezado del '+
-      'oficio y una frase de la narración.</div>';
   }
   // Tarjeta con el destinatario ya resuelto: es lo que va impreso arriba del oficio.
   var resumen = d.nombre
@@ -19095,7 +18996,8 @@ function ojDestinatarioHtml(d,s){
   var abrirCampos = !d.nombre || (via==='JUZGADO'&&!d.direccion) || !via;
   return '<div class="oj-dest">'+
     '<div class="oj-dest-hd">¿A quién se remite el informe?'+(via?'':'<span class="req" title="Obligatorio: define el encabezado del oficio">*</span>')+'</div>'+
-    '<div class="oj-vias">'+opciones+'</div>'+
+    '<select class="fi oj-via-sel" id="oj-x-via" aria-label="A quién se remite el informe" '+
+      'onchange="ojCambiarVia(this.value)">'+opciones+'</select>'+
     aviso+accion+resumen+
     '<details class="oj-mas oj-dest-mas"'+(abrirCampos?' open':'')+'>'+
       '<summary>'+(d.nombre?'Corregir para este informe':'Escribir el destinatario a mano')+
@@ -19117,12 +19019,9 @@ function ojDestinatarioHtml(d,s){
         ? '<button class="btn bs bsm bbl" onclick="ojGuardarFiscaliaDefecto()">Guardar como fiscalía por defecto del equipo</button>'
         : '<button class="btn bs bsm bbl" onclick="ojGuardarDestinatario()">Guardar este despacho para reutilizarlo</button>')+
     '</details>'+
-    // El fundamento de la propuesta: interesa una vez, no en cada captura.
-    '<details class="oj-mas oj-dest-mas">'+
-      '<summary>Por qué se propone este destinatario <small>— '+escHtml(s.regla)+'</small></summary>'+
-      '<p class="oj-hint" style="margin:0">'+escHtml(s.nota)+'</p>'+
-      '<div class="oj-fund">'+escHtml(s.fundamento)+'</div>'+
-    '</details>'+
+    /* ⚠️ «Por qué se propone este destinatario» se retiró (2026-10-26): no
+       cumplía ninguna función en el formulario. La regla aplicada se sigue
+       guardando en el caso (`destino.reglaAplicada`) para que sea trazable. */
   '</div>';
 }
 /* La fiscalía es del EQUIPO, no de la captura: se registra una vez y de ahí en
@@ -19164,52 +19063,11 @@ function ojGuardarDestinatario(){
   cfg.despachosPropios=lista; DB.saveConfig(cfg);
   toast('Despacho guardado para reutilizarlo ✓');
 }
-function ojCargarFirmaPerfil(){
-  var cfg=DB.getConfig(), p=ojPerfilActivo(cfg);
-  if(!p.nombre){ toast('No hay un perfil activo — diligencia la firma a mano o crea uno en Perfil'); return; }
-  ojCollect();
-  wc.oj.firma={grado:p.grado||'',nombre:p.nombre||'',cargo:p.cargo||'',telefono:p.telefono||'',correo:p.correo||''};
-  // «Datos» y no «firma» a secas: la firma manuscrita es otra cosa y se ve justo
-  // debajo — decir «Firma cargada ✓» hacía creer que ya se había traído el trazo.
-  renderWiz(); toast('Datos del firmante cargados del perfil ✓');
-}
-/* Qué firma manuscrita va a salir en ESTE oficio, dicho en el propio paso de
-   revisión y con la miniatura a la vista.
-   ⚠️ Una firma que se pone sola TIENE que verse antes de generar: si no, es
-   indistinguible de una que no se puso, que es justo el silencio que se corrigió
-   al dejar de exigir que el nombre coincidiera con el del perfil.
-   ⚠️ Y se firma DESDE AQUÍ: mandar al funcionario a la pantalla de Perfil a
-   firmar equivale a no pedírselo (misma regla del escudo del membrete). */
-function ojFirmaWizHtml(nombre){
-  var r=lcFirmaResuelta(nombre!==undefined?nombre:((wc&&wc.oj&&wc.oj.firma&&wc.oj.firma.nombre)||''));
-  var mini=r.firma?'<div class="fw-prev" style="margin:8px 0"><img src="data:image/png;base64,'+
-    escAttr(r.firma.b64)+'" alt="Firma que se va a imprimir"></div>':'';
-  if(r.firma&&r.propia)
-    return ojNotaDerivada('Tu firma guardada se imprime sola sobre tu nombre, al final del oficio.')+mini+
-      '<button class="btn bs bbl bsm" onclick="ojFirmarDesdeWizard()">Cambiar mi firma</button>';
-  if(r.firma&&r.otroPerfil)
-    return ojNotaDerivada('El oficio lo suscribe '+r.otroPerfil.nombre+', así que se imprime la firma guardada de ese perfil.')+mini;
-  if(r.otroPerfil)
-    return '<div class="oj-alert blanda"><b>'+escHtml(r.otroPerfil.nombre)+' no tiene firma guardada</b>'+
-      'El oficio dejará el espacio en blanco para firmarlo a mano, como siempre.</div>';
-  if(r.hayPerfil)
-    return '<div class="oj-alert blanda"><b>Todavía no has guardado tu firma</b>'+
-      'Fírmala una vez con el dedo y se imprimirá sola en todos tus oficios. Sin ella, el espacio queda en blanco.</div>'+
-      '<button class="btn bs bbl bsm" onclick="ojFirmarDesdeWizard()">Firmar ahora</button>';
-  return '';
-}
-/* ⚠️ Repinta SOLO su bloque. Volver a renderizar el paso entero borraría lo que
-   el usuario esté escribiendo en los demás campos (lección del logo). */
-function ojRefrescarFirmaWiz(){
-  var d=document.getElementById('oj-firma-wiz'); if(!d) return;
-  var i=document.getElementById('oj-f-nom');
-  d.innerHTML=ojFirmaWizHtml(i?i.value:undefined);
-}
-function ojFirmarDesdeWizard(){
-  var p=ojPerfilActivo(DB.getConfig());
-  if(!p.id){ toast('Crea primero un perfil de funcionario en Perfil'); return; }
-  openFirmaModal(p.id);
-}
+/* ⚠️ El bloque «Encabezado, custodia y firma» salió de la revisión (2026-10-26):
+   el firmante, su firma manuscrita, el membrete y la custodia se configuran en
+   Perfil y en Ajustes y llegan solos al caso (`ojPrellenarDeCfg`). Con él se
+   fueron sus cuatro funciones (cargar del perfil, la miniatura de la firma, su
+   repintado y «Firmar ahora»). */
 /* ─────────────────────────────────────────────────────────────────────────
    I.9 · RECOLECCIÓN DEL PASO ACTIVO
    Se llama en cada avance/retroceso del wizard y antes de guardar o generar.
@@ -20509,19 +20367,19 @@ function ojCasoParaDocumento(c){ return ojEsLegado(c)?ojDesdeLegado(c):ojNormali
 
 /* Un bloqueo tiene que explicarse: antes era un toast que nombraba UNA de las
    faltas y se iba. Ahora se listan todas y se puede saltar al paso exacto. */
+/* Mismo componente que la revisión (`ojAvisosHtml`), abierto y con el botón de
+   cada grupo llevando al sitio donde se corrige: el paso de la captura, Ajustes
+   o Perfil. Así lo que dice este diálogo y lo que dice la revisión no pueden
+   discrepar. */
 function ojModalFaltantes(id,duras,legado){
-  var filas=duras.map(function(v){
-    return '<div class="oj-kv" style="align-items:flex-start">'+
-      '<span style="min-width:78px">Paso '+(v.paso+1)+'</span>'+
-      '<span style="text-align:left">'+escHtml(v.msg)+'</span></div>';
-  }).join('');
+  var ir=function(d){
+    if(d.paso===undefined) return "closeModal();go('"+d.k+"')";
+    return id?"ojCompletarCaso('"+id+"',"+d.paso+")":'';
+  };
   openModal(
     '<div class="mh"><h2>Faltan datos para el oficio</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
-    '<div class="oj-alert dura"><b>No se puede generar todavía</b>'+
-    'Sin estos datos el oficio saldría incompleto ante el despacho judicial.</div>'+
-    (legado?'<div class="oj-hint" style="margin:0 0 12px">Captura del formato anterior: estos datos se piden una sola vez.</div>':'')+
-    filas+
-    (id?'<button class="btn bp bbl" style="margin-top:16px" onclick="ojCompletarCaso(\''+id+'\','+duras[0].paso+')">Completar el caso</button>':'')
+    (legado?'<p class="oj-hint" style="margin:0 0 12px">Captura del formato anterior: estos datos se piden una sola vez.</p>':'')+
+    ojAvisosHtml(duras,'dura',ir,true)
   );
 }
 function ojCompletarCaso(id,paso){
@@ -20564,15 +20422,12 @@ function ojConfirmarVigencia(caso,cb){
   window._ojSeguirVencida=cb;
   openModal(
     '<div class="mh"><h2>La orden figura vencida</h2><button class="mx" onclick="ojCancelarVencida()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
-    '<div class="oj-alert dura"><b>Advertencia — vigencia de la orden</b>'+
-    'La orden No. '+escHtml((caso.oj.orden.numero)||'—')+' venció el '+escHtml(ojFechaCorta(vig.hasta))+
-    ' (hace '+Math.abs(vig.dias)+' día(s)). Capturar con orden vencida obliga a la libertad inmediata: '+
-    'da aviso inmediato y por escrito a la autoridad que la libró y a la Fiscalía.'+
-    '<div class="oj-fund">Art. 298 CPP (mod. Ley 1453 de 2011, art. 56) · CSJ AP4491-2016</div></div>'+
-    /* ⚠️ El cuadro rojo de arriba NO se toca: es la advertencia legal, y ahí
-       cada palabra tiene efecto. Lo que se resumió es la explicación de las dos
-       salidas, que los propios botones ya nombran. */
-    '<p class="oj-hint">Si generas, el informe deja constancia de que la orden figuraba vencida.</p>'+
+    /* ⚠️ Acortado el 2026-10-26 (decisión del usuario): una línea con la orden,
+       la fecha y la consecuencia, más la cita. El oficio deja constancia de que
+       la orden figuraba vencida; eso ya lo hace el documento, no hay que decirlo. */
+    '<div class="oj-alert dura">La orden No. '+escHtml((caso.oj.orden.numero)||'—')+' venció el '+
+    escHtml(ojFechaCorta(vig.hasta))+'. Obliga a la libertad inmediata.'+
+    '<div class="oj-fund">Art. 298 CPP · CSJ AP4491-2016</div></div>'+
     '<div class="flx g8" style="flex-wrap:wrap">'+
       '<button class="btn bs" onclick="ojCancelarVencida()">Revisar la fecha</button>'+
       '<button class="btn bp" onclick="ojSeguirVencida()">Generar de todos modos</button>'+
@@ -20720,22 +20575,15 @@ async function ojGuardarCaso(silencioso){
     return false;
   }
 }
+/* Guardar abre el EXPEDIENTE de la captura (2026-10-26, decisión del usuario):
+   el botón «Generar oficio» salió de la revisión, y el oficio queda a un toque
+   en la tarjeta «Oficio de disposición». Antes se volvía a la lista y había
+   que buscar la captura para generarlo. */
 async function ojGuardarYSalir(){
   var ok=await ojGuardarCaso();
-  if(ok){ wc=null; go('capturas'); renderDraftSlot(); }
-}
-async function ojGenerarDesdeWizard(){
-  ojCollect();
-  var duras=ojDuras(wc);
-  if(duras.length){
-    var v=duras[0];
-    toast('Falta un dato obligatorio (paso '+(v.paso+1)+'): '+v.msg,7000);
-    ws=v.paso; renderWiz();
-    return;
-  }
-  var ok=await ojGuardarCaso(true);
   if(!ok) return;
-  ojDescargarOficio(wc);          // pide formato y tamaño antes de producir
+  var id=wc.id;
+  wc=null; renderDraftSlot(); abrirDossierCaso(id);
 }
 /*OJ_MODULE_END*/
 
