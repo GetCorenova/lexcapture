@@ -2039,6 +2039,47 @@ body.cu-on{overflow:hidden}
 .lc-dir-prev{font-size:12px;color:var(--text-3);margin-top:6px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .lc-dir-prev b{color:var(--acc);font-family:var(--m);letter-spacing:.02em}
 .lc-dir-link{background:none;border:0;padding:0;font:inherit;font-size:12px;color:var(--acc);cursor:pointer;text-decoration:underline}
+/* La dirección en el formulario es una TARJETA; sus campos viven en la ventana
+   (2026-10-27, `lcDirGrupo`). Mismo canto y fondo que un campo, para que se lea
+   como un dato que se toca, no como un aviso. */
+.lc-dirc{
+  display:flex;align-items:center;gap:12px;width:100%;min-height:58px;text-align:left;cursor:pointer;
+  background:var(--field);border:1px solid var(--field-bd);border-radius:var(--radius-sm);
+  padding:10px 12px;color:var(--text);font:inherit;
+  transition:border-color var(--d1) var(--ease),background var(--d1) var(--ease);
+}
+@media(hover:hover){.lc-dirc:hover{border-color:var(--acc)}}
+.lc-dirc:active{background:var(--pressed)}
+.lc-dirc:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.lc-dirc-ic{
+  flex:0 0 36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--acc);
+}
+.lc-dirc-ic svg,.lc-dirc-ed svg{width:18px;height:18px}
+.lc-dirc-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.lc-dirc-l1{font-size:15px;font-weight:600;line-height:1.3;color:var(--text);overflow-wrap:anywhere}
+.lc-dirc-l2{font-size:13px;line-height:1.35;color:var(--text-2);overflow-wrap:anywhere}
+.lc-dirc-ed{flex:0 0 auto;display:flex;color:var(--text-3)}
+.lc-dirc.vacia{border-style:dashed;background:transparent}
+.lc-dirc.vacia .lc-dirc-l1{font-weight:500;color:var(--acc)}
+.lc-dirc.vacia .lc-dirc-ed{color:var(--acc)}
+.lc-dirc.falta{border-color:var(--danger)}
+.lc-dirc-campos{display:none}
+/* La ventana: contenedor propio encima de #modal (z 200) y debajo de la cuenta. */
+#dir-ov{z-index:300}
+#dir-ov .lc-dirc-campos{display:block}
+#dir-ov .mc{display:flex;flex-direction:column}
+#dir-ov-b{flex:1;min-height:0}
+.lc-dirov-pie{
+  display:flex;gap:10px;position:sticky;bottom:calc(-20px - var(--sab));margin:8px -20px calc(-20px - var(--sab));
+  padding:12px 20px calc(12px + var(--sab));background:var(--elev);border-top:1px solid var(--border);
+}
+.lc-dirov-pie .btn{flex:1;min-height:48px}
+@media(min-width:700px){
+  #dir-ov{align-items:center}
+  #dir-ov .mc{max-width:560px;border-radius:20px;max-height:86dvh}
+  #dir-ov .mc::before{display:none}
+}
 /* Pareja campo-ancho + campo-corto SIEMPRE en la misma línea, también en el
    teléfono. Con `.fr` (una columna hasta 580px) cada conducta y cada elemento
    ocupaban cuatro renglones, que es justo lo que hacía el paso interminable. */
@@ -2681,11 +2722,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
               <div class="fg"><label class="fl">Indicativo</label><input class="fi" id="aj-ind-est" placeholder="Indicativo del comandante de la estación"></div>
               <div class="fg"><label class="fl">Comandante</label><input class="fi" id="aj-verde3" placeholder="Grado y nombre del comandante"></div>
             </div>
-            <div class="fg"><label class="fl">Dirección</label><input class="fi" id="aj-dir" placeholder="Dirección de la estación"></div>
-            <div class="fr">
-              <div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" placeholder="Barrio de la estación"></div>
-              <div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" placeholder="Municipio de la estación"></div>
-            </div>
+            <!-- Dirección, barrio y municipio: tarjeta con su ventana (2026-10-27).
+                 La pinta loadAjustesFields con los valores guardados. -->
+            <div id="aj-dir-slot"></div>
             <div class="fr">
               <div class="fg"><label class="fl">Teléfono</label><input class="fi" id="aj-tel" placeholder="Teléfono de la estación"></div>
               <div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="aj-cor" placeholder="Correo de la unidad"></div>
@@ -2858,6 +2897,9 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 <div class="toast" id="toast"></div>
 
 <!-- ====== MODAL ====== -->
+<!-- Ventana de dirección (2026-10-27): contenedor PROPIO, encima de #modal, para
+     poder abrirse sobre el formulario de persona o de despacho sin cerrarlo. -->
+<div class="mo" id="dir-ov"><div class="mc" id="dir-ov-c" role="dialog" aria-modal="true"></div></div>
 <div class="mo" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="mc" id="modal-c"></div>
 </div>
@@ -2972,6 +3014,8 @@ function go(name) {
   /* F3: sin derecho de uso no se navega (ver «DERECHO DE USO»). Antes de abrir
      la sesión no se sabe nada todavía: el arranque decide después. */
   if (_lcListo && !lcGuardia()) return;
+  // La ventana de dirección abierta se descarta: sus campos vuelven a su formulario.
+  if (_lcDirOv) lcDirCerrar(false, true);
   evAlNavegar(name);
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('on'); });
   var el = document.getElementById('screen-' + name);
@@ -3002,6 +3046,7 @@ function go(name) {
    aplicación (no había manejador y `go` solo hacía replaceState), y con ella se
    iba todo lo diligenciado. Ahora se trata igual que el botón ✕: se pregunta. */
 window.addEventListener('popstate', function() {
+  if (lcDirAlPop()) return;   // la ventana de dirección se atiende primero
   var wiz = document.getElementById('screen-wizard');
   if (!wiz || !wiz.classList.contains('on') || !wc) return;
   try { history.pushState({screen:'wizard'}, '', '#wizard'); } catch(e) {}
@@ -3182,7 +3227,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 158;
+var _BUILD = 159;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -3478,6 +3523,7 @@ function openPanel(titulo, html) {
    (el `onclick` del fondo) no puede perder lo que el funcionario acaba de
    escribir. */
 function closeModal() {
+  if (_lcDirOv) lcDirCerrar(false);   // la ventana de dirección encima: se descarta antes
   var mc = document.getElementById('modal-c');
   try {
     if (mc && wc && wc.ojv === 2 && mc.querySelector('#oj-r-pn')) ojCollectRequerido();
@@ -5542,6 +5588,12 @@ var _lcDir={};
 function lcDirWidget(id,valor,label,ph){
   var st=lcDirParsear(valor);
   if(st.modo==='libre') st.libre=st.libre||String(valor||'');
+  /* ⚠️ Lo guardado NO se reescribe mientras nadie lo toque (2026-10-27). El
+     widget interpreta la dirección para poder editarla, pero recomponerla al
+     abrir cambiaba en silencio «CL 48 # 55 - 50» por «CL 48 # 55-50» con solo
+     abrir y guardar el formulario. Hasta que se edite (o se pulse «Guardar» en
+     su ventana) el valor es el original, con «KR»→«CR» como siempre. */
+  st.orig=lcDirCR(String(valor==null?'':valor).trim()); st.toc=false;
   _lcDir[id]=st;
   return '<div class="fg" id="'+id+'__wrap">'+
     (label?'<label class="fl">'+escHtml(label)+'</label>':'')+
@@ -5551,6 +5603,7 @@ function lcDirWidget(id,valor,label,ph){
 }
 function lcDirValor(id){
   var st=_lcDir[id]||{};
+  if(st.toc===false) return st.orig;
   return lcDirCR(st.modo==='libre'?String(st.libre||'').trim():lcDirComponer(st));
 }
 /* ⚠️ En escritura libre la conversión de «KR» se hace VISIBLE al salir del campo,
@@ -5598,6 +5651,7 @@ function lcDirCuerpo(id,ph){
    necesita saber que detrás hay un widget. */
 function lcDirEditar(id){
   var st=_lcDir[id]; if(!st) return;
+  st.toc=true;
   function g(suf){ var el=document.getElementById(id+'__'+suf); return el?el.value:''; }
   if(st.modo==='libre') st.libre=g('libre');
   else { st.via=g('via'); st.num=g('num'); st.cruce=g('cruce'); st.placa=g('placa'); st.comp=g('comp'); }
@@ -5614,16 +5668,145 @@ function lcDirEditar(id){
    lo que haya escrito el usuario. */
 function lcDirModo(id,modo){
   var st=_lcDir[id]; if(!st) return;
-  if(modo==='libre'){ st.libre=lcDirValor(id); st.modo='libre'; }
+  if(modo==='libre'){ st.libre=lcDirValor(id); st.modo='libre'; st.toc=true; }
   else {
     var p=lcDirParsear(st.libre||'');
     if(p.modo==='form'){ p.modo='form'; _lcDir[id]=p; }
     else { st.modo='form'; st.comp=st.comp||''; }
-    _lcDir[id].modo='form';
+    _lcDir[id].modo='form'; _lcDir[id].toc=true;
   }
   var body=document.getElementById(id+'__body');
   if(body) body.innerHTML=lcDirCuerpo(id);
   var h=document.getElementById(id); if(h) h.value=lcDirValor(id);
+}
+
+/* ── LA DIRECCIÓN SE DILIGENCIA EN SU PROPIA VENTANA (2026-10-27) ──────────
+   Pedido del usuario con el paso «Lugar» a la vista: vía, número, placa,
+   complemento, barrio, características, localidad, zona y vereda se pedían en
+   un bloque largo dentro del formulario. Ahora el formulario enseña una TARJETA
+   con la dirección ya compuesta y sus detalles en una línea; tocarla abre una
+   ventana con todos los campos, y lo escrito solo llega al formulario al pulsar
+   «Guardar». Se puede reabrir y corregir cuando se quiera. Mismo componente en
+   los nueve formularios de la app que piden una dirección.
+
+   ⚠️ LOS CAMPOS NO SE DUPLICAN: se MUEVEN. El bloque de campos vive dentro del
+   formulario (oculto) con los ids de siempre; al abrir, el nodo pasa a la
+   ventana y al cerrar vuelve a su sitio. Así cada recolector (`collectStep`,
+   `savePersonModal`, `lcDespGuardarForm`, `ojCollect*`, `saveAjustes`,
+   `rtGuardar`, `feLeer`…) sigue leyendo el mismo id, y la inferencia del
+   departamento y el aviso de homónimos (`oninput` del municipio) funcionan
+   dentro de la ventana sin una línea nueva. El modelo del caso no cambia.
+
+   ⚠️ CANCELAR DEVUELVE LO QUE HABÍA, campo por campo y también el estado del
+   widget guiado (`_lcDir`): `lcDirValor` lee de ese estado, no del DOM.
+
+   ⚠️ Tocar fuera NO cierra: un toque accidental tiraría lo tecleado. Se cierra
+   con «Guardar», «Cancelar», la X o el botón atrás de Android (que descarta). */
+var _lcDirG={};          // descripción de cada grupo vivo, por id de la dirección
+var _lcDirOv=null;       // {id, snap, dir} mientras la ventana está abierta
+var _lcDirPopIgnorar=false;
+var LC_DIRC_IC_PIN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
+var LC_DIRC_IC_EDIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+var LC_DIRC_IC_MAS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+/* o = {label, titulo, ph, req, padre, reqTitle, extras (HTML de los campos que
+   acompañan a la dirección), resumen: [[{id, pre}]…] (grupos de la segunda línea
+   de la tarjeta: los ids de un grupo se unen con «, » y los grupos con « · »),
+   vals: {id: valor} para pintar la tarjeta antes de que exista el DOM,
+   alGuardar: función que corre tras guardar}. */
+function lcDirGrupo(id,valor,o){
+  o=o||{};
+  var w=lcDirWidget(id,valor,o.campoLbl===undefined?(o.extras?'Dirección':''):o.campoLbl,o.ph);
+  _lcDirG[id]={titulo:o.titulo||o.label||'Dirección',resumen:o.resumen||[],alGuardar:o.alGuardar||null,req:!!o.req};
+  var lab=o.label?'<label class="fl'+(o.padre?' fl-p':'')+'">'+escHtml(o.label)+
+    (o.req?'<span class="req" title="'+escAttr(o.reqTitle||'Obligatorio: sin este dato no se genera el documento')+'">*</span>':'')+'</label>':'';
+  var dir=lcDirValor(id);
+  return '<div class="fg lc-dirg" id="'+id+'__grp">'+lab+
+    '<button type="button" class="lc-dirc'+(dir?'':' vacia'+(o.req?' falta':''))+'" id="'+id+'__card" '+
+      'aria-label="'+escAttr(dir?'Editar la dirección: '+dir:'Agregar dirección')+'" onclick="lcDirAbrir(\''+id+'\')">'+
+      lcDirTarjetaHtml(id,dir,function(x){ return (o.vals&&o.vals[x]!=null)?o.vals[x]:''; })+'</button>'+
+    '<div class="lc-dirc-campos" id="'+id+'__campos">'+w+(o.extras||'')+'</div>'+
+  '</div>';
+}
+function lcDirTarjetaHtml(id,dir,leer){
+  var g=_lcDirG[id]||{resumen:[]};
+  var partes=(g.resumen||[]).map(function(grp){
+    return grp.map(function(x){ var v=String(leer(x.id)||'').trim(); return v?(x.pre||'')+v:''; })
+      .filter(Boolean).join(', ');
+  }).filter(Boolean);
+  var l2=partes.join(' · ');
+  var vacia=!dir;
+  return '<span class="lc-dirc-ic" aria-hidden="true">'+LC_DIRC_IC_PIN+'</span>'+
+    '<span class="lc-dirc-tx"><span class="lc-dirc-l1">'+escHtml(vacia?'Agregar dirección':dir)+'</span>'+
+      (l2?'<span class="lc-dirc-l2">'+escHtml(l2)+'</span>':'')+'</span>'+
+    '<span class="lc-dirc-ed" aria-hidden="true">'+(vacia?LC_DIRC_IC_MAS:LC_DIRC_IC_EDIT)+'</span>';
+}
+/* Repinta solo la tarjeta, leyendo lo que hay en los campos. */
+function lcDirTarjeta(id){
+  var card=document.getElementById(id+'__card'); if(!card) return;
+  var dir=lcDirValor(id);
+  card.innerHTML=lcDirTarjetaHtml(id,dir,function(x){ var el=document.getElementById(x); return el?el.value:''; });
+  card.classList.toggle('vacia',!dir);
+  card.classList.toggle('falta',!dir&&!!(_lcDirG[id]||{}).req);
+  card.setAttribute('aria-label',(dir?'Editar la dirección: '+dir:'Agregar dirección'));
+}
+function lcDirAbrir(id){
+  if(_lcDirOv) lcDirCerrar(false);
+  var campos=document.getElementById(id+'__campos');
+  var ov=document.getElementById('dir-ov'), c=document.getElementById('dir-ov-c');
+  if(!campos||!ov||!c) return;
+  var g=_lcDirG[id]||{};
+  var snap=[].map.call(campos.querySelectorAll('input,select,textarea'),function(el){
+    return {el:el,v:el.value,auto:el.dataset?el.dataset.lcAuto:undefined};
+  });
+  _lcDirOv={id:id,snap:snap,dir:JSON.parse(JSON.stringify(_lcDir[id]||{}))};
+  c.innerHTML='<div class="mh"><h2>'+escHtml(g.titulo||'Dirección')+'</h2>'+
+      '<button class="mx" onclick="lcDirCerrar(false)" aria-label="Cerrar sin guardar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
+    '<div id="dir-ov-b"></div>'+
+    '<div class="lc-dirov-pie"><button type="button" class="btn bs" onclick="lcDirCerrar(false)">Cancelar</button>'+
+      '<button type="button" class="btn bp" id="dir-ov-ok" onclick="lcDirCerrar(true)">Guardar</button></div>';
+  document.getElementById('dir-ov-b').appendChild(campos);
+  ov.classList.add('open');
+  lcGeoBarrer(ov);
+  try{ history.pushState({dirOv:1},'',location.hash); }catch(e){}
+}
+/* guardar=true lleva lo escrito al formulario; false lo devuelve como estaba.
+   `desdePop` = lo cerró el botón atrás: la entrada del historial ya se consumió. */
+function lcDirCerrar(guardar,desdePop){
+  var st=_lcDirOv; if(!st) return;
+  _lcDirOv=null;
+  var id=st.id, campos=document.getElementById(id+'__campos');
+  if(campos){
+    if(guardar){ lcDirLibreCR(id); lcDirEditar(id); }   // «Guardar» acepta lo que enseña «Se imprimirá»
+    else{
+      st.snap.forEach(function(s){
+        s.el.value=s.v;
+        if(s.el.dataset){ if(s.auto===undefined) delete s.el.dataset.lcAuto; else s.el.dataset.lcAuto=s.auto; }
+      });
+      _lcDir[id]=st.dir;
+      var body=document.getElementById(id+'__body'); if(body) body.innerHTML=lcDirCuerpo(id);
+      var h0=document.getElementById(id); if(h0) h0.value=lcDirValor(id);
+    }
+    var grp=document.getElementById(id+'__grp');
+    if(grp) grp.appendChild(campos); else if(campos.parentNode) campos.parentNode.removeChild(campos);
+    if(grp) lcGeoBarrer(grp);
+  }
+  var ov=document.getElementById('dir-ov'); if(ov) ov.classList.remove('open');
+  var c=document.getElementById('dir-ov-c'); if(c) c.innerHTML='';
+  if(!desdePop){ _lcDirPopIgnorar=true; try{ history.back(); }catch(e){ _lcDirPopIgnorar=false; } }
+  if(guardar&&campos){
+    /* Quien escucha el formulario (el borrador automático del wizard, los
+       avisos del acta) se entera del cambio como si se hubiera tecleado. */
+    var h=document.getElementById(id);
+    if(h){ h.dispatchEvent(new Event('input',{bubbles:true})); h.dispatchEvent(new Event('change',{bubbles:true})); }
+    var g=_lcDirG[id]; if(g&&typeof g.alGuardar==='function'){ try{ g.alGuardar(); }catch(e){} }
+  }
+  lcDirTarjeta(id);
+}
+/* Botón atrás de Android con la ventana abierta: se cierra sin guardar. */
+function lcDirAlPop(){
+  if(_lcDirPopIgnorar){ _lcDirPopIgnorar=false; return true; }
+  if(_lcDirOv){ lcDirCerrar(false,true); return true; }
+  return false;
 }
 
 /* ── Placas de vehículo (observación 7) ────────────────────────────────────
@@ -6259,19 +6442,33 @@ function rStep2(){
     /* Dirección con formato guiado (observación 5). El campo oculto `w-dir`
        sigue llevando el mismo string de siempre, así que collectStep y el
        mapeo al FPJ-5 (celda 63) no cambian ni una línea. */
-    lcAtribs(
-      lcDirWidget('w-dir',l.dir,'Dirección exacta','Ej: finca La Esperanza, vía al mar km 4')+
+    /* ⚠️ 2026-10-27: la dirección y lo que describe el sitio (barrio,
+       características, localidad, zona, vereda) se diligencian en su ventana
+       (`lcDirGrupo`). El municipio y el departamento se quedan aquí, a la vista,
+       por decisión del usuario: de ellos sale el despacho y el NUNC. */
+    lcAtribs(lcLugarDirGrupo(l,cfg));
+}
+function lcLugarDirGrupo(l,cfg){
+  var loc=l.localidad!==undefined?l.localidad:cfg.localidadDefault;
+  var zona=l.zona||cfg.zonaDefault||'Urbana';
+  var ver=l.vereda!==undefined?l.vereda:cfg.veredaDefault;
+  return lcDirGrupo('w-dir',l.dir,{
+    label:'Dirección exacta', titulo:'Dirección del lugar de los hechos',
+    ph:'Ej: finca La Esperanza, vía al mar km 4',
+    extras:
       '<div class="fg"><label class="fl">Barrio</label><input class="fi" id="w-barrio" value="'+escAttr(l.barrio)+'" list="dl-barrio"></div>'+
       '<div class="fg"><label class="fl">Características del sitio</label><textarea class="ft" id="w-caract">'+escHtml(l.caract)+'</textarea></div>'+
       '<div class="fr3">'+
-      '<div class="fg"><label class="fl">Localidad</label><input class="fi mono" id="w-local" value="'+(l.localidad!==undefined?l.localidad:cfg.localidadDefault)+'" inputmode="numeric" maxlength="4"></div>'+
+      '<div class="fg"><label class="fl">Localidad</label><input class="fi mono" id="w-local" value="'+escAttr(loc)+'" inputmode="numeric" maxlength="4"></div>'+
       '<div class="fg"><label class="fl">Zona</label><select class="fs" id="w-zona">'+
-      '<option value="Urbana" '+((l.zona||cfg.zonaDefault||'Urbana')==='Urbana'?'selected':'')+'>Urbana</option>'+
-      '<option value="Rural" '+((l.zona||cfg.zonaDefault||'')==='Rural'?'selected':'')+'>Rural</option>'+
+      '<option value="Urbana" '+(zona==='Urbana'?'selected':'')+'>Urbana</option>'+
+      '<option value="Rural" '+(zona==='Rural'?'selected':'')+'>Rural</option>'+
       '</select></div>'+
-      '<div class="fg"><label class="fl">Vereda</label><input class="fi" id="w-vereda" value="'+(l.vereda!==undefined?l.vereda:cfg.veredaDefault)+'"></div>'+
-      '</div>'
-    );
+      '<div class="fg"><label class="fl">Vereda</label><input class="fi" id="w-vereda" value="'+escAttr(ver)+'"></div>'+
+      '</div>',
+    resumen:[[{id:'w-barrio',pre:'Barrio '}],[{id:'w-zona'}],[{id:'w-local',pre:'Localidad '}],[{id:'w-vereda',pre:'Vereda '}]],
+    vals:{'w-barrio':l.barrio,'w-zona':zona,'w-local':loc,'w-vereda':ver}
+  });
 }
 
 /* ── Homónimos: se preguntan, no se adivinan ───────────────────────────────
@@ -6461,7 +6658,7 @@ function openPersonModal(key,idx,p,showSenas,showRole){
        ⚠️ La residencia es el PADRE: el teléfono y el correo son las otras dos
        formas de llegar a la persona, no atributos de la dirección — por eso van
        a su lado y no anidados. */
-    lcDirWidget('pm-dirRes',p.dirRes,'Dirección de residencia')+
+    lcDirGrupo('pm-dirRes',p.dirRes,{label:'Dirección de residencia',titulo:'Dirección de residencia'})+
     '<div class="fr"><div class="fg"><label class="fl">Teléfono</label><input class="fi" id="pm-tel" value="'+escAttr(p.tel)+'" inputmode="tel"></div>'+
     '<div class="fg"><label class="fl">Correo electrónico</label><input class="fi" id="pm-correo" value="'+escAttr(p.correo)+'"></div></div>'
     , !isEdit || !tieneContacto)+
@@ -12376,8 +12573,7 @@ function rtAbrir(id, empId) {
     /* La dirección del hallazgo es el PADRE; la ubicación precisa —«en la
        pretina del pantalón»— solo tiene sentido dentro de ella. */
     '<div class="st">5. Sitio o lugar de hallazgo</div>' +
-    '<div class="fg"><label class="fl fl-p">Dirección</label>' +
-      '<input class="fi" id="rt-dir" value="' + escAttr(m.direccion) + '"></div>' +
+    lcDirGrupo('rt-dir', m.direccion, { label:'Dirección', padre:true, titulo:'Dirección del hallazgo' }) +
     lcAtribs(
     '<div class="fg"><label class="fl">Ubicación exacta</label>' +
       '<textarea class="ft" id="rt-ubic" placeholder="En la vía pública · En la pretina del pantalón · En la mano derecha">' + escHtml(m.ubicacion) + '</textarea></div>'
@@ -13955,7 +14151,7 @@ function feRecibeHtml(c, e) {
       lcCampo('Identificación', lcInput('fe-rec-ide', d.ident, 'Ej: CC 71234567', { mono:true })) +
       lcCampo('Teléfono / Celular', lcInput('fe-rec-tel', d.tel, '', { extra:' inputmode="tel"' })) +
     '</div>' +
-    lcCampo('Dirección', lcInput('fe-rec-dir', d.dir)) +
+    lcDirGrupo('fe-rec-dir', d.dir, { label:'Dirección', titulo:'Dirección de quien recibe' }) +
     lcCampo('Correo electrónico', lcInput('fe-rec-cor', d.correo, '', { extra:' inputmode="email"' }));
 }
 function feAvisoHtml(c) {
@@ -14050,8 +14246,8 @@ function feAbrir(id) {
     ojwChk('fe-opj', e.ordenPJ, 'Orden a Policía Judicial') +
 
     '<div class="st">Autoridad que ordena la entrega</div>' +
-    lcCampo('Dirección', lcInput('fe-dir', m.dirAutoridad, 'Dirección del despacho',
-      { extra:' onblur="feRefrescarAviso()"' })) +
+    lcDirGrupo('fe-dir', m.dirAutoridad, { label:'Dirección', titulo:'Dirección de la autoridad',
+      ph:'Dirección del despacho', alGuardar:feRefrescarAviso }) +
 
     '<div class="st">Elementos que se entregan</div>' +
     '<div id="fe-elementos">' + feElementosHtml(c) + '</div>' +
@@ -16526,17 +16722,21 @@ function lcDespForm(id,pre){
       'Se imprime así en el informe.',true,
       'Obligatorio: sin nombre el despacho no se puede guardar')+
     lcAtribs(
-      lcDirWidget('dp-dir',d.direccion,'Dirección','Dirección del despacho')+
+      /* La dirección, el barrio, el municipio y el departamento se diligencian en
+         la ventana de dirección (2026-10-27); el contacto se queda aquí. */
+      lcDirGrupo('dp-dir',d.direccion,{label:'Dirección',titulo:'Dirección del despacho',ph:'Dirección del despacho',
+        extras:lcCampo('Barrio',lcInput('dp-bar',d.barrio,'Barrio'))+
+          '<div class="fr">'+
+          lcCampo('Municipio','<input class="fi" id="dp-mun" list="dl-muni" value="'+escAttr(d.municipio||'')+'" '+
+            'placeholder="Municipio" data-dep="dp-dep" oninput="lcGeoCompletar(this,\'dp-dep\')" onblur="lcGeoAprender(this,\'dp-dep\')">')+
+          lcCampo('Departamento',lcInput('dp-dep',d.departamento,'Se completa solo'))+
+          '</div>',
+        resumen:[[{id:'dp-bar'}],[{id:'dp-mun'},{id:'dp-dep'}]],
+        vals:{'dp-bar':d.barrio,'dp-mun':d.municipio,'dp-dep':d.departamento}})+
       '<div class="fr">'+
-        lcCampo('Barrio',lcInput('dp-bar',d.barrio,'Barrio'))+
-        lcCampo('Municipio','<input class="fi" id="dp-mun" list="dl-muni" value="'+escAttr(d.municipio||'')+'" '+
-          'placeholder="Municipio" data-dep="dp-dep" oninput="lcGeoCompletar(this,\'dp-dep\')" onblur="lcGeoAprender(this,\'dp-dep\')">')+
-      '</div>'+
-      '<div class="fr">'+
-        lcCampo('Departamento',lcInput('dp-dep',d.departamento,'Se completa solo'))+
         lcCampo('Teléfono',lcInput('dp-tel',d.telefono,'Teléfono'))+
-      '</div>'+
-      lcCampo('Correo electrónico',lcInput('dp-cor',d.correo,'opcional'))
+        lcCampo('Correo electrónico',lcInput('dp-cor',d.correo,'opcional'))+
+      '</div>'
     )+
     '<div id="dp-nunc-box">'+lcDespNuncHtml(cl,d.nunc)+'</div>'+
     '<div class="mb"><button class="btn bs" onclick="closeModal()">Cancelar</button>'+
@@ -16764,6 +16964,8 @@ function lcAccToggle(id) {
 function loadAjustesFields() {
   var cfg=DB.getConfig();
   var vb=document.getElementById('aj-build'); if(vb) vb.textContent=_BUILD;
+  var slot=document.getElementById('aj-dir-slot');
+  if(slot) slot.innerHTML=lcAjDirGrupo(cfg.ojCustDireccion||cfg.dosDir||'',cfg.ojCustBarrio||'',lcUnidadCiudad(cfg)||'');
   /* El nombre de la unidad y su ciudad se muestran RESUELTOS: si el equipo los
      tenía escritos en una de las claves del oficio (membrete o custodia) y no
      en esta, el usuario los ve aquí y no los vuelve a teclear. */
@@ -16771,8 +16973,7 @@ function loadAjustesFields() {
     /* Contacto de la unidad. Se edita AQUÍ y se guarda en las claves `ojCust*`,
        que son las que lee el oficio. Las legadas (`dosDir`/`dosTel`) se siguen
        leyendo para que una config guardada antes no pierda lo ya escrito. */
-    'aj-dir':cfg.ojCustDireccion||cfg.dosDir||'',
-    'aj-bar':cfg.ojCustBarrio,'aj-ciu':lcUnidadCiudad(cfg),
+    /* Dirección, barrio y municipio los pinta lcAjDirGrupo, arriba. */
     'aj-tel':cfg.ojCustTelefono||cfg.dosTel||'','aj-cor':cfg.ojCustCorreo,'aj-web':cfg.ojPieWeb,
     /* ⚠️ MEJORA 7 — la patrulla, su CAI y los valores por defecto del lugar ya
        NO se pintan aquí: viven en Perfil → «Mi jurisdicción» (lcJurisRender).
@@ -16795,6 +16996,17 @@ function loadAjustesFields() {
      catálogo no reconoce—. */
   var rg=document.getElementById('aj-rango'); if(rg) lcGradoPista(rg);
   renderAjConocieron(cfg);
+}
+/* La dirección de la estación (Ajustes → Mi unidad). Se guarda con «Guardar
+   ajustes», como los demás campos de la sección: la ventana solo la diligencia. */
+function lcAjDirGrupo(dir,bar,ciu){
+  return lcDirGrupo('aj-dir',dir,{label:'Dirección',titulo:'Dirección de la estación',ph:'Dirección de la estación',
+    extras:'<div class="fr">'+
+      '<div class="fg"><label class="fl">Barrio</label><input class="fi" id="aj-bar" value="'+escAttr(bar)+'" placeholder="Barrio de la estación"></div>'+
+      '<div class="fg"><label class="fl">Municipio (Ciudad)</label><input class="fi" id="aj-ciu" list="dl-muni" value="'+escAttr(ciu)+'" placeholder="Municipio de la estación"></div>'+
+      '</div>',
+    resumen:[[{id:'aj-bar'}],[{id:'aj-ciu'}]],
+    vals:{'aj-bar':bar,'aj-ciu':ciu}});
 }
 
 /* Quién va a firmar el «Conocieron el caso» del dossier. Ya no es un formulario
@@ -18234,11 +18446,13 @@ function ojwMun(id,val,idDepto,ph){
    que colarle la etiqueta —con su asterisco de obligatorio— dentro. */
 /* `esPadre` marca la etiqueta como cabeza de grupo (`.fl-p`): la dirección de un
    lugar es de lo que cuelgan su barrio, su municipio y su tipo. */
-function ojwDir(id,val,label,ph,req,esPadre){
-  var w=lcDirWidget(id,val,'',ph);
-  var lab='<label class="fl'+(esPadre?' fl-p':'')+'">'+escHtml(label)+
-    (req?'<span class="req" title="Obligatorio: sin este dato no se genera el oficio">*</span>':'')+'</label>';
-  return w.replace('<div id="'+id+'__body">',lab+'<div id="'+id+'__body">');
+/* 2026-10-27: es la tarjeta de dirección con su ventana (lcDirGrupo); «o»
+   lleva los campos que acompañan a la dirección y la línea de resumen. */
+function ojwDir(id,val,label,ph,req,esPadre,o){
+  o=o||{};
+  return lcDirGrupo(id,val,{label:label,ph:ph,req:!!req,padre:!!esPadre,
+    reqTitle:'Obligatorio: sin este dato no se genera el oficio',
+    titulo:o.titulo||label,extras:o.extras,resumen:o.resumen,vals:o.vals});
 }
 function ojwDt(id,val,extra){ return '<input type="date" class="fi" id="'+id+'" value="'+escAttr(val||'')+'"'+(extra||'')+'>'; }
 function ojwHr(id,val,extra){ return lcHoraInput(id,val,extra); }
@@ -18919,15 +19133,16 @@ function ojRequeridoForm(){
        cambia — el widget escribe en un input oculto con el id de siempre. */
     '<div class="oj-blk">'+
       '<div class="st">Residencia</div>'+
-      ojwDir('oj-r-rdir',r.resDireccion,'Dirección','Dirección de residencia')+
-      ojwR(
-        ojwF('Barrio o vereda',ojwIn('oj-r-rbar',r.resBarrio,'')),
-        ojwF('Teléfono',ojwIn('oj-r-rtel',r.resTelefono,'',{mono:true}))
-      )+
-      ojwR(
-        ojwF('Municipio',ojwMun('oj-r-rmun',r.resMunicipio,'oj-r-rdep','')),
-        ojwF('Departamento',ojwIn('oj-r-rdep',r.resDepartamento,'Se completa solo'))
-      )+
+      ojwDir('oj-r-rdir',r.resDireccion,'Dirección','Dirección de residencia',false,false,{
+        titulo:'Dirección de residencia',
+        extras:ojwF('Barrio o vereda',ojwIn('oj-r-rbar',r.resBarrio,''))+
+          ojwR(
+            ojwF('Municipio',ojwMun('oj-r-rmun',r.resMunicipio,'oj-r-rdep','')),
+            ojwF('Departamento',ojwIn('oj-r-rdep',r.resDepartamento,'Se completa solo'))
+          ),
+        resumen:[[{id:'oj-r-rbar'}],[{id:'oj-r-rmun'},{id:'oj-r-rdep'}]],
+        vals:{'oj-r-rbar':r.resBarrio,'oj-r-rmun':r.resMunicipio,'oj-r-rdep':r.resDepartamento}})+
+      ojwF('Teléfono',ojwIn('oj-r-rtel',r.resTelefono,'',{mono:true}))+
     '</div>'+
 
     /* Señales particulares. Es UNA fila del formato, y se pedía con SEIS
@@ -19072,16 +19287,18 @@ function ojStep5(){
          el departamento y el tipo son atributos SUYOS, no cuatro datos más de
          la diligencia. Sin la jerarquía, «Municipio» en esta lista podía leerse
          como el del despacho, que se pide en el paso anterior. */
-      ojwDir('oj-g-dir',g.lugarDireccion,'Lugar de la '+t.acc,'Ej: CL 53 # 51-20',!g.lugarDireccion,true)+
-      lcAtribs(
-        ojwF('Barrio o vereda',ojwIn('oj-g-bar',g.lugarBarrio,''))+
-        ojwR(
-          ojwF('Municipio',ojwMun('oj-g-mun',g.lugarMunicipio,'oj-g-dep','')),
-          ojwF('Departamento',ojwIn('oj-g-dep',g.lugarDepartamento,'Se completa solo'))
-        )+
-        // Fila 3 — tipo de lugar.
-        ojwF('Tipo de lugar',ojwSel('oj-g-tlug','tipoLugar',g.lugarTipo,''))
-      )+
+      /* 2026-10-27: el barrio, el municipio, el departamento y el tipo se
+         diligencian con la dirección, en su ventana (fila 3 = tipo de lugar). */
+      ojwDir('oj-g-dir',g.lugarDireccion,'Lugar de la '+t.acc,'Ej: CL 53 # 51-20',!g.lugarDireccion,true,{
+        titulo:'Lugar de la '+t.acc,
+        extras:ojwF('Barrio o vereda',ojwIn('oj-g-bar',g.lugarBarrio,''))+
+          ojwR(
+            ojwF('Municipio',ojwMun('oj-g-mun',g.lugarMunicipio,'oj-g-dep','')),
+            ojwF('Departamento',ojwIn('oj-g-dep',g.lugarDepartamento,'Se completa solo'))
+          )+
+          ojwF('Tipo de lugar',ojwSel('oj-g-tlug','tipoLugar',g.lugarTipo,'')),
+        resumen:[[{id:'oj-g-bar'}],[{id:'oj-g-mun'},{id:'oj-g-dep'}]],
+        vals:{'oj-g-bar':g.lugarBarrio,'oj-g-mun':g.lugarMunicipio,'oj-g-dep':g.lugarDepartamento}})+
     '</div>';
     /* ⚠️ «Quién hizo la diligencia» se retiró (2026-10-26, punto 9): unidad,
        patrulla y funcionarios son el titular del perfil y su compañero, que ya
@@ -19372,11 +19589,14 @@ function ojDestinatarioHtml(d,s){
          y la firma. Anidar no es dejar de pintar. */
       ojwP(etiqueta,ojwIn('oj-x-nom',d.nombre,'Nombre completo del despacho o la fiscalía'),'',!d.nombre)+
       lcAtribs(
-        ojwF('Dirección',ojwIn('oj-x-dir',d.direccion,'Ej: Carrera 64C # 67-300, barrio Caribe'),'',via==='JUZGADO'&&!d.direccion)+
-        ojwR(
-          ojwF('Municipio',ojwMun('oj-x-mun',d.municipio,'oj-x-dep','Ej: Medellín')),
-          ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Se completa solo'))
-        )
+        ojwDir('oj-x-dir',d.direccion,'Dirección','Ej: Carrera 64C # 67-300',via==='JUZGADO'&&!d.direccion,false,{
+          titulo:'Dirección del destinatario',
+          extras:ojwR(
+            ojwF('Municipio',ojwMun('oj-x-mun',d.municipio,'oj-x-dep','Ej: Medellín')),
+            ojwF('Departamento',ojwIn('oj-x-dep',d.departamento,'Se completa solo'))
+          ),
+          resumen:[[{id:'oj-x-mun'},{id:'oj-x-dep'}]],
+          vals:{'oj-x-mun':d.municipio,'oj-x-dep':d.departamento}})
       )+
       (via==='FISCALIA'
         ? '<button class="btn bs bsm bbl" onclick="ojGuardarFiscaliaDefecto()">Guardar como fiscalía por defecto del equipo</button>'

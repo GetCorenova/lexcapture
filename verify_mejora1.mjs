@@ -206,6 +206,10 @@ log(await page.evaluate(() => 'numIncidente' in wc && 'recibe' in wc),
 /* ═══════════ OBSERVACIÓN 5 · direcciones con formato ═══════════ */
 sec('OBS 5 — direcciones normalizadas (lugar de los hechos)');
 await irA('Lugar');
+/* ⚠️ 2026-10-27: los campos de la dirección viven en su ventana (lcDirGrupo):
+   se abre la tarjeta antes de mirarlos y se guarda al terminar. */
+await page.evaluate(() => lcDirAbrir('w-dir'));
+await page.waitForTimeout(200);
 log(await page.isVisible('#w-dir__via'), 'La dirección del lugar se arma con un tipo de vía predefinido');
 const vias = await page.evaluate(() => Array.from(document.querySelectorAll('#w-dir__via option')).map(o => o.value).filter(Boolean));
 log(vias.includes('CL') && vias.includes('CR') && vias.includes('AV'),
@@ -235,6 +239,8 @@ log(await page.inputValue('#w-dir') === 'Finca La Esperanza, vía al mar km 4',
 await page.evaluate(() => lcDirModo('w-dir', 'form'));
 await page.waitForTimeout(120);
 log(await page.isVisible('#w-dir__via'), 'Se puede volver al formato guiado');
+await page.evaluate(() => lcDirCerrar(true));
+await page.waitForTimeout(150);
 // Interpretar direcciones ya guardadas: nada se pierde al abrir un caso viejo.
 const parseos = await page.evaluate(() => ([
   lcDirParsear('Calle 51 No 42-82'),
@@ -259,6 +265,8 @@ for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas
   await page.waitForTimeout(120);
   await page.evaluate((r) => addMultiPerson(r, r === 'capturados'), rol);
   await page.waitForTimeout(200);
+  await page.evaluate(() => lcDirAbrir('pm-dirRes'));
+  await page.waitForTimeout(150);
   const ok = await page.isVisible('#pm-dirRes__via');
   log(ok, `El registro de ${rol} usa el MISMO widget de dirección`);
   if (ok) {
@@ -268,6 +276,7 @@ for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas
       document.getElementById('pm-dirRes__cruce').value = '12';
       document.getElementById('pm-dirRes__placa').value = '30';
       lcDirEditar('pm-dirRes');
+      lcDirCerrar(true);
       document.getElementById('pm-priNom').value = 'ANA';
       document.getElementById('pm-priApe').value = 'GOMEZ';
       document.getElementById('pm-numDoc').value = '1234567';
@@ -276,11 +285,13 @@ for (const [paso, rol] of [['Capturados', 'capturados'], ['Víctimas', 'victimas
     await page.waitForTimeout(200);
     log(await page.evaluate((r) => wc[r][0].dirRes, rol) === 'CR 45 # 12-30',
       `Y la guarda con el mismo formato en ${rol}`);
-  } else { log(false, `(no se pudo probar el guardado en ${rol})`); }
+  } else { await page.evaluate(() => lcDirCerrar(false)); log(false, `(no se pudo probar el guardado en ${rol})`); }
 }
 // Registro de Personas (fuera del wizard): mismo widget, misma salida.
 await page.evaluate(() => { go('personas'); openPersonForm({ rol: 'Testigo' }); });
 await page.waitForTimeout(250);
+await page.evaluate(() => lcDirAbrir('pm-dirRes'));
+await page.waitForTimeout(150);
 log(await page.isVisible('#pm-dirRes__via'), 'El registro de Personas (módulo aparte) usa el mismo widget');
 await page.evaluate(() => { closeModal(); go('wizard'); renderWiz(); });   // se vuelve a la captura en curso
 await page.waitForTimeout(200);

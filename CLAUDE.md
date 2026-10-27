@@ -8482,3 +8482,54 @@ despachos y los cinco del módulo de orden judicial. Verificado con `verify_geo_
   captura en «Bogotá D.C.».
 - Adaptados (eran el comportamiento corregido): `verify_jurisdiccion` [19] y [33], `verify_ola2` [10].
 - Anti-caché `?v=158` / `cache-v158`, `_BUILD=158`. Para la app de Play hace falta un `.aab` nuevo.
+
+## La dirección se diligencia en su propia ventana (2026-10-27, build 159)
+Pedido del usuario con el paso «Lugar» de flagrancia a la vista: vía, número, placa, complemento,
+barrio, características, localidad, zona y vereda formaban un bloque largo y desordenado. Ahora el
+formulario enseña una **tarjeta** con la dirección compuesta y sus detalles en una línea; tocarla
+abre una **ventana con «Guardar»**, y se puede reabrir y corregir cuando se quiera. Mismo componente
+en **los nueve formularios** que piden dirección. Rama `direccion-modal`. Verificado con
+`verify_direccion_modal.mjs` (**59 checks**, nuevo) y mirando la tarjeta y la ventana en los dos temas.
+- **`lcDirGrupo(id, valor, o)`** (junto a `lcDirWidget`): etiqueta + tarjeta (`.lc-dirc`, vacía con
+  borde punteado y «Agregar dirección»; obligatoria y vacía, borde en `--danger`) + el bloque de
+  campos oculto (`<id>__campos`). `o.extras` = el HTML de los campos que acompañan a la dirección,
+  `o.resumen` = qué se enseña en la segunda línea, `o.alGuardar` = qué correr tras guardar.
+  `ojwDir` pasa a envolverla. `lcDirAbrir` / `lcDirCerrar(guardar)` / `lcDirTarjeta`.
+- ⚠️ **Los campos NO se duplican: se MUEVEN.** Al abrir, el nodo `<id>__campos` pasa a la ventana
+  (`#dir-ov`, contenedor propio con z-index 300, encima de `#modal`) y al cerrar vuelve a su sitio.
+  Los ids son los de siempre, así que **ningún recolector cambió** (`collectStep`,
+  `savePersonModal`, `lcDespGuardarForm`, `ojCollect*`, `saveAjustes`, `rtGuardar`, `feLeer`), ni el
+  modelo, ni un documento; y la inferencia del departamento y el aviso de homónimos (`oninput` del
+  municipio) funcionan dentro de la ventana sin una línea nueva.
+- **Cancelar, la X y el botón atrás de Android devuelven lo que había**, campo por campo y también el
+  estado del widget guiado (`_lcDir`, que es de donde lee `lcDirValor`). **Tocar fuera no cierra.**
+  Guardar dispara `input`/`change` en el campo oculto: el borrador automático y los avisos del acta
+  se enteran. `closeModal()` y `go()` descartan la ventana si quedó abierta; el `popstate` la
+  atiende antes que el wizard (`lcDirAlPop`), así atrás no cierra la captura.
+- ⚠️ **Lo guardado no se reescribe mientras nadie lo toque** (`st.orig`/`st.toc`): el widget
+  interpretaba la dirección al abrir y, con solo abrir y guardar el formulario, «CL 48 # 55 - 50»
+  quedaba «CL 48 # 55-50». Ahora el valor es el original hasta que se edite o se pulse «Guardar» en la
+  ventana (que acepta lo que enseña «Se imprimirá»). Lo destapó `verify_mejora7` [B5].
+
+| Formulario | En la ventana | Fuera |
+|---|---|---|
+| Flagrancia · Lugar | dirección, barrio, características, localidad, zona, vereda | municipio, departamento (deciden despacho y NUNC — decisión del usuario) |
+| Persona | residencia | teléfono, correo |
+| Despacho | dirección, barrio, municipio, departamento | teléfono, correo, NUNC |
+| OJ · residencia | dirección, barrio o vereda, municipio, departamento | teléfono |
+| OJ · lugar de la captura | dirección (obligatoria), barrio, municipio, departamento, tipo de lugar | fecha, hora |
+| OJ · destinatario | dirección, municipio, departamento | nombre |
+| Ajustes · Estación | dirección, barrio, municipio (la pinta `lcAjDirGrupo` desde `loadAjustesFields`) | teléfono, correo |
+| Rótulo FPJ-7 | dirección del hallazgo | ubicación exacta |
+| Acta de entrega | dirección de la autoridad · dirección de quien recibe | lo demás |
+
+- Los cinco que eran texto suelto (destinatario, estación, rótulo, las dos del acta de entrega) ganan
+  el formato guiado; una dirección que no encaja abre en «Escribir a mano», intacta.
+- ⚠️ **Al escribir una suite**: los campos de una dirección están ocultos hasta abrir su tarjeta. Para
+  `page.fill`/`isVisible` hay que abrirla (`page.click('#<id>__card')` o `lcDirAbrir(id)`) y guardar
+  (`#dir-ov-ok` o `lcDirCerrar(true)`). Asignar `.value` por JS sigue funcionando sin abrirla.
+- Suites adaptadas sin bajar lo que protegen: `verify_mejora1`, `verify_via_cr`, `verify_despachos`,
+  `verify_oj`, `verify_ola4`, `verify_formulario_oj`, `verify_geo_muni` (su `escribe` abre la tarjeta
+  del campo), `verify_jerarquia` (la relación dirección → atributos se mide en la ventana) y
+  `verify_mejora7` ([A6]/[A8h] leen el id base `aj-dir`).
+- Anti-caché `?v=159` / `cache-v159`, `_BUILD=159`. Para la app de Play hace falta un `.aab` nuevo.

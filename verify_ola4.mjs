@@ -227,8 +227,9 @@ await page.fill('#oj-d-nom', 'Juzgado de Garantías de Prueba');
 await page.fill('#oj-p-rad', '999');
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(250);
 await page.fill('#oj-g-fec', hoy); await page.fill('#oj-g-hor', '08:00');
-await page.evaluate(() => lcDirModo('oj-g-dir', 'libre'));
+await page.evaluate(() => { lcDirAbrir('oj-g-dir'); lcDirModo('oj-g-dir', 'libre'); });   // la dirección vive en su ventana
 await page.fill('#oj-g-dir__libre', 'Carrera 70 con calle 44');
+await page.evaluate(() => lcDirCerrar(true));
 await page.click('button[onclick="wizNext()"]'); await page.waitForTimeout(300);
 // Mejora 3 (obs. 7): el destinatario se muestra resuelto y sus campos viajan
 // plegados; el test los abre para escribirlo a mano.

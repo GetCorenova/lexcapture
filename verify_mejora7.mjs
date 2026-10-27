@@ -133,7 +133,7 @@ const orden = await page.evaluate(() => {
                'aj-estacion','aj-ind-est','aj-verde3','aj-dir','aj-bar','aj-ciu','aj-tel','aj-cor'];
   /* ⚠️ «Asunto del oficio» se retiró el 2026-10-25 por instrucción del usuario. */
   const campos = [...document.querySelectorAll('#aj-body-unidad-sec input,#aj-body-unidad-sec select')]
-    .map(e => e.id).filter(Boolean);
+    .map(e => e.id).filter(i => i && i.indexOf('__') < 0);   // los sub-campos del widget de dirección (aj-dir__via…) no son campos de la maqueta
   const t = id => { const i = document.getElementById(id); const l = i && i.closest('.fg') && i.closest('.fg').querySelector('.fl'); return l ? l.textContent.trim() : ''; };
   return { esperado: ids, real: campos,
            lbl: Object.fromEntries(ids.map(i => [i, t(i)])),
@@ -161,7 +161,8 @@ const arbol = await page.evaluate(() => {
   const out = [];
   let padre = null;
   [...document.querySelectorAll('#aj-body-unidad-sec .fg')].forEach(fg => {
-    const inp = fg.querySelector('input,select'); if (!inp) return;
+    const inp0 = fg.querySelector('input,select'); if (!inp0) return;
+    const inp = { id: inp0.id.split('__')[0] };   // la tarjeta de dirección (aj-dir__grp) cuenta como aj-dir
     const lbl = fg.querySelector('.fl');
     const hijo = !!fg.closest('.lc-hijos');
     if (!hijo) { padre = inp.id; out.push({ id: inp.id, de: null, p: lbl && lbl.classList.contains('fl-p') }); }

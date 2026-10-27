@@ -99,21 +99,27 @@ async function abrirNuevo() {
 }
 await abrirNuevo();
 log(await page.isVisible('#dp-nom'), 'El formulario de alta se abre en un modal');
-log(await page.isVisible('#dp-dir__via'), 'La dirección usa el MISMO widget guiado que el resto de la app');
 log(await page.isVisible('#dp-nunc'), 'Una fiscalía SÍ tiene casilla de NUNC');
 
 await page.fill('#dp-nom', 'URI Centro');
+/* ⚠️ 2026-10-27: dirección, barrio, municipio y departamento se diligencian en
+   la ventana de dirección (lcDirGrupo), que se abre tocando su tarjeta. */
+await page.click('#dp-dir__card');
+await page.waitForTimeout(250);
+log(await page.isVisible('#dp-dir__via'), 'La dirección usa el MISMO widget guiado que el resto de la app');
 await page.selectOption('#dp-dir__via', 'CR');
 await page.fill('#dp-dir__num', '56');
 await page.fill('#dp-dir__cruce', '42');
 await page.fill('#dp-dir__placa', '70');
 await page.fill('#dp-bar', 'Boston');
 await page.fill('#dp-mun', 'Medellín');
-await page.fill('#dp-tel', '(604) 444 0000');
-await page.fill('#dp-nunc', '0500160001202601');
 await page.waitForTimeout(250);
 const deptoAuto = await page.inputValue('#dp-dep');
 log(deptoAuto === 'Antioquia', 'El departamento se infiere de la ciudad, como en el resto de la app', deptoAuto);
+await page.click('#dir-ov-ok');
+await page.waitForTimeout(250);
+await page.fill('#dp-tel', '(604) 444 0000');
+await page.fill('#dp-nunc', '0500160001202601');
 await page.click('button[onclick="lcDespGuardarForm()"]');
 await page.waitForTimeout(500);
 
@@ -148,7 +154,9 @@ log((await page.inputValue('#dp-nom')) === 'Juzgado 3 Penal Municipal',
   'Cambiar de tipo repinta SOLO la casilla del NUNC: no borra lo que se está escribiendo');
 await page.selectOption('#dp-clase', 'JUZGADO');
 await page.waitForTimeout(200);
+await page.click('#dp-dir__card'); await page.waitForTimeout(250);
 await page.fill('#dp-mun', 'Medellín');
+await page.click('#dir-ov-ok'); await page.waitForTimeout(250);
 await page.click('button[onclick="lcDespGuardarForm()"]');
 await page.waitForTimeout(500);
 l = await despachos();

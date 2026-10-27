@@ -214,6 +214,16 @@ const JERARQUIA = `(sel) => {
 }`;
 const jer = sel => page.evaluate(new Function('return ' + JERARQUIA)(), sel);
 const buscar = (arr, txt) => arr.find(x => x.etiqueta.indexOf(txt) === 0);
+/* ⚠️ 2026-10-27: los atributos de una dirección viven en su ventana
+   (lcDirGrupo). Se abre la tarjeta, se leen las etiquetas que trae y se cierra
+   sin guardar: la relación es «dirección → sus atributos», ahora por ventana. */
+const enVentana = async id => {
+  await page.evaluate(i => lcDirAbrir(i), id); await page.waitForTimeout(200);
+  const r = await page.evaluate(() => [...document.querySelectorAll('#dir-ov-c label.fl')]
+    .map(l => l.textContent.replace(/\*$/, '').trim()));
+  await page.evaluate(() => lcDirCerrar(false)); await page.waitForTimeout(150);
+  return r;
+};
 
 // ── Wizard de flagrancia · Lugar
 await page.evaluate(() => { wc = null; startWizard('URI'); });
@@ -223,10 +233,11 @@ await page.waitForTimeout(300);
 const jLugar = await jer('#wz-panels');
 log(buscar(jLugar, 'Municipio') && buscar(jLugar, 'Municipio').esPadre,
   '[Lugar] El municipio del hecho es el padre: decide la jurisdicción');
-log(['Dirección exacta', 'Barrio', 'Características', 'Localidad', 'Zona', 'Vereda']
-    .every(e => { const c = buscar(jLugar, e); return c && c.padre === 'Municipio'; }),
-  '[Lugar] Y los seis campos del sitio cuelgan de él',
-  jLugar.filter(x => x.padre === 'Municipio').length + ' hijos');
+const vLugar = await enVentana('w-dir');
+log(buscar(jLugar, 'Dirección exacta') && buscar(jLugar, 'Dirección exacta').padre === 'Municipio' &&
+    ['Barrio', 'Características', 'Localidad', 'Zona', 'Vereda'].every(e => vLugar.some(x => x.indexOf(e) === 0)),
+  '[Lugar] Y los seis campos del sitio cuelgan de él: la dirección, y sus cinco atributos en su ventana',
+  vLugar.join(' · '));
 
 // ── Wizard de flagrancia · Servidor
 await page.evaluate(() => { ws = getWizConfig().steps.indexOf('Servidor'); renderWiz(); });
@@ -272,9 +283,11 @@ await page.waitForTimeout(400);
 const jDesp = await jer('#modal-c');
 log(buscar(jDesp, 'Nombre del despacho') && buscar(jDesp, 'Nombre del despacho').esPadre,
   '[Despacho] El despacho es el padre de su propia ubicación');
-log(['Dirección', 'Barrio', 'Municipio', 'Departamento', 'Teléfono', 'Correo']
-    .every(e => { const c = buscar(jDesp, e); return c && c.padre === 'Nombre del despacho'; }),
-  '[Despacho] Sus seis atributos, anidados', jDesp.filter(x => x.padre === 'Nombre del despacho').length + ' hijos');
+const vDesp = await enVentana('dp-dir');
+log(['Dirección', 'Teléfono', 'Correo'].every(e => { const c = buscar(jDesp, e); return c && c.padre === 'Nombre del despacho'; }) &&
+    ['Barrio', 'Municipio', 'Departamento'].every(e => vDesp.some(x => x.indexOf(e) === 0)),
+  '[Despacho] Sus seis atributos, anidados (barrio, municipio y departamento en la ventana de la dirección)',
+  jDesp.filter(x => x.padre === 'Nombre del despacho').length + ' hijos · ventana: ' + vDesp.join(' · '));
 
 // ── Perfil · Mi jurisdiccion: DOS entidades, no una lista de cinco
 await page.evaluate(() => {
@@ -310,10 +323,10 @@ log(buscar(jOJ1, 'Municipio') && buscar(jOJ1, 'Municipio').padre === 'Nombre com
 await page.evaluate(() => { ws = 2; renderWiz(); });
 await page.waitForTimeout(400);
 const jOJ2 = await jer('#wz-panels');
+const vOJ2 = await enVentana('oj-g-dir');
 log(buscar(jOJ2, 'Lugar de la') && buscar(jOJ2, 'Lugar de la').esPadre &&
-    ['Barrio o vereda', 'Municipio', 'Departamento', 'Tipo de lugar']
-      .every(e => { const c = buscar(jOJ2, e); return c && /^Lugar de la/.test(c.padre || ''); }),
-  '[OJ · materialización] El lugar de la captura es el padre de sus cuatro atributos');
+    ['Barrio o vereda', 'Municipio', 'Departamento', 'Tipo de lugar'].every(e => vOJ2.some(x => x.indexOf(e) === 0)),
+  '[OJ · materialización] El lugar de la captura es el padre de sus cuatro atributos (en su ventana)', vOJ2.join(' · '));
 
 /* ⚠️ EL MISMO DATO, EL MISMO NOMBRE. El membrete se pide en Ajustes por su
    nombre y en el wizard se pedia por su numero de renglon, escribiendo en las
