@@ -208,16 +208,21 @@ const dil = await page.evaluate(() => {
     funcs: (wc.oj.diligencia.funcionarios || []).map(f => f.grado + ' ' + f.nombre),
     // ⚠️ Plegar NO es borrar: los campos siguen en el DOM y se recolectan.
     enDom: !!document.getElementById('oj-g-uni'),
-    agregar: !!det && /Agregar funcionario/.test(det.textContent)
+    agregar: !!det && /Agregar funcionario/.test(det.textContent),
+    unidadAntes: wc.oj.diligencia.unidad,
+    unidadTras: (ojCollect(), wc.oj.diligencia.unidad),
+    v15: ojValidar(wc).some(v => v.id === 'V15')
   };
 });
 log(dil.funcs.length === 2, '[26] Los dos funcionarios entran solos: titular y companero', dil.funcs.join(' · '));
 log(/Nelson David/.test(dil.funcs[0] || '') && /Ana Maria/.test(dil.funcs[1] || ''),
   '[27] Salen del perfil, sin teclear nada');
-log(dil.plegado === true, '[28] El bloque «Quien hizo la diligencia» viaja plegado');
-log(/Nelson David/.test(dil.resumen), '[29] Y su resumen dice quienes van, sin abrirlo', dil.resumen.trim().slice(0, 60));
-log(dil.enDom === true, '[30] Plegar no es borrar: los campos siguen en el DOM y se recolectan');
-log(dil.agregar === true, '[31] Se conserva la opcion de registrar cualquier otro funcionario');
+/* ⚠️ 2026-10-26 (punto 9): el bloque, aunque plegado, solo repetia los nombres
+   del perfil — salio del formulario. Lo que se protege es que los datos siguen. */
+log(dil.hay === false, '[28] El bloque «Quien hizo la diligencia» ya no esta en el formulario');
+log(dil.enDom === false && dil.agregar === false, '[29] Ni sus campos ni «Agregar funcionario»');
+log(dil.unidadAntes === dil.unidadTras, '[30] Recolectar sin el bloque en pantalla no toca la unidad', dil.unidadTras);
+log(dil.v15 === false, '[31] Con los funcionarios del perfil no falta nada (sin V15)');
 
 // Recolectar con el bloque CERRADO no puede vaciar la lista.
 const trasCollect = await page.evaluate(() => { ojCollect(); return (wc.oj.diligencia.funcionarios || []).length; });
@@ -348,7 +353,9 @@ log(con.lista[0] === 'IT Ana Maria Perez',
   '[51] Y el de MAYOR RANGO encabeza, aunque este registrado como companero', con.lista[0]);
 log(con.rangoIT < con.rangoSI && con.rangoRaro > con.rangoSI,
   '[52] La piramide de rangos sale del catalogo; un grado desconocido va al final');
-log(/Ana Maria/.test(con.eco), '[53] Ajustes lo enseña resuelto, en vez de esconderlo', con.eco.slice(0, 70));
+/* ⚠️ Decisión del usuario (commit 21ae35b, 2026-09-01): Ajustes ya no lista los
+   nombres, solo dice de dónde salen; los nombres resueltos los miden [50]-[51]. */
+log(/Perfil/.test(con.eco) && !/Ana Maria/.test(con.eco), '[53] Ajustes dice que salen de Perfil, sin volver a listarlos', con.eco.slice(0, 70));
 
 // Y llega al dossier de una captura nueva.
 const dossier = await page.evaluate(async () => {

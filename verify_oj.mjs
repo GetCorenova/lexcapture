@@ -255,9 +255,10 @@ log(await page.isVisible('#oj-d-nom'), 'La autoridad solicitante es el dato 8 de
 await page.fill('#oj-d-nom', 'Juzgado Tercero Penal del Circuito de Conocimiento');
 await page.fill('#oj-d-mun', 'Ciudad Prueba');
 await page.fill('#oj-d-dep', 'Departamento Prueba');
-await page.click('button[onclick="ojGuardarDespacho()"]'); await page.waitForTimeout(150);
-const guardados = await page.evaluate(() => (DB.getConfig().despachosPropios || []).length);
-log(guardados === 1, 'El despacho diligenciado a mano queda guardado para reutilizarlo', guardados);
+/* ⚠️ 2026-10-26 (punto 4): la autoridad solicitante solo trae nombre y
+   municipio, y un despacho a medias no se registra — el botón se retiró. */
+log(!(await page.$('button[onclick="ojGuardarDespacho()"]')) && await page.evaluate(() => typeof ojGuardarDespacho === 'undefined'),
+  'La autoridad solicitante ya no ofrece «Guardar este despacho»: con nombre y municipio solos sería un registro a medias');
 const espejoSolic = await page.evaluate(() => { ojCollect(); return wc.oj.orden.autoridadSolicitante; });
 log(espejoSolic === 'Juzgado Tercero Penal del Circuito de Conocimiento',
   'Un solo campo alimenta la autoridad solicitante — sin duplicar la pregunta', espejoSolic);
@@ -282,10 +283,11 @@ await page.fill('#oj-g-dir__libre', 'Calle 53 con carrera 51');
 await page.fill('#oj-g-bar', 'Barrio de Prueba');
 await page.fill('#oj-g-mun', 'Ciudad Prueba');
 await page.fill('#oj-g-dep', 'Departamento Prueba');
-await page.click('button[onclick="ojListaAgregar(\'funcionarios\')"]'); await page.waitForTimeout(150);
-await page.fill('#ojl-funcionarios-1-grado', 'Patrullero');
-await page.fill('#ojl-funcionarios-1-nombre', 'ACOMPANANTE DE PRUEBA');
-await page.fill('#ojl-funcionarios-1-cedula', '2.222.222');
+/* ⚠️ 2026-10-26 (punto 9): «Quién hizo la diligencia» salió del formulario —los
+   funcionarios salen del perfil (titular y compañero)—. Se mide que el bloque ya
+   no está y que un funcionario más del modelo sigue llegando al oficio. */
+log(!(await page.$('#oj-list-funcionarios')) && !(await page.$('#oj-g-uni')), 'Paso 3 · sin el bloque «Quién hizo la diligencia»');
+await page.evaluate(() => wc.oj.diligencia.funcionarios.push({ grado: 'Patrullero', nombre: 'ACOMPANANTE DE PRUEBA', cedula: '2222222', placa: '' }));
 /* ⚠️ Expectativa actualizada el 2026-08-28 (obs. 6): el CUADRO del término de
    36 horas se retiró del paso de materialización —ocupaba media pantalla para
    mostrar un cálculo derivado de los dos campos que hay debajo—. El reloj sigue

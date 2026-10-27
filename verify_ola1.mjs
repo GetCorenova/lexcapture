@@ -220,18 +220,21 @@ log(retomado.numero === '7788' && /CARLOS/.test(retomado.despacho),
 /* ─────────── 6. Las listas repetibles sobreviven al cambio de paso ─────────
    Regresión del bug que destapó esta ola: guardar el borrador después de
    renderWiz() leía las listas antes de su pintado diferido y las vaciaba. */
-await page.evaluate(() => wizGoto(2));
+/* ⚠️ 2026-10-26 (punto 9): la lista de funcionarios salió del formulario (salen
+   del perfil). La lista repetible que queda en pantalla es la de delitos; y los
+   funcionarios del modelo no pueden perderse por recorrer los pasos. */
+await page.evaluate(() => { wizGoto(1); wc.oj.proceso.delitos = [{ nombre: 'Hurto', articulo: '239' }]; renderWiz(); });
 await page.waitForTimeout(300);
-const funcAntes = await page.evaluate(() => wc.oj.diligencia.funcionarios.length);
-await page.evaluate(() => { wizGoto(1); });
-await page.waitForTimeout(250);
+const funcAntes = await page.evaluate(() => wc.oj.proceso.delitos.length + wc.oj.diligencia.funcionarios.length * 10);
 await page.evaluate(() => { wizGoto(2); });
+await page.waitForTimeout(250);
+await page.evaluate(() => { wizGoto(1); });
 await page.waitForTimeout(300);
 const funcDespues = await page.evaluate(() => ({
-  modelo: wc.oj.diligencia.funcionarios.length,
-  dom: document.querySelectorAll('#oj-list-funcionarios .oj-row').length
+  modelo: wc.oj.proceso.delitos.length + wc.oj.diligencia.funcionarios.length * 10,
+  dom: document.querySelectorAll('#oj-list-delitos .oj-row').length
 }));
-log(funcAntes === 1 && funcDespues.modelo === 1 && funcDespues.dom === 1,
+log(funcAntes === funcDespues.modelo && funcDespues.dom === 1,
   'Ir y volver de un paso no borra las filas de las listas repetibles',
   funcAntes + ' → ' + funcDespues.modelo + ' (DOM ' + funcDespues.dom + ')');
 

@@ -193,14 +193,18 @@ log(!/DESPACHOS_MEDELLIN|concat\(/.test(cuerpoSel),
   'Su selector ya no concatena ninguna lista escrita en el código');
 
 // El camino de vuelta: un despacho diligenciado dentro del wizard OJ aparece aquí.
+/* ⚠️ Desde el 2026-10-26 (punto 4) la autoridad solicitante ya no tiene botón
+   de guardar: la vuelta es por el DESTINATARIO de la revisión, que sí trae la
+   dirección (`ojDespachoAlRegistro`). */
 const vuelta = await page.evaluate(() => {
   const cfg = DB.getConfig();
   const antes = (cfg.despachosPropios || []).length;
   window.wc = ojNuevoCaso();
-  wc.oj.despacho.nombre = 'Juzgado 12 de Ejecución de Penas';
-  wc.oj.despacho.municipio = 'Medellín';
-  wc.oj.despacho.tipo = 'JEPMS';
-  ojGuardarDespacho();
+  wc.oj.destino.nombre = 'Juzgado 12 de Ejecución de Penas';
+  wc.oj.destino.municipio = 'Medellín';
+  wc.oj.destino.direccion = 'CL 44 # 52-165';
+  wc.oj.destino.tipo = 'JEPMS';
+  ojDespachoAlRegistro(wc.oj.destino);
   const l = DB.getConfig().despachosPropios || [];
   const nuevo = l.find(d => /Ejecución de Penas/.test(d.nombre));
   return { antes, ahora: l.length, clase: nuevo && nuevo.clase, tipo: nuevo && nuevo.tipo };
@@ -215,9 +219,9 @@ const noPisa = await page.evaluate(() => {
   const cfg = DB.getConfig();
   const uri = (cfg.despachosPropios || []).find(d => d.clase === 'FISCALIA');
   window.wc = ojNuevoCaso();
-  wc.oj.despacho.nombre = uri.nombre;
-  wc.oj.despacho.direccion = 'CL 1 # 2-3';
-  ojGuardarDespacho();
+  wc.oj.destino.nombre = uri.nombre;
+  wc.oj.destino.direccion = 'CL 1 # 2-3';
+  ojDespachoAlRegistro(wc.oj.destino);
   const l = DB.getConfig().despachosPropios || [];
   const post = l.filter(d => d.nombre === uri.nombre);
   return { copias: post.length, nunc: post[0] && post[0].nunc, dir: post[0] && post[0].direccion };

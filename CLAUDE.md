@@ -5,7 +5,7 @@
 > irreversibles y lo que hace falta pedirle al usuario. Este archivo es la
 > historia del producto.
 
-> 🧹 **Formularios sin saturación (2026-10-26, build 156, rama `revision-oj`)**: regla vigente para todo
+> 🧹 **Formularios sin saturación (2026-10-26, builds 156-157)**: regla vigente para todo
 > formulario — en pantalla solo lo que se decide o se corrige; lo que vive en Ajustes/Perfil no se vuelve
 > a pedir. Ver «Revisión de la captura por orden judicial, sin saturación» al final.
 
@@ -8397,3 +8397,50 @@ del caso no cambia**: las claves se conservan y lo ya guardado se sigue imprimie
   `verify_mejora6b`, `verify_jerarquia`, `verify_firma`, `verify_ola1` (medían los bloques
   retirados; ahora miden que no están y que los datos siguen llegando al caso y al oficio).
 - Anti-caché `?v=156` / `cache-v156`, `_BUILD=156`. Para la app de Play hace falta un `.aab` nuevo.
+
+## El formulario de orden judicial, sin lo que no aporta (2026-10-26, build 157)
+Nueve observaciones del usuario sobre siete pantallazos del formulario de orden judicial (y de
+flagrancia donde aplica). Misma regla de «Formularios sin saturación». Verificado con
+`verify_formulario_oj.mjs` (**59 checks**, nuevo) y `verify_resumen_como.mjs` (41, sección C rehecha).
+- **1 · Delitos: solo «Delito» y «Artículo»**. Se retiraron Inciso, Numeral, Código del delito (SPOA)
+  y «Con circunstancias de agravación». Auditados antes: el código SPOA no salía en ningún documento;
+  inciso, numeral y agravación sí, pero como texto de la misma fila, y eso se escribe en los dos campos
+  libres. `ojMigrarDelitos` (en `ojNormalizar`) lleva lo guardado a esos dos campos con el MISMO texto
+  que imprimía el oficio («Homicidio agravado (Art. 103, inc. 2 y num. 1 …)») y retira el código.
+- **El delito se escribe bien** (`lcDelitoNorm`, al salir del campo y al recolectar; también en las
+  conductas de flagrancia): si es del catálogo (`#dl-cond` + `OJ_ART_CP`) sale con su ortografía; si
+  no, inicial en mayúscula y tildes de las palabras del Código Penal (`LC_DELITO_TILDES`). No reinterpreta
+  nada más.
+- **El artículo solo si es seguro** (`lcArtDeDelito`, mapa ampliado con artículos de la Ley 599 sin
+  duda). ⚠️ Defecto PREEXISTENTE corregido: las claves de `OJ_ART_CP` llevan tilde y se buscaban sin
+  ella, así que todo delito con tilde (Extorsión, Tráfico, Receptación, Daño…) nunca traía su artículo.
+  No es obligatorio. El blur no lo rellena si el foco va al artículo.
+- ⚠️ **Entrar a un campo que puso la app SELECCIONA su contenido** (`_lcSelAuto`, en `focusin` y `click`):
+  lo que se teclee reemplaza la sugerencia en vez de pegarse («246246 inc. 2»).
+- **3 · El departamento sale del municipio, en toda la app**: además del `input` del municipio, en el
+  modelo al abrir (`lcGeoCompletarCaso`, dentro de `wizMarcarBase` y `ojNormalizar`, ANTES de la foto
+  del borrador: abrir no cuenta como cambio), al pintar (`lcGeoBarrer` en `renderWiz`, `openModal`,
+  `openPanel`) y al salir del municipio (focusout: además lo escribe como el catálogo, «medellin» →
+  «Medellín»). Todo municipio con departamento al lado lo declara con `data-dep` (y `data-pais` el de
+  nacimiento). Lo escrito por el usuario no se pisa y un homónimo no se adivina.
+- **4 · Sin «Guardar este despacho para reutilizarlo»** en la autoridad solicitante (nombre + municipio
+  es un registro a medias). `ojGuardarDespacho` se retiró; el destinatario de la revisión sí guarda,
+  ahora por `ojDespachoAlRegistro` (fusiona: no duplica ni borra NUNC ni barrio).
+- **5 y 6 · Motivo**: la opción `OTRA` se llama «Escribir a mano»; al elegirla el campo nace con el
+  texto de la opción que estaba elegida y guarda esa opción en `orden.finalidadBase`. ⚠️ `ojFinalidad(o)`
+  es el punto único de la ruta procesal (destinatario, calidad procesal): con texto a mano manda la base.
+  Fuera la nota «De aquí sale la fila…» y «Se imprime literalmente…».
+- **7 · Hora en 24 h en toda la app**: `<input type=time>` lo pinta Android con a. m./p. m. y no hay
+  forma de forzarlo. `lcHoraInput` (texto numérico, máscara al teclear «1741» → «17:41», normaliza al
+  salir, marca en rojo una hora a medias). Mismo valor «HH:MM» y mismos ids: ningún recolector cambió.
+  Flagrancia (captura y disposición), OJ, acta de derechos y rótulo.
+- **8 · «Resumen para el dossier» salió del paso 8** de flagrancia (y con él `lcResPropuesta`,
+  `lcResModoOpciones`, `LC_RES_MODOS`). La app elige la frase (`lcResumenComo`) y se corrige en Dossier →
+  «Datos del Dossier» (`dx-como`, `lcComoDossier`, «Usar la frase automática»), igual en orden judicial.
+  Guardada igual a la automática deja de ser manual.
+- **9 · «Quién hizo la diligencia» salió del paso 3**: unidad, patrulla y funcionarios los pone
+  `ojPrellenarDeCfg` desde el perfil; `ojCollectDiligencia` no los toca si no están en pantalla (una
+  captura con otros funcionarios los conserva). V15 manda a Perfil.
+- Suites adaptadas sin bajar lo que protegen: `verify_oj`, `verify_despachos`, `verify_mejora1`,
+  `verify_resumen_como`. Anti-caché `?v=157` / `cache-v157`, `_BUILD=157`. Para la app de Play hace
+  falta un `.aab` nuevo.
