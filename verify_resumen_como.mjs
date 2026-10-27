@@ -8,8 +8,8 @@
      A · La frase: el relato del pantallazo, cada modalidad, delitos sin
          víctima, concordancia, CESPA, OJ, un relato de tres páginas.
      B · El dossier: usa la frase, respeta lo escrito a mano, no toca lo guardado.
-     C · El paso 8: selector preseleccionado, cambiarlo rehace el resumen,
-         editar el resumen lo congela, todo se guarda.
+     C · El paso 8 ya no lo pregunta (2026-10-26): se corrige en «Datos del
+         Dossier», en flagrancia y en orden judicial.
      D · El FPJ-5 no cambia. */
 import { chromium } from 'playwright';
 import http from 'http';
@@ -147,37 +147,60 @@ const intacto = await page.evaluate(c => { const a = JSON.stringify(c); genDossi
 log(intacto, 'Generar el dossier no toca lo guardado');
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
-sec('C · EL PASO 8');
-await page.evaluate(c => { wc = JSON.parse(JSON.stringify(c)); wc.narracion = { texto: '' }; ws = getWizConfig().steps.indexOf('Narración'); go('wizard'); renderWiz(); }, CASO());
+sec('C · EL PASO 8 YA NO LO PREGUNTA; SE CORRIGE EN «DATOS DEL DOSSIER»');
+/* ⚠️ 2026-10-26 (punto 8): «Resumen para el dossier» salió del paso 8 del
+   formulario. La app elige sola la frase; quien quiera otra la corrige en
+   Dossier → «Datos del Dossier». */
+await page.evaluate(c => { wc = JSON.parse(JSON.stringify(c)); ws = getWizConfig().steps.indexOf('Narración'); go('wizard'); renderWiz(); },
+  CASO({}, { resumen: 'Resumen propio del funcionario.', resumenManual: true }));
 await page.waitForTimeout(300);
-log(await page.isVisible('#w-narrModo') && await page.isVisible('#w-narrRes'), 'El paso 8 tiene «¿Cómo fue la captura?» y el resumen');
-await page.fill('#w-narrTxt', RELATO);
-log(await page.inputValue('#w-narrModo') === 'SENAL', 'Al escribir el relato, la modalidad se preselecciona sola');
-log(await page.inputValue('#w-narrRes') === r1, 'Y el resumen se propone solo');
-await page.selectOption('#w-narrModo', 'PERS');
-log(await page.inputValue('#w-narrRes') === esperadas.PERS, 'Cambiar la modalidad rehace el resumen');
-await page.fill('#w-narrTxt', 'El suscrito observó cuando el sujeto le hurtaba el celular a la víctima.');
-log(await page.inputValue('#w-narrModo') === 'PERS', 'Una modalidad elegida a mano no la pisa el relato');
-await page.fill('#w-narrRes', 'Corregido por el funcionario.');
-await page.fill('#w-narrTxt', RELATO);
-log(await page.inputValue('#w-narrRes') === 'Corregido por el funcionario.', 'Un resumen corregido no lo pisa la app');
+const p8 = await page.evaluate(() => ({ modo: !!document.getElementById('w-narrModo'), res: !!document.getElementById('w-narrRes'),
+  titulo: /Resumen para el dossier/.test(document.getElementById('wz-panels').innerText), relato: !!document.getElementById('w-narrTxt') }));
+log(!p8.modo && !p8.res && !p8.titulo && p8.relato, 'El paso 8 ya no pide «¿Cómo fue la captura?» ni el resumen; el relato sigue', JSON.stringify(p8));
 const g1 = await page.evaluate(() => { collectStep(); return wc.narracion; });
-log(g1.resumen === 'Corregido por el funcionario.' && g1.resumenManual === true && g1.modo === 'PERS' && g1.modoManual === true && g1.texto === RELATO,
-  'collectStep guarda relato, resumen, modalidad y qué escribió el funcionario');
-await page.click('text=Volver a proponer');
-log(await page.inputValue('#w-narrRes') === esperadas.PERS, '«Volver a proponer» rehace el resumen con la modalidad elegida');
-await page.evaluate(() => { collectStep(); ws = getWizConfig().steps.indexOf('Servidor'); renderWiz(); });
-await page.evaluate(() => { ws = getWizConfig().steps.indexOf('Narración'); renderWiz(); });
-log(await page.inputValue('#w-narrModo') === 'PERS' && await page.inputValue('#w-narrRes') === esperadas.PERS,
-  'Al volver al paso 8, la modalidad y el resumen se conservan');
+log(g1.resumen === 'Resumen propio del funcionario.' && g1.resumenManual === true,
+  'Guardar el paso 8 conserva el resumen que el caso ya traía');
 const ayudas = await page.evaluate(() => Array.from(document.querySelectorAll('#wz-panels .oj-hint')).map(e => e.textContent.trim().length));
-log(ayudas.every(x => x <= 110), 'Las ayudas no pasan de 110 caracteres', ayudas.join(','));
-await page.evaluate(() => document.getElementById('w-narrModo').scrollIntoView({ block: 'start' }));
-await page.waitForTimeout(300);
-await page.screenshot({ path: join(ROOT, 'verify_resumen_como_paso8.png') });
-await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
-await page.screenshot({ path: join(ROOT, 'verify_resumen_como_paso8_oscuro.png') });
-await page.evaluate(() => { document.documentElement.setAttribute('data-theme', 'light'); wc = null; go('capturas'); });
+log(ayudas.every(x => x <= 110), 'Las ayudas no pasan de 110 caracteres', ayudas.join(',') || 'ninguna');
+await page.evaluate(() => { wc = null; go('capturas'); });
+
+// En «Datos del Dossier»: la frase automática, editable.
+const idF = await page.evaluate(async c => { c.id = 'res-dx-1'; await DB.saveCase(c); _dosCasoId = c.id; go('dossierwa'); lcDossierExtra(); return c.id; }, CASO());
+await page.waitForTimeout(250);
+log(await page.isVisible('#dx-como'), '«Datos del Dossier» trae el CÓMO para corregirlo');
+log(await page.inputValue('#dx-como') === r1, 'Nace con la frase que la app eligió sola', await page.inputValue('#dx-como'));
+await page.fill('#dx-como', 'Fue capturado tras ser señalado por un vecino.');
+await page.evaluate(() => lcDossierExtraGuardar()); await page.waitForTimeout(250);
+const tras = await page.evaluate(id => { const c = DB.getCase(id); return { n: c.narracion, d: genDossier(c) }; }, idF);
+log(tras.n.resumenManual === true && tras.n.resumen === 'Fue capturado tras ser señalado por un vecino.',
+  'Lo corregido se guarda como escrito a mano');
+log(bloque(tras.d, 'CÓMO').join(' ') === 'Fue capturado tras ser señalado por un vecino.', 'Y el dossier lo usa');
+await page.evaluate(() => lcDossierExtra()); await page.waitForTimeout(200);
+log(await page.inputValue('#dx-como') === 'Fue capturado tras ser señalado por un vecino.', 'Al volver a abrir, sigue la frase corregida');
+await page.click('text=Usar la frase automática');
+log(await page.inputValue('#dx-como') === r1, '«Usar la frase automática» la devuelve');
+await page.evaluate(() => lcDossierExtraGuardar()); await page.waitForTimeout(250);
+const auto = await page.evaluate(id => DB.getCase(id).narracion, idF);
+log(auto.resumenManual === false, 'Guardada igual a la automática, deja de ser escrita a mano: sigue al relato');
+await page.evaluate(() => lcDossierExtra()); await page.waitForTimeout(200);
+await page.screenshot({ path: join(ROOT, 'verify_resumen_como_dossier.png') });
+await page.evaluate(() => closeModal());
+
+// Orden judicial: la misma dinámica.
+const ojDx = await page.evaluate(async () => {
+  const c = SIM.genOJ(); await DB.saveCase(c); _dosCasoId = c.id; go('dossierwa'); lcDossierExtra();
+  const ini = document.getElementById('dx-como').value;
+  document.getElementById('dx-como').value = 'Fue capturado en su residencia en cumplimiento de la orden.';
+  await lcDossierExtraGuardar();
+  // Abrir y guardar la captura desde el formulario no se lleva la frase.
+  closeModal(); await DB.clearDraft(); editCase(c.id); await new Promise(r => setTimeout(r, 300));
+  await ojGuardarCaso(true);
+  const k = DB.getCase(c.id); wc = null; go('capturas');
+  return { ini, n: k.narracion, d: genDossier(k) };
+});
+log(/orden judicial/.test(ojDx.ini), 'En orden judicial también nace con la frase automática', ojDx.ini);
+log(ojDx.n.resumenManual === true && bloque(ojDx.d, 'CÓMO').join(' ') === 'Fue capturado en su residencia en cumplimiento de la orden.',
+  'Y se corrige igual, y volver a guardar el formulario no la pisa');
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 sec('D · EL FPJ-5 NO CAMBIA');

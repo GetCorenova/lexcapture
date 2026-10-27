@@ -371,10 +371,11 @@ const dtUI = await page.evaluate(() => ({
   sueltas: ['w-fcD', 'w-fcM', 'w-fcA', 'w-hcH', 'w-hcM', 'w-fdD', 'w-fdM', 'w-fdA', 'w-hdH', 'w-hdM']
     .filter(id => document.getElementById(id)).length,
   fecha: (document.getElementById('w-fcap') || {}).type,
-  hora: (document.getElementById('w-hcap') || {}).type
+  hora: (document.getElementById('w-hcap') || {}).type, horaModo: (document.getElementById('w-hcap') || {}).inputMode
 }));
 log(dtUI.sueltas === 0, 'Las diez casillas sueltas desaparecieron', dtUI.sueltas + ' quedan');
-log(dtUI.fecha === 'date' && dtUI.hora === 'time', 'Ahora son controles nativos de fecha y hora');
+/* ⚠️ 2026-10-26 (punto 7): la hora deja de ser <input type=time>, que Android pinta con a. m./p. m.; es un campo numérico en 24 h con el MISMO valor «HH:MM». */
+log(dtUI.fecha === 'date' && dtUI.hora === 'text' && dtUI.horaModo === 'numeric', 'La fecha es el control nativo y la hora un campo numérico en 24 h');
 // Con fill(), que dispara los eventos de verdad: así se prueba también la
 // vista previa, que reacciona al oninput como lo haría con el usuario.
 await page.fill('#w-fcap', '2026-07-30');
