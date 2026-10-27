@@ -419,49 +419,40 @@ const docVar = await page.evaluate(async () => {
 log(docVar.media === true && docVar.rid6 === true,
   'El .docx de ese caso sale FIRMADO, no con el espacio en blanco');
 
-/* ═══════════ 6ter · SE VE ANTES DE GENERAR, Y SE FIRMA SIN SALIR ═══════════
-   Una firma que se pone sola tiene que verse en el paso de revisión: si no, es
-   indistinguible de una que no se puso. */
+/* ═══════════ 6ter · LA FIRMA VIVE EN PERFIL ═══════════
+   ⚠️ 2026-10-26 (decisión del usuario): el bloque «Encabezado, custodia y firma»
+   salió de la revisión del oficio — la firma se guarda en Perfil y se estampa
+   sola. Se mide que la revisión ya no la pide y que el oficio la sigue llevando
+   (o deja el espacio en blanco) según lo que haya en Perfil. */
 await page.evaluate(() => {
   wc = JSON.parse(JSON.stringify(window.__caso)); ws = 3; go('wizard'); renderWiz();
 });
 await page.waitForTimeout(350);
-const bloque = await page.evaluate(() => {
-  const d = document.getElementById('oj-firma-wiz');
-  return { hay: !!d, img: d ? d.querySelectorAll('img[src^="data:image/png"]').length : 0,
-    txt: d ? d.textContent : '' };
+const bloque = await page.evaluate(() => ({
+  hay: !!document.getElementById('oj-firma-wiz'),
+  campos: ['oj-f-nom', 'oj-f-car', 'oj-f-gra'].filter(id => !!document.getElementById(id)).length
+}));
+log(!bloque.hay, 'La revisión del oficio ya no repite el bloque de la firma');
+log(bloque.campos === 0, 'Ni los datos del firmante: vienen del perfil');
+await page.evaluate(() => { wc = null; go('perfil'); });
+const sinFw = await page.evaluate(async () => {
+  await DB.delFirma('p1');
+  const out = await buildOficioOJBlob(window.__caso, 'CARTA');
+  return !!out.files['word/media/firma.png'];
 });
-log(bloque.hay && bloque.img === 1,
-  'El paso de revisión enseña la miniatura de la firma que se va a imprimir');
-log(/se imprime sola/i.test(bloque.txt),
-  'Y dice que sale sola, sin que haya que hacer nada más');
-
-// Sin firma guardada: se ofrece firmar DESDE el procedimiento, no en otra pantalla.
-await page.evaluate(async () => { await DB.delFirma('p1'); ojRefrescarFirmaWiz(); });
-await page.waitForTimeout(150);
-const sinFw = await page.evaluate(() => {
-  const d = document.getElementById('oj-firma-wiz');
-  return { txt: d.textContent, btn: d.querySelectorAll('button').length };
-});
-log(/no has guardado tu firma/i.test(sinFw.txt) && sinFw.btn === 1,
-  'Sin firma guardada lo dice y ofrece firmar ahí mismo', sinFw.btn + ' botón «Firmar ahora»');
-
-// Firmar desde el wizard: el bloque se actualiza y NO se pierde lo ya tecleado.
-await page.evaluate(() => { document.getElementById('oj-f-car').value = 'CARGO TECLEADO A MANO'; });
-await page.evaluate(() => ojFirmarDesdeWizard());
+log(sinFw === false, 'Sin firma guardada el oficio deja el espacio en blanco, como siempre');
+await page.evaluate(() => openFirmaModal('p1'));
 await page.waitForTimeout(400);
 await firmar(page);
 await page.evaluate(async () => { await fwGuardar('p1'); });
 await page.waitForTimeout(350);
-const trasFirmar = await page.evaluate(() => ({
-  img: document.querySelectorAll('#oj-firma-wiz img[src^="data:image/png"]').length,
-  cargo: document.getElementById('oj-f-car').value,
-  enWizard: location.hash.indexOf('wizard') >= 0
-}));
-log(trasFirmar.img === 1 && trasFirmar.enWizard,
-  'Se firma sin salir del procedimiento y el bloque lo refleja al instante');
-log(trasFirmar.cargo === 'CARGO TECLEADO A MANO',
-  'Repintar solo ese bloque no borra lo que el funcionario estaba escribiendo');
+const conFw = await page.evaluate(async () => {
+  const out = await buildOficioOJBlob(window.__caso, 'CARTA');
+  return !!out.files['word/media/firma.png'];
+});
+log(conFw === true, 'Firmando en Perfil, el oficio del caso la lleva sin pasar por el formulario');
+log(await page.evaluate(() => !/ojRefrescarFirmaWiz/.test(String(fwGuardar) + String(fwEliminar))),
+  'Guardar o eliminar la firma ya no depende del formulario abierto');
 
 /* ═══════════ 7 · VISTA DE IMPRESIÓN (PDF) Y CONSOLA ═══════════ */
 const impr = await page.evaluate(async () => {

@@ -254,7 +254,7 @@ const vigencia = await page.evaluate(async () => {
     estado: v.estado, nivel: val && val.nivel,
     bloquea: ojDuras(c).some(x => x.id === 'V01'),
     avisoRevision: /la orden figura vencida/i.test(panel),
-    avisoPaso2: /vigencia de la orden/i.test(paso2) && /venci[oó]/i.test(paso2),
+    avisoPaso2: /figura vencida/i.test(paso2),   // ⚠️ 2026-10-26: aviso de una línea, mismo texto que la revisión
     confirma: !!ojVigenciaVencida(c),
     // Y el resto del formulario sigue diligenciable
     camposVivos: document.querySelectorAll('#wz-panels input:not([disabled])').length

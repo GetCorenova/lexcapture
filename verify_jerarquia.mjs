@@ -338,14 +338,14 @@ const etAjustes = await page.evaluate(() => {
   };
   return { min: et('aj-oj-min'), ins: et('aj-oj-inst'), uni: et('aj-oj-uni'), dep: et('aj-oj-dep') };
 });
-log(membrete.min === etAjustes.min && membrete.ins === etAjustes.ins &&
-    membrete.uni === etAjustes.uni && membrete.dep === etAjustes.dep,
-  '⚠️ El membrete se llama IGUAL en el wizard y en Ajustes: escriben en las mismas claves',
-  JSON.stringify(membrete));
-log(!/Línea [1-4]/.test(JSON.stringify(membrete)),
-  'Y ya no se pide por número de renglón');
-log(/Distrito/.test(membrete.dep) && !/estación o dependencia/i.test(membrete.dep),
-  '⚠️ La línea 4 dice DISTRITO, como Ajustes: el membrete imprime el distrito', membrete.dep);
+/* ⚠️ 2026-10-26: el membrete salió de la revisión (se pide UNA vez, en Ajustes).
+   Ya no puede llamarse distinto en dos sitios: solo existe uno. */
+log([membrete.min, membrete.ins, membrete.uni, membrete.dep].every(x => x === null),
+  '⚠️ El membrete ya no se pide en la revisión: vive solo en Ajustes', JSON.stringify(membrete));
+log(!/Línea [1-4]/.test(JSON.stringify(etAjustes)),
+  'Y en Ajustes se pide por su nombre, no por número de renglón');
+log(/Distrito/.test(etAjustes.dep) && !/estación o dependencia/i.test(etAjustes.dep),
+  '⚠️ La línea 4 dice DISTRITO: el membrete imprime el distrito', etAjustes.dep);
 
 await page.evaluate(() => {
   wc = ojNuevoCaso(); go('wizard'); ws = 3; renderWiz();
@@ -384,16 +384,11 @@ const porId = await page.evaluate(() => {
                'oj-x-nom','oj-x-dir','oj-x-mun'];
   const o = {}; ids.forEach(i => { o[i] = de(i); }); return o;
 });
-log(porId['oj-c-est'].esPadre &&
-    ['oj-c-dir','oj-c-bar','oj-c-ciu','oj-c-tel','oj-c-cor','oj-c-web']
-      .every(i => /custodia/.test(porId[i].padre || '')),
-  '[OJ · revisión] La unidad de custodia es el padre de su dirección y su contacto',
-  porId['oj-c-dir'].padre);
-log(porId['oj-f-nom'].esPadre &&
-    ['oj-f-gra','oj-f-car','oj-f-tel','oj-f-cor']
-      .every(i => porId[i].padre === 'Nombres y apellidos'),
-  '[OJ · revisión] Y el firmante es una persona, no cinco datos sueltos del oficio',
-  porId['oj-f-gra'].padre);
+/* ⚠️ 2026-10-26: custodia y firmante salieron de la revisión (Ajustes y Perfil). */
+log(['oj-c-est','oj-c-dir','oj-c-bar','oj-c-ciu','oj-c-tel','oj-c-cor','oj-c-web'].every(i => porId[i].falta),
+  '[OJ · revisión] La unidad de custodia ya no se pide aquí: viene de Ajustes');
+log(['oj-f-nom','oj-f-gra','oj-f-car','oj-f-tel','oj-f-cor'].every(i => porId[i].falta),
+  '[OJ · revisión] Ni el firmante: viene del perfil');
 /* Y el destinatario, que es quien comparte etiquetas con la custodia. */
 log(porId['oj-x-nom'].esPadre &&
     porId['oj-x-dir'].padre === porId['oj-x-nom'].etiqueta &&
@@ -433,7 +428,8 @@ fueron.forEach(([t, q]) => log(fuente.indexOf(t) === -1, 'Se retiró ' + q));
    previas de lo que va a salir impreso. */
 const quedan = [
   ['4 últimos son el año', '⚠️ que el año se actualiza solo: evita corregirlo a mano cada enero'],
-  ['Si generas, el informe deja constancia de que la orden figuraba vencida', 'la advertencia de la orden vencida']
+  // 2026-10-26: la confirmación se acortó a una línea; la advertencia y su cita se quedan.
+  ['Obliga a la libertad inmediata', 'la advertencia de la orden vencida']
 ];
 quedan.forEach(([t, q]) => log(fuente.indexOf(t) !== -1, 'Se conserva ' + q));
 
@@ -626,38 +622,35 @@ log(porFormulario.nunc === SEM.nunc && porFormulario.conductas[0] === SEM.conduc
     porFormulario.articulos[0] === SEM.articulosCP[0],
   '[B4] Y el NUNC, la conducta y su artículo del C.P. siguen llegando');
 
-/* El oficio de orden judicial: el membrete cambio de ETIQUETA, no de clave. */
+/* El oficio de orden judicial. ⚠️ 2026-10-26: membrete y custodia salieron de
+   la revisión; se mide que siguen llegando de las MISMAS claves de Ajustes al
+   caso, sin pasar por el formulario. */
 const oficio = await page.evaluate(async () => {
   const cfg = DB.getConfig();
   wc = ojNuevoCaso(); ws = 3; go('wizard'); renderWiz();
-  const v = id => (document.getElementById(id) || {}).value;
-  const leidos = { min: v('oj-e-min'), ins: v('oj-e-ins'), uni: v('oj-e-uni'), dep: v('oj-e-dep') };
   ojCollect();
-  return { leidos, cfg: { min: cfg.ojMinisterio, ins: cfg.ojInstitucion,
-           uni: cfg.ojUnidad, dep: cfg.ojDependencia },
-           modelo: wc.oj.encabezado };
+  return { cfg: { min: cfg.ojMinisterio, ins: cfg.ojInstitucion, uni: cfg.ojUnidad, dep: cfg.ojDependencia },
+           modelo: wc.oj.encabezado,
+           enPantalla: ['oj-e-min', 'oj-e-dep'].filter(id => !!document.getElementById(id)).length };
 });
-log(oficio.leidos.min === oficio.cfg.min && oficio.leidos.dep === oficio.cfg.dep,
-  '⚠️ [B5] Los campos del membrete siguen leyendo las mismas claves de Ajustes',
-  JSON.stringify(oficio.leidos));
-log(oficio.modelo.ministerio === oficio.cfg.min && oficio.modelo.dependencia === oficio.cfg.dep,
-  '[B6] Y ojCollect los sigue recolectando en el caso', JSON.stringify(oficio.modelo));
+log(oficio.enPantalla === 0,
+  '⚠️ [B5] La revisión ya no repite el membrete: se pide una vez, en Ajustes');
+log(oficio.modelo.ministerio === (oficio.cfg.min || '') && oficio.modelo.dependencia === (oficio.cfg.dep || oficio.modelo.dependencia),
+  '[B6] Y el caso lo sigue recibiendo de las mismas claves de Ajustes', JSON.stringify(oficio.modelo));
 
-/* Y la unidad de custodia anidada: sus 6 hijos llegan al modelo. */
+/* La custodia también llega de Ajustes al caso. */
 const custodia = await page.evaluate(() => {
-  const set = (id, v) => { const e = document.getElementById(id); if (e) e.value = v; };
-  set('oj-c-est', 'ESTACION PRUEBA'); set('oj-c-dir', 'CL 1 # 2-3');
-  set('oj-c-bar', 'BarrioX'); set('oj-c-ciu', 'Medellín');
-  set('oj-c-tel', '3001234567'); set('oj-c-cor', 'cust@prueba.test');
-  set('oj-c-web', 'www.prueba.test');
-  ojCollect();
+  const cfg = DB.getConfig();
+  cfg.ojCustEstacion = 'ESTACION PRUEBA'; cfg.ojCustDireccion = 'CL 1 # 2-3'; cfg.ojCustBarrio = 'BarrioX';
+  cfg.ojCustTelefono = '3001234567'; cfg.ojCustCorreo = 'cust@prueba.test'; cfg.ojPieWeb = 'www.prueba.test';
+  DB.saveConfig(cfg);
+  wc = ojNuevoCaso(); ws = 3; renderWiz(); ojCollect();
   return wc.oj.custodia;
 });
 log(custodia.estacion === 'ESTACION PRUEBA' && custodia.direccion === 'CL 1 # 2-3' &&
-    custodia.barrio === 'BarrioX' && custodia.ciudad === 'Medellín' &&
-    custodia.telefono === '3001234567' && custodia.correo === 'cust@prueba.test' &&
-    custodia.web === 'www.prueba.test',
-  '⚠️ [B7] La custodia anidada recolecta sus 7 campos', JSON.stringify(custodia));
+    custodia.barrio === 'BarrioX' && custodia.telefono === '3001234567' &&
+    custodia.correo === 'cust@prueba.test' && custodia.web === 'www.prueba.test',
+  '⚠️ [B7] La custodia llega de Ajustes al caso sin pedirse en el formulario', JSON.stringify(custodia));
 
 /* Mi jurisdiccion: dos entidades en pantalla, las mismas cinco claves en cfg. */
 const juris = await page.evaluate(() => {

@@ -5,6 +5,10 @@
 > irreversibles y lo que hace falta pedirle al usuario. Este archivo es la
 > historia del producto.
 
+> 🧹 **Formularios sin saturación (2026-10-26, build 156, rama `revision-oj`)**: regla vigente para todo
+> formulario — en pantalla solo lo que se decide o se corrige; lo que vive en Ajustes/Perfil no se vuelve
+> a pedir. Ver «Revisión de la captura por orden judicial, sin saturación» al final.
+
 > 🧭 **PLAN VIGENTE (2026-10-23) — cuenta, nube cifrada de extremo a extremo y prueba de 14 días.**
 > Sustituye las Fases 1-8 del plan del 2026-09-25 (la Fase 0 sigue hecha y publicada). Seis fases,
 > **cada una en su rama y esperando aprobación antes de la siguiente**: F1 almacén sin PIN ·
@@ -8342,3 +8346,54 @@ exige un `.aab` nuevo, español no garantizado). Verificado con `verify_resumen_
   expediente 13 · menú+expediente 16 · simulador 41 · mejora1 157 · multipersona · jerarquia 67 ·
   mejora5 81 · fpj5 tipografía 48.
 - Anti-caché `?v=155` / `cache-v155`, `_BUILD=155`. Para la app de Play hace falta un `.aab` nuevo.
+
+## Revisión de la captura por orden judicial, sin saturación (2026-10-26)
+Pedido del usuario con tres pantallazos del paso 4 «Revisión» del formulario de orden judicial,
+marcados en 9 recuadros, y la instrucción de extender el criterio a los demás formularios y dejarlo
+en el plan. Rama `revision-oj`, build 156, sin fusionar ni publicar. Verificado con
+`verify_revision_oj.mjs` (**37 checks**, nuevo) y mirando la pantalla en los dos temas a 384 px.
+
+⚠️ **Regla que deja este trabajo, para cualquier formulario**: en pantalla se queda lo que el
+funcionario DECIDE o tiene que CORREGIR. Se retira lo que repite un dato visible en otro sitio,
+explica cómo trabaja la app, o vuelve a pedir algo que ya vive en Ajustes o en Perfil. **El modelo
+del caso no cambia**: las claves se conservan y lo ya guardado se sigue imprimiendo igual.
+
+| Recuadro | Qué era | Qué quedó |
+|---|---|---|
+| 1 | Aviso de orden vencida de cuatro renglones | **Una línea** (`ojAvisoVigHtml`): «La orden figura vencida desde el … Obliga a la libertad inmediata (art. 298 CPP).» + «Revisar fecha». V01 ya no se repite en Advertencias |
+| 2 | Dos botones grandes Fiscalía / Juzgado | **Lista desplegable** `#oj-x-via` (Adolescentes solo si aplica). `ojCambiarVia` no cambió |
+| 3 | «Por qué se propone este destinatario» | Retirado. `destino.reglaAplicada` se sigue guardando |
+| 4 | Barra «36 H · VENCIDO» | Retirada con `ojPlazoBarraHtml`. El término se imprime en el oficio y avisa como V24/V25 |
+| 5 | «Resumen del informe» | Retirado con `ojResumenHtml` |
+| 6 | «Constancia de entrega» | Retirada. Sus claves (`fechaEntrega`…`motivoCambio`) se conservan y se imprimen si un caso las trae. **V23** se fue con ella (no hay dónde escribir el motivo) |
+| 7 | «Encabezado, custodia y firma» | Retirado: vive en **Ajustes → Mi unidad** y en **Perfil**, y llega solo al caso por `ojPrellenarDeCfg` (que `ojStep7` llama también, así lo configurado después de abrir la captura entra) |
+| 8 | Advertencias en lista corrida | **Agrupadas por el sitio donde se corrigen** (`ojAvisosHtml`): «Paso N · …», «Ajustes · Mi unidad», «Perfil», en el orden del formulario, un botón «Ir» por grupo y frases de ≤110 caracteres. La barra dice si impide generar |
+| 9 | «Listo» + «Generar oficio» | Retirados con `ojGenerarDesdeWizard`. **Guardar abre el expediente** (`ojGuardarYSalir` → `abrirDossierCaso`), donde está la tarjeta del oficio |
+
+- ⚠️ **V26–V31 llevan `ir`** (`'ajustes'` o `'perfil'`): desde que su bloque salió del formulario
+  no se corrigen en ningún paso. En la revisión el botón llama a `ojIrConfig`, que guarda el
+  borrador y sale; en el diálogo de faltantes, `closeModal();go(…)`.
+- ⚠️ `ojCollectDisposicion` no se tocó: se autolimita por `#oj-e-min` y `#oj-x-mot`, que ya no
+  existen, así que **no borra** membrete, custodia, firma ni constancia del caso.
+- **Retirado sin consumidores**: `ojCargarFirmaPerfil`, `ojFirmaWizHtml`, `ojRefrescarFirmaWiz`,
+  `ojFirmarDesdeWizard`, `lcFirmaResuelta`, `ojNotaDerivada`, `ojCompletarEstacion` (el oficio
+  sigue completando el tipo de dependencia al imprimir con `ojEstacionLabel`), y el CSS `.oj-via*`
+  y `.oj-plazo`. La firma se firma en Perfil y se sigue estampando sola.
+- ⚠️ **Contracara aceptada**: la custodia ya no se puede cambiar por captura desde el formulario
+  (era útil si el capturado quedaba en otra estación). Se corrige en Ajustes.
+
+**Extensión a otros formularios** (decidida con el usuario):
+- **Paso 2 de orden judicial**: el cuadro de vigencia es el mismo aviso de una línea
+  (`ojVigBoxHtml` → `ojAvisoVigHtml(vig,false)`).
+- **Confirmación de orden vencida** (`ojConfirmarVigencia`): una línea + «Art. 298 CPP · CSJ
+  AP4491-2016». Los dos botones no cambian.
+- **Paso «Servidor» de flagrancia** (`rStep7`): tarjeta con quién firma y su procedencia
+  (`lcServResumenHtml`, «De tu perfil» / «Escrito para esta captura»); los siete campos, con los
+  mismos ids que lee `collectStep`, plegados en «Corregir para este informe» (abierto si falta el
+  nombre). La tarjeta se repinta al escribir (`lcServResumenPintar`). Se fue el botón «Generar
+  oficio» de las capturas OJ del formato anterior. El FPJ-5 sale igual.
+
+- Suites adaptadas sin bajar lo que protegen: `verify_oj`, `verify_mejora2`, `verify_mejora3`,
+  `verify_mejora6b`, `verify_jerarquia`, `verify_firma`, `verify_ola1` (medían los bloques
+  retirados; ahora miden que no están y que los datos siguen llegando al caso y al oficio).
+- Anti-caché `?v=156` / `cache-v156`, `_BUILD=156`. Para la app de Play hace falta un `.aab` nuevo.

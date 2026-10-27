@@ -121,22 +121,25 @@ log(pasoTrasSalto === 3, 'El wizard queda realmente en la pantalla de revisión'
 const orden7 = await page.evaluate(() => {
   const panel = document.querySelector('#wz-panels .wpn');
   const alerta = panel.querySelector('.oj-estado.dura');
-  // Delante de la barra solo va el destinatario (`.oj-dest`), que con Mejora 3
-  // es la decisión del paso; los bloques de formulario van todos detrás.
-  const primerBloque = panel.querySelector('.oj-blk');
-  if (!alerta || !primerBloque) return { hay: !!alerta, antes: null };
-  // ¿La barra de faltantes va antes de los bloques de formulario?
-  const pos = alerta.compareDocumentPosition(primerBloque);
+  /* ⚠️ 2026-10-26: la revisión ya no tiene bloques de formulario (membrete,
+     custodia y constancia salieron). Delante de la barra solo van el aviso de
+     vigencia y el destinatario; y las faltas se agrupan por paso, con UN botón
+     por grupo. */
+  if (!alerta) return { hay: false, antes: null };
   return {
     hay: true,
-    antes: !!(pos & Node.DOCUMENT_POSITION_FOLLOWING),
+    antes: [...panel.children].indexOf(alerta) <= 3,
     texto: alerta.textContent.slice(0, 60),
-    botones: alerta.querySelectorAll('button[onclick^="wizGoto"]').length
+    grupos: alerta.querySelectorAll('.oj-av-gr').length,
+    // Un grupo de Ajustes o Perfil lleva su botón a esa pantalla, no a un paso.
+    botones: alerta.querySelectorAll('.oj-av-ir').length
   };
 });
 log(orden7.hay === true, 'El paso 7 lista los datos obligatorios que faltan');
-log(orden7.antes === true, 'Y los lista ARRIBA, antes del formulario (no tras 8 pantallas de scroll)');
-log(orden7.botones >= 4, 'Cada falta trae su botón para ir a diligenciarla', orden7.botones + ' botones');
+log(orden7.antes === true, 'Y los lista ARRIBA, justo después del destinatario (no tras 8 pantallas de scroll)');
+log(orden7.grupos >= 2 && orden7.botones === orden7.grupos,
+  'Las faltas van agrupadas por paso, cada grupo con su botón para ir a diligenciarlas',
+  orden7.grupos + ' grupos · ' + orden7.botones + ' botones');
 
 const destinoSalto = await page.evaluate(() => {
   const b = document.querySelector('#wz-panels .oj-estado.dura button[onclick^="wizGoto"]');

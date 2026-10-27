@@ -368,19 +368,21 @@ log(p7c.nombre === 'Juzgado Segundo de Ejecucion de Penas de Medellin' && p7c.di
   'Al seleccionarlo se carga todo lo registrado: el usuario no teclea nada', p7c.nombre);
 
 const p7d = await page.evaluate(() => {
-  // Los 4 campos siguen en el DOM aunque el bloque esté plegado: si no,
-  // ojCollectDisposicion dejaría de recolectar el membrete, la custodia y la firma.
+  // Los 4 campos del destinatario siguen en el DOM aunque el bloque esté
+  // plegado. ⚠️ 2026-10-26: el membrete salió de la revisión, y recolectar NO lo
+  // borra del caso (sus campos ya no están en pantalla).
   wc = JSON.parse(JSON.stringify(window.__caso)); ws = 3; renderWiz();
   const det = document.querySelector('.oj-dest-mas');
   const nom = document.getElementById('oj-x-nom');
-  document.getElementById('oj-e-uni').value = 'UNIDAD TECLEADA';
+  const unidadAntes = wc.oj.encabezado.unidad;
+  document.getElementById('oj-x-dir').value = 'DIRECCION TECLEADA';
   ojCollectDisposicion();
-  return { plegado: det && !det.open, existe: !!nom, unidad: wc.oj.encabezado.unidad,
-    nombre: wc.oj.destino.nombre };
+  return { plegado: det && !det.open, existe: !!nom, dir: wc.oj.destino.direccion,
+    unidad: wc.oj.encabezado.unidad, unidadAntes, nombre: wc.oj.destino.nombre };
 });
-log(p7d.plegado && p7d.existe && p7d.unidad === 'UNIDAD TECLEADA' && !!p7d.nombre,
-  'Plegar no es borrar: con el bloque cerrado se sigue recolectando todo el paso',
-  'unidad=' + p7d.unidad);
+log(p7d.plegado && p7d.existe && p7d.dir === 'DIRECCION TECLEADA' && !!p7d.nombre && p7d.unidad === p7d.unidadAntes,
+  'Plegar no es borrar: con el bloque cerrado se sigue recolectando, y el membrete del caso no se pierde',
+  'dir=' + p7d.dir);
 
 /* ══════ Obs. 8 · El dossier ══════ */
 const p8 = await page.evaluate(async () => {

@@ -219,7 +219,9 @@ console.log('\n── VIII · El modelo no cambió ──\n');
      alguien los convierte en <select>, la escritura libre desaparece y esta
      comprobación lo dice. */
   const html = await readFile(join(ROOT, 'LexCapture_v8.html'), 'utf8');
-  const ids = ['pfm-grado', 'pfm-cgrado', 'w-sGrado', 'oj-f-gra'];
+  /* ⚠️ 2026-10-26: el firmante del oficio (`oj-f-gra`) salió de la revisión;
+     su grado es el del perfil (`pfm-grado`). Quedan tres campos. */
+  const ids = ['pfm-grado', 'pfm-cgrado', 'w-sGrado'];
   /* ⚠️ Adaptado en la Mejora 7 (2026-08-31): el formulario del perfil pasó a
      componer sus campos una sola vez (`pfmCampos`) para el titular y para el
      compañero, así que sus dos ids ya no aparecen escritos literalmente — se
@@ -240,8 +242,8 @@ console.log('\n── VIII · El modelo no cambió ──\n');
   enDom.push(await page.evaluate(mide, 'pfm-cgrado'));
   await page.evaluate(() => closeModal());
   const viaHelper = enDom.every(Boolean) &&
-    ['w-sGrado', 'oj-f-gra'].every(id => html.includes("lcGradoInput('" + id + "'"));
-  log(viaHelper, 'Los cuatro campos con id fijo se construyen por el MISMO punto', ids.join(' · '));
+    html.includes("lcGradoInput('w-sGrado'") && !html.includes("lcGradoInput('oj-f-gra'");
+  log(viaHelper, 'Los tres campos con id fijo se construyen por el MISMO punto', ids.join(' · '));
   log(/\{k:'grado',l:'Grado',ph:'Ej: Patrullero',par:'a',lista:'dl-grado'\}/.test(html),
     'Y el de la lista de funcionarios usa el soporte de datalist que el motor ya tenía', "lista:'dl-grado'");
   log(!/<select[^>]*id="(pfm-grado|pfm-cgrado|w-sGrado|oj-f-gra)"/.test(html),
