@@ -8619,3 +8619,64 @@ opciones con soporte profesional. Rama `inicio-modulos`. Verificado con `verify_
   intermitente. ⚠️ Si `verify_compras` no logra cargar las funciones del emulador, deja un Firestore
   huérfano y las suites de cuenta siguientes mueren con «port taken»: cerrar ese `java.exe` (sin
   proceso padre) y repetirlas.
+
+## Turnos (2026-10-29, build 162)
+Pedido del usuario: llevar a Flagrante el calendario de turnos que tenía aparte
+(calendarioturno2026.netlify.app, solo la 2.ª sección) para las **tres secciones** que cubren el
+servicio 24/7, con un control para elegir la sección y con el sistema visual de la app. Rama
+`turnos`. Verificado con `verify_turnos.mjs` (**49 checks**, nuevo) y mirando la pantalla en los
+dos temas, en teléfono y en escritorio.
+
+**Decisiones del usuario**: horas **2.º turno 06–13 · 3.er turno 13–21 · 4.º y 1.er turno 21–06**;
+el ciclo **se puede calibrar** y **no se reinicia** en 2027; **franja «Mi turno» arriba del Inicio
++ módulo** en un grupo nuevo «Servicio»; funciones de la v1: **novedades propias** y **compartir**
+(sin notificaciones: exigirían un complemento y un `.aab` nuevo).
+
+- **El ciclo** (`tnBase`): `Tercero → Segundo – primero → Disponible`, ancla 01/01/2026 con la
+  1.ª sección en Segundo – primero, la 2.ª en Tercero y la 3.ª Disponible (`TN_OFF = {1:1,2:0,3:2}`).
+  Comprobado contra **las 93 casillas de la tabla de enero del usuario** y contra **su calendario de
+  octubre** de la 2.ª sección. Sigue igual antes del ancla y en 2027 (no hay reinicio: 365 no es
+  múltiplo de 3).
+- ⚠️ **Lectura de las horas que se aplicó**: un día de «Tercero» se trabaja 13:00–21:00; uno de
+  «Segundo – primero», 06:00–13:00 **y** 21:00–06:00, que termina a las 06:00 del día siguiente (ese
+  día la sección está Disponible). Así cada día queda cubierto 24 h por las tres. Si no es así, se
+  corrige en `TN_TURNOS[*].bl` y `TN_BLOQUES`.
+- **Bloque `tn*`** al final del script. Motor puro (`tnTurno`, `tnBloques`, `tnEstado`,
+  `tnResumenMes`, `tnDesfasePara`) separado de la pantalla. `tnEstado` mira **desde ayer**: el bloque
+  de las 21:00 sigue vivo hasta las 06:00 y la app dice «(turno de anoche)».
+- ⚠️ **Hora de Bogotá, no la del equipo** (`tnAhora`, con `Intl` y `America/Bogota`) y fechas «de
+  pared» construidas con `new Date(a, m, d, 0, min)`: un teléfono en otra zona horaria o con horario
+  de verano no corre el turno (check [I5], con el equipo en Tokio).
+- **Festivos con nombre — un solo sitio**: `lcFestivosCO(anio)` tiene las reglas (Ley 51/1983 y
+  Pascua) y **`ojFestivos` se deriva de ahí**. El calendario y el motor de destinatario del oficio
+  no pueden discrepar (check [B2], 2026–2035).
+- **Calibrar** («Ajustar el ciclo»): «Hoy, ¿qué turno tiene tu sección?» → `cfg.turnos.desfase`
+  (0–2), que corre **las tres secciones a la vez** (siguen teniendo turnos distintos). En el mismo
+  panel, las horas de los tres turnos con `lcHoraInput` (24 h) y «Restaurar».
+- **Novedades propias** (`cfg.turnos.novedades`, lista **con `id`**: la fusión a tres vías de la nube
+  las junta elemento por elemento): Permiso · Vacaciones · Incapacidad · Comisión · Descanso (33 %) ·
+  Cambio de turno (con el turno que se toma y con quién). No cambian el ciclo: se pintan encima. Si
+  varias cubren un día, manda la última registrada. La franja del Inicio también las respeta.
+- **Configuración**: `cfg.turnos = {seccion, desfase, horas|null, novedades[]}`, cifrada y
+  sincronizada como el resto de `cfg`. `tnCfg()` normaliza al leer y **leer no escribe**.
+- **La pantalla** (`#screen-turnos`): selector «Mi sección» (1.ª · 2.ª · 3.ª, persiste) · tarjeta de
+  hoy con **línea de 24 horas** (bloques del día, tramo de anoche y hora actual) y estado vivo
+  («Entras hoy a las 21:00 · en 5 h 3 min») · próximos 7 días · mes de lunes a domingo (se desliza
+  con el dedo) · día elegido con su festivo, su novedad y **el turno de las otras dos secciones** · el
+  mes en cifras (días por turno, horas de servicio, festivos con servicio, novedades). En escritorio
+  el mes va a la derecha. Sin sección, pide elegirla en vez de pintar un calendario a ciegas.
+- **Colores**: tokens propios `--tn-dis/-ter/-sp` (+ `-bg`, `-bd`) por tema; las piezas toman el
+  color por `--tc/--tcb/--tcd` que pone la clase `tn-k-*`. ⚠️ **No se reutilizan** `--ok`, `--flag`,
+  `--danger` ni `--cspT`, que ya significan correcto, flagrancia, error y menores. Contraste AA medido
+  sobre la celda real en los dos temas: el naranja claro tuvo que bajar a `#9A4807` (daba 4,43:1).
+- **Compartir** (`tnCompartir`): el mes por chat (un renglón por día con turno, horas y festivo), el
+  día con las otras secciones, copiar, y **.ics** con un evento por bloque en `TZID=America/Bogota`
+  (UID fijo por sección, día y bloque: reimportar actualiza en vez de duplicar). En Android sale por
+  el compartir nativo (`_shareNativo`); en el navegador se descarga.
+- **Inicio**: franja «Mi turno» (`#ini-turno`, `tnFranjaHtml`) bajo el saludo y mosaico **ancho** en
+  el grupo «Servicio» con la semana en miniatura (`LC_MODULOS` gana `ancho:true`). En escritorio los
+  grupos del Inicio pasan a `auto-fit` (cuatro columnas). El reloj (`tnReloj`) repinta cada 30 s
+  **solo** con Inicio o Turnos a la vista, y al volver a la app.
+- `verify_inicio.mjs` adaptado sin bajar su cuenta (45): siete módulos, cuatro grupos y «volver»
+  también en Turnos.
+- Anti-caché `?v=162` / `cache-v162`, `_BUILD=162`. Para la app de Play hace falta un `.aab` nuevo.
