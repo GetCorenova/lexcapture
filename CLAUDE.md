@@ -88,6 +88,9 @@ Todos los colores fluyen por tokens CSS; el tema claro solo redefine tokens, no 
 | Saludo dossier | Automático por hora: DÍAS (06-11:59) / TARDES (12-18:59) / NOCHES (19-05:59) | |
 
 ## Navegación (2026-07-17) — redistribución profesional
+⚠️ **SUSTITUIDA el 2026-10-29** por «Inicio por módulos» (al final): la app abre en un Inicio de
+seis módulos y la barra inferior es Inicio · Buscar · [Nueva] · Pendientes · Perfil. La hoja «Más»
+ya no existe.
 - **Sidebar desktop** agrupado con etiquetas de sección (`.sb-sec`): **Operación** (Capturas, Personas, Dossier) / **Análisis** (Estadísticas) / **Recursos** (Despachos, Plantillas). Perfil y Ajustes van anclados al fondo en `.sb-bottom` (patrón de apps profesionales).
 - **Bottom bar móvil** (5 ítems): Capturas · Personas · **Nueva** (botón central circular destacado `.bn-cta`, gradiente ámbar→púrpura) · Dossier · Más. El FAB se eliminó por redundante con el CTA central. Estadísticas vive en el sheet "Más" (que ya no repite Personas).
 
@@ -8554,3 +8557,65 @@ bajo su brazo del medio**, apoyado en la línea de abajo de la F. Solo cambió `
   en el adaptativo. Gráfico de la ficha regenerado. `.aab` **versionCode 7** (7,50 MB, `jar verified.`,
   build 160 dentro, ícono nuevo comprobado extrayéndolo del paquete).
 - En verde: tema 51 · csp 11 · expediente 13. Anti-caché `?v=160` / `cache-v160`, `_BUILD=160`.
+
+## Inicio por módulos (2026-10-29, build 161)
+Pedido del usuario con un boceto: al entrar, en vez de caer directo en la lista de Capturas, ver un
+**Inicio con módulos** y elegir; y que la barra inferior —que quedaría casi vacía— lleve las mejores
+opciones con soporte profesional. Rama `inicio-modulos`. Verificado con `verify_inicio.mjs`
+(**45 checks**, nuevo) y mirando la pantalla en los dos temas, en teléfono y en escritorio.
+
+**Auditoría (en qué se apoya cada decisión):**
+| Referente | Patrón | Qué se tomó |
+|---|---|---|
+| SAP Fiori Launchpad, Salesforce Field Service, Dynamics 365 móvil | Lanzador de mosaicos con dato vivo | Cada módulo dice algo útil sin abrirlo |
+| Bancolombia, Nequi, Davivienda, Mi Argentina | Saludo con nombre + cuadrícula + acción central | Saludo por franja, cuadrícula de 2, «Nueva» al centro |
+| Material Design 3 · barra de navegación | 3–5 destinos **globales**; la acción principal no es un destino | La barra no repite los módulos |
+| Apple HIG · tab bars | Las pestañas son secciones transversales | Buscar y Pendientes sirven desde cualquier módulo |
+| NN/g (hub & spoke, retomar, Hick, Fitts) | Lo pendiente primero; pocas opciones por grupo | Borrador arriba; módulos de a dos |
+| Nielsen #4 Consistencia | Mismo orden en todas las superficies | Orden del Inicio = orden del panel lateral |
+
+- **Inicio (`#screen-inicio`, pantalla de arranque)**: marca · fecha y saludo («Buenas tardes, SI
+  Nelson GOMEZ», franjas 01/12/18 del dossier, `lcSaludo`/`lcNombreSaludo`) · la captura sin terminar
+  · lo que llegó por revisar (`bzAvisoBandeja`/`bzAvisoCapturas`) · seis mosaicos en **tres grupos de
+  dos**: **Operación** (Capturas, Personas) · **Gestión** (Estadísticas, Despachos) · **Mi cuenta**
+  (Perfil, Ajustes). `LC_MODULOS` ES el orden. Difiere del boceto solo en que Perfil y Ajustes van
+  juntos al final (configuración al final, convención iOS/Android) y Despachos sube junto a
+  Estadísticas.
+- **Dato vivo** (`lcModuloDato`): «3 registradas · 2 este mes» · «2 registradas» · «2 este mes» ·
+  «1 registrado» · grado y nombre · «Unidad, apariencia y cuenta». Antes de abrir la sesión no se
+  pinta ningún número (sería un «0» falso). Contador en Capturas si hay algo por revisar.
+- **Barra inferior**: Inicio · Buscar · [+ Nueva] · Pendientes · **Perfil** (decisión del usuario).
+  ⚠️ El CTA solo queda centrado con 5 ítems. **La hoja «Más» se retiró** (`#sheet`,
+  `openSheet/closeSheet`): sus tres destinos están en Inicio.
+- **Buscar (`#screen-buscar`, `lcBuscar`)**: un campo para capturas y personas; sin tildes ni
+  mayúsculas (`lcNormNom`), todas las palabras tienen que aparecer, en cualquier orden. Busca nombres,
+  alias y documentos de capturados/víctimas/testigos (con o sin puntos), NUNC, SPOA, número de la
+  orden, radicado, delito, barrio, dirección y municipio; personas del registro por nombre y
+  documento. Máx. 20 por grupo. Tocar abre el expediente o la persona; «volver» del expediente
+  regresa a Buscar con la búsqueda (`lcVolverExp`).
+- **Pendientes (`#screen-pendientes`)**: la captura sin terminar + «Por revisar» y «Enviados» del
+  buzón. `lcPendCount` = borrador + bandeja; el contador vive en el ítem Pendientes del panel
+  (`#bz-cnt-nav`) y el punto en el de la barra (`#bz-punto`) — antes estaban en Capturas.
+  `bzPintarAvisos` llama a `lcPintarPend`. Vacío: «Todo al día».
+- **Navegación**: los seis módulos tienen «volver al inicio» (`.topbar-back`, solo < 900 px).
+  Salir de Inicio empuja una entrada de historial (`_lcPushed`) y `lcVolverInicio` la consume con
+  `history.back()`, así el botón atrás de Android vuelve a Inicio, el historial no crece y solo desde
+  Inicio se sale de la app. Atrás con un modal u hoja abiertos los cierra primero (`lcCerrarCapa`).
+  «Volver» de Nueva captura y cancelar el formulario regresan a donde se empezó (`lcVolverNueva`,
+  `lcSalidaWiz`); guardar sigue llevando a Capturas.
+- **Escritorio**: panel lateral con Inicio, Buscar y Pendientes arriba y luego Operación / Gestión /
+  Perfil-Ajustes; los tres grupos del Inicio lado a lado; el título dice «Inicio» (la marca ya está
+  en el panel).
+- Solo tokens del Design System v2, sin gradientes ni emojis; contraste AA medido en los dos temas.
+- Anti-caché `?v=161` / `cache-v161`, `_BUILD=161`. Para la app de Play hace falta un `.aab` nuevo.
+- Suites adaptadas, sin bajar lo que protegen: `verify_compartir`, `custodia`, `entrega` e
+  `incautacion` llamaban a `closeSheet()` de la hoja «Más» para cerrar el menú ⋮ de la captura (que
+  es `closeActionSheet`); `verify_ds` fotografía el Inicio en vez de la hoja retirada;
+  `verify_enviar_a` [D2] busca el contador en Pendientes; `verify_cambios_buzon` [G7] acota el aviso a
+  `#screen-capturas` (el mismo aviso sale ahora antes en el DOM, en Inicio); `verify_ola1` [27] y
+  `verify_prueba` [P5] aceptan que se vuelve / se abre en Inicio.
+- Regresión: en verde todas salvo `verify_mejora7` [B23] — **preexistente**: falla igual poniendo el
+  HTML de `HEAD` (el dossier dejó de imprimir «PATRULLA 32 CAI …» con la Mejora 8); ya no es
+  intermitente. ⚠️ Si `verify_compras` no logra cargar las funciones del emulador, deja un Firestore
+  huérfano y las suites de cuenta siguientes mueren con «port taken»: cerrar ese `java.exe` (sin
+  proceso padre) y repetirlas.

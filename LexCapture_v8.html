@@ -2202,6 +2202,49 @@ body.cu-on{overflow:hidden}
 .ic-x{width:15px;height:15px;stroke-width:2.2;margin:auto}
 .ib-close .ic-x{width:16px;height:16px}
 
+/* ═══ INICIO POR MÓDULOS (2026-10-29) ═══
+   Mosaicos con dato vivo, en tres grupos de dos. Solo tokens: el tema claro
+   los redefine y aquí no se escribe ningún color. Objetivos ≥48 px. */
+.ini-top{gap:10px}
+.ini-logo{width:32px;height:32px;border-radius:8px;overflow:hidden;flex-shrink:0;box-shadow:0 0 0 1px var(--border)}
+.ini-logo img{width:100%;height:100%;object-fit:cover;display:block}
+.ini-hola{padding:2px 2px 16px}
+.ini-f{font-size:13px;line-height:18px;color:var(--text-2);font-weight:500}
+.ini-s{font-size:22px;line-height:28px;font-weight:700;color:var(--text);margin-top:6px;letter-spacing:-.005em}
+.ini-n{font-size:22px;line-height:28px;font-weight:400;color:var(--text-2)}
+#ini-draft .draft-card,#ini-avisos .bz-aviso{margin-bottom:12px}
+.mod-sec{font-size:13px;line-height:18px;font-weight:600;color:var(--text-2);margin:16px 2px 8px}
+.mod-g:first-child .mod-sec{margin-top:4px}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mod-tile{
+  position:relative;display:flex;flex-direction:column;align-items:flex-start;
+  min-height:124px;padding:14px;text-align:left;min-width:0;
+  background:var(--surface-1);border:1px solid var(--card-bd);border-radius:var(--radius);
+  box-shadow:var(--sh-1);color:var(--text);
+  transition:transform var(--d1) var(--ease),background var(--d1) var(--ease);
+}
+.mod-tile:active{transform:scale(.98);background:var(--pressed)}
+@media(hover:hover){.mod-tile:hover{background:var(--hover)}}
+.mod-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  background:var(--accG);color:var(--acc)}
+.mod-ic svg{width:22px;height:22px;stroke-width:1.8}
+.mod-t{margin-top:auto;padding-top:14px;font-size:16px;line-height:20px;font-weight:600}
+.mod-d{font-size:13px;line-height:18px;color:var(--text-2);margin-top:2px;min-height:18px;max-width:100%;
+  overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.ini-h-d{display:none}
+.mod-cnt{position:absolute;top:12px;right:12px;min-width:22px;height:22px;padding:0 6px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;background:var(--acc);color:var(--acc-fg);
+  font-size:12px;font-weight:700;line-height:1}
+#screen-buscar .mod-sec{margin-top:18px}
+#bus-res .cc-wrap,#bus-res .prow{margin-bottom:10px}
+.bus-mas{margin:4px 2px 8px}
+@media(min-width:720px){
+  /* Pantalla ancha: los tres grupos lado a lado, un mosaico debajo de otro. */
+  #ini-mods{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+  #ini-mods .mod-sec{margin-top:4px}
+  #ini-mods .mod-grid{grid-template-columns:1fr}
+}
+
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
   .fr{grid-template-columns:1fr 1fr;column-gap:10px}
@@ -2228,6 +2271,11 @@ body.cu-on{overflow:hidden}
     box-shadow:none;border-bottom:1px solid var(--border);
   }
   #bottombar{display:none}
+  /* En computador el panel lateral siempre está a la vista: el «volver al
+     inicio» de los módulos sobra. */
+  .topbar-back{display:none}
+  .ini-logo,.ini-h-m{display:none}
+  .ini-h-d{display:inline}
   #net-badge{bottom:16px;left:auto;right:16px}
   #main{padding-bottom:0}
   .screen{padding:0 40px;max-width:880px;width:100%;margin:0 auto}
@@ -2274,25 +2322,38 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     Nueva captura
   </button>
 
+  <!-- Inicio por módulos (2026-10-29): los tres destinos globales arriba, en el
+       mismo orden que la barra inferior del teléfono. -->
+  <div class="sb-item on" data-screen="inicio" onclick="go('inicio')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></svg>
+    Inicio
+  </div>
+  <div class="sb-item" data-screen="buscar" onclick="go('buscar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>
+    Buscar
+  </div>
+  <div class="sb-item" data-screen="pendientes" onclick="go('pendientes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>
+    Pendientes
+    <span class="bz-cnt" id="bz-cnt-nav" style="display:none" aria-label="Pendientes por atender"></span>
+  </div>
+
   <div class="sb-sec">Operación</div>
 
-  <div class="sb-item on" data-screen="capturas" onclick="go('capturas')">
+  <div class="sb-item" data-screen="capturas" onclick="go('capturas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
     Capturas
-    <span class="bz-cnt" id="bz-cnt-nav" style="display:none" aria-label="Te enviaron algo por revisar"></span>
   </div>
   <div class="sb-item" data-screen="personas" onclick="go('personas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>
     Personas
   </div>
-  <div class="sb-sec">Análisis</div>
+  <div class="sb-sec">Gestión</div>
 
   <div class="sb-item" data-screen="estadisticas" onclick="go('estadisticas')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
     Estadísticas
   </div>
-
-  <div class="sb-sec">Recursos</div>
 
   <div class="sb-item" data-screen="despachos" onclick="go('despachos')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
@@ -2313,9 +2374,56 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 
 <main id="main">
 
-  <!-- ====== CAPTURAS ====== -->
-  <section id="screen-capturas" class="screen on">
+  <!-- ====== INICIO (2026-10-29) ======
+       La app abre en un inicio de módulos (patrón de lanzador: SAP Fiori,
+       Salesforce Field Service, apps bancarias). Lo pinta renderInicio(): saludo,
+       la captura sin terminar, lo que llegó por revisar y los seis módulos en
+       tres grupos de dos. Ver «Inicio por módulos» en CLAUDE.md. -->
+  <section id="screen-inicio" class="screen on">
+    <header class="topbar ini-top">
+      <span class="ini-logo" aria-hidden="true"><img id="ini-logo" alt=""></span>
+      <div class="ttl"><h1><span class="ini-h-m">Flagrante</span><span class="ini-h-d">Inicio</span></h1></div>
+    </header>
+    <div class="pane">
+      <div class="ini-hola" id="ini-hola"></div>
+      <div id="ini-draft"></div>
+      <div id="ini-avisos"></div>
+      <div id="ini-mods"></div>
+    </div>
+  </section>
+
+  <!-- ====== BUSCAR ====== -->
+  <section id="screen-buscar" class="screen">
     <header class="topbar">
+      <div class="ttl">
+        <h1>Buscar</h1>
+        <span class="sub">Capturas y personas</span>
+      </div>
+    </header>
+    <div class="pane">
+      <input class="desp-search" id="bus-q" type="search" placeholder="Nombre, cédula, NUNC, delito o barrio…" oninput="renderBuscar()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-bus-nofill" data-form-type="other" data-lpignore="true" aria-label="Buscar capturas y personas">
+      <div id="bus-res"></div>
+    </div>
+  </section>
+
+  <!-- ====== PENDIENTES ====== -->
+  <section id="screen-pendientes" class="screen">
+    <header class="topbar">
+      <div class="ttl">
+        <h1>Pendientes</h1>
+        <span class="sub" id="pend-sub"></span>
+      </div>
+    </header>
+    <div class="pane">
+      <div id="pend-draft"></div>
+      <div id="pend-cont"></div>
+    </div>
+  </section>
+
+  <!-- ====== CAPTURAS ====== -->
+  <section id="screen-capturas" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Capturas</h1>
         <span class="sub" id="cap-sub"></span>
@@ -2344,7 +2452,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== NUEVA CAPTURA ====== -->
   <section id="screen-nueva" class="screen">
     <header class="topbar">
-      <button class="topbar-btn" onclick="go('capturas')" aria-label="Volver">
+      <button class="topbar-btn" onclick="lcVolverNueva()" aria-label="Volver">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div class="ttl">
@@ -2399,6 +2507,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== ESTADÍSTICAS ====== -->
   <section id="screen-estadisticas" class="screen">
     <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Estadísticas</h1>
         <span class="sub" id="stats-sub">—</span>
@@ -2410,7 +2519,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== DOSSIER ====== -->
   <section id="screen-dossier" class="screen">
     <header class="topbar">
-      <button class="topbar-btn" onclick="go('capturas')" aria-label="Volver">
+      <button class="topbar-btn" onclick="lcVolverExp()" aria-label="Volver">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <div class="ttl">
@@ -2505,6 +2614,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== PERFIL ====== -->
   <section id="screen-perfil" class="screen">
     <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Perfil</h1>
         <span class="sub">Funcionarios de la estación</span>
@@ -2536,6 +2646,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== DESPACHOS ====== -->
   <section id="screen-despachos" class="screen">
     <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Despachos</h1>
         <span class="sub" id="desp-header-sub">Aún no has registrado ningún despacho</span>
@@ -2612,6 +2723,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   ══════════════════════════════════════════════════════════════════════════ -->
   <section id="screen-ajustes" class="screen">
     <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Ajustes</h1>
         <span class="sub">Configuración del sistema</span>
@@ -2811,6 +2923,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <!-- ====== PERSONAS ====== -->
   <section id="screen-personas" class="screen">
     <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Personas</h1>
         <span class="sub">Capturados, víctimas y testigos</span>
@@ -2850,48 +2963,35 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <button class="ib-close" onclick="pwaDismiss()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 </div>
 
-<!-- ====== BOTTOM NAV ====== -->
+<!-- ====== BOTTOM NAV ======
+     Inicio por módulos (2026-10-29): la barra lleva DESTINOS GLOBALES, no los
+     módulos (esos viven en Inicio). Material 3 / Apple HIG: 3–5 destinos y la
+     acción principal en el centro, en la zona del pulgar. Perfil va al final
+     (decisión del usuario, convención de las apps). ⚠️ El CTA solo queda
+     centrado con 5 ítems (.bn-item{flex:1}). -->
 <nav id="bottombar">
-  <button class="bn-item on" data-screen="capturas" onclick="go('capturas')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
-    <span class="bz-punto" id="bz-punto" style="display:none"></span>
-    Capturas
+  <button class="bn-item on" data-screen="inicio" onclick="lcVolverInicio()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M10 21v-6h4v6"/></svg>
+    Inicio
   </button>
-  <button class="bn-item" data-screen="personas" onclick="go('personas')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>
-    Personas
+  <button class="bn-item" data-screen="buscar" onclick="go('buscar')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>
+    Buscar
   </button>
   <button class="bn-item bn-cta" data-screen="nueva" onclick="go('nueva')" aria-label="Nueva captura">
     <span class="bn-cta-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
     Nueva
   </button>
-  <button class="bn-item" data-screen="estadisticas" onclick="go('estadisticas')">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>
-    Estadísticas
+  <button class="bn-item" data-screen="pendientes" onclick="go('pendientes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/></svg>
+    <span class="bz-punto" id="bz-punto" style="display:none"></span>
+    Pendientes
   </button>
-  <button class="bn-item" onclick="openSheet()">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>
-    Más
+  <button class="bn-item" data-screen="perfil" onclick="go('perfil')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+    Perfil
   </button>
 </nav>
-
-<!-- ====== "MÁS" SHEET ====== -->
-<div class="sheet-back" id="sheet-back" onclick="closeSheet()"></div>
-<div class="sheet" id="sheet">
-  <div class="sheet-handle"></div>
-  <button class="sheet-item" onclick="closeSheet();go('perfil')">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg></div>
-    <div class="body"><div class="ti">Perfil</div><div class="de">Funcionario activo</div></div>
-  </button>
-  <button class="sheet-item" onclick="closeSheet();go('despachos')">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg></div>
-    <div class="body"><div class="ti">Despachos</div><div class="de">Tus fiscalías, CESPA y juzgados</div></div>
-  </button>
-  <button class="sheet-item" onclick="closeSheet();go('ajustes')">
-    <div class="lic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg></div>
-    <div class="body"><div class="ti">Ajustes</div><div class="de">Datos e importación</div></div>
-  </button>
-</div>
 
 <!-- ====== TOAST ====== -->
 <div class="toast" id="toast"></div>
@@ -3004,7 +3104,33 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
+var screens = ['inicio','buscar','pendientes','capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
+/* Inicio por módulos (2026-10-29). _lcPrev = la pantalla de la que se viene;
+   _lcAntesNueva = desde dónde se abrió «Nueva captura» (su «volver» y cancelar
+   el formulario regresan ahí); _lcPushed = al salir de Inicio se empujó una
+   entrada de historial, así «volver» y el botón atrás de Android la consumen en
+   vez de apilar entradas (si no, desde Inicio habría que pulsar atrás dos veces
+   para salir de la app). */
+var _lcPrev = null, _lcAntesNueva = null, _lcAntesWiz = null, _lcAntesExp = null, _lcPushed = false;
+/* «Volver» del expediente: a Buscar, Inicio o Pendientes si se abrió desde ahí;
+   si no, a Capturas, como siempre. */
+function lcVolverExp() {
+  var o = _lcAntesExp;
+  if (o === 'inicio') lcVolverInicio();
+  else go((o === 'buscar' || o === 'pendientes') ? o : 'capturas');
+}
+/* Adónde se vuelve al salir del formulario SIN guardar: a donde empezó el
+   trámite (Inicio, Pendientes, Buscar…). Lo abierto desde Capturas o desde el
+   expediente vuelve a Capturas, como siempre. Guardar sigue llevando a Capturas,
+   que es donde se ve la captura nueva. */
+function lcSalidaWiz() {
+  var o = _lcAntesWiz === 'nueva' ? (_lcAntesNueva || 'inicio') : _lcAntesWiz;
+  return (o === 'inicio' || o === 'pendientes' || o === 'buscar' || o === 'personas') ? o : 'capturas';
+}
+function _lcPantallaActual() {
+  var s = document.querySelector('.screen.on');
+  return s ? s.id.replace('screen-', '') : null;
+}
 var toastTimer = null;
 var _caseFilter = 'all';
 var wc = null, ws = 0;
@@ -3017,11 +3143,24 @@ function go(name) {
   // La ventana de dirección abierta se descarta: sus campos vuelven a su formulario.
   if (_lcDirOv) lcDirCerrar(false, true);
   evAlNavegar(name);
+  var desde = _lcPantallaActual();
+  if (desde && desde !== name) _lcPrev = desde;
+  if (name === 'nueva' && desde && desde !== 'nueva' && desde !== 'wizard') _lcAntesNueva = desde;
+  if (name === 'wizard' && desde && desde !== 'wizard') _lcAntesWiz = desde;
+  if (name === 'dossier' && desde && ['dossier','dossierwa','wizard'].indexOf(desde) < 0) _lcAntesExp = desde;
   document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('on'); });
   var el = document.getElementById('screen-' + name);
   if (el) el.classList.add('on');
   markActive(name);
   window.scrollTo(0, 0);
+  if (name === 'inicio') renderInicio();
+  if (name === 'buscar') {
+    renderBuscar();
+    /* Pestaña de búsqueda = el campo ya listo para escribir (Google, WhatsApp). */
+    var bq = document.getElementById('bus-q');
+    if (bq && !bq.value) setTimeout(function () { try { bq.focus(); } catch (e) {} }, 60);
+  }
+  if (name === 'pendientes') renderPendientes();
   if (name === 'capturas') renderCases();
   if (name === 'estadisticas') renderEstadisticas();
   if (name === 'dossier') renderDossier();
@@ -3036,27 +3175,300 @@ function go(name) {
   /* El wizard SÍ empuja una entrada de historial: así el botón atrás de Android
      (y el gesto de deslizar) tienen algo que consumir y los intercepta el
      manejador de abajo, en vez de cerrar la app con el caso a medias. */
+  /* Salir de Inicio también empuja una entrada: el botón atrás de Android vuelve
+     a Inicio (destino de partida, Material 3) y solo desde Inicio sale de la app. */
   try {
     if (name === 'wizard') history.pushState({screen: name}, '', '#' + name);
+    else if (desde === 'inicio' && name !== 'inicio') { history.pushState({screen: name}, '', '#' + name); _lcPushed = true; }
     else history.replaceState({screen: name}, '', '#' + name);
   } catch(e) {}
+  if (name === 'inicio') _lcPushed = false;
 }
 
-/* Botón atrás / gesto de retroceso estando en el wizard: antes salía de la
-   aplicación (no había manejador y `go` solo hacía replaceState), y con ella se
-   iba todo lo diligenciado. Ahora se trata igual que el botón ✕: se pregunta. */
+/* Volver a Inicio (botón volver de los módulos e ítem Inicio de la barra). Si al
+   salir de Inicio se empujó historial, se consume con history.back(): el
+   manejador de abajo lleva a Inicio y la pila no crece. */
+function lcVolverInicio() {
+  if (_on('inicio')) { renderInicio(); return; }
+  if (_lcPushed) { try { history.back(); return; } catch (e) {} }
+  go('inicio');
+}
+/* «Volver» de Nueva captura: a la pantalla desde la que se abrió. */
+function lcVolverNueva() {
+  var d = _lcAntesNueva && screens.indexOf(_lcAntesNueva) >= 0 ? _lcAntesNueva : 'inicio';
+  if (d === 'inicio') lcVolverInicio(); else go(d);
+}
+
+/* Cierra lo que esté abierto encima de la pantalla (modal, panel u hoja de
+   acciones). Devuelve true si cerró algo: el botón atrás de Android cierra
+   primero la capa de arriba, como en cualquier app de Android. */
+function lcCerrarCapa() {
+  var m = document.getElementById('modal');
+  if (m && m.classList.contains('open')) { closeModal(); return true; }
+  var hojas = [['act-sheet', function(){ closeActionSheet(); }], ['share-sheet', function(){ closeShareSheet(); }],
+               ['sim-sheet', function(){ closeSimSheet(); }]];
+  for (var i = 0; i < hojas.length; i++) {
+    var h = document.getElementById(hojas[i][0]);
+    if (h && h.classList.contains('on')) { hojas[i][1](); return true; }
+  }
+  return false;
+}
+
+/* Botón atrás / gesto de retroceso. En el wizard se trata igual que el botón ✕
+   (se pregunta: antes salía de la app con todo lo diligenciado). Fuera de él,
+   cierra la capa abierta o vuelve a Inicio; desde Inicio sale de la app. */
 window.addEventListener('popstate', function() {
   if (lcDirAlPop()) return;   // la ventana de dirección se atiende primero
   var wiz = document.getElementById('screen-wizard');
-  if (!wiz || !wiz.classList.contains('on') || !wc) return;
-  try { history.pushState({screen:'wizard'}, '', '#wizard'); } catch(e) {}
-  cancelWiz();
+  if (wiz && wiz.classList.contains('on') && wc) {
+    try { history.pushState({screen:'wizard'}, '', '#wizard'); } catch(e) {}
+    cancelWiz();
+    return;
+  }
+  var cu = document.getElementById('cu-ov');
+  if (cu && cu.classList.contains('on')) return;
+  if (lcCerrarCapa()) {
+    try { history.pushState({screen: _lcPantallaActual()}, '', location.hash); } catch(e) {}
+    return;
+  }
+  _lcPushed = false;
+  if (!_on('inicio')) go('inicio');
 });
 
 function markActive(name) {
   document.querySelectorAll('.sb-item[data-screen], .bn-item[data-screen]').forEach(function(it) {
     it.classList.toggle('on', it.dataset.screen === name);
   });
+}
+
+/* ═══ INICIO POR MÓDULOS (2026-10-29) ═══
+   La app abre en un lanzador de módulos, no en la lista de Capturas. Criterio
+   (ver «Inicio por módulos» en CLAUDE.md): patrón de lanzador con DATO VIVO por
+   mosaico (SAP Fiori, Salesforce Field Service, apps bancarias), lo pendiente
+   primero (NN/g, «retomar donde quedaste») y seis módulos en TRES GRUPOS DE DOS
+   ordenados por frecuencia y tipo: operación diaria, gestión, mi cuenta. El
+   mismo orden que el panel lateral de escritorio (consistencia).
+   ⚠️ Los módulos NO se repiten en la barra inferior: esa lleva destinos
+   globales (Inicio · Buscar · Nueva · Pendientes · Perfil). */
+var LC_IC = {
+  capturas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>',
+  personas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="19" cy="8" r="3"/><path d="M23 21v-1.5a3 3 0 0 0-3-3"/></svg>',
+  estadisticas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 6-6"/></svg>',
+  despachos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>',
+  perfil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>',
+  ajustes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>',
+  chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+  buscar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>'
+};
+/* El orden de este arreglo ES el orden del Inicio. */
+var LC_MODULOS = [
+  { g: 'Operación',  id: 'capturas',     t: 'Capturas' },
+  { g: 'Operación',  id: 'personas',     t: 'Personas' },
+  { g: 'Gestión',    id: 'estadisticas', t: 'Estadísticas' },
+  { g: 'Gestión',    id: 'despachos',    t: 'Despachos' },
+  { g: 'Mi cuenta',  id: 'perfil',       t: 'Perfil' },
+  { g: 'Mi cuenta',  id: 'ajustes',      t: 'Ajustes' }
+];
+
+/* Franjas del saludo: las mismas del dossier (DÍAS 01:00–11:59, TARDES
+   12:00–17:59, NOCHES 18:00–00:59). */
+function lcSaludo(d) {
+  var h = (d || new Date()).getHours();
+  return (h >= 1 && h < 12) ? 'Buenos días' : (h >= 12 && h < 18) ? 'Buenas tardes' : 'Buenas noches';
+}
+function lcPerfilActivo(cfg) {
+  cfg = cfg || DB.getConfig() || {};
+  var p = null;
+  (cfg.perfiles || []).forEach(function (x) { if (x.id === cfg.perfilActivo) p = x; });
+  return p;
+}
+/* «SI Nelson DAVID»: grado abreviado + nombre corto (primer nombre y apellido). */
+function lcNombreSaludo(p) {
+  if (!p || !String(p.nombre || '').trim()) return '';
+  var ab = p.grado ? (lcAbrevGrado(p.grado) || '') : '';
+  return (ab ? ab + ' ' : '') + bzNomCorto(p.nombre);
+}
+function _lcEsteMes(c, hoy) {
+  var d = lcStatsFecha(c);
+  return !!d && d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth();
+}
+/* La línea de dato vivo de cada mosaico. Antes de abrir la sesión no se sabe
+   nada todavía, y se dice nada en vez de un «0» que mentiría. */
+function lcModuloDato(id) {
+  if (!_sessionKey) return '';
+  var hoy = new Date(), n;
+  if (id === 'capturas' || id === 'estadisticas') {
+    var cs = DB.getCases(), mes = cs.filter(function (c) { return !c.isTest && _lcEsteMes(c, hoy); }).length;
+    if (id === 'estadisticas') return cs.length ? (mes + ' este mes') : 'Sin datos aún';
+    if (!cs.length) return 'Sin capturas';
+    return cs.length + ' registrada' + (cs.length === 1 ? '' : 's') + (mes ? ' · ' + mes + ' este mes' : '');
+  }
+  if (id === 'personas') {
+    n = DB.getPersons().length;
+    return n ? n + ' registrada' + (n === 1 ? '' : 's') : 'Sin personas';
+  }
+  if (id === 'despachos') {
+    n = lcDespachos().length;
+    return n ? n + ' registrado' + (n === 1 ? '' : 's') : 'Sin registrar';
+  }
+  if (id === 'perfil') {
+    return lcNombreSaludo(lcPerfilActivo()) || 'Sin configurar';
+  }
+  if (id === 'ajustes') return 'Unidad, apariencia y cuenta';
+  return '';
+}
+function lcModuloCnt(id) {
+  if (id !== 'capturas') return 0;
+  try { return bzActiva() ? _bzBandeja.length : 0; } catch (e) { return 0; }
+}
+
+function renderInicio() {
+  var logo = document.getElementById('ini-logo');
+  if (logo && !logo.getAttribute('src')) {
+    var src = document.querySelector('.sb-logo-wrap img');
+    if (src) logo.setAttribute('src', src.getAttribute('src'));
+  }
+  var hola = document.getElementById('ini-hola');
+  if (hola) {
+    var hoy = new Date(), nom = _sessionKey ? lcNombreSaludo(lcPerfilActivo()) : '';
+    var f = hoy.toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' });
+    hola.innerHTML = '<div class="ini-f">' + escHtml(f.charAt(0).toUpperCase() + f.slice(1)) + '</div>' +
+      '<div class="ini-s">' + escHtml(lcSaludo(hoy)) + (nom ? ',' : '') + '</div>' +
+      (nom ? '<div class="ini-n">' + escHtml(nom) + '</div>' : '');
+  }
+  renderInicioAvisos();
+  var el = document.getElementById('ini-mods');
+  if (!el) return;
+  var h = '', g = null;
+  LC_MODULOS.forEach(function (m) {
+    if (m.g !== g) {
+      if (g !== null) h += '</div></div>';
+      g = m.g;
+      h += '<div class="mod-g"><div class="mod-sec">' + escHtml(g) + '</div><div class="mod-grid">';
+    }
+    var dato = lcModuloDato(m.id), cnt = lcModuloCnt(m.id);
+    h += '<button class="mod-tile" data-mod="' + m.id + '" onclick="go(\'' + m.id + '\')">' +
+      '<span class="mod-ic">' + LC_IC[m.id] + '</span>' +
+      (cnt ? '<span class="mod-cnt" aria-label="' + cnt + ' por revisar">' + (cnt > 9 ? '9+' : cnt) + '</span>' : '') +
+      '<span class="mod-t">' + escHtml(m.t) + '</span>' +
+      '<span class="mod-d">' + escHtml(dato) + '</span>' +
+    '</button>';
+  });
+  el.innerHTML = h + '</div></div>';
+}
+function renderInicioAvisos() {
+  var av = document.getElementById('ini-avisos');
+  if (!av) return;
+  var h = '';
+  try { h = bzAvisoBandeja() + bzAvisoCapturas(); } catch (e) {}
+  av.innerHTML = h;
+}
+
+/* ── Pendientes: lo que espera una decisión ─────────────────────────────── */
+function lcPendCount() {
+  var d = null; try { d = DB.getDraft(); } catch (e) {}
+  var n = (d && d.caso) ? 1 : 0;
+  try { if (bzActiva()) n += _bzBandeja.length; } catch (e) {}
+  return n;
+}
+function lcPintarPend() {
+  var n = lcPendCount();
+  var c = document.getElementById('bz-cnt-nav');
+  if (c) { c.textContent = n > 9 ? '9+' : String(n); c.style.display = n ? '' : 'none'; }
+  var p = document.getElementById('bz-punto'); if (p) p.style.display = n ? '' : 'none';
+}
+function renderPendientes() {
+  renderDraftSlot();
+  var el = document.getElementById('pend-cont'); if (!el) return;
+  var h = '';
+  try { if (bzActiva()) h = bzUiPendientes() + bzUiEnviados(); } catch (e) {}
+  var n = lcPendCount(), sub = document.getElementById('pend-sub');
+  if (sub) sub.textContent = n ? (n + ' por atender') : 'Todo al día';
+  var d = DB.getDraft();
+  if (!h && !(d && d.caso)) {
+    h = '<div class="empty"><div class="ic">' + LC_IC.ok + '</div><h3>Todo al día</h3>' +
+      '<p>Aquí aparecen la captura sin terminar y lo que te envíen para revisar.</p></div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ── Buscar: una caja para capturas y personas ─────────────────────────── */
+/* Lo buscable de una captura. Los documentos van además SIN separadores, así
+   «71.234.567» y «71234567» encuentran lo mismo. */
+function _lcBusTextoCaso(c) {
+  var t = [];
+  ['capturados', 'victimas', 'testigos'].forEach(function (k) {
+    (c[k] || []).forEach(function (p) {
+      t.push(fullName(p), p.alias || '', p.numDoc || '', String(p.numDoc || '').replace(/\D/g, ''));
+    });
+  });
+  var oj = c.oj || {}, o = oj.orden || {}, pr = oj.proceso || {}, l = c.lugar || {};
+  t.push(c.nunc || '', c.spoa || '', (c.conductas || []).join(' '), c.delitoOrden || '',
+         l.barrio || '', l.dir || '', l.muni || '', o.numero || '', pr.radicado || '');
+  return lcNormNom(t.join(' '));
+}
+function _lcBusTextoPersona(p) {
+  return lcNormNom([fullName(p), p.alias || '', p.numDoc || '', String(p.numDoc || '').replace(/\D/g, '')].join(' '));
+}
+/* null = consulta demasiado corta. Todas las palabras tienen que aparecer. */
+function lcBuscar(q) {
+  var n = lcNormNom(q);
+  if (n.replace(/ /g, '').length < 2) return null;
+  var tk = n.split(' ');
+  var hit = function (txt) { return tk.every(function (k) { return txt.indexOf(k) >= 0; }); };
+  var cs = _sessionKey ? DB.getCases().filter(function (c) { return hit(_lcBusTextoCaso(c)); }) : [];
+  var ps = _sessionKey ? DB.getPersons().filter(function (p) { return hit(_lcBusTextoPersona(p)); }) : [];
+  cs = lcOrdenar(cs, 'capturas', { fecha: function (c) { return c.created || 0; },
+    nombre: function (c) { return (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : ''; } });
+  return { casos: cs, personas: ps };
+}
+var LC_BUS_MAX = 20;
+function renderBuscar() {
+  var inp = document.getElementById('bus-q'), el = document.getElementById('bus-res');
+  if (!el) return;
+  var q = inp ? inp.value : '';
+  var r = lcBuscar(q);
+  if (!r) {
+    el.innerHTML = '<div class="empty"><div class="ic">' + LC_IC.buscar + '</div><h3>Busca en todo</h3>' +
+      '<p>Nombre o cédula de cualquier persona, NUNC, número de la orden, delito o barrio.</p></div>';
+    return;
+  }
+  if (!r.casos.length && !r.personas.length) {
+    el.innerHTML = '<div class="empty"><div class="ic">' + LC_IC.buscar + '</div><h3>Sin resultados</h3>' +
+      '<p>Nada coincide con «' + escHtml(q.trim()) + '».</p></div>';
+    return;
+  }
+  var h = '';
+  if (r.casos.length) {
+    h += '<div class="mod-sec">Capturas · ' + r.casos.length + '</div>';
+    h += r.casos.slice(0, LC_BUS_MAX).map(function (c) {
+      var cap = (c.capturados && c.capturados[0]) ? fullName(c.capturados[0]) : 'Sin capturado';
+      var tb = c.tipo === 'CESPA' ? 'b-csp' : c.tipo === 'OJ' ? 'b-oj' : 'b-uri';
+      var bar = c.tipo === 'CESPA' ? 'var(--cspT)' : c.tipo === 'OJ' ? 'var(--oj-2)' : 'var(--uriT)';
+      var cond = (c.conductas || []).filter(Boolean)[0] || c.delitoOrden || 'Sin conducta';
+      return '<div class="cc-wrap"><div class="cc" data-bus="c" onclick="abrirDossierCaso(\'' + escAttr(c.id) + '\')">' +
+        '<div class="cc-top"><div class="cc-badges"><span class="badge ' + tb + '">' + (c.tipo === 'OJ' ? 'Judicial' : c.tipo) + '</span>' +
+        (c.isTest ? '<span class="badge b-test">Demo</span>' : '') + '</div>' +
+        '<div class="cc-name">' + escHtml(cap) + '</div><div class="cc-conducta">' + escHtml(cond) + '</div></div>' +
+        '<div class="cc-bottom"><span class="cc-date">' + (fmtDate(c.fechaProc) || 'Sin fecha') + '</span></div>' +
+        '</div><div class="cc-lbar" style="background:' + bar + '"></div></div>';
+    }).join('');
+    if (r.casos.length > LC_BUS_MAX) h += '<p class="txs txd bus-mas">Y ' + (r.casos.length - LC_BUS_MAX) + ' más: escribe algo más preciso.</p>';
+  }
+  if (r.personas.length) {
+    h += '<div class="mod-sec">Personas · ' + r.personas.length + '</div>';
+    h += r.personas.slice(0, LC_BUS_MAX).map(function (p) {
+      var bc = personRoleCls(p);
+      return '<div class="prow" data-bus="p" onclick="editPerson(\'' + escAttr(p.id) + '\')">' +
+        '<div class="prow-av ' + bc.replace('b-', 'av-') + '">' + escHtml(personInitials(p)) + '</div>' +
+        '<div class="prow-body"><div class="prow-name">' + escHtml(fullName(p)) + '</div>' +
+        '<div class="prow-meta"><span class="badge ' + bc + '">' + escHtml(p.rol || '—') + '</span>' +
+        '<span class="prow-doc">' + escHtml((p.tipoDoc || '') + ' ' + (p.numDoc || '')) + '</span></div></div></div>';
+    }).join('');
+    if (r.personas.length > LC_BUS_MAX) h += '<p class="txs txd bus-mas">Y ' + (r.personas.length - LC_BUS_MAX) + ' más: escribe algo más preciso.</p>';
+  }
+  el.innerHTML = h;
 }
 
 /* ═══ TEMA CLARO / OSCURO / SISTEMA ═══
@@ -3209,8 +3621,6 @@ function showToast(msg, dur) {
 }
 function toast(msg, dur) { showToast(msg, dur); }
 
-function openSheet() { document.getElementById('sheet-back').classList.add('on'); document.getElementById('sheet').classList.add('on'); }
-function closeSheet() { document.getElementById('sheet-back').classList.remove('on'); document.getElementById('sheet').classList.remove('on'); }
 function openSimSheet() { document.getElementById('sim-back').classList.add('on'); document.getElementById('sim-sheet').classList.add('on'); }
 function closeSimSheet() { document.getElementById('sim-back').classList.remove('on'); document.getElementById('sim-sheet').classList.remove('on'); }
 
@@ -3227,7 +3637,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 160;
+var _BUILD = 161;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -3836,6 +4246,7 @@ async function lcAbrirEquipo() {
    migración del PIN. */
 function _lcTrasAbrir() {
   renderCases();
+  renderInicio();
   /* Una vez al año: el NUNC de los despachos ya entró al año en curso en la
      lectura de la configuración; aquí se persiste y se anuncia. */
   lcNuncAvisoAno();
@@ -5148,10 +5559,10 @@ function wizDescartarBorrador(){
 /* Tarjeta de recuperación en la pantalla Capturas: es la única forma de que el
    funcionario SEPA que su trabajo sigue ahí. Un borrador invisible no sirve. */
 function renderDraftSlot(){
-  var el = document.getElementById('draft-slot'); if (!el) return;
+  /* La captura sin terminar se ve en Capturas, en Inicio y en Pendientes, y
+     cuenta en el contador de Pendientes. */
   var d = DB.getDraft();
-  if (!d || !d.caso) { el.innerHTML=''; return; }
-  el.innerHTML =
+  var html = (!d || !d.caso) ? '' :
     '<div class="draft-card">'+
       '<div class="dc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">'+
         '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>'+
@@ -5165,13 +5576,17 @@ function renderDraftSlot(){
         '<button class="btn bs bsm" onclick="wizDescartarBorrador()">Descartar</button>'+
       '</div>'+
     '</div>';
+  ['draft-slot', 'ini-draft', 'pend-draft'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.innerHTML = html;
+  });
+  lcPintarPend();
 }
 
 /* Salir del wizard. Antes: `wc=null` y a la calle, sin preguntar y sin red.
    Ahora se ofrece la salida honesta — el trabajo queda como borrador — y
    descartar es una decisión explícita, no el comportamiento por defecto. */
 function cancelWiz() {
-  if (!wizSucio()) { wc=null; go('capturas'); renderDraftSlot(); return; }
+  if (!wizSucio()) { wc=null; go(lcSalidaWiz()); renderDraftSlot(); return; }
   openModal(
     '<div class="mh"><h2>¿Salir de la captura?</h2><button class="mx" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>'+
     '<p class="txs txd" style="margin-bottom:14px">Tienes datos diligenciados que todavía no se han guardado como captura.</p>'+
@@ -5182,13 +5597,13 @@ function cancelWiz() {
 }
 function wizSalirGuardando(){
   wizGuardarBorrador().then(function(ok){
-    closeModal(); wc=null; go('capturas'); renderDraftSlot();
-    toast(ok ? 'Borrador guardado — lo retomas desde Capturas' : 'Sin cambios que guardar');
+    closeModal(); wc=null; go(lcSalidaWiz()); renderDraftSlot();
+    toast(ok ? 'Borrador guardado — lo retomas desde Inicio o Pendientes' : 'Sin cambios que guardar');
   });
 }
 function wizSalirDescartando(){
   wizCerrarBorrador();
-  closeModal(); wc=null; go('capturas'); renderDraftSlot();
+  closeModal(); wc=null; go(lcSalidaWiz()); renderDraftSlot();
   toast('Captura descartada');
 }
 
@@ -21718,8 +22133,8 @@ document.addEventListener('DOMContentLoaded', function() {
   _lcPurgarPlantillas();
   lcBarraSistema();
   var hash = location.hash.slice(1);
-  if (hash && screens.indexOf(hash) >= 0) go(hash);
-  else go('capturas');
+  if (hash && screens.indexOf(hash) >= 0 && hash !== 'inicio') go(hash);
+  else go('inicio');
   /* Sin PIN: abre directo con la llave del equipo. Un equipo de una versión con
      PIN pasa una sola vez por la migración. */
   if (localStorage.getItem('lc_key_salt')) showPinMigracion();
@@ -26285,6 +26700,8 @@ function bzRepintar() {
   } catch (e) {}
   try { if (_on('capturas')) renderCases(); } catch (e) {}
   try { if (_on('personas')) renderPersonas(); } catch (e) {}
+  try { if (_on('pendientes')) renderPendientes(); } catch (e) {}
+  try { if (_on('inicio')) renderInicio(); } catch (e) {}
 }
 function bzUiCompaneros() {
   var l = bzContactos(), lleno = l.length >= BZ_MAX;
@@ -26662,13 +27079,14 @@ function _bzLimpiarPartes() {
 
 /* ── Lo que se ve ───────────────────────────────────────────────────────── */
 function bzPintarAvisos() {
-  var n = (bzActiva() ? _bzBandeja.length : 0);
-  ['bz-cnt-nav'].forEach(function (id) {
-    var el = document.getElementById(id);
-    if (el) { el.textContent = n > 9 ? '9+' : String(n); el.style.display = n ? '' : 'none'; }
-  });
-  var p = document.getElementById('bz-punto'); if (p) p.style.display = n ? '' : 'none';
+  /* El contador vive en «Pendientes» (panel lateral y barra inferior), que
+     suma también la captura sin terminar: un solo sitio para lo que espera. */
+  lcPintarPend();
   try { evPintarBarras(); } catch (e) {}
+  try {
+    if (_on('inicio')) renderInicioAvisos();
+    if (_on('pendientes')) renderPendientes();
+  } catch (e) {}
 }
 function bzUiPendientes() {
   var llegando = Object.keys(_bzPartes).map(function (k) { return _bzPartes[k]; });

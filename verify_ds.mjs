@@ -115,14 +115,10 @@ await page.evaluate(() => go('personas'));
 await page.waitForTimeout(300);
 await page.screenshot({ path: OUT('12_personas_dark') });
 
-// 12. Sheet "Más"
-await page.evaluate(() => go('capturas'));
-await page.waitForTimeout(200);
-await page.evaluate(() => openSheet());
+// 12. Inicio por módulos (2026-10-29: sustituye a la hoja «Más», retirada)
+await page.evaluate(() => go('inicio'));
 await page.waitForTimeout(400);
-await page.screenshot({ path: OUT('13_sheet_mas_dark') });
-await page.evaluate(() => closeSheet());
-await page.waitForTimeout(300);
+await page.screenshot({ path: OUT('13_inicio_dark') });
 
 // ═══ TEMA CLARO ═══
 await page.evaluate(() => setTheme('light'));

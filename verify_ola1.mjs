@@ -256,11 +256,18 @@ log(dialogo.sigueEnWizard === true, 'Y mientras se decide no se sale de la captu
 
 await page.evaluate(() => wizSalirGuardando());
 await page.waitForTimeout(400);
-const trasSalir = await page.evaluate(() => ({
-  pantalla: document.getElementById('screen-capturas').classList.contains('on'),
-  borrador: !!DB.getDraft(),
-  tarjeta: /Captura sin terminar/.test(document.getElementById('draft-slot').textContent)
-}));
+/* Inicio por módulos (2026-10-29): se sale a donde empezó el trámite —aquí,
+   Inicio, que es la pantalla de arranque— y la tarjeta de la captura sin
+   terminar está ARRIBA de esa pantalla. Lo que se protege no cambia: el
+   trabajo queda a un toque, en la pantalla a la que se vuelve. */
+const trasSalir = await page.evaluate(() => {
+  const s = document.querySelector('.screen.on');
+  return {
+    pantalla: !!s && (s.id === 'screen-inicio' || s.id === 'screen-capturas'),
+    borrador: !!DB.getDraft(),
+    tarjeta: !!s && /Captura sin terminar/.test(s.textContent)
+  };
+});
 log(trasSalir.pantalla && trasSalir.borrador && trasSalir.tarjeta,
   '«Guardar borrador y salir» deja el trabajo a un toque de distancia');
 

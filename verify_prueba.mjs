@@ -221,8 +221,9 @@ const venceA = ent ? Date.parse(ent.fields.vence.timestampValue) : 0;
 log(ent && ent.fields.plan.stringValue === 'prueba' && Math.abs(venceA - (Date.now() + 14 * DIA)) < 120000,
     '[P4] con el correo verificado, el servidor concede 14 días', ent && ent.fields.vence.timestampValue);
 const p5 = await A.page.evaluate(() => ({ der: lcDerecho(), plan: _cuenta.derecho && _cuenta.derecho.plan, llamadas: window.__simLlamadas, uid: _cuenta.uid,
-  t: document.getElementById('toast').textContent, cas: document.getElementById('screen-capturas').classList.contains('on') }));
-log(p5.der === 'activo' && p5.plan === 'prueba' && p5.cas && /14 días/.test(p5.t), '[P5] la app se abre en Capturas y lo dice', p5.t);
+  t: document.getElementById('toast').textContent, cas: document.getElementById('screen-inicio').classList.contains('on') }));
+/* Desde el Inicio por módulos (2026-10-29) la app abre en Inicio, no en Capturas. */
+log(p5.der === 'activo' && p5.plan === 'prueba' && p5.cas && /14 días/.test(p5.t), '[P5] la app se abre en Inicio y lo dice', p5.t);
 log(p5.llamadas.length === 1 && p5.llamadas[0].requestHash === sha('flagrante|prueba|' + uidA) && p5.llamadas[0].proyecto === '123456789012',
     '[P6] el token de integridad va atado a la cuenta (requestHash) y al número del proyecto');
 const tel = await listar('dispositivosPrueba');
