@@ -118,6 +118,13 @@
      En oscuro el neón es el texto; en claro es el fondo, con texto casi negro
      —un neón sobre blanco no se lee—, así se ve fluorescente en los dos temas. */
   --neon:#4CFF88;    --neon-bg:rgba(76,255,136,.14); --neon-bd:rgba(76,255,136,.45);
+  /* — Turnos de vigilancia (módulo Turnos, 2026-10-29): verde, naranja y coral,
+       como el calendario que el usuario ya usaba. ⚠️ Son tokens PROPIOS: --ok,
+       --flag, --danger y --cspT ya significan correcto, flagrancia, error y
+       menores, y un turno no es ninguna de esas cosas. — */
+  --tn-dis:#5ACB8E;  --tn-dis-bg:rgba(90,203,142,.13);  --tn-dis-bd:rgba(90,203,142,.38);
+  --tn-ter:#F2A04B;  --tn-ter-bg:rgba(242,160,75,.13);  --tn-ter-bd:rgba(242,160,75,.40);
+  --tn-sp:#F2857A;   --tn-sp-bg:rgba(242,133,122,.13);  --tn-sp-bd:rgba(242,133,122,.40);
 
   /* — Superficies de estado. Antes cada componente resolvía «seleccionado» y
      «deshabilitado» por su cuenta; ahora tienen token, como --hover y --pressed. — */
@@ -227,6 +234,9 @@
   /* En claro se invierte: el neón es el FONDO y el texto va casi negro. Un
      #4CFF88 como texto sobre blanco da 1,4:1 — ilegible. Así medido: 7,9:1. */
   --neon:#0B3D22;    --neon-bg:#4BE87E;              --neon-bd:#22C55E;
+  --tn-dis:#0A7346;  --tn-dis-bg:rgba(10,115,70,.09);  --tn-dis-bd:rgba(10,115,70,.32);
+  --tn-ter:#9A4807;  --tn-ter-bg:rgba(154,72,7,.10);   --tn-ter-bd:rgba(154,72,7,.32);
+  --tn-sp:#BC3328;   --tn-sp-bg:rgba(188,51,40,.08);   --tn-sp-bd:rgba(188,51,40,.30);
 
   --surface-selected:rgba(0,49,83,.09);
   --surface-disabled:rgba(16,36,56,.04);
@@ -2239,10 +2249,202 @@ body.cu-on{overflow:hidden}
 #bus-res .cc-wrap,#bus-res .prow{margin-bottom:10px}
 .bus-mas{margin:4px 2px 8px}
 @media(min-width:720px){
-  /* Pantalla ancha: los tres grupos lado a lado, un mosaico debajo de otro. */
-  #ini-mods{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+  /* Pantalla ancha: los grupos lado a lado, un mosaico debajo de otro. */
+  #ini-mods{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;align-items:start}
   #ini-mods .mod-sec{margin-top:4px}
   #ini-mods .mod-grid{grid-template-columns:1fr}
+}
+
+/* ═══ TURNOS (2026-10-29, build 162) ═══
+   Calendario de las tres secciones de vigilancia. Cada pieza toma el color de
+   su turno por tres propiedades (--tc color · --tcb fondo · --tcd canto) que
+   pone la clase tn-k-*: así una celda, una pastilla o una franja se pintan con
+   la misma regla, y el tema claro solo redefine los tokens --tn-*. */
+.tn-k-dis{--tc:var(--tn-dis);--tcb:var(--tn-dis-bg);--tcd:var(--tn-dis-bd)}
+.tn-k-ter{--tc:var(--tn-ter);--tcb:var(--tn-ter-bg);--tcd:var(--tn-ter-bd)}
+.tn-k-sp{--tc:var(--tn-sp);--tcb:var(--tn-sp-bg);--tcd:var(--tn-sp-bd)}
+.tn-k-lib{--tc:var(--text-2);--tcb:var(--surface-3);--tcd:var(--border-strong)}
+.tn-dot{width:9px;height:9px;border-radius:50%;background:var(--tc);flex:none}
+.tn-sec{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.tn-sec-l{font-size:13px;font-weight:600;color:var(--text-2);flex:none}
+.tn-sec .theme-seg{flex:1}
+.tn-cols{display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"hoy" "sem" "mes" "dia" "res" "acc";row-gap:16px}
+.tn-a-hoy{grid-area:hoy}.tn-a-sem{grid-area:sem}.tn-a-mes{grid-area:mes}
+.tn-a-dia{grid-area:dia}.tn-a-res{grid-area:res}.tn-a-acc{grid-area:acc}
+.tn-cols>div:empty{display:none}
+.tn-cols .st{margin:0 0 10px}
+
+/* Tarjeta de hoy y franja del Inicio: la franja izquierda es el color del turno. */
+.tn-hoy,.tn-fr{position:relative;overflow:hidden;padding:16px 16px 14px 20px}
+.tn-hoy::before,.tn-fr::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tc)}
+.tn-hoy-f{display:flex;align-items:center;gap:8px;font-size:13px;line-height:18px;color:var(--text-2);font-weight:500}
+.tn-hoy-f .tn-tag{margin-left:auto}
+.tn-tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:6px;font-size:11px;line-height:14px;
+  font-weight:700;letter-spacing:.05em;text-transform:uppercase;background:var(--tcb);color:var(--tc);border:1px solid var(--tcd)}
+.tn-hoy-n{font-size:24px;line-height:30px;font-weight:700;color:var(--text);margin-top:8px;letter-spacing:-.01em}
+.tn-hoy-h{font-size:14px;line-height:20px;color:var(--text-2);margin-top:2px;font-variant-numeric:tabular-nums}
+.tn-est{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px;line-height:20px;color:var(--text);font-weight:500}
+.tn-vivo{position:relative;width:9px;height:9px;border-radius:50%;background:var(--tc);flex:none}
+.tn-vivo::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--tc);opacity:0;
+  animation:tn-pulso 2s var(--ease) infinite}
+@keyframes tn-pulso{0%{transform:scale(.5);opacity:.7}100%{transform:scale(1.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.tn-vivo::after{animation:none}}
+.tn-man{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);
+  font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-man b{color:var(--text);font-weight:600}
+
+/* Línea de 24 horas: los bloques del día, el tramo que viene de anoche y la hora actual. */
+.tn-24{position:relative;margin-top:14px;height:30px}
+.tn-24-t{position:absolute;left:0;right:0;top:6px;height:10px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.tn-24-b{position:absolute;top:0;bottom:0;background:var(--tc)}
+.tn-24-b.prev{opacity:.5}
+.tn-24-n{position:absolute;top:1px;width:3px;height:20px;margin-left:-1.5px;border-radius:2px;background:var(--text);
+  box-shadow:0 0 0 2px var(--surface-1)}
+.tn-24-l{position:absolute;top:19px;font-size:11px;line-height:11px;color:var(--text-3);transform:translateX(-50%);
+  font-variant-numeric:tabular-nums}
+.tn-24-l.i{transform:none}.tn-24-l.f{transform:translateX(-100%)}
+.tn-24.mini{height:12px;margin-top:12px}
+.tn-24.mini .tn-24-t{top:2px;height:8px}
+.tn-24.mini .tn-24-n{top:-2px;height:16px}
+
+/* Franja «Mi turno» del Inicio. */
+.tn-fr{display:block;width:100%;text-align:left;margin-bottom:12px;padding-right:40px;font:inherit;color:var(--text);cursor:pointer;
+  transition:transform var(--d1) var(--ease),background var(--d1) var(--ease)}
+.tn-fr:active{transform:scale(.99);background:var(--pressed)}
+@media(hover:hover){.tn-fr:hover{background:var(--hover)}}
+.tn-fr>span{display:block}
+.tn-fr .tn-man{display:flex;margin-top:10px;padding-top:10px}
+.tn-fr .tn-hoy-f{display:flex}
+.tn-fr-n{font-size:18px;line-height:24px;font-weight:700;margin-top:6px;color:var(--text)}
+.tn-fr .tn-est{margin-top:4px;font-size:13px;line-height:18px;color:var(--text-2);display:flex}
+.tn-fr-chev{position:absolute;right:14px;top:50%;width:20px;height:20px;margin-top:-10px;color:var(--text-3)}
+.tn-fr-chev svg{width:20px;height:20px;stroke-width:2}
+
+/* Próximos días. */
+.tn-sem{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.tn-sd{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0 6px;min-width:0;border-radius:12px;
+  background:var(--surface-1);border:1px solid var(--card-bd);box-shadow:var(--sh-1);color:var(--text);font:inherit;cursor:pointer}
+.tn-sd:active{background:var(--pressed)}
+.tn-sd-w{font-size:12px;line-height:16px;color:var(--text-2);font-weight:500}
+.tn-sd-n{font-size:16px;line-height:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.tn-sd-k{align-self:stretch;margin:2px 4px 0;border-radius:6px;padding:2px 0;text-align:center;font-size:11px;line-height:14px;
+  font-weight:700;background:var(--tcb);color:var(--tc);box-shadow:inset 0 0 0 1px var(--tcd)}
+.tn-sd.hoy{box-shadow:0 0 0 2px var(--acc)}
+.tn-sd.hoy .tn-sd-w{color:var(--acc);font-weight:700}
+
+/* El mes. */
+.tn-mes{padding:14px 10px 12px}
+.tn-mh{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.tn-mt{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;font-size:17px;line-height:24px;
+  font-weight:700;color:var(--text)}
+.tn-mt span{font-weight:500;color:var(--text-2)}
+.tn-nav{width:40px;height:40px;flex:none;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tn-nav:active{background:var(--pressed)}
+.tn-nav svg{width:18px;height:18px;stroke-width:2.2}
+.tn-hoyb{padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--accG);color:var(--acc);
+  font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.tn-wk,.tn-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px}
+.tn-wk{margin-bottom:4px}
+.tn-wk span{text-align:center;font-size:12px;line-height:16px;font-weight:600;color:var(--text-3);padding:2px 0}
+.tn-g{touch-action:pan-y}
+.tn-c{position:relative;display:flex;flex-direction:column;justify-content:space-between;gap:4px;min-height:58px;min-width:0;
+  padding:5px 3px 4px;border-radius:10px;border:1px solid transparent;background:var(--surface-2);color:var(--text);
+  font:inherit;text-align:left;cursor:pointer;transition:background var(--d1) var(--ease)}
+.tn-c:active{background:var(--pressed)}
+.tn-c-n{display:inline-flex;align-items:center;justify-content:center;width:24px;height:22px;border-radius:11px;
+  font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.tn-c.dom .tn-c-n,.tn-c.fest .tn-c-n{color:var(--acc);font-weight:700}
+.tn-c.hoy .tn-c-n{background:var(--acc);color:var(--acc-fg)}
+.tn-c-k{display:block;border-radius:6px;padding:2px 0;text-align:center;font-size:11px;line-height:14px;font-weight:700;
+  background:var(--tcb);color:var(--tc);box-shadow:inset 0 0 0 1px var(--tcd);white-space:nowrap;overflow:hidden}
+.tn-c.tn-k-lib .tn-c-k{background:transparent;box-shadow:inset 0 0 0 1px var(--border-strong)}
+.tn-c-m{position:absolute;top:6px;right:5px;display:flex;gap:3px}
+.tn-c-m i{display:block;width:6px;height:6px;border-radius:50%}
+.tn-c-m .f{background:var(--acc)}
+.tn-c-m .n{box-shadow:inset 0 0 0 1.5px var(--text-2)}
+.tn-c.fuera{opacity:.4}
+.tn-c.sel{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc);background:var(--surface-1)}
+.tn-ley{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;font-size:12px;line-height:16px;color:var(--text-2)}
+.tn-ley>span{display:inline-flex;align-items:center;gap:6px}
+.tn-ley i{display:block;width:6px;height:6px;border-radius:50%}
+.tn-ley .f{background:var(--acc)}
+.tn-ley .n{box-shadow:inset 0 0 0 1.5px var(--text-2)}
+
+/* El día elegido. */
+.tn-dia-h{display:flex;align-items:center;gap:8px}
+.tn-dia-t{flex:1;font-size:16px;line-height:22px;font-weight:700;color:var(--text)}
+.tn-fest{margin-top:2px;font-size:13px;line-height:18px;color:var(--acc);font-weight:600}
+.tn-dia-k{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;border-radius:12px;
+  background:var(--tcb);box-shadow:inset 0 0 0 1px var(--tcd)}
+.tn-dia-k b{display:block;font-size:16px;line-height:22px;color:var(--text)}
+.tn-dia-k span{display:block;font-size:13px;line-height:18px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.tn-dia-k .tn-dot{width:12px;height:12px}
+.tn-nov{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface-2);border:1px solid var(--border);
+  font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-nov b{display:block;font-size:14px;color:var(--text)}
+.tn-nov-b{display:flex;gap:8px;margin-top:8px}
+.tn-otras{margin-top:14px}
+.tn-otras-t{font-size:13px;line-height:18px;font-weight:600;color:var(--text-2);margin-bottom:6px}
+.tn-otra{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:14px;line-height:20px;color:var(--text-2)}
+.tn-otra b{margin-left:auto;color:var(--text);font-weight:600}
+.tn-dia-b{display:flex;gap:8px;margin-top:14px}
+.tn-dia-b .btn{flex:1}
+
+/* El mes en cifras. */
+.tn-barra{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--surface-3);gap:2px}
+.tn-barra i{display:block;background:var(--tc)}
+.tn-cuenta{display:flex;flex-wrap:wrap;gap:6px 16px;margin:10px 0 14px;font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-cuenta span{display:inline-flex;align-items:center;gap:6px}
+.tn-cuenta b{color:var(--text);font-variant-numeric:tabular-nums}
+.tn-cifras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tn-cifra{padding:10px;border-radius:12px;background:var(--surface-2)}
+.tn-cifra b{display:block;font-size:20px;line-height:26px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-cifra span{display:block;font-size:12px;line-height:16px;color:var(--text-2)}
+.tn-nl{margin-top:14px}
+.tn-nl-i{display:flex;align-items:center;gap:10px;width:100%;padding:10px 0;border:none;border-top:1px solid var(--border);
+  background:none;color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.tn-nl-i b{display:block;font-size:14px;line-height:20px;font-weight:600}
+.tn-nl-i span{display:block;font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-acc{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tn-acc .bp{grid-column:1/-1}
+
+/* Formularios del módulo (novedad y ajuste del ciclo). */
+.tn-mb{display:flex;gap:8px;margin-top:18px}
+.tn-mb .btn{flex:1}
+.tn-ops{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tn-op{min-height:44px;padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);
+  color:var(--text);font:inherit;font-size:14px;font-weight:500;cursor:pointer;text-align:left;
+  display:flex;align-items:center;gap:8px}
+.tn-op.on{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc);background:var(--surface-selected);font-weight:600}
+.tn-cal{display:flex;flex-direction:column;gap:8px}
+.tn-cal .tn-op{min-height:56px}
+.tn-cal .tn-op.on{border-color:var(--tc);box-shadow:0 0 0 1px var(--tc);background:var(--tcb)}
+.tn-op small{margin-left:auto;font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.tn-cal-n{font-size:13px;line-height:18px;color:var(--text-2);margin:10px 2px 0}
+.tn-hr{display:grid;grid-template-columns:minmax(0,1fr) 84px auto 84px;align-items:center;gap:8px;margin-bottom:10px}
+.tn-hr>span{font-size:14px;font-weight:600;color:var(--text)}
+.tn-hr i{font-style:normal;color:var(--text-3);font-size:13px}
+.tn-hr .fi{text-align:center;padding:10px 6px}
+
+/* Mosaico ancho del Inicio, con la semana en miniatura. */
+.mod-tile.ancho{grid-column:1/-1;min-height:0}
+.mod-tile.ancho .mod-t{margin-top:0;padding-top:12px}
+.tn-mini{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;align-self:stretch;margin-top:12px}
+.tn-mini>span{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;line-height:12px;color:var(--text-3);
+  font-weight:600;font-variant-numeric:tabular-nums}
+.tn-mini i{display:block;width:100%;height:6px;border-radius:3px;background:var(--tc)}
+.tn-mini .tn-k-lib i{background:transparent;box-shadow:inset 0 0 0 1.5px var(--border-strong)}
+.tn-mini .hoy{color:var(--text)}
+
+@media(min-width:900px){
+  /* Escritorio: el mes a la derecha, todo lo demás a la izquierda. */
+  .tn-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);column-gap:20px;
+    grid-template-areas:"hoy mes" "sem mes" "dia mes" "res mes" "acc mes";
+    grid-template-rows:auto auto auto auto 1fr;align-items:start}
+  .tn-a-mes{position:sticky;top:16px}
+  .tn-c{min-height:64px}
 }
 
 /* ═══ RESPONSIVE ═══ */
@@ -2359,6 +2561,12 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>
     Despachos
   </div>
+  <div class="sb-sec">Servicio</div>
+
+  <div class="sb-item" data-screen="turnos" onclick="go('turnos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11V6.5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h6"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><circle cx="17.5" cy="17.5" r="4"/><path d="M17.5 15.6v1.9l1.3 1"/></svg>
+    Turnos
+  </div>
 
   <div class="sb-bottom">
     <div class="sb-item" data-screen="perfil" onclick="go('perfil')">
@@ -2386,6 +2594,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
     </header>
     <div class="pane">
       <div class="ini-hola" id="ini-hola"></div>
+      <div id="ini-turno"></div>
       <div id="ini-draft"></div>
       <div id="ini-avisos"></div>
       <div id="ini-mods"></div>
@@ -2664,6 +2873,39 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         <button class="tab" id="tab-JUZGADO" onclick="switchDespTab('JUZGADO')">Juzgados</button>
       </div>
       <div id="desp-list" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ====== TURNOS (2026-10-29, build 162) ======
+       Calendario de las tres secciones de vigilancia. Lo pinta renderTurnos():
+       la sección elegida, el turno de hoy con su línea de 24 horas, los
+       próximos días, el mes, el día elegido y el mes en cifras. Ver «Turnos» en
+       CLAUDE.md. -->
+  <section id="screen-turnos" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl">
+        <h1>Turnos</h1>
+        <span class="sub" id="tn-sub"></span>
+      </div>
+      <button class="topbar-btn" id="tn-share" onclick="tnCompartir()" title="Compartir turnos" aria-label="Compartir turnos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+      </button>
+    </header>
+    <div class="pane">
+      <div class="tn-sec">
+        <span class="tn-sec-l" id="tn-sec-l">Mi sección</span>
+        <div class="theme-seg" id="tn-seg" role="radiogroup" aria-labelledby="tn-sec-l"></div>
+      </div>
+      <div id="tn-vacio"></div>
+      <div class="tn-cols" id="tn-cols">
+        <div class="tn-a-hoy" id="tn-hoy"></div>
+        <div class="tn-a-sem" id="tn-sem"></div>
+        <div class="tn-a-mes" id="tn-mes"></div>
+        <div class="tn-a-dia" id="tn-dia"></div>
+        <div class="tn-a-res" id="tn-res"></div>
+        <div class="tn-a-acc" id="tn-acc"></div>
+      </div>
     </div>
   </section>
 
@@ -3104,7 +3346,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['inicio','buscar','pendientes','capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','ajustes','wizard','personas'];
+var screens = ['inicio','buscar','pendientes','capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','turnos','ajustes','wizard','personas'];
 /* Inicio por módulos (2026-10-29). _lcPrev = la pantalla de la que se viene;
    _lcAntesNueva = desde dónde se abrió «Nueva captura» (su «volver» y cancelar
    el formulario regresan ahí); _lcPushed = al salir de Inicio se empujó una
@@ -3167,6 +3409,8 @@ function go(name) {
   if (name === 'dossierwa') renderDossierWA();
   if (name === 'ajustes') { loadAjustesFields(); renderAjCuenta(); }
   if (name === 'perfil') renderPerfilScreen();
+  if (name === 'turnos') renderTurnos();
+  tnReloj(name);
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
   // El navegador puede autocompletar o restaurar el buscador con un valor viejo
   // (p.ej. un NUNC de 16 dígitos escrito en el wizard). Si eso pasa, el filtro
@@ -3259,6 +3503,7 @@ var LC_IC = {
   ajustes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4.9a7 7 0 0 0-2-1.2l-.4-2.5h-4l-.4 2.5a7 7 0 0 0-2 1.2l-2.4-.9-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4.9a7 7 0 0 0 2 1.2l.4 2.5h4l.4-2.5a7 7 0 0 0 2-1.2l2.4.9 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>',
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+  turnos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11V6.5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h6"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><circle cx="17.5" cy="17.5" r="4"/><path d="M17.5 15.6v1.9l1.3 1"/></svg>',
   buscar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>'
 };
 /* El orden de este arreglo ES el orden del Inicio. */
@@ -3267,6 +3512,9 @@ var LC_MODULOS = [
   { g: 'Operación',  id: 'personas',     t: 'Personas' },
   { g: 'Gestión',    id: 'estadisticas', t: 'Estadísticas' },
   { g: 'Gestión',    id: 'despachos',    t: 'Despachos' },
+  /* Un solo módulo en su grupo: va ANCHO (las dos columnas) y lleva la semana en
+     miniatura, así no deja un hueco en la cuadrícula. */
+  { g: 'Servicio',   id: 'turnos',       t: 'Turnos', ancho: true },
   { g: 'Mi cuenta',  id: 'perfil',       t: 'Perfil' },
   { g: 'Mi cuenta',  id: 'ajustes',      t: 'Ajustes' }
 ];
@@ -3316,6 +3564,7 @@ function lcModuloDato(id) {
     return lcNombreSaludo(lcPerfilActivo()) || 'Sin configurar';
   }
   if (id === 'ajustes') return 'Unidad, apariencia y cuenta';
+  if (id === 'turnos') return tnModuloDato();
   return '';
 }
 function lcModuloCnt(id) {
@@ -3337,6 +3586,8 @@ function renderInicio() {
       '<div class="ini-s">' + escHtml(lcSaludo(hoy)) + (nom ? ',' : '') + '</div>' +
       (nom ? '<div class="ini-n">' + escHtml(nom) + '</div>' : '');
   }
+  var it = document.getElementById('ini-turno');
+  if (it) it.innerHTML = tnFranjaHtml();
   renderInicioAvisos();
   var el = document.getElementById('ini-mods');
   if (!el) return;
@@ -3348,11 +3599,12 @@ function renderInicio() {
       h += '<div class="mod-g"><div class="mod-sec">' + escHtml(g) + '</div><div class="mod-grid">';
     }
     var dato = lcModuloDato(m.id), cnt = lcModuloCnt(m.id);
-    h += '<button class="mod-tile" data-mod="' + m.id + '" onclick="go(\'' + m.id + '\')">' +
+    h += '<button class="mod-tile' + (m.ancho ? ' ancho' : '') + '" data-mod="' + m.id + '" onclick="go(\'' + m.id + '\')">' +
       '<span class="mod-ic">' + LC_IC[m.id] + '</span>' +
       (cnt ? '<span class="mod-cnt" aria-label="' + cnt + ' por revisar">' + (cnt > 9 ? '9+' : cnt) + '</span>' : '') +
       '<span class="mod-t">' + escHtml(m.t) + '</span>' +
       '<span class="mod-d">' + escHtml(dato) + '</span>' +
+      (m.id === 'turnos' ? tnMiniHtml() : '') +
     '</button>';
   });
   el.innerHTML = h + '</div></div>';
@@ -3637,7 +3889,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 161;
+var _BUILD = 162;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -18443,13 +18695,33 @@ function ojPascua(anio){
       mes=Math.floor((h+l-7*m+114)/31),dia=((h+l-7*m+114)%31)+1;
   return new Date(anio,mes-1,dia);
 }
-function ojFestivos(anio){
-  var out={}, add=function(d){ out[ojISO(d)]=true; };
-  [[0,1],[4,1],[6,20],[7,7],[11,8],[11,25]].forEach(function(p){ add(new Date(anio,p[0],p[1])); });
+/* Los festivos CON SU NOMBRE (2026-10-29, módulo Turnos). Es el único sitio
+   donde viven las reglas: ojFestivos se deriva de aquí, así el calendario de
+   turnos y el motor de destinatario del oficio no pueden discrepar. Si dos caen
+   el mismo día (pasa: San Pedro trasladado puede caer con el Sagrado Corazón),
+   se nombran los dos. */
+function lcFestivosCO(anio){
+  var out={}, add=function(d,n){ var k=ojISO(d); out[k]=out[k]?out[k]+' · '+n:n; };
+  [[0,1,'Año Nuevo'],[4,1,'Día del Trabajo'],[6,20,'Día de la Independencia'],[7,7,'Batalla de Boyacá'],
+   [11,8,'Inmaculada Concepción'],[11,25,'Navidad']].forEach(function(p){ add(new Date(anio,p[0],p[1]),p[2]); });
   var lunes=function(d){ while(d.getDay()!==1) d.setDate(d.getDate()+1); return d; };
-  [[0,6],[2,19],[5,29],[7,15],[9,12],[10,1],[10,11]].forEach(function(p){ add(lunes(new Date(anio,p[0],p[1]))); });
+  [[0,6,'Reyes Magos'],[2,19,'San José'],[5,29,'San Pedro y San Pablo'],[7,15,'Asunción de la Virgen'],
+   [9,12,'Día de la Raza'],[10,1,'Todos los Santos'],[10,11,'Independencia de Cartagena']]
+    .forEach(function(p){ add(lunes(new Date(anio,p[0],p[1])),p[2]); });
   var p=ojPascua(anio), dias=function(n){ return new Date(p.getFullYear(),p.getMonth(),p.getDate()+n); };
-  [-3,-2,43,64,71].forEach(function(n){ add(dias(n)); });
+  [[-3,'Jueves Santo'],[-2,'Viernes Santo'],[43,'Ascensión del Señor'],[64,'Corpus Christi'],[71,'Sagrado Corazón']]
+    .forEach(function(x){ add(dias(x[0]),x[1]); });
+  return out;
+}
+var _lcFestNomCache={};
+function lcFestivoNombre(d){
+  var y=d.getFullYear();
+  if(!_lcFestNomCache[y]) _lcFestNomCache[y]=lcFestivosCO(y);
+  return _lcFestNomCache[y][ojISO(d)]||'';
+}
+function ojFestivos(anio){
+  var out={}, f=lcFestivosCO(anio);
+  Object.keys(f).forEach(function(k){ out[k]=true; });
   return out;
 }
 var _ojFestCache={};
@@ -27817,6 +28089,701 @@ function evArchivo() {
 }
 
 // NOTA: el SW solo funciona en HTTPS o localhost.
+/* ══════════════════════════════════════════════════════════════════════════
+   TURNOS DE VIGILANCIA (2026-10-29, build 162) — ver «Turnos» en CLAUDE.md
+   Las tres secciones cubren el servicio 24/7 con un ciclo de tres días que no
+   se reinicia: Tercero → Segundo – primero → Disponible, desde el 01/01/2026.
+   Ese día la 1.ª sección estaba en Segundo – primero, la 2.ª en Tercero y la 3.ª
+   Disponible; cada día las tres tienen turnos distintos.
+   Horas (decisión del usuario): 2.º turno 06–13, 3.er turno 13–21, 4.º y 1.er
+   turno 21–06. Un día de «Tercero» se trabaja el 3.er turno; uno de «Segundo –
+   primero», el 2.º y, esa noche, el 4.º y 1.er, que termina a las 06:00 del día
+   siguiente.
+   ⚠️ Todo se calcula en la hora de America/Bogota (tnAhora), no en la del
+   equipo, y con fechas «de pared» (día, mes, año): sin saltos de horario.
+   ⚠️ Lo que guarda el módulo vive en cfg.turnos (cifrado y sincronizado con la
+   nube como el resto de la configuración). Las novedades son una lista CON id,
+   así la fusión a tres vías las junta elemento por elemento.
+   ══════════════════════════════════════════════════════════════════════════ */
+var TN_TURNOS = {
+  T: { n: 'Tercero',           c: 'ter', ab: 'TER', bl: ['t3'] },
+  S: { n: 'Segundo – primero', c: 'sp',  ab: '2·1', bl: ['t2', 't41'] },
+  D: { n: 'Disponible',        c: 'dis', ab: 'DIS', bl: [] }
+};
+var TN_CICLO = ['T', 'S', 'D'];
+var TN_ANCLA = '2026-01-01';
+var TN_OFF = { 1: 1, 2: 0, 3: 2 };
+var TN_SECC = { 1: '1.ª sección', 2: '2.ª sección', 3: '3.ª sección' };
+var TN_BLOQUES = {
+  t2:  { n: '2.º turno',        def: ['06:00', '13:00'] },
+  t3:  { n: '3.er turno',       def: ['13:00', '21:00'] },
+  t41: { n: '4.º y 1.er turno', def: ['21:00', '06:00'] }
+};
+/* Novedades propias: no cambian el ciclo de la sección, se pintan encima.
+   `libra` = ese día no se presta servicio. El cambio de turno pone otro turno. */
+var TN_NOV = {
+  permiso:     { n: 'Permiso',         ab: 'PER', libra: true },
+  vacaciones:  { n: 'Vacaciones',      ab: 'VAC', libra: true },
+  incapacidad: { n: 'Incapacidad',     ab: 'INC', libra: true },
+  comision:    { n: 'Comisión',        ab: 'COM', libra: true },
+  descanso:    { n: 'Descanso (33 %)', ab: 'DES', libra: true },
+  cambio:      { n: 'Cambio de turno', ab: '',    libra: false }
+};
+var TN_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+var TN_DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+var TN_DC = ['dom','lun','mar','mié','jue','vie','sáb'];
+var TN_EMO = { T: '🟠', S: '🔴', D: '🟢' };   // solo en el texto que se comparte por chat
+var _tnVer = null, _tnSel = null, _tnTick = null, _tnHoyPint = null;
+
+/* ── Motor (sin DOM) ─────────────────────────────────────────────────────── */
+function tnMod(a, n) { return ((a % n) + n) % n; }
+function tnDia(iso) { var p = String(iso).split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); }
+function tnFecha(iso) { var p = String(iso).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function tnMas(iso, n) { var p = String(iso).split('-'); return ojISO(new Date(+p[0], +p[1] - 1, +p[2] + n)); }
+function tnCap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+/* La hora de Bogotá como fecha «de pared» (sus campos son los de Bogotá),
+   aunque el equipo esté configurado en otra zona horaria. */
+function tnAhora() {
+  try {
+    var p = {};
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/Bogota', year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric', hourCycle: 'h23' })
+      .formatToParts(new Date()).forEach(function (x) { p[x.type] = x.value; });
+    return new Date(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  } catch (e) { return new Date(); }
+}
+function tnHoy() { return ojISO(tnAhora()); }
+/* Lo guardado, normalizado. Leer no escribe. */
+function tnCfg(cfg) {
+  if (!cfg) { try { cfg = DB.getConfig(); } catch (e) {} }
+  var t = (cfg && cfg.turnos) || {}, s = +t.seccion;
+  return {
+    seccion: (s === 1 || s === 2 || s === 3) ? s : null,
+    desfase: tnMod(Math.round(+t.desfase || 0), 3),
+    horas: (t.horas && typeof t.horas === 'object') ? t.horas : null,
+    novedades: Array.isArray(t.novedades) ? t.novedades.filter(function (n) { return n && n.id && TN_NOV[n.tipo] && n.desde; }) : []
+  };
+}
+function tnHoras(t) {
+  var o = {};
+  Object.keys(TN_BLOQUES).forEach(function (k) {
+    var h = t && t.horas && t.horas[k], a = h && lcHoraNorm(h[0]), b = h && lcHoraNorm(h[1]);
+    o[k] = (a && b && a !== b) ? [a, b] : TN_BLOQUES[k].def.slice();
+  });
+  return o;
+}
+/* El turno que el ciclo le da a una sección un día (sin novedades). */
+function tnBase(iso, sec, t) {
+  return TN_CICLO[tnMod(tnDia(iso) - tnDia(TN_ANCLA) + TN_OFF[sec] + (t ? t.desfase : 0), 3)];
+}
+/* La novedad que cubre un día: si hay varias, manda la última registrada. */
+function tnNovedad(iso, t) {
+  var r = null;
+  (t.novedades || []).forEach(function (n) {
+    var h = (n.hasta && n.hasta >= n.desde) ? n.hasta : n.desde;
+    if (iso >= n.desde && iso <= h) r = n;
+  });
+  return r;
+}
+/* base = lo que dice el ciclo · nov = la novedad del día · ef = el turno que de
+   verdad se presta (null = ese día no se presta servicio). */
+function tnTurno(iso, sec, t, sinNov) {
+  t = t || tnCfg();
+  var base = tnBase(iso, sec, t), nov = sinNov ? null : tnNovedad(iso, t), ef = base;
+  if (nov) ef = TN_NOV[nov.tipo].libra ? null : (TN_TURNOS[nov.turno] ? nov.turno : base);
+  return { base: base, nov: nov, ef: ef };
+}
+function tnMin(h) { var p = String(h).split(':'); return +p[0] * 60 + +p[1]; }
+/* Los bloques de servicio de un día, con su inicio y su fin como fechas de
+   pared. Un fin anterior o igual al inicio cruza la medianoche. */
+function tnBloques(iso, sec, t) {
+  t = t || tnCfg();
+  var tu = tnTurno(iso, sec, t);
+  if (!tu.ef) return [];
+  var hs = tnHoras(t), p = String(iso).split('-');
+  return TN_TURNOS[tu.ef].bl.map(function (k) {
+    var a = tnMin(hs[k][0]), b = tnMin(hs[k][1]);
+    if (b <= a) b += 1440;
+    return { k: k, iso: iso, turno: tu.ef, min: b - a,
+      ini: new Date(+p[0], +p[1] - 1, +p[2], 0, a), fin: new Date(+p[0], +p[1] - 1, +p[2], 0, b) };
+  });
+}
+/* ¿En servicio ahora? Si no, ¿cuándo entra? Mira desde AYER: el bloque de las
+   21:00 de ayer sigue vivo hasta las 06:00 de hoy. */
+function tnEstado(ahora, sec, t) {
+  t = t || tnCfg();
+  var hoy = ojISO(ahora), en = null, prox = null;
+  for (var i = -1; i <= 62 && !prox; i++) {
+    tnBloques(tnMas(hoy, i), sec, t).forEach(function (b) {
+      if (b.ini <= ahora && ahora < b.fin) en = b;
+      else if (b.ini > ahora && (!prox || b.ini < prox.ini)) prox = b;
+    });
+  }
+  return { en: en, prox: prox };
+}
+function tnDur(min) {
+  min = Math.max(0, Math.round(min));
+  var h = Math.floor(min / 60), m = min % 60;
+  return h ? h + ' h' + (m ? ' ' + m + ' min' : '') : m + ' min';
+}
+function tnCuando(d, ahora) {
+  var dd = tnDia(ojISO(d)) - tnDia(ojISO(ahora));
+  if (dd === 0) return 'hoy';
+  if (dd === 1) return 'mañana';
+  return 'el ' + TN_DC[d.getDay()] + ' ' + d.getDate() + (dd > 27 ? ' de ' + TN_MESES[d.getMonth()] : '');
+}
+function tnFraseEstado(est, ahora) {
+  if (est.en) {
+    var s = 'En servicio hasta las ' + ojHHMM(est.en.fin) + ' · faltan ' + tnDur((est.en.fin - ahora) / 6e4);
+    if (est.en.iso !== ojISO(ahora)) s += ' (turno de anoche)';
+    return { vivo: true, t: s };
+  }
+  if (est.prox) {
+    var f = (est.prox.ini - ahora) / 6e4;
+    return { vivo: false, t: 'Entras ' + tnCuando(est.prox.ini, ahora) + ' a las ' + ojHHMM(est.prox.ini) + (f < 1440 ? ' · en ' + tnDur(f) : '') };
+  }
+  return { vivo: false, t: 'Sin servicio en los próximos dos meses' };
+}
+/* «06:00–13:00 y 21:00–06:00». */
+function tnHorasTxt(code, t) {
+  var hs = tnHoras(t), bl = TN_TURNOS[code].bl;
+  if (!bl.length) return 'Sin servicio';
+  return bl.map(function (k) { return hs[k][0] + '–' + hs[k][1]; }).join(' y ');
+}
+/* El desfase que hace que HOY la sección esté en el turno indicado. */
+function tnDesfasePara(iso, sec, code) {
+  return tnMod(TN_CICLO.indexOf(code) - (tnDia(iso) - tnDia(TN_ANCLA) + TN_OFF[sec]), 3);
+}
+function tnResumenMes(y, m, sec, t) {
+  t = t || tnCfg();
+  var r = { T: 0, S: 0, D: 0, horas: 0, fest: 0, nov: 0, dias: new Date(y, m + 1, 0).getDate() };
+  for (var d = 1; d <= r.dias; d++) {
+    var iso = ojISO(new Date(y, m, d)), tu = tnTurno(iso, sec, t), bl = tnBloques(iso, sec, t);
+    r[tu.base]++;
+    if (tu.nov) r.nov++;
+    bl.forEach(function (b) { r.horas += b.min / 60; });
+    if (bl.length && lcFestivoNombre(new Date(y, m, d))) r.fest++;
+  }
+  r.horas = Math.round(r.horas * 10) / 10;
+  return r;
+}
+/* Cómo se ve un día: clase de color, código corto y nombre. */
+function tnVista(tu) {
+  if (tu.ef) return { c: TN_TURNOS[tu.ef].c, ab: TN_TURNOS[tu.ef].ab, n: TN_TURNOS[tu.ef].n };
+  var nv = TN_NOV[tu.nov.tipo];
+  return { c: 'lib', ab: nv.ab, n: nv.n };
+}
+function tnFechaLarga(iso, conAnio) {
+  var d = tnFecha(iso);
+  return tnCap(TN_DIAS[d.getDay()]) + ' ' + d.getDate() + ' de ' + TN_MESES[d.getMonth()] + (conAnio ? ' de ' + d.getFullYear() : '');
+}
+function tnFechaCorta(iso) { var d = tnFecha(iso); return d.getDate() + ' ' + TN_MESES[d.getMonth()].slice(0, 3); }
+async function tnGuardar(patch) {
+  var cfg = DB.getConfig() || {};
+  cfg.turnos = Object.assign({}, cfg.turnos || {}, patch);
+  await DB.saveConfig(cfg);
+}
+
+/* ── Inicio: franja «Mi turno» y mosaico ──────────────────────────────────── */
+var TN_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>';
+function tn24Html(iso, sec, t, ahora, mini) {
+  var segs = '', dia0 = tnFecha(iso).getTime();
+  function seg(b, prev) {
+    var a = Math.max(0, (b.ini - dia0) / 6e4), z = Math.min(1440, (b.fin - dia0) / 6e4);
+    if (z <= a) return;
+    segs += '<i class="tn-24-b tn-k-' + TN_TURNOS[b.turno].c + (prev ? ' prev' : '') + '" style="left:' + (a / 14.4).toFixed(2) + '%;width:' + ((z - a) / 14.4).toFixed(2) + '%"></i>';
+  }
+  tnBloques(tnMas(iso, -1), sec, t).forEach(function (b) { seg(b, true); });
+  tnBloques(iso, sec, t).forEach(function (b) { seg(b, false); });
+  var h = '<div class="tn-24' + (mini ? ' mini' : '') + '" aria-hidden="true"><div class="tn-24-t">' + segs + '</div>';
+  if (ahora && ojISO(ahora) === iso) h += '<i class="tn-24-n" style="left:' + ((ahora.getHours() * 60 + ahora.getMinutes()) / 14.4).toFixed(2) + '%"></i>';
+  if (!mini) [0, 6, 12, 18, 24].forEach(function (x, i) {
+    h += '<span class="tn-24-l' + (i === 0 ? ' i' : i === 4 ? ' f' : '') + '" style="left:' + (x / 24 * 100) + '%">' + String(x).padStart(2, '0') + '</span>';
+  });
+  return h + '</div>';
+}
+function tnFranjaHtml() {
+  if (!_sessionKey) return '';
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) {
+    return '<button class="card tn-fr tn-k-lib" onclick="go(\'turnos\')"><span class="tn-hoy-f">Mis turnos</span>' +
+      '<span class="tn-fr-n">¿Cuál es tu sección?</span><span class="tn-est">Elígela y verás qué turno te toca cada día.</span>' +
+      '<span class="tn-fr-chev">' + TN_CHEV + '</span></button>';
+  }
+  var ahora = tnAhora(), iso = ojISO(ahora), tu = tnTurno(iso, sec, t), v = tnVista(tu), fr = tnFraseEstado(tnEstado(ahora, sec, t), ahora);
+  var man = tnVista(tnTurno(tnMas(iso, 1), sec, t));
+  return '<button class="card tn-fr tn-k-' + v.c + '" onclick="go(\'turnos\')" aria-label="' + escAttr('Turno de hoy: ' + v.n + '. ' + fr.t) + '">' +
+    '<span class="tn-hoy-f"><span class="tn-dot"></span>Hoy · ' + TN_SECC[sec] + '</span>' +
+    '<span class="tn-fr-n">' + escHtml(v.n) + '</span>' +
+    '<span class="tn-est">' + (fr.vivo ? '<span class="tn-vivo"></span>' : '') + escHtml(fr.t) + '</span>' +
+    tn24Html(iso, sec, t, ahora, true) +
+    '<span class="tn-man tn-k-' + man.c + '"><span class="tn-dot"></span>Mañana: <b>' + escHtml(man.n) + '</b></span>' +
+    '<span class="tn-fr-chev">' + TN_CHEV + '</span></button>';
+}
+function tnModuloDato() {
+  if (!_sessionKey) return '';
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) return 'Elige tu sección';
+  var hoy = tnHoy();
+  for (var i = 0; i < 40; i++) {
+    var iso = tnMas(hoy, i);
+    if (tnTurno(iso, sec, t).ef === 'D') {
+      return TN_SECC[sec] + ' · ' + (i === 0 ? 'hoy estás Disponible' : 'Disponible ' + tnCuando(tnFecha(iso), tnFecha(hoy)));
+    }
+  }
+  return TN_SECC[sec];
+}
+function tnMiniHtml() {
+  if (!_sessionKey) return '';
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) return '';
+  var hoy = tnHoy(), h = '<span class="tn-mini" aria-hidden="true">';
+  for (var i = 0; i < 7; i++) {
+    var iso = tnMas(hoy, i), v = tnVista(tnTurno(iso, sec, t));
+    h += '<span class="tn-k-' + v.c + (i === 0 ? ' hoy' : '') + '"><i></i>' + tnFecha(iso).getDate() + '</span>';
+  }
+  return h + '</span>';
+}
+
+/* ── La pantalla ──────────────────────────────────────────────────────────── */
+function renderTurnos() {
+  var t = tnCfg(), sec = t.seccion, hoy = tnHoy();
+  _tnHoyPint = hoy;
+  if (!_tnVer) { var h = tnFecha(hoy); _tnVer = { y: h.getFullYear(), m: h.getMonth() }; }
+  if (!_tnSel) _tnSel = hoy;
+  var sub = document.getElementById('tn-sub');
+  if (sub) sub.textContent = sec ? TN_SECC[sec] + (t.desfase ? ' · ciclo ajustado' : '') : 'Elige tu sección';
+  var sg = document.getElementById('tn-seg');
+  if (sg) sg.innerHTML = [1, 2, 3].map(function (s) {
+    return '<button role="radio" aria-checked="' + (s === sec) + '" class="' + (s === sec ? 'on' : '') + '" onclick="tnElegirSeccion(' + s + ')">' + s + '.ª</button>';
+  }).join('');
+  var sh = document.getElementById('tn-share');
+  if (sh) sh.style.display = sec ? '' : 'none';
+  var vac = document.getElementById('tn-vacio'), cols = document.getElementById('tn-cols');
+  if (!sec) {
+    if (vac) vac.innerHTML = '<div class="empty"><div class="ic">' + LC_IC.turnos + '</div><h3>¿Cuál es tu sección?</h3>' +
+      '<p>Elígela arriba y el calendario se pinta con su ciclo.</p></div>';
+    if (cols) cols.style.display = 'none';
+    return;
+  }
+  if (vac) vac.innerHTML = '';
+  if (cols) cols.style.display = '';
+  tnPintarHoy();
+  tnPintarSemana();
+  tnPintarMes();
+  tnPintarDia();
+  tnPintarResumen();
+  var acc = document.getElementById('tn-acc');
+  if (acc) acc.innerHTML = '<div class="tn-acc">' +
+    '<button class="btn bp" onclick="tnCompartir()">Compartir mis turnos</button>' +
+    '<button class="btn bs" onclick="tnNovedadForm(null,_tnSel)">Agregar novedad</button>' +
+    '<button class="btn bs" onclick="tnAjustar()">Ajustar el ciclo</button></div>';
+}
+function tnPintarHoy() {
+  var el = document.getElementById('tn-hoy');
+  if (!el) return;
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) { el.innerHTML = ''; return; }
+  var ahora = tnAhora(), iso = ojISO(ahora), tu = tnTurno(iso, sec, t), v = tnVista(tu);
+  var fr = tnFraseEstado(tnEstado(ahora, sec, t), ahora), man = tnVista(tnTurno(tnMas(iso, 1), sec, t));
+  var horas = tu.ef ? tnHorasTxt(tu.ef, t)
+    : 'Hasta el ' + tnFechaCorta(tu.nov.hasta || tu.nov.desde) + ' · por ciclo, ' + TN_TURNOS[tu.base].n;
+  el.innerHTML = '<div class="card tn-hoy tn-k-' + v.c + '">' +
+    '<div class="tn-hoy-f">Hoy, ' + escHtml(tnFechaLarga(iso).toLowerCase()) + '<span class="tn-tag">' + (tu.ef ? 'Tu turno' : 'Novedad') + '</span></div>' +
+    '<div class="tn-hoy-n">' + escHtml(v.n) + '</div>' +
+    '<div class="tn-hoy-h">' + escHtml(horas) + '</div>' +
+    tn24Html(iso, sec, t, ahora, false) +
+    '<div class="tn-est">' + (fr.vivo ? '<span class="tn-vivo"></span>' : '') + escHtml(fr.t) + '</div>' +
+    '<div class="tn-man tn-k-' + man.c + '"><span class="tn-dot"></span>Mañana: <b>' + escHtml(man.n) + '</b></div></div>';
+}
+function tnPintarSemana() {
+  var el = document.getElementById('tn-sem');
+  if (!el) return;
+  var t = tnCfg(), sec = t.seccion, hoy = tnHoy(), h = '<div class="st">Próximos días</div><div class="tn-sem">';
+  for (var i = 0; i < 7; i++) {
+    var iso = tnMas(hoy, i), d = tnFecha(iso), v = tnVista(tnTurno(iso, sec, t));
+    h += '<button class="tn-sd tn-k-' + v.c + (i === 0 ? ' hoy' : '') + '" onclick="tnElegir(\'' + iso + '\',true)" aria-label="' +
+      escAttr(tnFechaLarga(iso) + ': ' + v.n) + '"><span class="tn-sd-w">' + (i === 0 ? 'Hoy' : tnCap(TN_DC[d.getDay()])) + '</span>' +
+      '<span class="tn-sd-n">' + d.getDate() + '</span><span class="tn-sd-k">' + v.ab + '</span></button>';
+  }
+  el.innerHTML = h + '</div>';
+}
+function tnPintarMes() {
+  var el = document.getElementById('tn-mes');
+  if (!el) return;
+  var t = tnCfg(), sec = t.seccion, y = _tnVer.y, m = _tnVer.m, hoy = tnHoy(), hd = tnFecha(hoy);
+  var lead = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), tot = Math.ceil((lead + n) / 7) * 7;
+  var actual = hd.getFullYear() === y && hd.getMonth() === m;
+  var h = '<div class="card tn-mes"><div class="tn-mh">' +
+    '<button class="tn-nav" onclick="tnMesMover(-1)" aria-label="Mes anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>' +
+    '<div class="tn-mt" aria-live="polite">' + tnCap(TN_MESES[m]) + ' <span>' + y + '</span>' +
+      (actual ? '' : '<button class="tn-hoyb" onclick="tnIrHoy()">Hoy</button>') + '</div>' +
+    '<button class="tn-nav" onclick="tnMesMover(1)" aria-label="Mes siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button></div>' +
+    '<div class="tn-wk" aria-hidden="true"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>' +
+    '<div class="tn-g" id="tn-g">';
+  for (var i = 0; i < tot; i++) {
+    var d = new Date(y, m, 1 - lead + i), iso = ojISO(d), tu = tnTurno(iso, sec, t), v = tnVista(tu), fest = lcFestivoNombre(d);
+    var cls = 'tn-c tn-k-' + v.c + (d.getMonth() !== m ? ' fuera' : '') + (iso === hoy ? ' hoy' : '') + (iso === _tnSel ? ' sel' : '') +
+      (d.getDay() === 0 ? ' dom' : '') + (fest ? ' fest' : '');
+    var marcas = (fest ? '<i class="f"></i>' : '') + (tu.nov ? '<i class="n"></i>' : '');
+    var lbl = tnFechaLarga(iso) + ': ' + v.n + (fest ? ', festivo ' + fest : '') + (tu.nov && tu.ef ? ', ' + TN_NOV[tu.nov.tipo].n : '');
+    h += '<button class="' + cls + '" data-iso="' + iso + '" onclick="tnElegir(\'' + iso + '\')" aria-pressed="' + (iso === _tnSel) + '" aria-label="' + escAttr(lbl) + '">' +
+      '<span class="tn-c-n">' + d.getDate() + '</span>' + (marcas ? '<span class="tn-c-m">' + marcas + '</span>' : '') +
+      '<span class="tn-c-k">' + v.ab + '</span></button>';
+  }
+  h += '</div><div class="tn-ley">' +
+    ['T', 'S', 'D'].map(function (k) { return '<span class="tn-k-' + TN_TURNOS[k].c + '"><span class="tn-dot"></span>' + TN_TURNOS[k].n + '</span>'; }).join('') +
+    '<span><i class="f"></i>Festivo</span><span><i class="n"></i>Novedad</span></div></div>';
+  el.innerHTML = h;
+  tnDeslizar(document.getElementById('tn-g'));
+}
+/* Deslizar el mes con el dedo: izquierda = siguiente, derecha = anterior. */
+function tnDeslizar(g) {
+  if (!g) return;
+  var x0 = null, y0 = null;
+  g.addEventListener('touchstart', function (e) { var p = e.touches[0]; x0 = p.clientX; y0 = p.clientY; }, { passive: true });
+  g.addEventListener('touchend', function (e) {
+    if (x0 === null) return;
+    var p = e.changedTouches[0], dx = p.clientX - x0, dy = p.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 60 && Math.abs(dy) < 45) tnMesMover(dx < 0 ? 1 : -1);
+  }, { passive: true });
+}
+function tnPintarDia() {
+  var el = document.getElementById('tn-dia');
+  if (!el) return;
+  var t = tnCfg(), sec = t.seccion, iso = _tnSel || tnHoy(), d = tnFecha(iso), tu = tnTurno(iso, sec, t), v = tnVista(tu);
+  var fest = lcFestivoNombre(d), hoy = tnHoy();
+  var h = '<div class="card tn-dia"><div class="tn-dia-h"><div class="tn-dia-t">' + escHtml(tnFechaLarga(iso, d.getFullYear() !== tnFecha(hoy).getFullYear())) + '</div>' +
+    (iso === hoy ? '<span class="tn-tag tn-k-' + v.c + '">Hoy</span>' : '') + '</div>' +
+    (fest ? '<div class="tn-fest">Festivo · ' + escHtml(fest) + '</div>' : '') +
+    '<div class="tn-dia-k tn-k-' + v.c + '"><span class="tn-dot"></span><div><b>' + escHtml(v.n) + '</b><span>' +
+      escHtml(tu.ef ? tnHorasTxt(tu.ef, t) : 'Por ciclo, ' + TN_TURNOS[tu.base].n) + '</span></div></div>';
+  if (tu.nov) {
+    var nv = tu.nov, rango = nv.hasta && nv.hasta !== nv.desde ? 'Del ' + tnFechaCorta(nv.desde) + ' al ' + tnFechaCorta(nv.hasta) : tnFechaCorta(nv.desde);
+    h += '<div class="tn-nov"><b>' + escHtml(TN_NOV[nv.tipo].n) + '</b>' + escHtml(rango) +
+      (nv.tipo === 'cambio' && tu.ef !== tu.base ? ' · por ciclo, ' + escHtml(TN_TURNOS[tu.base].n) : '') +
+      (nv.con ? '<br>Con ' + escHtml(nv.con) : '') + (nv.nota ? '<br>' + escHtml(nv.nota) : '') +
+      '<div class="tn-nov-b"><button class="btn bs bsm" onclick="tnNovedadForm(\'' + escAttr(nv.id) + '\')">Editar</button>' +
+      '<button class="btn bd bsm" onclick="tnNovedadQuitar(\'' + escAttr(nv.id) + '\')">Quitar</button></div></div>';
+  }
+  h += '<div class="tn-otras"><div class="tn-otras-t">Las otras secciones</div>';
+  [1, 2, 3].forEach(function (s) {
+    if (s === sec) return;
+    var b = TN_TURNOS[tnBase(iso, s, t)];
+    h += '<div class="tn-otra tn-k-' + b.c + '"><span class="tn-dot"></span>' + TN_SECC[s] + '<b>' + escHtml(b.n) + '</b></div>';
+  });
+  h += '</div><div class="tn-dia-b">' +
+    (tu.nov ? '' : '<button class="btn bs bsm" onclick="tnNovedadForm(null,\'' + iso + '\')">Agregar novedad</button>') +
+    '<button class="btn bs bsm" onclick="tnCompartirDia()">Compartir el día</button></div></div>';
+  el.innerHTML = h;
+}
+function tnPintarResumen() {
+  var el = document.getElementById('tn-res');
+  if (!el) return;
+  var t = tnCfg(), sec = t.seccion, y = _tnVer.y, m = _tnVer.m, r = tnResumenMes(y, m, sec, t), hoy = tnHoy();
+  var h = '<div class="card"><div class="st">' + tnCap(TN_MESES[m]) + ' en cifras</div><div class="tn-barra" aria-hidden="true">' +
+    ['T', 'S', 'D'].map(function (k) { return r[k] ? '<i class="tn-k-' + TN_TURNOS[k].c + '" style="flex:' + r[k] + '"></i>' : ''; }).join('') + '</div>' +
+    '<div class="tn-cuenta">' + ['T', 'S', 'D'].map(function (k) {
+      return '<span class="tn-k-' + TN_TURNOS[k].c + '"><span class="tn-dot"></span>' + TN_TURNOS[k].n + ' <b>' + r[k] + '</b></span>';
+    }).join('') + '</div>' +
+    '<div class="tn-cifras"><div class="tn-cifra"><b>' + String(r.horas).replace('.', ',') + ' h</b><span>de servicio</span></div>' +
+    '<div class="tn-cifra"><b>' + r.fest + '</b><span>festivo' + (r.fest === 1 ? '' : 's') + ' con servicio</span></div>' +
+    '<div class="tn-cifra"><b>' + r.nov + '</b><span>día' + (r.nov === 1 ? '' : 's') + ' con novedad</span></div></div>';
+  var prox = t.novedades.filter(function (n) { return (n.hasta || n.desde) >= hoy; })
+    .sort(function (a, b) { return a.desde < b.desde ? -1 : 1; }).slice(0, 5);
+  if (prox.length) {
+    h += '<div class="tn-nl"><div class="tn-otras-t">Tus novedades</div>' + prox.map(function (n) {
+      var rango = n.hasta && n.hasta !== n.desde ? tnFechaCorta(n.desde) + ' al ' + tnFechaCorta(n.hasta) : tnFechaCorta(n.desde);
+      var k = n.tipo === 'cambio' && TN_TURNOS[n.turno] ? TN_TURNOS[n.turno].c : 'lib';
+      return '<button class="tn-nl-i tn-k-' + k + '" onclick="tnElegir(\'' + n.desde + '\',true)"><span class="tn-dot"></span><span><b>' +
+        escHtml(TN_NOV[n.tipo].n + (n.tipo === 'cambio' && TN_TURNOS[n.turno] ? ' · ' + TN_TURNOS[n.turno].n : '')) + '</b><span>' + escHtml(rango) + '</span></span></button>';
+    }).join('') + '</div>';
+  }
+  el.innerHTML = h + '</div>';
+}
+/* Solo lo que cambia con el reloj: no se repinta el mes cada minuto. */
+function tnPintarVivo() {
+  if (!_sessionKey) return;
+  if (_on('inicio')) { var it = document.getElementById('ini-turno'); if (it) it.innerHTML = tnFranjaHtml(); }
+  if (_on('turnos')) { if (_tnHoyPint !== tnHoy()) renderTurnos(); else tnPintarHoy(); }
+}
+function tnReloj(name) {
+  if (_tnTick) { clearInterval(_tnTick); _tnTick = null; }
+  if (name === 'inicio' || name === 'turnos') _tnTick = setInterval(tnPintarVivo, 30000);
+}
+document.addEventListener('visibilitychange', function () { if (!document.hidden) { try { tnPintarVivo(); } catch (e) {} } });
+
+/* ── Lo que hace el usuario ───────────────────────────────────────────────── */
+async function tnElegirSeccion(s) {
+  if (tnCfg().seccion === s) return;
+  try { await tnGuardar({ seccion: s }); } catch (e) { return; }
+  renderTurnos();
+  toast(TN_SECC[s] + ' · el calendario se pintó con su ciclo');
+}
+function tnElegir(iso, ver) {
+  _tnSel = iso;
+  var d = tnFecha(iso);
+  if (d.getFullYear() !== _tnVer.y || d.getMonth() !== _tnVer.m) {
+    _tnVer = { y: d.getFullYear(), m: d.getMonth() };
+    tnPintarMes(); tnPintarResumen();
+  } else {
+    document.querySelectorAll('#tn-g .tn-c').forEach(function (c) {
+      var on = c.dataset.iso === iso;
+      c.classList.toggle('sel', on); c.setAttribute('aria-pressed', on);
+    });
+  }
+  tnPintarDia();
+  if (ver) { var el = document.getElementById('tn-dia'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+}
+function tnMesMover(n) {
+  var d = new Date(_tnVer.y, _tnVer.m + n, 1);
+  _tnVer = { y: d.getFullYear(), m: d.getMonth() };
+  var hoy = tnFecha(tnHoy());
+  _tnSel = (hoy.getFullYear() === _tnVer.y && hoy.getMonth() === _tnVer.m) ? tnHoy() : ojISO(d);
+  tnPintarMes(); tnPintarDia(); tnPintarResumen();
+}
+function tnIrHoy() { _tnVer = null; _tnSel = null; renderTurnos(); }
+
+/* Novedades propias. */
+var _tnNov = null;
+function tnNovedadForm(id, iso) {
+  var t = tnCfg();
+  if (!t.seccion) { toast('Elige primero tu sección'); return; }
+  var n = null;
+  if (id) t.novedades.forEach(function (x) { if (x.id === id) n = x; });
+  var nuevo = !n;
+  n = n ? Object.assign({}, n) : { id: '', tipo: 'permiso', desde: iso || tnHoy(), hasta: iso || tnHoy(), turno: '', con: '', nota: '' };
+  /* En un cambio se propone el OTRO turno de servicio: quien cambia suele
+     tomar el turno de un compañero, no quedarse disponible. */
+  if (!n.turno) n.turno = tnBase(n.desde, t.seccion, t) === 'T' ? 'S' : 'T';
+  _tnNov = { id: n.id, tipo: n.tipo, turno: n.turno };
+  openModal(
+    '<div class="mh"><h2>' + (nuevo ? 'Nueva novedad' : 'Editar novedad') + '</h2>' +
+      '<button class="mx" onclick="closeModal()" aria-label="Cerrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="ic-x"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>' +
+    lcCampo('Tipo', '<div class="tn-ops" id="tn-nv-tipos" role="radiogroup" aria-label="Tipo de novedad">' + Object.keys(TN_NOV).map(function (k) {
+      return '<button class="tn-op' + (k === n.tipo ? ' on' : '') + '" role="radio" aria-checked="' + (k === n.tipo) + '" data-k="' + k + '" onclick="tnNovTipo(\'' + k + '\')">' + escHtml(TN_NOV[k].n) + '</button>';
+    }).join('') + '</div>') +
+    '<div class="fr">' +
+      lcCampo('Desde', '<input type="date" class="fi" id="tn-nv-desde" value="' + escAttr(n.desde) + '">') +
+      lcCampo('Hasta', '<input type="date" class="fi" id="tn-nv-hasta" value="' + escAttr(n.hasta || n.desde) + '">') +
+    '</div>' +
+    '<div id="tn-nv-cambio"' + (n.tipo === 'cambio' ? '' : ' hidden') + '>' +
+      lcCampo('Turno que tomas', '<div class="tn-cal" id="tn-nv-turnos" role="radiogroup" aria-label="Turno que tomas">' + TN_CICLO.map(function (k) {
+        return '<button class="tn-op tn-k-' + TN_TURNOS[k].c + (k === n.turno ? ' on' : '') + '" role="radio" aria-checked="' + (k === n.turno) + '" data-k="' + k + '" onclick="tnNovTurno(\'' + k + '\')"><span class="tn-dot"></span>' + escHtml(TN_TURNOS[k].n) + '</button>';
+      }).join('') + '</div>') +
+      lcCampo('Con quién', lcInput('tn-nv-con', n.con, 'Ej.: PT Juan Pérez, 3.ª sección')) +
+    '</div>' +
+    lcCampo('Nota', '<textarea class="ft" id="tn-nv-nota" placeholder="Opcional">' + escHtml(n.nota || '') + '</textarea>') +
+    '<div class="tn-mb">' + (nuevo ? '' : '<button class="btn bd" onclick="tnNovedadQuitar(\'' + escAttr(n.id) + '\')">Quitar</button>') +
+      '<button class="btn bs" onclick="closeModal()">Cancelar</button>' +
+      '<button class="btn bp" onclick="tnNovedadGuardar()">Guardar</button></div>');
+}
+function tnNovTipo(k) {
+  _tnNov.tipo = k;
+  document.querySelectorAll('#tn-nv-tipos .tn-op').forEach(function (b) { var on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  var c = document.getElementById('tn-nv-cambio');
+  if (c) c.hidden = k !== 'cambio';
+}
+function tnNovTurno(k) {
+  _tnNov.turno = k;
+  document.querySelectorAll('#tn-nv-turnos .tn-op').forEach(function (b) { var on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+}
+async function tnNovedadGuardar() {
+  if (!_tnNov) return;
+  var v = function (id) { var e = document.getElementById(id); return e ? String(e.value || '').trim() : ''; };
+  var desde = v('tn-nv-desde'), hasta = v('tn-nv-hasta') || desde;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(desde)) { toast('Falta la fecha de inicio'); return; }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hasta) || hasta < desde) { toast('La fecha final no puede ser anterior a la inicial'); return; }
+  if (tnDia(hasta) - tnDia(desde) > 366) { toast('Una novedad dura como máximo un año'); return; }
+  var n = { id: _tnNov.id || ('nv' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)),
+    tipo: _tnNov.tipo, desde: desde, hasta: hasta, nota: v('tn-nv-nota') };
+  if (n.tipo === 'cambio') { n.turno = _tnNov.turno; n.con = v('tn-nv-con'); }
+  var lista = tnCfg().novedades.filter(function (x) { return x.id !== n.id; });
+  lista.push(n);
+  try { await tnGuardar({ novedades: lista }); } catch (e) { return; }
+  _tnNov = null;
+  closeModal();
+  _tnSel = desde;
+  var d = tnFecha(desde); _tnVer = { y: d.getFullYear(), m: d.getMonth() };
+  renderTurnos();
+  toast('Novedad guardada');
+}
+async function tnNovedadQuitar(id) {
+  var lista = tnCfg().novedades.filter(function (x) { return x.id !== id; });
+  try { await tnGuardar({ novedades: lista }); } catch (e) { return; }
+  _tnNov = null;
+  if (document.getElementById('modal').classList.contains('open')) closeModal();
+  renderTurnos();
+  toast('Novedad quitada');
+}
+
+/* Ajustar el ciclo: para la unidad cuyo ciclo va corrido respecto del
+   predeterminado, y para cambiar las horas de los tres turnos. */
+var _tnCal = null;
+function tnDesfaseTxt(d) {
+  return d ? 'Tu ciclo va corrido ' + d + ' día' + (d > 1 ? 's' : '') + ' respecto del predeterminado.' : 'Igual al ciclo predeterminado.';
+}
+function tnAjustar() {
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) { toast('Elige primero tu sección'); return; }
+  var hoy = tnHoy(), base = tnBase(hoy, sec, t), hs = tnHoras(t);
+  _tnCal = { code: base, desfase: t.desfase };
+  openPanel('Ajustar el ciclo',
+    '<div class="st">Tu ciclo</div>' +
+    '<p class="oj-hint">Hoy, ' + escHtml(tnFechaLarga(hoy).toLowerCase()) + ', ¿qué turno tiene la ' + TN_SECC[sec] + '?</p>' +
+    '<div class="tn-cal" id="tn-cal" role="radiogroup" aria-label="Turno de hoy">' + TN_CICLO.map(function (k) {
+      return '<button class="tn-op tn-k-' + TN_TURNOS[k].c + (k === base ? ' on' : '') + '" role="radio" aria-checked="' + (k === base) + '" data-k="' + k + '" onclick="tnCalElegir(\'' + k + '\')">' +
+        '<span class="tn-dot"></span>' + escHtml(TN_TURNOS[k].n) + '<small>' + escHtml(tnHorasTxt(k, t)) + '</small></button>';
+    }).join('') + '</div>' +
+    '<p class="tn-cal-n" id="tn-cal-n">' + tnDesfaseTxt(t.desfase) + '</p>' +
+    '<div class="st">Horario de los turnos</div>' +
+    Object.keys(TN_BLOQUES).map(function (k) {
+      return '<div class="tn-hr"><span>' + TN_BLOQUES[k].n + '</span>' + lcHoraInput('tn-h-' + k + '-a', hs[k][0]) + '<i>a</i>' + lcHoraInput('tn-h-' + k + '-b', hs[k][1]) + '</div>';
+    }).join('') +
+    '<div class="tn-mb"><button class="btn bs" onclick="tnAjusteRestaurar()">Restaurar</button>' +
+      '<button class="btn bp" onclick="tnAjusteGuardar()">Guardar</button></div>');
+}
+function tnCalElegir(k) {
+  var t = tnCfg();
+  _tnCal = { code: k, desfase: tnDesfasePara(tnHoy(), t.seccion, k) };
+  document.querySelectorAll('#tn-cal .tn-op').forEach(function (b) { var on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
+  var n = document.getElementById('tn-cal-n');
+  if (n) n.textContent = tnDesfaseTxt(_tnCal.desfase);
+}
+function tnAjusteRestaurar() {
+  var t = tnCfg();
+  tnCalElegir(tnBase(tnHoy(), t.seccion, { desfase: 0 }));
+  Object.keys(TN_BLOQUES).forEach(function (k) {
+    document.getElementById('tn-h-' + k + '-a').value = TN_BLOQUES[k].def[0];
+    document.getElementById('tn-h-' + k + '-b').value = TN_BLOQUES[k].def[1];
+  });
+}
+async function tnAjusteGuardar() {
+  if (!_tnCal) return;
+  var horas = {}, propias = false, mal = false;
+  Object.keys(TN_BLOQUES).forEach(function (k) {
+    var ea = document.getElementById('tn-h-' + k + '-a'), eb = document.getElementById('tn-h-' + k + '-b');
+    var a = lcHoraNorm(ea.value), b = lcHoraNorm(eb.value);
+    ea.classList.toggle('fi-err', !a); eb.classList.toggle('fi-err', !b || a === b);
+    if (!a || !b || a === b) { mal = true; return; }
+    horas[k] = [a, b];
+    if (a !== TN_BLOQUES[k].def[0] || b !== TN_BLOQUES[k].def[1]) propias = true;
+  });
+  if (mal) { toast('Revisa las horas marcadas: van de 00:00 a 23:59 y no pueden ser iguales'); return; }
+  try { await tnGuardar({ desfase: _tnCal.desfase, horas: propias ? horas : null }); } catch (e) { return; }
+  _tnCal = null;
+  closeModal();
+  renderTurnos();
+  toast('Ciclo guardado');
+}
+
+/* ── Compartir ────────────────────────────────────────────────────────────── */
+function tnTextoMes(y, m, sec, t) {
+  t = t || tnCfg();
+  var L = ['*Turnos · ' + TN_SECC[sec] + '*', '_' + tnCap(TN_MESES[m]) + ' de ' + y + '_', ''];
+  var n = new Date(y, m + 1, 0).getDate();
+  for (var d = 1; d <= n; d++) {
+    var f = new Date(y, m, d), iso = ojISO(f), tu = tnTurno(iso, sec, t), fest = lcFestivoNombre(f);
+    var txt = tu.ef ? TN_TURNOS[tu.ef].n + (TN_TURNOS[tu.ef].bl.length ? ' (' + tnHorasTxt(tu.ef, t) + ')' : '') : TN_NOV[tu.nov.tipo].n;
+    if (tu.nov && tu.ef) txt += ' · ' + TN_NOV[tu.nov.tipo].n;
+    L.push((tu.ef ? TN_EMO[tu.ef] : '⚪') + ' ' + tnCap(TN_DC[f.getDay()]) + ' ' + String(d).padStart(2, '0') + ' · ' + txt + (fest ? ' · Festivo: ' + fest : ''));
+  }
+  return L.join('\n');
+}
+function tnTextoDia(iso, sec, t) {
+  t = t || tnCfg();
+  var tu = tnTurno(iso, sec, t), fest = lcFestivoNombre(tnFecha(iso));
+  var L = ['*' + tnFechaLarga(iso, true) + '*' + (fest ? ' · Festivo: ' + fest : ''),
+    (tu.ef ? TN_EMO[tu.ef] + ' ' : '⚪ ') + TN_SECC[sec] + ': ' + (tu.ef ? TN_TURNOS[tu.ef].n + ' (' + tnHorasTxt(tu.ef, t) + ')' : TN_NOV[tu.nov.tipo].n)];
+  [1, 2, 3].forEach(function (s) {
+    if (s === sec) return;
+    var b = tnBase(iso, s, t);
+    L.push(TN_EMO[b] + ' ' + TN_SECC[s] + ': ' + TN_TURNOS[b].n);
+  });
+  return L.join('\n');
+}
+function tnEnviarTexto(txt) {
+  var wa = function () { window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank'); };
+  try {
+    var P = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins && Capacitor.Plugins.Share;
+    if (P) { P.share({ text: txt }).catch(function () {}); return; }
+  } catch (e) {}
+  if (navigator.share) {
+    navigator.share({ text: txt }).catch(function (e) { if (e && e.name === 'AbortError') return; wa(); });
+    return;
+  }
+  wa();
+}
+function tnCopiar(txt) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(function () { toast('Copiado ✓'); }).catch(function () { _copyFallback(txt); });
+  } else _copyFallback(txt);
+}
+function tnCompartir() {
+  var t = tnCfg();
+  if (!t.seccion) { toast('Elige primero tu sección'); return; }
+  if (!_tnVer) { var h = tnFecha(tnHoy()); _tnVer = { y: h.getFullYear(), m: h.getMonth() }; }
+  openActionSheet(
+    '<div class="prow-body"><div class="prow-name">Compartir turnos</div><div class="prow-meta"><span class="prow-doc">' +
+      TN_SECC[t.seccion] + ' · ' + tnCap(TN_MESES[_tnVer.m]) + ' de ' + _tnVer.y + '</span></div></div>',
+    actItem('tnEnviarMes', '', ACT_IC.wa, 'Enviar el mes', 'Por WhatsApp u otra app', '', ACT_OK) +
+    actItem('tnCopiarMes', '', ACT_IC.copy, 'Copiar el mes', 'Para pegarlo donde quieras', '', ACT_ACC) +
+    actItem('tnIcs', '', LC_IC.turnos, 'Agregar a mi calendario', 'Archivo .ics de este mes y los dos siguientes', '', ACT_URI));
+}
+function tnEnviarMes() { var t = tnCfg(); tnEnviarTexto(tnTextoMes(_tnVer.y, _tnVer.m, t.seccion, t)); }
+function tnCopiarMes() { var t = tnCfg(); tnCopiar(tnTextoMes(_tnVer.y, _tnVer.m, t.seccion, t)); }
+function tnCompartirDia() { var t = tnCfg(); tnEnviarTexto(tnTextoDia(_tnSel || tnHoy(), t.seccion, t)); }
+/* Un evento por bloque de servicio, en la hora de Bogotá. El identificador es
+   fijo por sección, día y bloque: si se vuelve a importar tras ajustar el
+   ciclo, el calendario actualiza los eventos en vez de duplicarlos. */
+function tnIcsEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n'); }
+function tnIcsF(d) {
+  var p = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + 'T' + p(d.getHours()) + p(d.getMinutes()) + '00';
+}
+function tnIcsTexto(sec, t, desde, dias) {
+  t = t || tnCfg();
+  var stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  var L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Flagrante//Turnos//ES', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'X-WR-CALNAME:' + tnIcsEsc('Turnos · ' + TN_SECC[sec]), 'X-WR-TIMEZONE:America/Bogota',
+    'BEGIN:VTIMEZONE', 'TZID:America/Bogota', 'BEGIN:STANDARD', 'DTSTART:19700101T000000',
+    'TZOFFSETFROM:-0500', 'TZOFFSETTO:-0500', 'TZNAME:-05', 'END:STANDARD', 'END:VTIMEZONE'];
+  for (var i = 0; i < dias; i++) {
+    var iso = tnMas(desde, i), fest = lcFestivoNombre(tnFecha(iso));
+    tnBloques(iso, sec, t).forEach(function (b) {
+      L.push('BEGIN:VEVENT', 'UID:tn' + sec + '-' + iso.replace(/-/g, '') + '-' + b.k + '@flagrante', 'DTSTAMP:' + stamp,
+        'DTSTART;TZID=America/Bogota:' + tnIcsF(b.ini), 'DTEND;TZID=America/Bogota:' + tnIcsF(b.fin),
+        'SUMMARY:' + tnIcsEsc(TN_BLOQUES[b.k].n + ' · ' + TN_TURNOS[b.turno].n),
+        'DESCRIPTION:' + tnIcsEsc(TN_SECC[sec] + (fest ? ' · Festivo: ' + fest : '')), 'TRANSP:OPAQUE', 'END:VEVENT');
+    });
+  }
+  L.push('END:VCALENDAR');
+  return L.map(function (l) {   // líneas de más de 74 caracteres se pliegan (RFC 5545)
+    var o = '';
+    while (l.length > 74) { o += l.slice(0, 74) + '\r\n '; l = l.slice(74); }
+    return o + l;
+  }).join('\r\n') + '\r\n';
+}
+function tnIcs() {
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) return;
+  var y = _tnVer.y, m = _tnVer.m, desde = ojISO(new Date(y, m, 1)), dias = tnDia(ojISO(new Date(y, m + 3, 1))) - tnDia(desde);
+  var txt = tnIcsTexto(sec, t, desde, dias);
+  var out = { blob: new Blob([txt], { type: 'text/calendar;charset=utf-8' }),
+    fname: 'Turnos_seccion' + sec + '_' + y + '-' + String(m + 1).padStart(2, '0') + '.ics', label: 'Calendario de turnos' };
+  var listo = function () { toast('Ábrelo para agregar tus turnos al calendario', 6000); };
+  if (_capNative()) {
+    _shareNativo(out).catch(function (e) {
+      if (e && e.name === 'AbortError') return;
+      _dlDocBlob(out.blob, out.fname); listo();
+    });
+    return;
+  }
+  _dlDocBlob(out.blob, out.fname);
+  listo();
+}
+
 // Para deploy: subir todos los archivos a GitHub Pages u otro hosting HTTPS.
 /* ⚠️ FASE 0 (2026-09-25): dentro de la app de Play el código ya viaja EN EL
    PAQUETE y no se descarga de GitHub. Ahí el Service Worker no aporta nada (todo
