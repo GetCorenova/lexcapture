@@ -61,6 +61,9 @@ const casoBase = await page.evaluate(() => {
   let c;
   for (let i = 0; i < 40; i++) { c = SIM.genOJ(); if (!ojEsAdolescente(c)) break; }
   c.oj.orden.fechaExpedicion = '2023-01-01';
+  /* Sin prórroga: el escenario antiguo del simulador trae una que vence en el
+     futuro, y con ella la orden ya no estaba vencida (fallaba ~1 de 6 corridas). */
+  c.oj.orden.prorrogas = [];
   c.oj.encabezado = { ministerio: '', institucion: '', unidad: '', dependencia: '' };
   c.oj.custodia = { estacion: '', direccion: '', barrio: '', ciudad: '', telefono: '', correo: '', web: '' };
   c.oj.firma = { grado: '', nombre: '', cargo: '', telefono: '', correo: '' };
