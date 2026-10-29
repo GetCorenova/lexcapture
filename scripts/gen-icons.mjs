@@ -13,9 +13,11 @@
 //      del 80%) y en el icono adaptativo de Android (72/108) quedaria cortado.
 // Por eso se SEPARA la F y el chulo del fondo azul (sprite con transparencia,
 // sombras incluidas) y se recomponen sobre el degradado del propio original,
-// ajustado a la zona segura de cada formato. La composicion (la F un poco a la
-// izquierda, el chulo abajo a la derecha) se conserva: se escala alrededor del
-// centro de la baldosa, no se recentra.
+// ajustado a la zona segura de cada formato.
+// ⚠️ La composicion de la imagen NO se conserva (2026-10-29, decision del
+// usuario): el chulo, que en el original va abajo a la derecha lejos de la F,
+// se coloca en el hueco que deja la F bajo su brazo del medio, y el conjunto
+// se centra en la baldosa. Ver el paso 4b.
 //
 // Si el usuario cambia la imagen, basta con reemplazar marca/logo-fuente.jpg:
 // la baldosa, el degradado y el contenido se MIDEN, no estan escritos aqui.
@@ -124,6 +126,88 @@ const R = await page.evaluate(async ({ b64, conAndroid }) => {
   }
   spx.putImageData(out, 0, 0);
 
+  // --- 4b. El chulo, dentro de la F (2026-10-29, decision del usuario) -----
+  // En la imagen el chulo esta abajo a la derecha, lejos de la F: en el
+  // lanzador de Android quedaba pegado al borde de la mascara y, por ser lo
+  // mas alejado del centro, obligaba a encoger todo el dibujo. Se separan las
+  // dos piezas (componentes conexos del alfa, sombras incluidas) y el chulo se
+  // coloca en el hueco que deja la F bajo su brazo del medio, apoyado en la
+  // linea de abajo de la F. Todo se MIDE sobre la imagen.
+  const A = (i, j) => out.data[(j * sw + i) * 4 + 3];
+  const lab = new Int32Array(sw * sh).fill(-1);
+  const comps = [];
+  for (let j0 = 0; j0 < sh; j0++) for (let i0 = 0; i0 < sw; i0++) {
+    if (A(i0, j0) === 0 || lab[j0 * sw + i0] >= 0) continue;
+    const id = comps.length, pila = [j0 * sw + i0];
+    const c = { id, n: 0, x0: sw, x1: 0, y0: sh, y1: 0, op: 0, sum: -1 };
+    lab[j0 * sw + i0] = id;
+    while (pila.length) {
+      const q = pila.pop(), i = q % sw, j = (q - i) / sw;
+      c.n++; if (i < c.x0) c.x0 = i; if (i > c.x1) c.x1 = i; if (j < c.y0) c.y0 = j; if (j > c.y1) c.y1 = j;
+      if (A(i, j) > 128) { c.op++; if (i + j > c.sum) c.sum = i + j; }
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const a = i + di, b = j + dj;
+        if (a < 0 || b < 0 || a >= sw || b >= sh) continue;
+        const k = b * sw + a;
+        if (lab[k] < 0 && A(a, b) > 0) { lab[k] = id; pila.push(k); }
+      }
+    }
+    comps.push(c);
+  }
+  const grandes = comps.filter(c => c.op > 500).sort((a, b) => b.op - a.op);
+  if (grandes.length !== 2) return { error: 'se esperaban 2 piezas (F y chulo) y salieron ' + grandes.length };
+  // El chulo es la pieza que llega mas abajo a la derecha; la otra, la F.
+  const [pC, pF] = grandes[0].sum > grandes[1].sum ? [grandes[0], grandes[1]] : [grandes[1], grandes[0]];
+  // Las motas pequenas se suman a la pieza mas cercana.
+  const dueno = new Int32Array(comps.length);
+  for (const c of comps) {
+    const d = p => Math.hypot((c.x0 + c.x1) / 2 - (p.x0 + p.x1) / 2, (c.y0 + c.y1) / 2 - (p.y0 + p.y1) / 2);
+    dueno[c.id] = c === pC || c === pF ? c.id : (d(pC) < d(pF) ? pC.id : pF.id);
+  }
+  const pieza = (p) => {
+    const cv = document.createElement('canvas'); cv.width = sw; cv.height = sh;
+    const cx2 = cv.getContext('2d'), im2 = cx2.createImageData(sw, sh);
+    let x0 = sw, x1 = 0, y0 = sh, y1 = 0;                  // caja de lo opaco (> 0,5)
+    for (let k = 0; k < sw * sh; k++) {
+      if (lab[k] < 0 || dueno[lab[k]] !== p.id) continue;
+      for (let ch = 0; ch < 4; ch++) im2.data[k * 4 + ch] = out.data[k * 4 + ch];
+      if (out.data[k * 4 + 3] > 128) { const i = k % sw, j = (k - i) / sw; if (i < x0) x0 = i; if (i > x1) x1 = i; if (j < y0) y0 = j; if (j > y1) y1 = j; }
+    }
+    cx2.putImageData(im2, 0, 0);
+    return { cv, x0, x1, y0, y1 };
+  };
+  const F = pieza(pF), C = pieza(pC);
+  const opF = (i, j) => i >= 0 && j >= 0 && i < sw && j < sh && lab[j * sw + i] >= 0 && dueno[lab[j * sw + i]] === pF.id && A(i, j) > 128;
+  const fW = F.x1 - F.x0, fH = F.y1 - F.y0;
+  // Borde derecho del asta: lo opaco mas a la derecha en las filas bajas.
+  let asta = F.x0;
+  for (let j = Math.round(F.y1 - fH * .12); j <= F.y1 - 4; j++) for (let i = F.x0; i <= F.x1; i++) if (opF(i, j) && i > asta) asta = i;
+  // Brazo del medio: subiendo desde la base por una columna a la derecha del
+  // asta, lo primero opaco es el borde inferior del brazo.
+  const col = Math.round(asta + fW * .12);
+  let brazoAbajo = -1;
+  for (let j = F.y1; j >= F.y0; j--) if (opF(col, j)) { brazoAbajo = j; break; }
+  if (brazoAbajo < 0 || asta >= F.x1) return { error: 'no se encontro el hueco de la F' };
+  const holgura = fW * .06;
+  const libreW = F.x1 - asta - 2 * holgura, libreH = F.y1 - brazoAbajo - holgura;
+  const cW = C.x1 - C.x0, cH = C.y1 - C.y0;
+  const kC = Math.min(1, libreW / cW, libreH / cH);
+  // Destino del chulo (coordenadas de la fuente): centrado en el ancho libre,
+  // apoyado en la base de la F.
+  const cX = asta + holgura + (libreW - cW * kC) / 2, cY = F.y1 - cH * kC;
+  // El conjunto se centra en la baldosa.
+  const gx0 = Math.min(F.x0, cX), gx1 = Math.max(F.x1, cX + cW * kC);
+  const gy0 = Math.min(F.y0, cY), gy1 = F.y1;
+  const dX = cx - (sx0 + (gx0 + gx1) / 2), dY = cy - (sy0 + (gy0 + gy1) / 2);
+  // Lo mas alejado del centro, ya recolocado (para la zona segura).
+  lejos = 0;
+  for (let j = 0; j < sh; j++) for (let i = 0; i < sw; i++) {
+    if (A(i, j) <= 128 || lab[j * sw + i] < 0) continue;
+    const esC = dueno[lab[j * sw + i]] === pC.id;
+    const X = esC ? cX + (i - C.x0) * kC : i, Y = esC ? cY + (j - C.y0) * kC : j;
+    lejos = Math.max(lejos, Math.hypot(sx0 + X + dX - cx, sy0 + Y + dY - cy));
+  }
+
   // --- 5. Composicion ------------------------------------------------------
   // Escala = pixeles de salida por pixel de la fuente, alrededor del centro de
   // la baldosa. El reescalado se hace por mitades sucesivas: un drawImage de
@@ -145,10 +229,13 @@ const R = await page.evaluate(async ({ b64, conAndroid }) => {
     ctx.putImageData(img, 0, 0);
   };
   const pintaSprite = (ctx, N, esc) => {
-    const w = sw * esc, h = sh * esc;
-    const r = reduce(spr, Math.ceil(w), Math.ceil(h));
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(r, N / 2 + (sx0 - cx) * esc, N / 2 + (sy0 - cy) * esc, w, h);
+    const ox = N / 2 + (sx0 + dX - cx) * esc, oy = N / 2 + (sy0 + dY - cy) * esc;
+    const w = sw * esc, h = sh * esc;
+    ctx.drawImage(reduce(F.cv, Math.ceil(w), Math.ceil(h)), ox, oy, w, h);
+    const e = esc * kC;
+    ctx.drawImage(reduce(C.cv, Math.ceil(sw * e), Math.ceil(sh * e)),
+      ox + cX * esc - C.x0 * e, oy + cY * esc - C.y0 * e, sw * e, sh * e);
   };
   // forma: 'tile' (cuadrado redondeado, esquinas transparentes) · 'sangre' ·
   // 'circulo' · 'frente' (solo el sprite, sin fondo)
@@ -171,7 +258,9 @@ const R = await page.evaluate(async ({ b64, conAndroid }) => {
 
   const ESC_TILE = 512 / lado;                        // la baldosa del usuario llena el icono
   const ESC_MASK = Math.min(ESC_TILE, 200 / lejos);   // circulo seguro del maskable: 204.8
-  const ESC_ADAPT = Math.min(ESC_TILE, 166 / lejos);  // Android: 72/108 * 256 = 170.7
+  // Android solo GARANTIZA el circulo de 66 de sus 108 dp (156,4 px de 256);
+  // 72/108 es lo que se ve, no lo seguro. 140 deja aire hasta la mascara.
+  const ESC_ADAPT = Math.min(ESC_TILE, 140 / lejos);
 
   const png = {};
   png['icon-192.png'] = compone(192, ESC_TILE, 'tile');
@@ -196,11 +285,12 @@ const R = await page.evaluate(async ({ b64, conAndroid }) => {
                lejos: Math.round(lejos), resid: resid.toFixed(2), muestras: mues.length,
                ESC_TILE: ESC_TILE.toFixed(4), ESC_MASK: ESC_MASK.toFixed(4), ESC_ADAPT: ESC_ADAPT.toFixed(4),
                mask: (lejos * ESC_MASK).toFixed(1), adapt: (lejos * ESC_ADAPT).toFixed(1),
-               radioIcono: (radio * ESC_TILE).toFixed(1) },
+               radioIcono: (radio * ESC_TILE).toFixed(1), chulo: kC.toFixed(3) },
     png, and, fondoCentro: '#' + fc.toUpperCase(),
   };
 }, { b64: readFileSync(FUENTE).toString('base64'), conAndroid: existsSync(AND) });
 await browser.close();
+if (R.error) { console.error('ABORTA: ' + R.error + '.'); process.exit(1); }
 
 const m = R.medidas;
 console.log('  fuente ' + m.W + 'x' + m.H + ' · baldosa ' + m.lado + ' px, esquina r=' + m.radio +
@@ -208,8 +298,18 @@ console.log('  fuente ' + m.W + 'x' + m.H + ' · baldosa ' + m.lado + ' px, esqu
 console.log('  fondo: plano con ' + m.muestras + ' muestras, error medio ' + m.resid + ' niveles · centro ' + R.fondoCentro);
 console.log('  contenido llega a ' + m.lejos + ' px del centro de la baldosa (' + (m.lejos / (m.lado / 2) * 100).toFixed(0) + '% del radio)');
 console.log('  maskable: escala ' + m.ESC_MASK + ' -> ' + m.mask + ' de 204.8 px seguros');
-console.log('  Android:  escala ' + m.ESC_ADAPT + ' -> ' + m.adapt + ' de 170.7 px seguros');
-if (+m.mask > 204.8 || +m.adapt > 170.7) { console.error('ABORTA: se sale de la zona segura.'); process.exit(1); }
+console.log('  Android:  escala ' + m.ESC_ADAPT + ' -> ' + m.adapt + ' de 156.4 px seguros');
+console.log('  chulo dentro de la F, a escala ' + m.chulo + ' de su tamano original');
+if (+m.mask > 204.8 || +m.adapt > 156.4) { console.error('ABORTA: se sale de la zona segura.'); process.exit(1); }
+
+// --preview <carpeta>: escribe los PNG ahi y no toca nada del proyecto.
+const iPrev = process.argv.indexOf('--preview');
+if (iPrev > 0) {
+  const dir = process.argv[iPrev + 1];
+  for (const [f, b] of Object.entries(R.png)) writeFileSync(path.join(dir, f), Buffer.from(b, 'base64'));
+  if (R.and.xxxhdpi) for (const [n, b] of Object.entries(R.and.xxxhdpi)) writeFileSync(path.join(dir, n + '.png'), Buffer.from(b, 'base64'));
+  console.log('  vista previa en ' + dir); process.exit(0);
+}
 
 for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'icon-store-512.png']) {
   const buf = Buffer.from(R.png[f], 'base64');
