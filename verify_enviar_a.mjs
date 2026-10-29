@@ -137,11 +137,11 @@ const d = await page.evaluate(() => ({
   scr: screens.indexOf('compartir'),
   mas: [...document.querySelectorAll('#sheet .ti')].map(e => e.textContent.trim()).filter(t => /compartir/i.test(t)),
   funcs: ['renderCompartir', 'ptAbrirCompartir', 'ptUiMarcar', 'ptUiExportar', 'bzUiEnvio'].filter(f => typeof window[f] === 'function'),
-  cnt: !!document.querySelector('.sb-item[data-screen="capturas"] #bz-cnt-nav'),
-  punto: !!document.querySelector('#bottombar [data-screen="capturas"] #bz-punto')
+  cnt: !!document.querySelector('.sb-item[data-screen="pendientes"] #bz-cnt-nav'),
+  punto: !!document.querySelector('#bottombar [data-screen="pendientes"] #bz-punto')
 }));
 log(!d.pant && !d.nav && d.scr < 0 && !d.mas.length && !d.funcs.length, '[D1] «Modo compartir» ya no existe: ni pantalla, ni menú, ni sus funciones', JSON.stringify(d));
-log(d.cnt && d.punto, '[D2] El aviso de «por revisar» pasa al ítem Capturas (panel y barra inferior)');
+log(d.cnt && d.punto, '[D2] El aviso de «por revisar» vive en el ítem Pendientes (panel y barra inferior; antes en Capturas)');
 const src = readFileSync(join(ROOT, 'LexCapture_v8.html'), 'utf8');
 log(!/Modo compartir/.test(src.replace(/<!--[\s\S]*?-->/g, '').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')),
   '[D3] Ningún texto de la app nombra «Modo compartir»');

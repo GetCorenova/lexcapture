@@ -162,7 +162,7 @@ log(items.length > 0 && !items.some(t => /FPJ|Oficio|Acta|custodia|Rótulo/i.tes
   'El menú de la captura no nombra ningún documento: no puede crecer con este formato', items.join(' · '));
 log(!items.some(t => /custodia|Rótulo/i.test(t)),
   '⚠️ Y ninguno de los dos formatos nuevos entró en él: viven en el expediente');
-await page.evaluate(() => closeSheet());
+await page.evaluate(() => closeActionSheet());
 await page.waitForTimeout(150);
 
 /* ⚠️ Expectativa actualizada el 2026-08-28 (Mejora 6, 2.º documento, obs. 2):

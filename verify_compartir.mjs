@@ -496,7 +496,7 @@ const d2 = await page.evaluate(async () => {
   const nombra = tit.filter(t => docs.some(d => d && t.indexOf(d) >= 0));
   const r = { tit, nombra, scroll: sh.scrollHeight > sh.clientHeight + 1,
               alto: sh.scrollHeight, comparte: tit.some(t => /compart|compañero|enviar a/i.test(t)) };
-  closeSheet();
+  closeActionSheet();
   return r;
 });
 log(!d2.comparte && d2.nombra.length === 0 && !d2.scroll,

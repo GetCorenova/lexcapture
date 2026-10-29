@@ -189,7 +189,7 @@ const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e =
 log(items.length > 0 && !items.some(t => /FPJ|Oficio|Acta|custodia|Rótulo/i.test(t)),
   'El menú de la captura no nombra ningún documento: no puede crecer con este formato', items.join(' · '));
 log(!items.some(t => /incauta/i.test(t)), '⚠️ Y el acta no entró en él: vive en el expediente');
-await page.evaluate(() => closeSheet());
+await page.evaluate(() => closeActionSheet());
 await page.waitForTimeout(150);
 
 /* ⚠️ La tarjeta tiene que decir lo MISMO que dirá el motor al generar: si la

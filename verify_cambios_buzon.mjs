@@ -201,12 +201,14 @@ log((await caso(B, 'cas-1')).bzc[uA].b.victimas[0].tel === '3009999999', '[G5] Q
 log(/hizo cambios en la captura de JUAN PÉREZ/.test(await dichos(A)), '[G6] Aviso breve al llegar', (await dichos(A)).slice(-90));
 const vista = await A.page.evaluate(() => {
   go('capturas'); renderCases();
-  const av = document.querySelector('.bz-aviso'), bd = document.querySelector('.b-bzcam');
+  /* Acotado a Capturas: desde el Inicio por módulos (2026-10-29) el mismo aviso
+     sale también arriba del Inicio, que va antes en el DOM. */
+  const av = document.querySelector('#screen-capturas .bz-aviso'), bd = document.querySelector('#screen-capturas .b-bzcam');
   return { av: av ? av.innerText : '', alto: av ? av.getBoundingClientRect().height : 0, bd: !!bd,
            cnt: (document.getElementById('bz-cnt-nav') || {}).textContent };
 });
 log(vista.alto > 30 && /hizo cambios en 1 captura/.test(vista.av) && vista.bd && vista.cnt === '1',
-  '[G7] En Capturas: el aviso arriba, la insignia en la tarjeta y el contador del menú', vista.av.replace(/\n/g, ' · '));
+  '[G7] En Capturas: el aviso arriba, la insignia en la tarjeta y el contador del menú', JSON.stringify(vista));
 
 await A.page.evaluate(k => bzUiRevisarCambios(k), ent.k);
 await A.page.waitForSelector('#modal.open');

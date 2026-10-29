@@ -205,7 +205,7 @@ const items = await page.$$eval('#act-items .sheet-item .ti', els => els.map(e =
    mano este check fallaba por un verbo nuevo y dejaba de vigilar lo suyo. */
 log(items.length > 0 && !items.some(t => /entrega|resumen|FPJ/i.test(t)),
   'El menú de la captura sigue en 4 ítems y no nombra ningún documento', items.join(' · '));
-await page.evaluate(() => closeSheet());
+await page.evaluate(() => closeActionSheet());
 await page.waitForTimeout(150);
 
 /* ⚠️ El resumen NUNCA dice «faltan datos»: un dato sin registrar sale en blanco,
