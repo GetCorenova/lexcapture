@@ -130,20 +130,22 @@ log(hr.mes.T === 11 && hr.mes.S === 10 && hr.mes.D === 10 && hr.mes.horas === 24
 /* ═══ D · la pantalla ═══ */
 await page.evaluate(() => go('turnos')); await page.waitForTimeout(150);
 const vac = await page.evaluate(() => ({ e: !!document.querySelector('#tn-vacio .empty'), cols: getComputedStyle(document.getElementById('tn-cols')).display,
-  sh: getComputedStyle(document.getElementById('tn-share')).display, seg: document.querySelectorAll('#tn-seg button').length }));
-log(vac.e && vac.cols === 'none' && vac.sh === 'none' && vac.seg === 3, '[D1] Sin sección: pide elegirla y no enseña un calendario a ciegas', JSON.stringify(vac));
-await page.click('#tn-seg button:nth-child(2)'); await page.waitForTimeout(400);
+  sh: getComputedStyle(document.getElementById('tn-share')).display, sel: document.getElementById('tn-sec-sel').tagName,
+  op: [...document.querySelectorAll('#tn-sec-sel option')].map(o => o.textContent) }));
+log(vac.e && vac.cols === 'none' && vac.sh === 'none' && vac.sel === 'SELECT' && vac.op.length === 4 && vac.op[0] === 'Elige tu sección',
+  '[D1] Sin sección: lista desplegable que pide elegirla y no enseña un calendario a ciegas', JSON.stringify(vac));
+await page.selectOption('#tn-sec-sel', '2'); await page.waitForTimeout(400);
 const d2 = await page.evaluate(() => {
-  const s = document.getElementById('screen-turnos'), r = s.getBoundingClientRect();
-  return { enMain: !!s.closest('#main'), alto: r.height, sec: tnCfg().seccion, on: document.querySelector('#tn-seg .on').textContent,
+  const s = document.getElementById('screen-turnos'), r = s.getBoundingClientRect(), sl = document.getElementById('tn-sec-sel');
+  return { enMain: !!s.closest('#main'), alto: r.height, sec: tnCfg().seccion, on: sl.options[sl.selectedIndex].textContent, ops: sl.options.length,
     celdas: document.querySelectorAll('#tn-g .tn-c').length, hoy: document.querySelectorAll('#tn-g .tn-c.hoy').length,
-    sub: document.getElementById('tn-sub').textContent, sem: document.querySelectorAll('.tn-sd').length,
-    hoyN: document.querySelector('.tn-hoy-n').textContent, otras: document.querySelectorAll('.tn-otra').length };
+    sub: document.getElementById('tn-sub').textContent, sem: document.querySelectorAll('.tn-sd, #tn-sem').length,
+    hoyN: document.querySelector('.tn-hoy-n b').textContent, otras: document.querySelectorAll('.tn-otra').length };
 });
-log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.on === '2.ª', '[D2] Elegir la sección la guarda y pinta la pantalla (vive en #main y tiene alto real)', JSON.stringify(d2));
-log(d2.celdas % 7 === 0 && d2.celdas >= 28 && d2.hoy === 1 && d2.sem === 7 && d2.otras === 2,
-  '[D3] Mes en semanas completas, hoy marcado una vez, 7 próximos días y las otras 2 secciones', JSON.stringify(d2));
-const hoyCel = await page.evaluate(() => { const h = tnHoy(); return { cel: document.querySelector('#tn-g .tn-c.hoy .tn-c-k').textContent, ab: TN_TURNOS[tnBase(h, 2, tnCfg())].ab }; });
+log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.on === '2.ª sección' && d2.ops === 3, '[D2] Elegir la sección la guarda y pinta la pantalla (vive en #main y tiene alto real)', JSON.stringify(d2));
+log(d2.celdas % 7 === 0 && d2.celdas >= 28 && d2.hoy === 1 && d2.sem === 0 && d2.otras === 2,
+  '[D3] Mes en semanas completas, hoy marcado una vez, sin «Próximos días» y las otras 2 secciones', JSON.stringify(d2));
+const hoyCel = await page.evaluate(() => { const h = tnHoy(); return { cel: document.querySelector('#tn-g .tn-c.hoy').dataset.t, ab: tnBase(h, 2, tnCfg()) }; });
 log(hoyCel.cel === hoyCel.ab, '[D4] La celda de hoy dice el turno que da el ciclo', JSON.stringify(hoyCel));
 const mv = await page.evaluate(() => { const a = _tnVer.m; tnMesMover(1); const b = _tnVer.m; tnMesMover(-2); const c = _tnVer.m; tnIrHoy(); return [a, b, c, _tnVer.m, !!document.querySelector('.tn-hoyb')]; });
 log((mv[1] - mv[0] + 12) % 12 === 1 && (mv[0] - mv[2] + 12) % 12 === 1 && mv[3] === mv[0] && !mv[4], '[D5] Mes siguiente, anterior y «Hoy» vuelve al mes actual', mv);
@@ -159,8 +161,60 @@ await page.evaluate(() => tnElegir('2026-10-12')); await page.waitForTimeout(80)
 const dia = await page.evaluate(() => ({ t: document.querySelector('.tn-dia-t').textContent, f: (document.querySelector('.tn-fest') || {}).textContent,
   k: document.querySelector('.tn-dia-k b').textContent, otras: [...document.querySelectorAll('.tn-otra')].map(o => o.innerText.replace(/\s+/g, ' ').trim()) }));
 log(/12 de octubre/.test(dia.t) && dia.f === 'Festivo · Día de la Raza' && dia.k === 'Disponible' &&
-    JSON.stringify(dia.otras) === JSON.stringify(['1.ª sección Tercero', '3.ª sección Segundo – primero']),
+    JSON.stringify(dia.otras) === JSON.stringify(['1.ª Tercero', '3.ª Segundo – primero']),
   '[D7] El día elegido dice su turno, su festivo y el de las otras dos secciones', JSON.stringify(dia));
+
+/* ═══ J · rediseño del calendario (build 163) ═══ */
+const rd = await page.evaluate(() => {
+  const g = e => getComputedStyle(e), fuera = [...document.querySelectorAll('#tn-g .tn-c.fuera')], card = document.querySelector('.tn-mes');
+  const mk = k => { const c = document.querySelector('#tn-g .tn-c[data-t="' + k + '"]'); return c ? c.querySelectorAll('.tn-mk i').length : -1; };
+  const ley = [...document.querySelectorAll('.tn-ley .tn-ley-s .tn-mk')].map(e => e.querySelectorAll('i').length);
+  const otras = document.querySelector('.tn-otras'), lh = parseFloat(g(otras).lineHeight);
+  return {
+    fueraSolo: fuera.every(c => c.children.length === 1 && c.textContent.trim() === c.querySelector('.tn-c-n').textContent),
+    fueraSinColor: fuera.every(c => g(c).backgroundColor === 'rgba(0, 0, 0, 0)' && !/tn-k-/.test(c.className) && c.tagName === 'SPAN'),
+    pastillas: document.querySelectorAll('#tn-g .tn-c-k').length, mk: { T: mk('T'), S: mk('S'), D: mk('D') }, ley,
+    sinBorde: [...document.querySelectorAll('#tn-g .tn-c:not(.fuera)')].every(c => g(c).borderTopWidth === '0px'),
+    hoyAlto: document.querySelector('.tn-hoy').getBoundingClientRect().height,
+    sin24: !document.querySelector('#tn-hoy .tn-24') && !document.querySelector('#tn-hoy .tn-man'),
+    otrasLineas: Math.round((otras.getBoundingClientRect().height - parseFloat(g(otras).paddingTop)) / lh),
+    fest: getComputedStyle(document.querySelector('#tn-g .tn-c.fest'), '::after').content !== 'none'
+  };
+});
+log(rd.fueraSolo && rd.fueraSinColor, '[J1] Días de otro mes: solo el número, sin color, sin turno y no se eligen', JSON.stringify(rd));
+log(rd.pastillas === 0 && rd.sinBorde, '[J2] Sin pastillas TER/2·1/DIS ni bordes en las celdas');
+log(rd.mk.T === 1 && rd.mk.S === 2 && rd.mk.D === 0, '[J3] La marca dibuja el turno: Tercero un tramo, Segundo – primero dos, Disponible ninguno', JSON.stringify(rd.mk));
+log(JSON.stringify(rd.ley) === '[1,2,0]', '[J4] La leyenda usa la MISMA marca que las celdas', JSON.stringify(rd.ley));
+log(rd.hoyAlto < 90 && rd.sin24, '[J5] La tarjeta de hoy es compacta: dos renglones, sin línea de 24 h ni «Mañana»', rd.hoyAlto);
+log(rd.otrasLineas === 1, '[J6] Las otras secciones caben en una sola línea', rd.otrasLineas);
+log(rd.fest, '[J7] El festivo se marca en la celda');
+/* Registro de servicio. */
+await page.evaluate(() => tnServicioForm('2026-10-11')); await page.waitForTimeout(150);
+await page.click('#tn-sv-ops [data-k="especial"]');
+const svDet = await page.evaluate(() => ({ v: !document.getElementById('tn-sv-det').hidden, l: document.getElementById('tn-sv-det-l').textContent }));
+await page.fill('#tn-sv-detalle', 'Escolta de valores');
+await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
+await page.evaluate(() => tnServicioForm('2026-10-14')); await page.waitForTimeout(150);
+await page.click('#tn-sv-ops [data-k="centinela"]');
+await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
+const sv = await page.evaluate(() => {
+  const t = tnCfg(), r = tnResumenMes(2026, 9, 2, t);
+  return { n: t.servicios.length, a: tnServicio('2026-10-11', t), reg: r.reg, srv: r.srv, dia: document.querySelector('.tn-srv b') && document.querySelector('.tn-srv b').textContent,
+    lista: [...document.querySelectorAll('.tn-reg-i')].map(e => e.innerText.replace(/\s+/g, ' ').trim()),
+    texto: tnTextoMes(2026, 9, 2, t).split('\n').filter(l => /Centinela|Otro servicio/.test(l)).length };
+});
+log(svDet.v && svDet.l === 'Cuál', '[J8] «Otro servicio especial» pide cuál', JSON.stringify(svDet));
+log(sv.n === 2 && sv.a.tipo === 'especial' && sv.a.detalle === 'Escolta de valores' && sv.dia === 'Centinela',
+  '[J9] Registrar lo que se hizo un día lo guarda y el día elegido lo enseña', JSON.stringify(sv));
+log(sv.reg === 2 && sv.srv.centinela === 1 && sv.lista.length === 2 && sv.texto === 2, '[J10] El mes en cifras y el mes por chat cuentan lo registrado', JSON.stringify(sv));
+await page.evaluate(() => tnServicioForm('2026-10-14')); await page.waitForTimeout(150);
+await page.click('#tn-sv-ops [data-k="noprestado"]'); await page.fill('#tn-sv-detalle', 'Citado a juicio');
+await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
+const sv2 = await page.evaluate(() => ({ n: tnCfg().servicios.length, t: tnServicio('2026-10-14').tipo, no: !!document.querySelector('.tn-srv-ic.no') }));
+log(sv2.n === 2 && sv2.t === 'noprestado' && sv2.no, '[J11] Editar un día lo reemplaza (uno por día) y «No lo presté» se marca distinto', JSON.stringify(sv2));
+await page.evaluate(() => tnServicioQuitar('2026-10-14')); await page.evaluate(() => tnServicioQuitar('2026-10-11')); await page.waitForTimeout(300);
+log(await page.evaluate(() => tnCfg().servicios.length === 0 && !document.querySelector('.tn-srv')), '[J12] Quitar el registro lo borra');
+await page.evaluate(() => tnIrHoy()); await page.waitForTimeout(100);
 
 /* ═══ E · ajustar el ciclo y las horas ═══ */
 await page.evaluate(() => tnAjustar()); await page.waitForTimeout(150);
@@ -189,7 +243,7 @@ await page.click('#tn-nv-tipos [data-k="vacaciones"]');
 await page.fill('#tn-nv-hasta', fin);
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
 const nv = await page.evaluate(h => ({ n: tnCfg().novedades.length, cel: document.querySelector(`#tn-g .tn-c[data-iso="${h}"]`).className,
-  k: document.querySelector(`#tn-g .tn-c[data-iso="${h}"] .tn-c-k`).textContent, hoyN: document.querySelector('.tn-hoy-n').textContent,
+  k: document.querySelector(`#tn-g .tn-c[data-iso="${h}"] .tn-cap`).textContent, hoyN: document.querySelector('.tn-hoy-n b').textContent,
   bl: tnBloques(h, 2, tnCfg()).length }), hoy);
 log(nv.n === 1 && /tn-k-lib/.test(nv.cel) && nv.k === 'VAC' && nv.hoyN === 'Vacaciones' && nv.bl === 0,
   '[F1] Unas vacaciones se pintan encima del ciclo y ese día no hay servicio', JSON.stringify(nv));
@@ -288,22 +342,33 @@ for (const tema of ['light', 'dark']) {
   await page.waitForTimeout(300);
   const c = await page.evaluate(() => {
     const g = e => getComputedStyle(e), cel = document.querySelector('#tn-g .tn-c:not(.fuera):not(.hoy):not(.sel)');
-    return ['dis', 'ter', 'sp'].map(k => {
-      const el = document.querySelector('#tn-g .tn-c.tn-k-' + k + ':not(.fuera):not(.sel) .tn-c-k'), cc = el.closest('.tn-c');
-      return { k, txt: g(el).color, tint: g(el).backgroundColor, cel: g(cc).backgroundColor,
-        card: g(document.querySelector('.tn-mes')).backgroundColor };
-    }).concat([{ k: 'sub', txt: g(document.querySelector('.tn-hoy-h')).color, tint: 'rgba(0,0,0,0)', cel: g(document.querySelector('.tn-hoy')).backgroundColor, card: g(document.querySelector('.tn-hoy')).backgroundColor }]);
+    /* El número del día sobre el tinte de su turno (texto, 4,5:1), la marca del
+       turno sobre ese tinte (gráfico, 3:1) y la abreviatura de una novedad. */
+    const card = g(document.querySelector('.tn-mes')).backgroundColor;
+    const num = ['dis', 'ter', 'sp'].map(k => {
+      const cc = document.querySelector('#tn-g .tn-c.tn-k-' + k + ':not(.hoy):not(.sel)');
+      return { k, txt: g(cc.querySelector('.tn-c-n')).color, tint: 'rgba(0,0,0,0)', cel: g(cc).backgroundColor, card, min: 4.5 };
+    });
+    const mk = ['ter', 'sp'].map(k => {
+      const cc = document.querySelector('#tn-g .tn-c.tn-k-' + k + ':not(.hoy):not(.sel)');
+      return { k: k + '-marca', txt: g(cc.querySelector('.tn-mk i')).backgroundColor, tint: 'rgba(0,0,0,0)', cel: g(cc).backgroundColor, card, min: 3 };
+    });
+    const hoyE = document.querySelector('.tn-hoy .tn-est');
+    return num.concat(mk).concat([{ k: 'sub', txt: g(hoyE).color, tint: 'rgba(0,0,0,0)', cel: g(document.querySelector('.tn-hoy')).backgroundColor, card: g(document.querySelector('.tn-hoy')).backgroundColor, min: 4.5 }]);
   });
-  const crs = c.map(x => { const fondo = sobre(x.tint, sobre(x.cel, x.card)); return +cr(x.txt, fondo).toFixed(2); });
-  log(crs.every(x => x >= 4.5), `[I3] Contraste AA de los tres turnos sobre su celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
+  /* La abreviatura de un cambio de turno va en el color del turno: se mide aparte. */
+  const cap = await page.evaluate(() => ['ter', 'sp', 'dis'].map(k => { const d = document.createElement('div'); d.className = 'tn-c tn-k-' + k; d.innerHTML = '<span class="tn-cap">CAM</span>';
+    document.getElementById('tn-g').appendChild(d); const g = getComputedStyle; const r = { k: k + '-cap', txt: g(d.firstChild).color, tint: 'rgba(0,0,0,0)', cel: g(d).backgroundColor, card: g(document.querySelector('.tn-mes')).backgroundColor, min: 4.5 }; d.remove(); return r; }));
+  const crs = c.concat(cap).map(x => { const fondo = sobre(x.tint, sobre(x.cel, x.card)); return { k: x.k, v: +cr(x.txt, fondo).toFixed(2), min: x.min }; });
+  log(crs.every(x => x.v >= x.min), `[I3] Contraste del número, la marca y la abreviatura sobre la celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
   await ctx.close();
 }
 ({ ctx, page } = await abrir(360, 740, 'light'));
 await page.evaluate(async () => { await tnGuardar({ seccion: 3 }); go('turnos'); }); await page.waitForTimeout(300);
 const sx = await page.evaluate(() => ({ x: document.documentElement.scrollWidth - innerWidth,
   c: Math.min(...[...document.querySelectorAll('#tn-g .tn-c')].map(e => e.getBoundingClientRect().width)),
-  k: [...document.querySelectorAll('#tn-g .tn-c-k')].every(e => e.scrollWidth <= e.clientWidth + 1) }));
-log(sx.x <= 0 && sx.c >= 40 && sx.k, '[I4] A 360 px: sin desborde, celdas de más de 40 px y el código entero', JSON.stringify(sx));
+  k: [...document.querySelectorAll('#tn-g .tn-mk')].every(e => e.getBoundingClientRect().width <= e.closest('.tn-c').getBoundingClientRect().width - 6) }));
+log(sx.x <= 0 && sx.c >= 40 && sx.k, '[I4] A 360 px: sin desborde, celdas de más de 40 px y la marca dentro de la celda', JSON.stringify(sx));
 await ctx.close();
 ({ ctx, page } = await abrir(384, 800, 'light', { timezoneId: 'Asia/Tokyo' }));
 await page.clock.setFixedTime(new Date('2026-10-29T22:30:00-05:00'));   // 12:30 del 30 en Tokio
