@@ -8680,3 +8680,29 @@ el ciclo **se puede calibrar** y **no se reinicia** en 2027; **franja «Mi turno
 - `verify_inicio.mjs` adaptado sin bajar su cuenta (45): siete módulos, cuatro grupos y «volver»
   también en Turnos.
 - Anti-caché `?v=162` / `cache-v162`, `_BUILD=162`. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: rediseño del calendario y registro del servicio (2026-10-29, build 163)
+Siete observaciones del usuario sobre tres pantallazos de Turnos, más el encargo de rediseñar el
+calendario. Verificado con `verify_turnos.mjs` (**61 checks**, antes 49) y mirando la pantalla en
+los dos temas, en teléfono y escritorio. Ni el ciclo, ni las fechas, ni los festivos, ni las
+novedades, ni la navegación entre meses cambiaron.
+- **Sección en lista desplegable** (`#tn-sec-sel`, `.fs`). Sin sección, nace con «Elige tu sección».
+- **Hoy en dos renglones** («Hoy · Segundo – primero» + estado). Fuera la línea de 24 h, la
+  etiqueta «Tu turno» y «Mañana»: el turno siguiente se sabe de memoria y lo dice el mes.
+  `tn24Html` y su CSS se quedan: los usa la franja del Inicio.
+- **«Próximos días» retirado** (`tnPintarSemana`, `#tn-sem`, `.tn-sd*`): repetía el mes.
+- **El calendario**: sin pastillas TER/2·1/DIS ni bordes. Cada día lleva DOS señales: el **tinte**
+  de la celda (tokens sólidos `--tn-*-cel` por tema, `--tcel`) y la **marca** (`tnMarcaHtml`, `.tn-mk`):
+  el turno dibujado sobre las 24 h del día (Tercero un tramo al centro, Segundo – primero mañana y
+  noche hasta las 24:00, Disponible vacía). ⚠️ La forma no depende del color: se lee con daltonismo.
+  Con novedad, en lugar de la marca va su abreviatura (`.tn-cap`: VAC, PER, CAM…). Hoy = número en
+  círculo de acento; elegido = anillo de acento; festivo = un punto en la esquina. La leyenda usa la
+  MISMA marca. Días de otro mes: solo el número apagado, en un `<span>` que no se elige.
+- **Las otras secciones en una línea** («Otras: ● 1.ª Disponible ● 3.ª Tercero»).
+- **Registrar servicio** (`TN_SRV`, `tnServicioForm`/`tnServicioGuardar`/`tnServicioQuitar`,
+  `tnServicio`): uno por día en `cfg.turnos.servicios` (lista con `id`, la nube la funde) — turno
+  cumplido · en otra jurisdicción (dónde) · no lo presté (motivo) · comandante de guardia ·
+  centinela · custodio · otro servicio especial (cuál). No cambia el ciclo ni las horas. Se ve en el
+  día elegido, se cuenta en «el mes en cifras» (cuarta cifra + «Lo que registraste») y sale en el
+  mes por chat.
+- Anti-caché `?v=163` / `cache-v163`, `_BUILD=163`. Para la app de Play hace falta un `.aab` nuevo.
