@@ -8533,3 +8533,24 @@ en **los nueve formularios** que piden dirección. Rama `direccion-modal`. Verif
   del campo), `verify_jerarquia` (la relación dirección → atributos se mide en la ventana) y
   `verify_mejora7` ([A6]/[A8h] leen el id base `aj-dir`).
 - Anti-caché `?v=159` / `cache-v159`, `_BUILD=159`. Para la app de Play hace falta un `.aab` nuevo.
+
+## El chulo del logo, dentro de la F (2026-10-29, build 160)
+Reportado con un pantallazo del lanzador de Android: el chulo, abajo a la derecha y lejos de la F,
+quedaba pegado al borde del ícono. Decisión del usuario: **el chulo va en el hueco que deja la F
+bajo su brazo del medio**, apoyado en la línea de abajo de la F. Solo cambió `scripts/gen-icons.mjs`
+(paso 4b) y lo que genera; la imagen fuente `marca/logo-fuente.jpg` no se tocó.
+- El sprite se parte en dos piezas por **componentes conexos** del alfa (sombras incluidas): la que
+  llega más abajo a la derecha es el chulo. El hueco se **mide** (borde derecho del asta, borde
+  inferior del brazo del medio, base de la F); el chulo se escala lo justo para caber con un margen
+  del 6 % del ancho de la F (salió 0,97) y el conjunto se **centra** en la baldosa. Aborta si no
+  encuentra exactamente dos piezas.
+- ⚠️ **Zona segura del ícono adaptativo corregida**: Android solo GARANTIZA el círculo de **66 de sus
+  108 dp** (156,4 px de 256); 72/108 es lo que se VE. El guard medía contra 170,7 y por eso el chulo
+  rozaba la máscara. Ahora el dibujo llega a 140 px (aire hasta el borde) y el guard aborta por
+  encima de 156,4.
+- `node scripts/gen-icons.mjs --preview <carpeta>` escribe los PNG en esa carpeta sin tocar el
+  proyecto ni el envoltorio (útil para mirar antes de aplicar).
+- Ícono a escala 0,3353 en web/maskable/ficha (= baldosa entera, ya no hace falta encoger) y 0,2599
+  en el adaptativo. Gráfico de la ficha regenerado. `.aab` **versionCode 7** (7,50 MB, `jar verified.`,
+  build 160 dentro, ícono nuevo comprobado extrayéndolo del paquete).
+- En verde: tema 51 · csp 11 · expediente 13. Anti-caché `?v=160` / `cache-v160`, `_BUILD=160`.
