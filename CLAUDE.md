@@ -8774,6 +8774,9 @@ las pantallas en los dos temas, en teléfono y escritorio. Publicado como **buil
   no ofrece ajustar el ciclo.
 - **11 · Mes y año**: el título del mes es un botón (`#tn-mtb`) que abre «Ir a un mes»
   (`tnMesPicker`): año con flechas y los 12 meses.
+- ⚠️ **SUSTITUIDO en el build 174** (ver «Turnos: consultar otra sección…» al final): elegir otra
+  sección en el calendario ya NO pregunta ni guarda nada, el calendario no usa el historial, y el
+  historial se corrige en las estadísticas. Lo que sigue es la historia del build 167.
 - **Historial de sección** (`cfg.turnos.historial = [{id, desde, seccion}]`, `desde` vacío = desde
   siempre; `tnHistNorm`, `tnSeccionEn`). Cada día se mide con la sección que el funcionario tenía ese
   día: el calendario de antes de un traslado no cambia. Elegir otra sección pregunta **desde cuándo**
@@ -8794,6 +8797,9 @@ las pantallas en los dos temas, en teléfono y escritorio. Publicado como **buil
 - Anti-caché `?v=167` / `cache-v167`, `_BUILD=167`. Para la app de Play hace falta un `.aab` nuevo.
 
 ## Turnos: estadísticas del año rediseñadas (2026-10-29, build 169)
+⚠️ **SUSTITUIDA en el build 174**: la ventana se retiró entera; las estadísticas son una pantalla
+propia guiada por las de Capturas, y el 3.º y el 2.º–1.º cambiaron de color a pedido del usuario. Ver
+«Turnos: consultar otra sección…» al final.
 El usuario rechazó la ventana «Mis turnos» del build 167 (saturada, barras que contradecían las
 cifras, rayados, colores marrón/rojo poco distinguibles, notas de relleno) y pidió verla **por
 año, por mes, por día y por hora**. Verificado con `verify_turnos.mjs` (**82 checks**, antes 79;
@@ -8802,7 +8808,8 @@ M8 rehecho, M14-M16 nuevos) y mirando la ventana en los dos temas.
   todo el módulo a azul profundo / turquesa / gris (lo pedía su propio plan de mejora); al verla,
   el usuario pidió **devolver los colores de antes** y conservar todo lo demás. Build 171: los
   tokens `--tn-*` y `TN_EMO` son otra vez, byte a byte, los del build 168. No volver a cambiarlos
-  sin que lo pida.
+  sin que lo pida. **(2026-10-30, build 174) Lo pidió**: el 3.º y el 2.º–1.º «tenían cierto tono
+  parecido»; pasan a amarillo y rojo y el verde de Disponible se queda.
 - **AÑO**: las horas de servicio como cifra principal y los turnos debajo; la barra reparte las
   **HORAS** (un 2.º–1.º pesa el doble que un 3.º), tres tarjetas en una fila (2.º–1.º · 3.º ·
   Disp.) con turnos **y** horas, y el promedio por día, semana y mes. «Turno en curso incluido»
@@ -8834,3 +8841,72 @@ mirando el panel en los dos temas.
 - `verify_turnos` [A5]/[A6] miden ahora que el ciclo es fijo; [E1]/[E4], que el panel no trae el
   ciclo y que guardar no lo mueve.
 - Anti-caché `?v=172` / `cache-v172`, `_BUILD=172`; `deploy:web` lo publicó como **build 173**. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: consultar otra sección, estadísticas como las de Capturas y el 3.º amarillo (2026-10-30, build 174)
+Cuatro observaciones del usuario sobre pantallazos del Inicio y de Turnos, más un boceto de las
+estadísticas. Rama `turnos-vista-stats`. Verificado con `verify_turnos.mjs` (**94 checks**, antes 82;
+secciones K y M rehechas, [I8] y [M22] nuevas) y mirando las pantallas en los dos temas, en teléfono y
+escritorio. ⚠️ **Comprobado que las comprobaciones nuevas muerden**: con la consulta de sección
+saboteada para que guarde, fallan [K2] [K4] [K5] [K6]; con los tintes viejos, falla [I8] (7,8 y 10,9).
+- **1 · Fuera «Mañana · pasado» de la franja del Inicio** (decisión del usuario: no aportaba). Se fue
+  su CSS (`.tn-fr-sig`, `.tn-fr-d*`); la franja cierra con la línea de 24 h y su propio margen.
+- **3 · El 3.º y el 2.º–1.º se distinguen**: medido, sus celdas se separaban solo **7,8 (claro) y 10,9
+  (oscuro) de ΔE2000** (naranja y coral, vecinos en el círculo de color). Ahora el 3.º es **amarillo**
+  y el 2.º–1.º **rojo/rosado**; el verde de Disponible se queda: verde · amarillo · rojo. Tintes:
+  claro `#DCF2E8 / #FDEEB5 / #FDE0E6`, oscuro `#1D4340 / #46422A / #4A2A38` → ningún par baja de
+  17,5 y 3.º/2.º–1.º quedan en 26–27. Texto `--tn-ter` `#735600`/`#F2CF55`, `--tn-sp`
+  `#B21E3F`/`#F7748A`. `TN_EMO.T` = 🟡.
+  - ⚠️ **Token nuevo `--tn-*-g` (variable `--tcg`) para los GRÁFICOS** (barras, puntos, línea de
+    24 h, franja de la tarjeta de hoy, barras apiladas). En oscuro es el mismo color del texto; en
+    claro NO puede serlo: un amarillo que se lea como texto sobre blanco (4,5:1) ya es oliva, y la
+    barra del 3.º salía oliva. Los gráficos solo piden 3:1: `#139A5E` · `#A88200` · `#D63A55`.
+    **Texto → `--tc`; relleno → `--tcg`.**
+  - [I3] (número, turno escrito y barras de festivo y novedad sobre cada tinte) sigue en verde, y la
+    nueva [I8] exige ΔE2000 ≥ 15 entre tintes (≥ 20 entre 3.º y 2.º–1.º) y rellenos ≥ 3:1.
+- **4 · Mirar otra sección es una CONSULTA** (decisión del usuario: «muchos van a cambiar de sección
+  solo por curiosidad o porque necesitan un dato de una fecha»). Tocar otra sección en la hoja **no
+  pregunta desde cuándo, no guarda nada y no toca las estadísticas** (`_tnSecV`, `tnSecVista(t)`,
+  `tnVerSeccion`). La tarjeta de hoy pasa a «Viendo la 3.ª sección · Hoy, X · la tuya es la 2.ª ·
+  **Volver a la mía**» y la barra dice «Viendo». Con otra sección se pinta solo su ciclo y los
+  festivos: las novedades y servicios son propios y no se muestran ni se ofrecen en la hoja del día.
+  Compartir (mes, día y `.ics`) manda lo que se ve. Entrar al módulo desde fuera vuelve a la propia.
+  - ⚠️ **El calendario ya NO usa el historial**: pinta el ciclo de la sección que se ve (con la
+    propia, el de la sección de HOY). El historial es de las estadísticas; si un día el funcionario
+    estaba en otra sección según sus cambios registrados, la hoja del día lo dice en una línea
+    (`.tn-ds-hs`), porque lo que registre ese día se cuenta con aquel turno.
+  - La hoja se titula «Ver una sección»; la propia dice «Tu sección · hoy, X»; la última fila,
+    «¿Cambiaste de sección? · Se corrige en tus estadísticas», lleva allá con el editor abierto
+    (`tnsCorregirSeccion`). Se retiraron `tnSeccionTocar`, `tnSeccionFecha`, `tnSeccionFechaGuardar`,
+    `tnCambiarSeccion`, `tnHistQuitar` y el aviso «Pasas a la X.ª el…» de la barra.
+- **4 · La pregunta se trasladó a las ESTADÍSTICAS**: arriba, un aviso «Se calculan suponiendo que
+  siempre has estado en la 2.ª sección. **Corregir**» (con cambios registrados: «Se calculan con tus
+  cambios: 2.ª al comienzo · 3.ª desde el 15 jul. **Editar**»). El editor «Tus secciones»
+  (`tnSecEditor`) es una fila por tramo: «Al comienzo [1.ª 2.ª 3.ª]» y cada cambio con su fecha y su
+  sección; «+ Agregar un cambio de sección»; se guarda todo junto (dos cambios con la misma fecha no
+  se guardan; un cambio a la sección que ya se tenía se descarta). La sección de hoy según ese
+  historial es «la tuya» en todo el módulo (`cfg.turnos.seccion` se sigue escribiendo).
+- **2 · Estadísticas: PANTALLA propia `#screen-tnstats`** (antes una ventana), guiada por las de
+  Capturas y por el boceto del usuario, con **las mismas piezas** (`.tabs`, `.stat-hero`,
+  `.stat-dist`, `.stat-rank-*`, `.stat-act-*`, `lcStatsRankingHtml`):
+  - **Períodos** del boceto: Todo el año · Últimos 3 meses · Este mes · Semana pasada (`TN_PER`,
+    `tnsPeriodo`). ⚠️ En un teléfono no caben en una fila (la cuarta quedaba cortada): van en **2×2**
+    y desde 560 px en una fila (`.tns-per`). «Últimos 3 meses» empieza el día 1 de hace dos meses,
+    como en Capturas; la semana pasada va de **lunes a domingo**.
+  - **TOTAL TURNOS REALIZADOS** como cifra principal (3.º + 2.º–1.º ya prestados), con las horas
+    debajo, «Incluye el turno en curso» si aplica, el reparto 2.º–1.º / 3.º (chips del calendario,
+    cuenta y %) y, en «Todo el año», el año con flechas (hasta 10 atrás).
+  - **Días especiales**: festivos y domingos trabajados. **Turnos en el tiempo**: barras APILADAS
+    (2.º–1.º abajo, 3.º arriba) por mes, semana o día; tocar una dice qué pasó (`tnsCap`).
+    **Novedades** y **Servicios que registraste** como rankings, solo si alguna vez se registró uno.
+  - Motor: `tnStatsRango(desde, tope, t, ahora)` generaliza el del año (misma regla: cuenta lo ya
+    empezado, ni novedades que libran ni «No lo presté»); `tnEstadisticas(y)` queda como envoltorio
+    con su reparto por mes (lo usan la fila de entrada y [M3]–[M7]). `novT` = días con cada novedad,
+    también las que no libran.
+  - Navegación: la fila «Mis turnos en 2026» de Turnos abre la pantalla; entrar desde Turnos empuja
+    historial, así **el botón atrás de Android y «Volver» regresan a Turnos** (`_tnsPushed`,
+    `tnsVolver`, rama en `popstate`). En escritorio queda marcado el ítem Turnos del panel.
+  - Se retiraron la ventana del build 169 (`tnStatsAbrir/Ano/Mes`, `tnStatsDiasHtml`,
+    `tnStats24Html`, `tnStatsHtml`, «Mes a mes», «Por hora del día») y su CSS (`#tn-st`, `.tn-st-*`,
+    `.tn-sd*`, `.tn-barra`, `.tn-hs*`).
+- En verde: turnos 94 · inicio 45 · tema 51 · DS 9/9 · CSP 11 · estadísticas 58 · jerarquía 67.
+- Anti-caché `?v=174` / `cache-v174`, `_BUILD=174`. Para la app de Play hace falta un `.aab` nuevo.
