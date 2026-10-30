@@ -120,43 +120,62 @@ log(/hasta las 06:00 · faltan 3 h 45 min \(turno de anoche\)/.test(frase), '[C2
 const hr = await page.evaluate(() => {
   const t = { seccion: 2, desfase: 0, horas: null, novedades: [] };
   return { S: tnBloques('2026-10-29', 2, t).reduce((a, b) => a + b.min, 0) / 60, T: tnBloques('2026-10-31', 2, t).reduce((a, b) => a + b.min, 0) / 60,
-    D: tnBloques('2026-10-30', 2, t).length, txt: tnHorasTxt('S', t), mes: tnResumenMes(2026, 9, 2, t) };
+    D: tnBloques('2026-10-30', 2, t).length, txt: tnHorasTxt('S', t),
+    /* Octubre visto desde el 31 a medianoche: el mes entero ya prestado. */
+    oct: tnEstadisticas(2026, Object.assign({ historial: [{ id: 'x', desde: '', seccion: 2 }], servicios: [] }, t), new Date(2026, 10, 1, 6, 0)).meses[9] };
 });
 log(hr.S === 16 && hr.T === 8 && hr.D === 0 && hr.txt === '06:00–13:00 y 21:00–06:00',
   '[C3] Horas del usuario: 2.º 06–13, 3.er 13–21, 4.º/1.er 21–06 (16 h, 8 h, 0 h)', JSON.stringify(hr));
-log(hr.mes.T === 11 && hr.mes.S === 10 && hr.mes.D === 10 && hr.mes.horas === 248 && hr.mes.fest === 0,
-  '[C4] Octubre en cifras: 11 · 10 · 10 días y 248 h de servicio', JSON.stringify(hr.mes));
+log(hr.oct.T === 11 && hr.oct.S === 10 && hr.oct.D === 10 && hr.oct.horas === 248,
+  '[C4] Octubre completo: 11 terceros · 10 segundos–primeros · 10 disponibles y 248 h', JSON.stringify(hr.oct));
 
 /* ═══ D · la pantalla ═══ */
 await page.evaluate(() => go('turnos')); await page.waitForTimeout(150);
 const vac = await page.evaluate(() => ({ e: !!document.querySelector('#tn-vacio .empty'), cols: getComputedStyle(document.getElementById('tn-cols')).display,
-  sh: getComputedStyle(document.getElementById('tn-share')).display, sub: document.getElementById('tn-sub').tagName,
-  subT: document.getElementById('tn-sub').textContent.trim(), b: [...document.querySelectorAll('#tn-vacio .tn-elige button')].map(o => o.textContent),
+  sh: getComputedStyle(document.getElementById('tn-share')).display, sub: !!document.getElementById('tn-sub'),
+  b: [...document.querySelectorAll('#tn-vacio .tn-elige button')].map(o => o.textContent),
   fila: !!document.querySelector('#screen-turnos select, #tn-sec-sel, .tn-sec') }));
-log(vac.e && vac.cols === 'none' && vac.sh === 'none' && vac.sub === 'BUTTON' && vac.subT === 'Elige tu sección' && !vac.fila &&
+log(vac.e && vac.cols === 'none' && vac.sh === 'none' && !vac.sub && !vac.fila &&
     JSON.stringify(vac.b) === JSON.stringify(['1.ª', '2.ª', '3.ª']),
-  '[D1] Sin sección: la pide con tres botones, sin fila de formulario, y no enseña un calendario a ciegas', JSON.stringify(vac));
+  '[D1] Sin sección: la pide con tres botones, sin fila de formulario ni subtítulo, y no enseña un calendario a ciegas', JSON.stringify(vac));
 await page.click('#tn-vacio .tn-elige button:nth-child(2)'); await page.waitForTimeout(400);
 const d2 = await page.evaluate(() => {
   const s = document.getElementById('screen-turnos'), r = s.getBoundingClientRect();
   return { enMain: !!s.closest('#main'), alto: r.height, sec: tnCfg().seccion,
     celdas: document.querySelectorAll('#tn-g .tn-c').length, hoy: document.querySelectorAll('#tn-g .tn-c.hoy').length,
-    sub: document.getElementById('tn-sub').textContent.trim(), sem: document.querySelectorAll('.tn-sd, #tn-sem').length,
+    bar: document.querySelector('#tn-bar-sec .tn-bar-v').textContent.trim(), sem: document.querySelectorAll('.tn-sd, #tn-sem').length,
     hoyN: document.querySelector('.tn-hoy-n b').textContent, diaFijo: !!document.getElementById('tn-dia') || !!document.querySelector('#screen-turnos .tn-dia') };
 });
-log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.sub === '2.ª sección', '[D2] Elegir la sección la guarda, la barra la dice y pinta la pantalla (vive en #main y tiene alto real)', JSON.stringify(d2));
+log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.bar === '2.ª sección', '[D2] Elegir la sección la guarda, la barra de la pantalla la dice y pinta el calendario', JSON.stringify(d2));
 log(d2.celdas % 7 === 0 && d2.celdas >= 28 && d2.hoy === 1 && d2.sem === 0 && !d2.diaFijo,
   '[D3] Mes en semanas completas, hoy marcado una vez, sin «Próximos días» ni tarjeta fija del día', JSON.stringify(d2));
-await page.click('#tn-sub'); await page.waitForTimeout(350);
+/* La barra: dos funciones independientes, entre «Hoy» y el mes. */
+const bar = await page.evaluate(() => {
+  const h = document.getElementById('tn-hoy').getBoundingClientRect(), b = document.getElementById('tn-bar').getBoundingClientRect(), m = document.getElementById('tn-mes').getBoundingClientRect();
+  const s = document.getElementById('tn-bar-sec').getBoundingClientRect(), c = document.getElementById('tn-bar-ciclo').getBoundingClientRect();
+  return { entre: b.top >= h.bottom && b.bottom <= m.top, lados: Math.abs(s.top - c.top) < 2 && c.left >= s.right - 1, alto: Math.min(s.height, c.height),
+    ls: [...document.querySelectorAll('#tn-bar .tn-bar-l')].map(e => e.textContent), ciclo: document.querySelector('#tn-bar-ciclo .tn-bar-v').textContent,
+    abajo: [...document.querySelectorAll('#screen-turnos .btn')].map(e => e.textContent.trim()).filter(t => /Compartir mis turnos|Ajustar el ciclo/.test(t)),
+    share: getComputedStyle(document.getElementById('tn-share')).display !== 'none' };
+});
+log(bar.entre && bar.lados && bar.alto >= 44 && JSON.stringify(bar.ls) === JSON.stringify(['Mi sección', 'Ciclo y horario']) && bar.ciclo === 'Predeterminado',
+  '[L1] Entre «Hoy» y el mes, una barra con dos mitades: «Mi sección» y «Ciclo y horario»', JSON.stringify(bar));
+log(!bar.abajo.length && bar.share, '[L2] Sin «Compartir mis turnos» ni «Ajustar el ciclo» al final (compartir sigue en la barra superior)', JSON.stringify(bar.abajo));
+await page.click('#tn-bar-sec'); await page.waitForTimeout(350);
 const ss = await page.evaluate(() => ({ on: document.getElementById('act-sheet').classList.contains('on'),
   ops: [...document.querySelectorAll('#act-items .tn-secc-op')].map(o => o.querySelector('.ti').textContent + '|' + o.querySelector('.de').textContent + '|' + o.classList.contains('on') + '|' + !!o.querySelector('.tn-secc-ok')),
   hoy: [1, 2, 3].map(s => TN_TURNOS[tnBase(tnHoy(), s, tnCfg())].n), aj: [...document.querySelectorAll('#act-items .sheet-item .ti')].some(e => e.textContent === 'Ajustar el ciclo') }));
-log(ss.on && ss.ops.length === 3 && ss.ops.every((o, i) => o.startsWith((i + 1) + '.ª sección|Hoy · ' + ss.hoy[i] + '|' + (i === 1) + '|' + (i === 1))) && ss.aj,
-  '[K1] El subtítulo de la barra abre la hoja de la sección: las tres con su turno de hoy, la elegida con chulo', JSON.stringify(ss));
+log(ss.on && ss.ops.length === 3 && ss.ops.every((o, i) => o.startsWith((i + 1) + '.ª sección|Hoy · ' + ss.hoy[i] + '|' + (i === 1) + '|' + (i === 1))) && !ss.aj,
+  '[K1] «Mi sección» abre la hoja de la sección: las tres con su turno de hoy, la elegida con chulo, sin el ajuste del ciclo', JSON.stringify(ss));
 await page.click('#act-items .tn-secc-op:nth-child(3)'); await page.waitForTimeout(400);
-const ss2 = await page.evaluate(() => ({ sec: tnCfg().seccion, sub: document.getElementById('tn-sub').textContent.trim(), on: document.getElementById('act-sheet').classList.contains('on') }));
+const desde = await page.evaluate(() => [...document.querySelectorAll('#act-items .sheet-item .ti')].map(e => e.textContent));
+await page.click('#act-items .sheet-item:nth-child(1)'); await page.waitForTimeout(400);
+const ss2 = await page.evaluate(() => ({ sec: tnCfg().seccion, h: tnCfg().historial.map(x => x.seccion + '@' + (x.desde || '-')), bar: document.querySelector('#tn-bar-sec .tn-bar-v').textContent.trim(),
+  on: document.getElementById('act-sheet').classList.contains('on'), ayer: tnTurno(tnMas(tnHoy(), -1), null).sec }));
 await page.evaluate(() => tnElegirSeccion(2)); await page.waitForTimeout(300);
-log(ss2.sec === 3 && ss2.sub === '3.ª sección' && !ss2.on, '[K2] Elegir otra sección desde la hoja la guarda, cierra la hoja y repinta', JSON.stringify(ss2));
+log(JSON.stringify(desde) === JSON.stringify(['Desde hoy', 'Desde mañana', 'Desde otra fecha', 'Siempre estuve en la 3.ª']) &&
+    ss2.sec === 3 && ss2.bar === '3.ª sección' && !ss2.on && ss2.ayer === 2 && ss2.h.length === 2,
+  '[K2] Otra sección pregunta desde cuándo; «Desde hoy» la guarda sin reescribir el pasado (ayer sigue en la 2.ª)', JSON.stringify({ desde, ss2 }));
 const hoyCel = await page.evaluate(() => { const h = tnHoy(); return { cel: document.querySelector('#tn-g .tn-c.hoy').dataset.t, ab: tnBase(h, 2, tnCfg()) }; });
 log(hoyCel.cel === hoyCel.ab, '[D4] La celda de hoy dice el turno que da el ciclo', JSON.stringify(hoyCel));
 const mv = await page.evaluate(() => { const a = _tnVer.m; tnMesMover(1); const b = _tnVer.m; tnMesMover(-2); const c = _tnVer.m; tnIrHoy(); return [a, b, c, _tnVer.m, !!document.querySelector('.tn-hoyb')]; });
@@ -204,8 +223,8 @@ log(rd.fueraSolo && rd.fueraSinColor, '[J1] Días de otro mes: solo el número, 
 log(rd.pastillas === 0 && rd.sinBorde, '[J2] Sin pastillas ni bordes en las celdas');
 log(rd.mk.ok && rd.mk.barras === 0 && JSON.stringify(rd.mk.ab) === JSON.stringify(['3.º', '2.º–1.º', 'Disp.']),
   '[J3] Cada día dice su turno escrito (3.º · 2.º–1.º · Disp.), sin la barrita', JSON.stringify(rd.mk));
-log(JSON.stringify(rd.ley) === JSON.stringify(['3.º Tercero', '2.º–1.º Segundo – primero', 'Disp. Disponible', 'Festivo', 'Permiso']),
-  '[J4] La leyenda: los tres turnos con su MISMA etiqueta y sin horas; a la derecha, festivo y la novedad por su nombre', JSON.stringify(rd.ley));
+log(JSON.stringify(rd.ley) === JSON.stringify(['3.º Tercero', '2.º–1.º Segundo – primero', 'Disp. Disponible', 'Festivo', 'Novedad: ninguna']),
+  '[J4] La leyenda: los tres turnos con su MISMA etiqueta; a la derecha, festivo y, sin novedades registradas, «Novedad: ninguna»', JSON.stringify(rd.ley));
 log(rd.hoyAlto < 90 && rd.sin24, '[J5] La tarjeta de hoy es compacta: dos renglones, sin línea de 24 h ni «Mañana»', rd.hoyAlto);
 log(rd.otrasLineas === 1, '[J6] Las otras secciones caben en una sola línea', rd.otrasLineas);
 log(rd.fest && rd.festLab, '[J7] El festivo es una barra roja arriba de la celda, y la celda sigue diciendo su turno', JSON.stringify(rd));
@@ -221,15 +240,14 @@ await page.click('#tn-sv-ops [data-k="centinela"]');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
 await page.evaluate(() => tnDiaSheet('2026-10-14')); await page.waitForTimeout(150);
 const sv = await page.evaluate(() => {
-  const t = tnCfg(), r = tnResumenMes(2026, 9, 2, t);
-  return { n: t.servicios.length, a: tnServicio('2026-10-11', t), reg: r.reg, srv: r.srv, dia: document.querySelector('.tn-srv b') && document.querySelector('.tn-srv b').textContent,
-    lista: [...document.querySelectorAll('.tn-reg-i')].map(e => e.innerText.replace(/\s+/g, ' ').trim()),
+  const t = tnCfg(), r = tnEstadisticas(2026, t, new Date(2026, 11, 31, 23, 0));
+  return { n: t.servicios.length, a: tnServicio('2026-10-11', t), reg: r.especiales, dia: document.querySelector('.tn-srv b') && document.querySelector('.tn-srv b').textContent,
     texto: tnTextoMes(2026, 9, 2, t).split('\n').filter(l => /Centinela|Otro servicio/.test(l)).length };
 });
 log(svDet.v && svDet.l === 'Cuál', '[J8] «Otro servicio especial» pide cuál', JSON.stringify(svDet));
 log(sv.n === 2 && sv.a.tipo === 'especial' && sv.a.detalle === 'Escolta de valores' && sv.dia === 'Centinela',
   '[J9] Registrar lo que se hizo un día lo guarda y el día elegido lo enseña', JSON.stringify(sv));
-log(sv.reg === 2 && sv.srv.centinela === 1 && sv.lista.length === 2 && sv.texto === 2, '[J10] El mes en cifras y el mes por chat cuentan lo registrado', JSON.stringify(sv));
+log(sv.reg === 2 && sv.texto === 2, '[J10] Las estadísticas del año y el mes por chat cuentan lo registrado', JSON.stringify(sv));
 await page.evaluate(() => tnServicioForm('2026-10-14')); await page.waitForTimeout(150);
 await page.click('#tn-sv-ops [data-k="noprestado"]'); await page.fill('#tn-sv-detalle', 'Citado a juicio');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
@@ -242,14 +260,14 @@ log(await page.evaluate(() => { tnDiaSheet('2026-10-14'); const r = tnCfg().serv
 await page.evaluate(() => tnIrHoy()); await page.waitForTimeout(100);
 
 /* ═══ E · ajustar el ciclo y las horas ═══ */
-await page.evaluate(() => tnAjustar()); await page.waitForTimeout(150);
+await page.click('#tn-bar-ciclo'); await page.waitForTimeout(250);
 const hoyBase = await page.evaluate(() => tnBase(tnHoy(), 2, tnCfg()));
 const otro = { T: 'D', S: 'T', D: 'S' }[hoyBase];
 await page.click(`#tn-cal [data-k="${otro}"]`);
 await page.fill('#tn-h-t3-a', '1400');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
-const aj = await page.evaluate(() => { const t = tnCfg(); return { base: tnBase(tnHoy(), 2, t), d: t.desfase, h: tnHoras(t).t3, sub: document.getElementById('tn-sub').textContent, abierto: document.getElementById('modal').classList.contains('open') }; });
-log(aj.base === otro && aj.d > 0 && /ajustado/.test(aj.sub) && !aj.abierto, '[E1] Calibrar desde el panel deja hoy en el turno elegido y lo dice', JSON.stringify(aj));
+const aj = await page.evaluate(() => { const t = tnCfg(); return { base: tnBase(tnHoy(), 2, t), d: t.desfase, h: tnHoras(t).t3, sub: document.querySelector('#tn-bar-ciclo .tn-bar-v').textContent, abierto: document.getElementById('modal').classList.contains('open') }; });
+log(aj.base === otro && aj.d > 0 && aj.sub === 'Ajustado' && !aj.abierto, '[E1] «Ciclo y horario» abre el ajuste; calibrar deja hoy en el turno elegido y la barra dice «Ajustado»', JSON.stringify(aj));
 log(aj.h[0] === '14:00' && aj.h[1] === '21:00', '[E2] La hora se escribe de corrido en 24 h («1400» → 14:00) y se guarda', aj.h);
 await page.evaluate(() => tnAjustar()); await page.waitForTimeout(120);
 await page.fill('#tn-h-t2-a', '25:00');
@@ -325,18 +343,106 @@ const sh = await page.evaluate(() => [...document.querySelectorAll('#act-items .
 log(JSON.stringify(sh) === JSON.stringify(['Enviar el mes', 'Copiar el mes', 'Agregar a mi calendario']), '[G5] La hoja de compartir ofrece mes por chat, copiar y calendario', sh);
 await page.evaluate(() => closeActionSheet());
 
+/* ═══ M · historial de sección, estadísticas del año y selector de año (build 167) ═══ */
+const hist = await page.evaluate(async () => {
+  const t0 = tnCfg();
+  await tnGuardar({ historial: [{ id: 'a', desde: '', seccion: 2 }, { id: 'b', desde: '2026-07-15', seccion: 3 }], novedades: [], servicios: [] });
+  const t = tnCfg();
+  return { sec: t.seccion, j14: tnTurno('2026-07-14', null, t).sec, j15: tnTurno('2026-07-15', null, t).sec,
+    b14: tnTurno('2026-07-14', null, t).base === tnBase('2026-07-14', 2, t), b15: tnTurno('2026-07-15', null, t).base === tnBase('2026-07-15', 3, t),
+    legado: tnCfg({ turnos: { seccion: 1 } }).historial.map(h => h.seccion + '@' + (h.desde || '-')).join(), ok0: t0.historial.length === 1 };
+});
+log(hist.sec === 3 && hist.j14 === 2 && hist.j15 === 3 && hist.b14 && hist.b15 && hist.legado === '1@-',
+  '[M1] Cada día usa la sección que tenías ese día; sin historial, la sección guardada vale desde siempre', JSON.stringify(hist));
+await page.evaluate(() => { _tnVer = { y: 2026, m: 6 }; tnPintarMes(); });
+const jul = await page.evaluate(() => ({ d14: document.querySelector('#tn-g .tn-c[data-iso="2026-07-14"]').dataset.t, e14: tnBase('2026-07-14', 2, tnCfg()),
+  d15: document.querySelector('#tn-g .tn-c[data-iso="2026-07-15"]').dataset.t, e15: tnBase('2026-07-15', 3, tnCfg()) }));
+log(jul.d14 === jul.e14 && jul.d15 === jul.e15, '[M2] El calendario pinta antes del traslado con la sección de entonces', JSON.stringify(jul));
+/* Oráculo independiente: se recorre el año con tnBase y la regla «cuenta lo ya empezado». */
+const stE = await page.evaluate(() => {
+  const t = tnCfg(), ahora = new Date(2026, 9, 29, 21, 27), r = tnEstadisticas(2026, t, ahora);
+  const ini = { T: '13:00', S: '06:00' }, o = { T: 0, S: 0, D: 0, h: 0 };
+  for (let iso = '2026-01-01'; iso <= '2026-10-29'; iso = tnMas(iso, 1)) {
+    const k = tnBase(iso, iso < '2026-07-15' ? 2 : 3, { desfase: 0 });
+    if (k === 'D') { o.D++; continue; }
+    const p = iso.split('-'), a = new Date(+p[0], +p[1] - 1, +p[2], +ini[k].slice(0, 2));
+    if (a <= ahora) { o[k]++; }
+  }
+  return { r: { T: r.T, S: r.S, D: r.D, horas: Math.round(r.horas * 10) / 10, sec: r.secciones.map(s => s.seccion + ':' + s.desde + '>' + s.hasta), curso: r.enCurso, oct: r.meses[9].dias, nov: r.meses[10].dias }, o };
+});
+log(stE.r.T === stE.o.T && stE.r.S === stE.o.S && stE.r.D === stE.o.D, '[M3] Turnos del 1 de enero a hoy: coinciden con un recuento independiente, con el traslado del 15 de julio', JSON.stringify(stE));
+log(stE.r.oct === 29 && stE.r.nov === 0 && JSON.stringify(stE.r.sec) === JSON.stringify(['2:2026-01-01>2026-07-14', '3:2026-07-15>2026-10-29']),
+  '[M4] El mes actual llega solo hasta hoy, los meses futuros no cuentan, y cada tramo dice su sección', JSON.stringify(stE.r));
+const hoyx = await page.evaluate(() => {
+  const t = { historial: [{ id: 'x', desde: '', seccion: 2 }], desfase: 0, horas: null, novedades: [], servicios: [] };   /* el 29/10 la 2.ª está en Segundo – primero */
+  const a = tnEstadisticas(2026, t, new Date(2026, 9, 29, 5, 0)), b = tnEstadisticas(2026, t, new Date(2026, 9, 29, 10, 0)), c = tnEstadisticas(2026, t, new Date(2026, 9, 29, 22, 0));
+  return { antes: a.S, despues: b.S, hb: Math.round((b.horas - a.horas) * 10) / 10, hc: Math.round((c.horas - a.horas) * 10) / 10, curso: b.enCurso && b.enCurso.iso };
+});
+log(hoyx.despues === hoyx.antes + 1 && hoyx.hb === 4 && hoyx.hc === 8 && hoyx.curso === '2026-10-29',
+  '[M5] El turno de hoy cuenta desde que empieza, con las horas hasta ahora (a las 10:00 lleva 4 h; a las 22:00, 8 h)', JSON.stringify(hoyx));
+const exc = await page.evaluate(() => {
+  const base = { historial: [{ id: 'x', desde: '', seccion: 2 }], desfase: 0, horas: null, novedades: [], servicios: [] }, A = new Date(2026, 9, 31, 23, 0);
+  const r0 = tnEstadisticas(2026, base, A);
+  const r1 = tnEstadisticas(2026, Object.assign({}, base, { novedades: [{ id: 'n', tipo: 'vacaciones', desde: '2026-10-01', hasta: '2026-10-02' }],
+    servicios: [{ id: 's1', fecha: '2026-10-04', tipo: 'noprestado' }, { id: 's2', fecha: '2026-10-03', tipo: 'guardia' }] }), A);
+  return { dT: r0.T - r1.T, dS: r0.S - r1.S, nov: r1.nov.vacaciones, noP: r1.noPrest, apoyo: r1.apoyo, dD: r0.D - r1.D,
+    y25: (() => { const r = tnEstadisticas(2025, base, A); return r.T + r.S + r.D + '|' + r.hasta; })(), y27: tnEstadisticas(2027, base, A).futuro };
+});
+/* 1/10 Tercero y 2/10 Segundo – primero de vacaciones; 4/10 Tercero no prestado; 3/10 Disponible con guardia. */
+log(exc.dT === 2 && exc.dS === 1 && exc.nov === 2 && exc.noP === 1 && exc.apoyo === 1 && exc.dD === 0,
+  '[M6] Ni las vacaciones ni un «No lo presté» cuentan; un disponible con servicio registrado se cuenta como apoyo', JSON.stringify(exc));
+log(exc.y25 === '365|2025-12-31' && exc.y27 === true, '[M7] Un año pasado cuenta entero (365 días); uno que no ha empezado, nada', JSON.stringify(exc));
+await page.evaluate(() => tnIrHoy()); await page.waitForTimeout(150);
+await page.click('#tn-stc'); await page.waitForTimeout(350);
+const stp = await page.evaluate(() => ({ open: document.getElementById('modal').classList.contains('open'), t: document.querySelector('#modal .lp-top h2').textContent,
+  y: document.querySelector('.tn-st-yv b').textContent, sig: document.querySelector('.tn-st-y .tn-nav:last-child').disabled,
+  hip: !!document.querySelector('.tn-st-hip .tn-st-tag') && /Hipotético/.test(document.querySelector('.tn-st-hip').innerText),
+  filas: [...document.querySelectorAll('.tn-st-f')].map(f => f.querySelector('.tn-st-fm').innerText.replace(/\s+/g, ' ').trim()),
+  m: tnFecha(tnHoy()).getMonth(), sec: document.querySelectorAll('.tn-st-sec .tn-hs-i').length,
+  big: document.querySelector('.tn-st-big b').textContent, esp: tnEstadisticas(2026).T + tnEstadisticas(2026).S }));
+log(stp.open && stp.t === 'Mis turnos' && stp.y === String(new Date().getFullYear()) && stp.sig && stp.hip && stp.big === String(stp.esp),
+  '[M8] «Mis turnos en …» abre la ventana: el año, lo prestado y los disponibles aparte como hipotéticos', JSON.stringify(stp));
+log(stp.filas.length === stp.m + 1 && /hasta hoy$/.test(stp.filas[stp.filas.length - 1]) && stp.sec === 2,
+  '[M9] Mes a mes hasta el mes actual («hasta hoy») y el tramo de cada sección', JSON.stringify(stp.filas));
+await page.click('.tn-st-y .tn-nav:first-child'); await page.waitForTimeout(200);
+const y0 = await page.evaluate(() => ({ y: document.querySelector('.tn-st-yv b').textContent, s: document.querySelector('.tn-st-yv span').textContent, filas: document.querySelectorAll('.tn-st-f').length }));
+await page.evaluate(() => closeModal()); await page.waitForTimeout(200);
+log(y0.y === String(new Date().getFullYear() - 1) && y0.s === 'Año completo' && y0.filas === 12, '[M10] El año anterior se ve completo, sus 12 meses', JSON.stringify(y0));
+await page.click('#tn-mtb'); await page.waitForTimeout(350);
+await page.click('#tn-pk .tn-pk-y .tn-nav:last-child'); await page.waitForTimeout(100);
+await page.click('#tn-pk .tn-pk-m[data-m="0"]'); await page.waitForTimeout(300);
+const pk = await page.evaluate(() => ({ v: _tnVer, t: document.getElementById('tn-mtb').innerText.replace(/\s+/g, ' ').trim(), on: document.getElementById('act-sheet').classList.contains('on'),
+  dia: document.querySelector('#tn-g .tn-c[data-iso="' + (tnFecha(tnHoy()).getFullYear() + 1) + '-01-01"]') !== null }));
+log(pk.v.y === new Date().getFullYear() + 1 && pk.v.m === 0 && /^Enero \d{4}$/.test(pk.t) && !pk.on && pk.dia,
+  '[M11] El título del mes abre «Ir a un mes»: se elige el año y el mes (enero del año siguiente)', JSON.stringify(pk));
+await page.evaluate(() => tnIrHoy());
+/* Un traslado a futuro: hoy sigue la sección de antes y la barra lo anuncia. */
+await page.evaluate(async () => { await tnElegirSeccion(2); await tnCambiarSeccion(3, tnMas(tnHoy(), 1)); });
+await page.waitForTimeout(250);
+const fut = await page.evaluate(() => ({ sec: tnCfg().seccion, n: (document.querySelector('#tn-bar-sec .tn-bar-n') || {}).textContent || '', man: tnTurno(tnMas(tnHoy(), 1), null).sec }));
+log(fut.sec === 2 && fut.man === 3 && /^Pasas a la 3\.ª el /.test(fut.n), '[M12] Un traslado desde mañana: hoy sigue la 2.ª y la barra lo anuncia', JSON.stringify(fut));
+await page.evaluate(() => tnSeccionSheet()); await page.waitForTimeout(300);
+const hs = await page.evaluate(() => [...document.querySelectorAll('#act-items .tn-hs-i')].map(e => e.innerText.replace(/\s+/g, ' ').trim()));
+await page.click('#act-items .tn-hs-i .tn-ds-b'); await page.waitForTimeout(350);
+const hs2 = await page.evaluate(() => tnCfg().historial.length);
+log(hs.length === 2 && /^2\.ª Desde el comienzo hasta el /.test(hs[0]) && /^3\.ª Desde el /.test(hs[1]) && hs2 === 1,
+  '[M13] La hoja de la sección lista los cambios y deja quitar uno', JSON.stringify({ hs, hs2 }));
+await page.evaluate(async () => { await tnElegirSeccion(2); });
+
 /* ═══ H · el Inicio ═══ */
 await page.evaluate(() => lcVolverInicio()); await page.waitForTimeout(250);
 const ini = await page.evaluate(() => {
-  const t = document.querySelector('.mod-tile[data-mod="turnos"]'), g = t.closest('.mod-g'), fr = document.querySelector('#ini-turno .tn-fr');
-  const r = t.getBoundingClientRect(), gr = g.querySelector('.mod-grid').getBoundingClientRect();
-  return { sec: g.querySelector('.mod-sec').textContent, ancho: Math.round(r.width) === Math.round(gr.width), mini: t.querySelectorAll('.tn-mini>span').length,
-    dato: t.querySelector('.mod-d').textContent, fr: !!fr && fr.getBoundingClientRect().height > 80,
+  const fr = document.querySelector('#ini-turno .tn-fr'), tr = fr && fr.querySelector('.tn-24-t'), n = fr && fr.querySelector('.tn-24-n');
+  return { tile: !!document.querySelector('.mod-tile[data-mod="turnos"]'), fr: !!fr && fr.getBoundingClientRect().height > 80,
+    ver: fr && fr.querySelector('.tn-fr-ver').textContent.trim(), k: fr && fr.querySelector('.tn-fr-k').textContent,
+    tr: tr && tr.getBoundingClientRect().height, dot: n ? [n.getBoundingClientRect().width, n.getBoundingClientRect().height] : null,
+    ls: fr ? [...fr.querySelectorAll('.tn-24-ls span')].map(e => e.textContent).join(' ') : '', sig: fr ? fr.querySelectorAll('.tn-fr-sig .tn-fr-d').length : 0,
     orden: [...document.querySelectorAll('#ini-mods .mod-sec')].map(e => e.textContent) };
 });
-log(ini.sec === 'Servicio' && ini.ancho && ini.mini === 7, '[H1] Mosaico Turnos en «Servicio», a lo ancho, con la semana en miniatura', JSON.stringify(ini));
-log(/^2\.ª sección · /.test(ini.dato) && ini.fr, '[H2] Dato vivo del mosaico y franja «Mi turno» arriba del Inicio', JSON.stringify(ini));
-log(JSON.stringify(ini.orden) === JSON.stringify(['Operación', 'Gestión', 'Servicio', 'Mi cuenta']), '[H3] Grupos: Operación · Gestión · Servicio · Mi cuenta', ini.orden);
+log(!ini.tile && JSON.stringify(ini.orden) === JSON.stringify(['Operación', 'Gestión', 'Mi cuenta']), '[H1] Sin mosaico Turnos: la franja es su puerta (grupos Operación · Gestión · Mi cuenta)', JSON.stringify(ini));
+log(ini.fr && ini.ver === 'Ver calendario' && /^Hoy · 2\.ª sección$/.test(ini.k) && ini.sig === 2, '[H2] La franja dice de dónde sale, invita a «Ver calendario» y trae mañana y pasado', JSON.stringify(ini));
+log(ini.tr <= 6 && ini.ls === '00 06 12 18 24' && (!ini.dot || (ini.dot[0] === ini.dot[1] && ini.dot[0] <= 14)),
+  '[H3] La línea de 24 h es fina (≤ 6 px), con las horas debajo y la hora actual como un punto', JSON.stringify(ini));
 await page.click('#ini-turno .tn-fr'); await page.waitForTimeout(200);
 log(await page.evaluate(() => _lcPantallaActual() === 'turnos'), '[H4] Tocar la franja abre Turnos');
 await page.click('#screen-turnos .topbar-back'); await page.waitForTimeout(300);

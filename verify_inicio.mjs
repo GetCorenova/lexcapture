@@ -1,5 +1,5 @@
 // Verificación del Inicio por módulos (2026-10-29, build 161).
-// La app abre en un lanzador de módulos (siete desde el build 162, con Turnos) con dato vivo, en tres grupos de
+// La app abre en un lanzador de módulos (seis; Turnos entra por la franja «Mi turno» desde el build 167) con dato vivo, en tres grupos de
 // dos; la barra inferior lleva destinos globales (Inicio · Buscar · Nueva ·
 // Pendientes · Perfil). Se mide sobre la app real en un teléfono (384×800,
 // touch) y en escritorio (1440×900): arranque, orden, dato vivo, navegación y
@@ -50,11 +50,11 @@ const a = await page.evaluate(() => {
 });
 log(a.on === 'inicio' && a.hash === '#inicio', '[A1] La app arranca en Inicio, no en Capturas', JSON.stringify(a));
 log(a.enMain && a.alto > 400, '[A2] El Inicio se VE (vive en #main y tiene alto real)', a.alto);
-log(JSON.stringify(a.mods) === JSON.stringify(['capturas', 'personas', 'estadisticas', 'despachos', 'turnos', 'perfil', 'ajustes']),
-  '[A3] Siete módulos en el orden fijado (Turnos desde el build 162)', a.mods);
-log(JSON.stringify(a.secs) === JSON.stringify(['Operación', 'Gestión', 'Servicio', 'Mi cuenta']) &&
-    JSON.stringify(a.grupos) === JSON.stringify(['capturas+personas', 'estadisticas+despachos', 'turnos', 'perfil+ajustes']),
-  '[A4] Grupos: Operación · Gestión · Servicio (Turnos, a lo ancho) · Mi cuenta', JSON.stringify(a.grupos));
+log(JSON.stringify(a.mods) === JSON.stringify(['capturas', 'personas', 'estadisticas', 'despachos', 'perfil', 'ajustes']),
+  '[A3] Seis módulos en el orden fijado (Turnos no es mosaico: su puerta es la franja «Mi turno», build 167)', a.mods);
+log(JSON.stringify(a.secs) === JSON.stringify(['Operación', 'Gestión', 'Mi cuenta']) &&
+    JSON.stringify(a.grupos) === JSON.stringify(['capturas+personas', 'estadisticas+despachos', 'perfil+ajustes']),
+  '[A4] Grupos: Operación · Gestión · Mi cuenta, de a dos', JSON.stringify(a.grupos));
 const fr = await page.evaluate(() => [[0, 30], [1, 0], [11, 59], [12, 0], [17, 59], [18, 0], [23, 59]]
   .map(([h, m]) => lcSaludo(new Date(2026, 9, 29, h, m))));
 log(JSON.stringify(fr) === JSON.stringify(['Buenas noches', 'Buenos días', 'Buenos días', 'Buenas tardes', 'Buenas tardes', 'Buenas noches', 'Buenas noches']),
@@ -233,7 +233,7 @@ const pc = await page.evaluate(() => ({
   h1: document.querySelector('#screen-inicio h1').innerText.trim()
 }));
 log(pc.back && JSON.stringify(pc.sb) === JSON.stringify(['inicio', 'buscar', 'pendientes']), '[F3] Escritorio: el panel lateral manda (Inicio, Buscar y Pendientes arriba; sin «volver»)', JSON.stringify(pc));
-log(pc.xs === 4 && pc.h1 === 'Inicio', '[F4] Escritorio: los cuatro grupos lado a lado y el título dice «Inicio»', JSON.stringify(pc));
+log(pc.xs === 3 && pc.h1 === 'Inicio', '[F4] Escritorio: los tres grupos lado a lado y el título dice «Inicio»', JSON.stringify(pc));
 await ctx.close();
 log(!errs.length, '[F5] Consola limpia', errs.slice(0, 3));
 
