@@ -84,10 +84,21 @@ log(await page.$eval('#dos-actions', el => getComputedStyle(el).display) === 'fl
 await page.screenshot({ path: OUT('08_dossier_dark') });
 
 // 8. Despachos
-await page.evaluate(() => go('despachos'));
+/* ⚠️ La estrella de «Favoritos» se retiró el 2026-08-08: la sustituyó la marca
+   PREDETERMINADO, que además decide el NUNC. Se mide esa marca, y que los íconos
+   de la pantalla sigan siendo SVG y no emojis (Design System v2). */
+await page.evaluate(() => {
+  const d = lcDespGuardar({ clase: 'FISCALIA', nombre: 'Fiscalía URI de prueba', direccion: 'CL 1 # 2-3' });
+  lcDespMarcarDefecto(d.id);
+  go('despachos');
+});
 await page.waitForTimeout(300);
-const starSvg = await page.$('.desp-fav svg');
-log(starSvg !== null, 'Favorito con estrella SVG');
+const desp = await page.evaluate(() => {
+  const sc = document.getElementById('screen-despachos');
+  return { def: !!sc.querySelector('.desp-def'), svg: sc.querySelectorAll('svg').length,
+           emoji: /[★⭐\u{1F31F}]/u.test(sc.innerText) };
+});
+log(desp.def && desp.svg > 0 && !desp.emoji, 'Despacho predeterminado marcado, íconos SVG y sin emojis', JSON.stringify(desp));
 await page.screenshot({ path: OUT('09_despachos_dark') });
 
 // 9. (La pantalla Plantillas se retiró: ningún documento sale ya de un .docx

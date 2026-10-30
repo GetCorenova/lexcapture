@@ -203,15 +203,19 @@ console.log('\n── VI · La pantalla de Ajustes ──\n');
   const ui = await page.evaluate(() => ({
     sinLista: !document.getElementById('aj-con-list'),
     eco: (document.getElementById('aj-con-auto') || {}).textContent || '',
+    lista: getConocieronList(DB.getConfig()).join(' / '),
     v3: (document.getElementById('aj-verde3') || {}).value,
     d3: (document.getElementById('aj-diamante3') || {}).value,
     esTexto: !document.querySelector('#screen-ajustes select.aj-con-sel')
   }));
   log(ui.sinLista, 'No hay lista que diligenciar: los dos salen de Perfil', 'sin #aj-con-list');
-  log(/NELSON DAVID GOMEZ/.test(ui.eco) && /JUAN PEREZ/.test(ui.eco),
-    'La pantalla enseña quiénes son, resueltos, en vez de esconderlo', ui.eco.slice(0, 72));
-  log(/IT NELSON DAVID GOMEZ/.test(ui.eco),
-    '  …con el grado vivo del perfil, que es lo que se propondrá en la próxima captura');
+  /* ⚠️ Decisión del usuario (commit 21ae35b, 2026-09-01): Ajustes ya NO lista a
+     los funcionarios —eran datos abrumadores—, solo dice de dónde salen. Lo que
+     se sigue protegiendo es que se RESUELVEN, con el grado vivo del perfil. */
+  log(/Perfil/.test(ui.eco) && !/NELSON|JUAN/.test(ui.eco),
+    'Ajustes dice de dónde salen (Perfil) sin volver a listarlos', ui.eco.slice(0, 72));
+  log(/IT NELSON DAVID GOMEZ/.test(ui.lista) && /JUAN PEREZ/.test(ui.lista),
+    '  …y se resuelven con el grado vivo del perfil, que es lo que se propondrá en la próxima captura', ui.lista);
   log(ui.esTexto, 'VERDE 3 y DIAMANTE 3 son un campo de texto', '#aj-verde3 · #aj-diamante3');
   /* ⚠️ Sale 'IT': la referencia guardada por la versión anterior estaba VIVA y
      el perfil ascendió en la sección III. Es lo correcto — VERDE 3 es un dato de
