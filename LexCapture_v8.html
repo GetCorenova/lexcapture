@@ -2334,13 +2334,17 @@ body.cu-on{overflow:hidden}
 .tn-fr-chev{position:absolute;right:14px;top:50%;width:20px;height:20px;margin-top:-10px;color:var(--text-3)}
 .tn-fr-chev svg{width:20px;height:20px;stroke-width:2}
 
-/* La marca del turno: el día de 0 a 24 h y, encima, los tramos de servicio.
-   La misma pieza va en la celda, en la leyenda y en el día elegido. */
-.tn-mk{position:relative;display:block;width:30px;height:4px;border-radius:2px;overflow:hidden;flex:none}
-/* La pista (el día entero) va tenue: un Disponible no puede leerse como un tramo lleno. */
-.tn-mk::before{content:'';position:absolute;inset:0;background:var(--tcd);opacity:.45}
-.tn-mk i{position:absolute;top:0;bottom:0;border-radius:2px;background:var(--tc)}
-.tn-cap{display:block;font-size:10px;line-height:12px;font-weight:700;letter-spacing:.06em;color:var(--tc)}
+/* El turno ESCRITO: «3.º», «2.º–1.º», «Disp.». La misma pieza va en la celda,
+   en la leyenda y en el día elegido. Disponible pesa menos que un turno de
+   servicio: es el día que no se trabaja y no tiene por qué competir. */
+.tn-lb{display:block;max-width:100%;font-size:12px;line-height:14px;font-weight:700;color:var(--tc);
+  white-space:nowrap;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.tn-k-dis .tn-lb{font-weight:600}
+/* En la celda estrecha (teléfono de 360 px) «2.º–1.º» a 12 px roza el borde: baja un punto. */
+.tn-g .tn-c{container-type:inline-size}
+@container (max-width:44px){.tn-lb{font-size:11px}.tn-cap{font-size:10px;letter-spacing:.04em}}
+/* La sigla de una novedad, en versalitas: se distingue de un turno a primera vista. */
+.tn-cap{display:block;font-size:11px;line-height:14px;font-weight:700;letter-spacing:.06em;color:var(--tc)}
 .tn-k-lib .tn-cap{color:var(--text-2)}
 
 /* El mes. */
@@ -2361,7 +2365,7 @@ body.cu-on{overflow:hidden}
 .tn-wk{margin-bottom:6px}
 .tn-wk span{text-align:center;font-size:11px;line-height:16px;font-weight:600;letter-spacing:.04em;color:var(--text-3)}
 .tn-g{touch-action:pan-y}
-.tn-c{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+.tn-c{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   height:56px;min-width:0;padding:0;border:0;border-radius:12px;background:var(--tcel,transparent);color:var(--text);
   font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;
   transition:box-shadow var(--d1) var(--ease),transform var(--d1) var(--ease)}
@@ -2382,11 +2386,12 @@ body.cu-on{overflow:hidden}
 /* Leyenda: cada muestra es la misma celda en pequeño. */
 .tn-ley{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 4px 0;font-size:12px;line-height:16px;color:var(--text-2)}
 .tn-ley>span{display:inline-flex;align-items:center;gap:7px}
-.tn-ley-s{position:relative;display:inline-flex;align-items:center;justify-content:center;width:26px;height:16px;
-  border-radius:5px;background:var(--tcel);flex:none}
-.tn-ley-s .tn-mk{width:18px;height:3px}
-.tn-ley-s .tn-cap{font-size:8px;line-height:10px;letter-spacing:.02em}
-.tn-ley-f{position:relative;width:26px;height:16px;border-radius:5px;background:var(--surface-2);flex:none}
+.tn-ley-h{margin-left:-2px;color:var(--text-3);font-variant-numeric:tabular-nums}
+.tn-ley-s{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 6px;
+  border-radius:6px;background:var(--tcel);flex:none}
+.tn-ley-s .tn-lb{font-size:11px;line-height:12px}
+.tn-ley-s .tn-cap{font-size:10px;line-height:12px;letter-spacing:.04em}
+.tn-ley-f{position:relative;width:34px;height:20px;border-radius:6px;background:var(--surface-2);flex:none}
 .tn-ley-f::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--text)}
 
 /* El día elegido. */
@@ -2397,9 +2402,9 @@ body.cu-on{overflow:hidden}
 .tn-fest{margin-top:2px;font-size:13px;line-height:18px;color:var(--text-2)}
 .tn-fest b{color:var(--text);font-weight:600}
 .tn-dia-k{display:flex;align-items:center;gap:12px;margin-top:14px}
-.tn-dia-k .tn-ley-s{width:44px;height:28px;border-radius:8px}
-.tn-dia-k .tn-ley-s .tn-mk{width:30px;height:4px}
-.tn-dia-k .tn-ley-s .tn-cap{font-size:10px}
+.tn-dia-k .tn-ley-s{min-width:52px;height:32px;padding:0 8px;border-radius:8px}
+.tn-dia-k .tn-ley-s .tn-lb{font-size:14px;line-height:16px}
+.tn-dia-k .tn-ley-s .tn-cap{font-size:12px;line-height:14px}
 .tn-dia-k b{display:block;font-size:15px;line-height:20px;color:var(--text)}
 .tn-dia-k .h{display:block;font-size:13px;line-height:18px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .tn-nov,.tn-srv{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--surface-2);
@@ -3924,7 +3929,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 163;
+var _BUILD = 164;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -28141,9 +28146,9 @@ function evArchivo() {
    así la fusión a tres vías las junta elemento por elemento.
    ══════════════════════════════════════════════════════════════════════════ */
 var TN_TURNOS = {
-  T: { n: 'Tercero',           c: 'ter', ab: 'TER', bl: ['t3'] },
-  S: { n: 'Segundo – primero', c: 'sp',  ab: '2·1', bl: ['t2', 't41'] },
-  D: { n: 'Disponible',        c: 'dis', ab: 'DIS', bl: [] }
+  T: { n: 'Tercero',           c: 'ter', ab: '3.º',     bl: ['t3'] },
+  S: { n: 'Segundo – primero', c: 'sp',  ab: '2.º–1.º', bl: ['t2', 't41'] },
+  D: { n: 'Disponible',        c: 'dis', ab: 'Disp.',   bl: [] }
 };
 var TN_CICLO = ['T', 'S', 'D'];
 var TN_ANCLA = '2026-01-01';
@@ -28434,22 +28439,20 @@ function renderTurnos() {
     '<button class="btn bp" onclick="tnCompartir()">Compartir mis turnos</button>' +
     '<button class="btn bs" onclick="tnAjustar()">Ajustar el ciclo</button></div>';
 }
-/* La marca de un turno: el día de 0 a 24 h y, encima, sus tramos de servicio
-   (el de la noche se dibuja hasta las 24:00: lo que sigue es del día siguiente).
-   Es la misma pieza en la celda, en la leyenda y en el día elegido. */
-function tnMarcaHtml(code, hs) {
-  var h = '';
-  (TN_TURNOS[code] ? TN_TURNOS[code].bl : []).forEach(function (k) {
-    var a = tnMin(hs[k][0]), b = tnMin(hs[k][1]);
-    if (b <= a) b = 1440;
-    h += '<i style="left:' + (a / 14.4).toFixed(2) + '%;width:' + ((b - a) / 14.4).toFixed(2) + '%"></i>';
-  });
-  return '<span class="tn-mk" aria-hidden="true">' + h + '</span>';
+/* Lo de abajo de un día: el turno ESCRITO, abreviado como se dice en la calle
+   («3.º», «2.º–1.º», «Disp.»), o, con novedad, su sigla en versalitas (VAC, PER,
+   CAM…). Es la misma pieza en la celda, en la leyenda y en el día elegido; el
+   texto, y no solo el color, dice el turno. */
+function tnSenaHtml(tu) {
+  return tu.nov ? '<span class="tn-cap" aria-hidden="true">' + TN_NOV[tu.nov.tipo].ab + '</span>'
+    : '<span class="tn-lb" aria-hidden="true">' + escHtml(TN_TURNOS[tu.ef].ab) + '</span>';
 }
-/* Lo de abajo de un día: la marca del turno o, con novedad, su abreviatura
-   (la palabra dice cuál: VAC, PER, CAM…). */
-function tnSenaHtml(tu, hs) {
-  return tu.nov ? '<span class="tn-cap">' + TN_NOV[tu.nov.tipo].ab + '</span>' : tnMarcaHtml(tu.ef, hs);
+/* Las horas de un turno en corto, para la leyenda: «13–21», «06–13 · 21–06». */
+function tnHorasCortas(code, t) {
+  var hs = tnHoras(t);
+  return TN_TURNOS[code].bl.map(function (k) {
+    return hs[k].map(function (x) { return /:00$/.test(x) ? x.slice(0, 2) : x; }).join('–');
+  }).join(' · ');
 }
 function tnPintarHoy() {
   var el = document.getElementById('tn-hoy');
@@ -28466,7 +28469,7 @@ function tnPintarHoy() {
 function tnPintarMes() {
   var el = document.getElementById('tn-mes');
   if (!el) return;
-  var t = tnCfg(), sec = t.seccion, y = _tnVer.y, m = _tnVer.m, hoy = tnHoy(), hd = tnFecha(hoy), hs = tnHoras(t);
+  var t = tnCfg(), sec = t.seccion, y = _tnVer.y, m = _tnVer.m, hoy = tnHoy(), hd = tnFecha(hoy);
   var lead = (new Date(y, m, 1).getDay() + 6) % 7, n = new Date(y, m + 1, 0).getDate(), tot = Math.ceil((lead + n) / 7) * 7;
   var actual = hd.getFullYear() === y && hd.getMonth() === m;
   var h = '<div class="card tn-mes"><div class="tn-mh">' +
@@ -28484,11 +28487,13 @@ function tnPintarMes() {
     var cls = 'tn-c tn-k-' + v.c + (iso === hoy ? ' hoy' : '') + (iso === _tnSel ? ' sel' : '') + (fest ? ' fest' : '');
     var lbl = tnFechaLarga(iso) + ': ' + v.n + (fest ? ', festivo ' + fest : '') + (tu.nov && tu.ef ? ', ' + TN_NOV[tu.nov.tipo].n : '');
     h += '<button class="' + cls + '" data-iso="' + iso + '" data-t="' + (tu.ef || '') + '" onclick="tnElegir(\'' + iso + '\')" aria-pressed="' + (iso === _tnSel) + '" aria-label="' + escAttr(lbl) + '">' +
-      '<span class="tn-c-n">' + d.getDate() + '</span>' + tnSenaHtml(tu, hs) + '</button>';
+      '<span class="tn-c-n">' + d.getDate() + '</span>' + tnSenaHtml(tu) + '</button>';
   }
   h += '</div><div class="tn-ley">' +
     TN_CICLO.map(function (k) {
-      return '<span><span class="tn-ley-s tn-k-' + TN_TURNOS[k].c + '">' + tnMarcaHtml(k, hs) + '</span>' + TN_TURNOS[k].n + '</span>';
+      var hc = tnHorasCortas(k, t);
+      return '<span><span class="tn-ley-s tn-k-' + TN_TURNOS[k].c + '">' + tnSenaHtml({ ef: k }) + '</span>' + TN_TURNOS[k].n +
+        (hc ? '<span class="tn-ley-h">' + hc + '</span>' : '') + '</span>';
     }).join('') +
     '<span><span class="tn-ley-f"></span>Festivo</span>' +
     '<span><span class="tn-ley-s tn-k-lib"><span class="tn-cap">VAC</span></span>Novedad</span></div></div>';
@@ -28513,11 +28518,11 @@ function tnPintarDia() {
   var el = document.getElementById('tn-dia');
   if (!el) return;
   var t = tnCfg(), sec = t.seccion, iso = _tnSel || tnHoy(), d = tnFecha(iso), tu = tnTurno(iso, sec, t), v = tnVista(tu);
-  var fest = lcFestivoNombre(d), hoy = tnHoy(), hs = tnHoras(t), sv = tnServicio(iso, t);
+  var fest = lcFestivoNombre(d), hoy = tnHoy(), sv = tnServicio(iso, t);
   var h = '<div class="card tn-dia"><div class="tn-dia-h"><div class="tn-dia-t">' + escHtml(tnFechaLarga(iso, d.getFullYear() !== tnFecha(hoy).getFullYear())) + '</div>' +
     (iso === hoy ? '<span class="tn-hoyc">Hoy</span>' : '') + '</div>' +
     (fest ? '<div class="tn-fest">Festivo · <b>' + escHtml(fest) + '</b></div>' : '') +
-    '<div class="tn-dia-k"><span class="tn-ley-s tn-k-' + v.c + '">' + tnSenaHtml(tu, hs) + '</span><div><b>' + escHtml(v.n) + '</b><span class="h">' +
+    '<div class="tn-dia-k"><span class="tn-ley-s tn-k-' + v.c + '">' + tnSenaHtml(tu) + '</span><div><b>' + escHtml(v.n) + '</b><span class="h">' +
       escHtml(tu.ef ? tnHorasTxt(tu.ef, t) : 'Por ciclo, ' + TN_TURNOS[tu.base].n) + '</span></div></div>';
   if (tu.nov) {
     var nv = tu.nov, rango = nv.hasta && nv.hasta !== nv.desde ? 'Del ' + tnFechaCorta(nv.desde) + ' al ' + tnFechaCorta(nv.hasta) : tnFechaCorta(nv.desde);
