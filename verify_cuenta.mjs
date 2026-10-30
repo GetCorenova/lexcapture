@@ -452,16 +452,10 @@ const pkg = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'));
 const vend = existsSync(join(ROOT, 'vendor/firebase.js')) ? readFileSync(join(ROOT, 'vendor/firebase.js'), 'utf8') : '';
 log(vend.startsWith('/* Flagrante · paquete local de Firebase JS SDK ' + pkg.devDependencies.firebase + ' ') && !/<script[^>]+src=["']https?:/i.test(src),
     '[I2] el SDK viaja en un archivo local de la versión fijada, sin CDN');
-const sw = readFileSync(join(ROOT, 'sw.js'), 'utf8'), and = readFileSync(join(ROOT, 'scripts/build-android.mjs'), 'utf8');
-log(/'\.\/vendor\/firebase\.js'/.test(sw) && /vendor', 'firebase\.js'/.test(and), '[I3] el Service Worker lo guarda para usarlo sin señal y el paquete de Android lo lleva');
-const T2 = await telefono(false);
-const docs = []; T2.page.on('request', r => { if (r.resourceType() === 'document') docs.push(r.url()); });
-await T2.page.goto('http://localhost:8171/index.html?mode=verifyEmail&oobCode=ABC#capturas', { waitUntil: 'load' });
-await T2.page.waitForURL(/LexCapture_v8\.html/);
-await listo(T2.page);
-const i4 = docs.find(u => /LexCapture_v8.html/.test(u)) || '';
-log(/mode=verifyEmail/.test(i4) && /oobCode=ABC/.test(i4) && /\+ location\.hash\)/.test(readFileSync(join(ROOT, 'index.html'), 'utf8')), '[I4] la redirección de index.html conserva el enlace del correo', i4.replace(/^.*\//, ''));
-await T2.ctx.close();
+const and = readFileSync(join(ROOT, 'scripts/build-android.mjs'), 'utf8');
+log(/vendor', 'firebase\.js'/.test(and) && !/serviceWorker\.register\(/.test(src), '[I3] el paquete de Android lleva el SDK y la app ya no registra un Service Worker (web retirada)');
+const idx = readFileSync(join(ROOT, 'index.html'), 'utf8');
+log(!/LexCapture_v8\.html/.test(idx) && /flagrante\.web\.app/.test(idx), '[I4] index.html ya no abre la app: la versión web se retiró');
 const i5 = await A.page.evaluate(async claves => {
   let txt = JSON.stringify(Object.assign({}, localStorage));
   return claves.filter(c => txt.includes(c));

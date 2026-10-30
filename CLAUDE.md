@@ -9011,3 +9011,11 @@ origen del almacenamiento del teléfono) · 6 App Check obligatorio. Rama `web-r
   mientras la ficha de Play apunte a la URL vieja.
 - ⚠️ **Falta en Play Console** (lo hace el usuario): cambiar la URL de la política y poner la de
   eliminación de la cuenta. Hasta entonces Pages no se puede apagar.
+- **Paso 2 hecho (build 179)**: `sw.js` es ahora un Service Worker que **borra todas las cachés del
+  origen y se desregistra** (sin manejador de peticiones); `index.html` ya no abre la app: redirige
+  a https://flagrante.web.app; y la app **ya no registra un Service Worker en ningún entorno**
+  (siempre retira el que haya). Medido en Chromium: un SW del build 177 con su caché queda sin caché
+  y sin registro al recibir el nuevo. `build-web.mjs` deja de exigir el token de `index.html`.
+  `verify_cuenta` [I3]/[I4] y `verify_formatos` [H4] miden ahora la web retirada (62/62 y 60/60).
+  ⚠️ `LexCapture_v8.html` sigue en la raíz porque es la fuente del `.aab`; abrirlo por su URL
+  directa en Pages todavía funciona hasta que el usuario apague Pages (paso 3).

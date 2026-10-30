@@ -3,33 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Flagrante v8</title>
-  <link rel="manifest" href="./manifest.json">
-  <script>
-    // Redirect a la app. El token ?v lo sube `npm run build:web` en cada
-    // despliegue para forzar que el navegador/CDN descarguen el HTML nuevo.
-    //
-    // ⚠️ La ruta es RELATIVA a propósito. Estuvo clavada a '/lexcapture/…',
-    // así que la app solo arrancaba servida desde una ruta con ese nombre:
-    // en localhost, en la raíz de un dominio o dentro de un paquete de
-    // escritorio el redirect daba 404 y no se veía nada. Con './' funciona
-    // desde cualquier host y cualquier subcarpeta, que es lo que hace que la
-    // misma copia sirva para GitHub Pages, para un servidor local y para el
-    // envoltorio nativo. El resto del proyecto (sw.js, manifest, el registro
-    // del Service Worker) ya era relativo.
-    //
-    // ⚠️ Se conservan los parámetros y el ancla: los enlaces del correo de la
-    // cuenta (verificar el correo, restablecer la contraseña) llegan aquí con
-    // ?mode=…&oobCode=…, y perderlos en la redirección deja el enlace sin efecto.
-    var _q = location.search ? '&' + location.search.slice(1) : '';
-    window.location.replace('./LexCapture_v8.html?v=178' + _q + location.hash);
-  </script>
+  <title>Flagrante</title>
+  <meta http-equiv="refresh" content="0; url=https://flagrante.web.app/">
+  <link rel="canonical" href="https://flagrante.web.app/">
+  <!-- La versión web se retiró (2026-10-30): esta página ya no abre la app. -->
 </head>
 <body>
-  <p>Redirigiendo a Flagrante...</p>
-  <noscript>
-    <p>Esta aplicación necesita JavaScript.
-       <a href="./LexCapture_v8.html">Abrir Flagrante</a>.</p>
-  </noscript>
+  <p>Flagrante ya no tiene versión web: es una aplicación para Android.
+     <a href="https://flagrante.web.app/">Más información</a>.</p>
 </body>
 </html>

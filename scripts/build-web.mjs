@@ -33,13 +33,11 @@ import { comprobar as comprobarPdfjs, copiar as copiarPdfjs } from './build-pdfj
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const APP = join(RAIZ, 'LexCapture_v8.html');
-const INDEX = join(RAIZ, 'index.html');
 const SW = join(RAIZ, 'sw.js');
 
 // Los tres sitios donde vive el número de build. Cada uno con el patrón que lo
 // localiza; el grupo 1 es el número. Añadir un cuarto sitio es añadir una fila.
 const TOKENS = [
-  { nom: 'index.html → ?v=',    ruta: INDEX, re: /(LexCapture_v8\.html\?v=)(\d+)/,        g: 2 },
   { nom: 'sw.js → cache-v',     ruta: SW,    re: /(lexcapture-v8-cache-v)(\d+)/,          g: 2 },
   { nom: 'Flagrante → _BUILD' , ruta: APP,   re: /(var\s+_BUILD\s*=\s*)(\d+)/,            g: 2 },
 ];
@@ -53,7 +51,7 @@ let fallos = 0;
 const err = m => { console.error('  ✗ ' + m); fallos++; };
 const ok  = m => console.log('  ✓ ' + m);
 
-// ── 1. Leer los tres tokens ────────────────────────────────────────────────
+// ── 1. Leer los tokens ────────────────────────────────────────────────
 console.log('\nTokens anti-caché');
 const leidos = TOKENS.map(t => {
   const txt = readFileSync(t.ruta, 'utf8');
@@ -65,7 +63,7 @@ if (leidos.some(x => !x)) { console.error('\nBUILD FALLIDO\n'); process.exit(1);
 
 const valores = leidos.map(x => x.valor);
 const enSync = valores.every(v => v === valores[0]);
-if (enSync) ok(`los tres en ${valores[0]}`);
+if (enSync) ok(`todos en ${valores[0]}`);
 else err(`DESINCRONIZADOS: ${leidos.map(x => `${x.nom}${x.valor}`).join(' · ')}`);
 
 // ── 2. Validar el JavaScript del HTML ──────────────────────────────────────
