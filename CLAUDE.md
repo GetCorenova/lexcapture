@@ -8751,3 +8751,44 @@ festivos, ni las novedades guardadas cambiaron.
 - `verify_turnos` 64/64: [D1] sin fila de formulario, [K1]/[K2] la hoja de la sección, [D7] la hoja
   del día, [J4] la leyenda nueva, [J7] la barra de festivo, [F1]/[K3] la novedad no tapa el turno y la
   leyenda la nombra. Publicado como **build 166**. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: franja rediseñada, barra de sección y ciclo, historial y estadísticas del año (2026-10-29, build 167)
+Once observaciones del usuario sobre cinco pantallazos (Inicio y Turnos). Verificado con
+`verify_turnos.mjs` (**79 checks**, antes 64; sección M nueva) y `verify_inicio.mjs` (45), y mirando
+las pantallas en los dos temas, en teléfono y escritorio. Sin commit ni despliegue.
+- **1 · Sin mosaico Turnos en el Inicio** (y sin el grupo «Servicio»): la franja «Mi turno» ES la
+  puerta. Se fueron `tnModuloDato`, `tnMiniHtml` y el CSS `.mod-tile.ancho`/`.tn-mini`. El panel
+  lateral de escritorio conserva su ítem.
+- **2, 3 y 4 · La franja, rediseñada** (`tnFranjaHtml`, `tnEstadoPartes`): cabecera «Hoy · 2.ª
+  sección» + **«Ver calendario ›»** en acento · etiqueta del turno («2.º–1.º») + nombre · estado a la
+  izquierda («En servicio · hasta las 06:00») y cuenta atrás a la derecha («faltan 8 h 33 min») ·
+  línea de 24 h **de 6 px** con lo pasado apagado, la hora actual como un punto con aro y 00·06·12·18·24
+  debajo · mañana y pasado en dos columnas. Sin la franja izquierda de color. Saludo a 24 px.
+- **5 · Leyenda**: sin novedades en el mes dice **«Novedad: ninguna»** con la muestra hueca
+  (`tnNovMes` ya no inventa «Permiso»).
+- **6 y 7 · Fuera «Compartir mis turnos» y «Ajustar el ciclo»** del final (compartir sigue en la barra
+  superior).
+- **9 y 10 · La sección sale del subtítulo** y, con el ciclo, va en una **barra partida en dos**
+  entre «Hoy» y el mes (`tnPintarBarra`, `#tn-bar-sec` / `#tn-bar-ciclo`): «Mi sección · 2.ª sección ⌄»
+  | «Ciclo y horario · Predeterminado/Ajustado ›». Funciones independientes: la hoja de la sección ya
+  no ofrece ajustar el ciclo.
+- **11 · Mes y año**: el título del mes es un botón (`#tn-mtb`) que abre «Ir a un mes»
+  (`tnMesPicker`): año con flechas y los 12 meses.
+- **Historial de sección** (`cfg.turnos.historial = [{id, desde, seccion}]`, `desde` vacío = desde
+  siempre; `tnHistNorm`, `tnSeccionEn`). Cada día se mide con la sección que el funcionario tenía ese
+  día: el calendario de antes de un traslado no cambia. Elegir otra sección pregunta **desde cuándo**
+  (hoy · mañana · otra fecha · «siempre estuve en la X.ª», que corrige y reemplaza el historial;
+  `tnSeccionTocar`, `tnCambiarSeccion`). La hoja lista los cambios y deja quitarlos; un traslado futuro
+  se anuncia en la barra. ⚠️ `tnTurno(iso, null, t)` = MI turno (por historial); con número, el de
+  esa sección. `cfg.turnos.seccion` se sigue guardando (la de hoy) para equipos anteriores; sin
+  historial, la sección guardada vale desde siempre.
+- **8 · Estadísticas del año** (`tnEstadisticas(y, t, ahora)`, ventana `tnStatsAbrir`, entrada
+  `#tn-stc` «Mis turnos en 2026»): del 1 de enero a AHORA. Un turno cuenta desde que empieza su
+  primer bloque y sus horas hasta ahora (el de hoy, en curso); los días futuros no cuentan; no cuentan
+  las novedades que libran ni «No lo presté». **Disponibles aparte, como hipotéticos** (tarjeta con
+  trazo discontinuo, rayado en las barras) con cuántos traen servicio registrado. Mes a mes (el
+  actual «hasta hoy»), novedades («Ninguna» si no hay), festivos con servicio, servicios especiales y,
+  si hubo traslado, el tramo de cada sección. Años anteriores con las flechas (completos). Se retiró
+  `tnResumenMes` («el mes en cifras» sumaba también lo no prestado).
+- ⚠️ El ciclo calibrado (`desfase`) sigue siendo global: corre las tres secciones y el pasado.
+- Anti-caché `?v=167` / `cache-v167`, `_BUILD=167`. Para la app de Play hace falta un `.aab` nuevo.
