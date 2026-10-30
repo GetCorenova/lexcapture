@@ -29,6 +29,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { comprobar as comprobarFirebase, empaquetar as empaquetarFirebase } from './build-firebase.mjs';
+import { comprobar as comprobarPdfjs, copiar as copiarPdfjs } from './build-pdfjs.mjs';
 
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), '..');
 const APP = join(RAIZ, 'LexCapture_v8.html');
@@ -110,6 +111,18 @@ if (!soloCheck) {
 } else {
   const r = comprobarFirebase();
   if (r.ok) ok(`al día (Firebase ${r.version}, ${r.kb} KB)`); else r.fallos.forEach(err);
+}
+
+// ── 3c. El lector de PDF del módulo Formatos (vendor/pdfjs/) ───────────────
+// Se carga solo al abrir la vista previa de un formato. Misma regla: versión
+// exacta de package.json; al compilar se copia, con --check solo se mira.
+console.log('\nLector de PDF (vendor/pdfjs/)');
+if (!soloCheck) {
+  try { const r = copiarPdfjs(); if (r.ok) ok(`copiado (pdf.js ${r.version}, ${r.kb} KB)`); else r.fallos.forEach(err); }
+  catch (e) { err('no se pudo copiar: ' + e.message); }
+} else {
+  const r = comprobarPdfjs();
+  if (r.ok) ok(`al día (pdf.js ${r.version}, ${r.kb} KB)`); else r.fallos.forEach(err);
 }
 
 // ── 4. Peso ────────────────────────────────────────────────────────────────

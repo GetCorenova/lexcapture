@@ -1,0 +1,23 @@
+rules_version = '2';
+
+// Reglas de Cloud Storage de FLAGRANTE (build 176).
+//
+// El bucket SOLO guarda los formatos en blanco del módulo «Formatos»
+// (formatos/estandarizados/ y formatos/no_estandarizados/): documentos públicos,
+// sin datos de nadie. Los datos de los usuarios NO están aquí: viajan cifrados
+// por Firestore.
+//
+// · Leer: cualquiera (también la web sin cuenta).
+// · Escribir: nadie desde un teléfono. Los sube scripts/admin-formatos.mjs con
+//   el SDK de administración, que no pasa por estas reglas.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /formatos/{todo=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /{todo=**} {
+      allow read, write: if false;
+    }
+  }
+}

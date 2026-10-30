@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lexcapture-v8-cache-v175'
+const CACHE_NAME = 'lexcapture-v8-cache-v176'
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,10 @@ const ASSETS = [
   // El SDK de Firebase (la cuenta): se carga solo cuando hace falta, pero tiene
   // que estar aquí para poder cerrar sesión o abrir la cuenta sin señal.
   './vendor/firebase.js',
+  // El lector de PDF de Formatos: solo se carga al abrir la vista previa, pero
+  // tiene que estar para abrir sin señal un formato ya guardado.
+  './vendor/pdfjs/pdf.min.mjs',
+  './vendor/pdfjs/pdf.worker.min.mjs',
 ]
 
 self.addEventListener('install', e => {

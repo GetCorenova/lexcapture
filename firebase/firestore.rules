@@ -120,6 +120,17 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── FORMATOS (build 176) ──────────────────────────────────────────────
+    // El catálogo de formatos EN BLANCO (oficiales y no oficiales): un solo
+    // documento, `formatos/catalogo`. Lectura pública —son formatos públicos, sin
+    // datos de nadie, y la web sin cuenta también los muestra—. Nadie lo escribe
+    // desde un teléfono: lo publica scripts/admin-formatos.mjs con el SDK de
+    // administración, que no pasa por estas reglas.
+    match /formatos/{d} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Todo lo demás, cerrado — también dispositivosPrueba (solo el servidor).
     match /{document=**} {
       allow read, write: if false;

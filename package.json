@@ -13,6 +13,8 @@
     "serve:web": "node scripts/serve-web.mjs",
     "deploy:web": "node scripts/deploy-web.mjs",
     "deploy:playstore": "node scripts/deploy-playstore.mjs",
+    "formatos": "node scripts/admin-formatos.mjs",
+    "build:pdfjs": "node scripts/build-pdfjs.mjs",
     "verify": "node scripts/verify.mjs",
     "test": "node scripts/build-web.mjs --check",
     "store:assets": "node scripts/store-assets.mjs",
@@ -27,7 +29,9 @@
   "devDependencies": {
     "esbuild": "0.28.2",
     "firebase": "12.19.0",
+    "firebase-admin": "13.10.0",
     "firebase-tools": "15.32.1",
+    "pdfjs-dist": "6.3.289",
     "playwright": "^1.61.0"
   }
 }
