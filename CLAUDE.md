@@ -8909,4 +8909,4 @@ saboteada para que guarde, fallan [K2] [K4] [K5] [K6]; con los tintes viejos, fa
     `tnStats24Html`, `tnStatsHtml`, «Mes a mes», «Por hora del día») y su CSS (`#tn-st`, `.tn-st-*`,
     `.tn-sd*`, `.tn-barra`, `.tn-hs*`).
 - En verde: turnos 94 · inicio 45 · tema 51 · DS 9/9 · CSP 11 · estadísticas 58 · jerarquía 67.
-- Anti-caché `?v=174` / `cache-v174`, `_BUILD=174`. Para la app de Play hace falta un `.aab` nuevo.
+- Anti-caché `?v=174` / `cache-v174`, `_BUILD=174`; `deploy:web` lo publicó como **build 175**. Para la app de Play hace falta un `.aab` nuevo.
