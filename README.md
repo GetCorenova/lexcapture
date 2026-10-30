@@ -17,7 +17,8 @@ dependencias externas: funciona sin conexión, que es como se usa.
 | `sw.js` | Service Worker: caché offline. El HTML va siempre a red primero |
 | `manifest.json` | Manifiesto PWA |
 | `icon-*.png`, `icon.svg` | Íconos. Los genera `npm run gen:icons` desde `marca/logo-fuente.jpg` |
-| `privacy.html` | Política de privacidad (la exige Google Play) |
+| `privacy.html` | Redirige a https://flagrante.web.app/privacidad (la política vive en `firebase/publico/`) |
+| `firebase/publico/` | Lo que sirve Firebase Hosting: política de privacidad y eliminación de la cuenta (`npx firebase deploy --only hosting` desde `firebase/`) |
 | `.nojekyll` | Desactiva el procesado Jekyll de GitHub Pages |
 
 ## Comandos

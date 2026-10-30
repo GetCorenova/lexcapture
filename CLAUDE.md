@@ -8992,3 +8992,22 @@ los dos temas, en teléfono y escritorio.
   rojo `mejora7` [B23] (preexistente) y `cuenta` [E11], intermitente (sola da 62/62). ⚠️ `verify_formatos` **muerde**: con el buscador y la caché
   saboteados falla en D5, D6, D8 y aborta en F.
 - Anti-caché `?v=176` / `cache-v176`, `_BUILD=176`; fusionado en `main` y publicado en la web como **build 177** (2026-10-30). `.aab` **versionCode 8**, sin subir a Play. Hasta que se hagan las tareas de consola de `PUBLICAR.md`, la pantalla dice que no pudo cargar el catálogo.
+
+## Se retira la versión web — paso 1: la política sale de GitHub (2026-10-30, build 178)
+Decisión del usuario: la web se descarta por seguridad; queda solo la app de Play (y más adelante
+App Store). Nadie usa la web. Orden acordado: 1 política y eliminación de cuenta en Firebase
+Hosting · 2 último despliegue de la web con un Service Worker que se desinstala · 3 apagar Pages y
+repo privado (lo hace el usuario) · 4 repo privado del envoltorio Android + copia cifrada del
+keystore · 5 quitar el código solo-web (⚠️ NO tocar `server.hostname = getcorenova.github.io`: es el
+origen del almacenamiento del teléfono) · 6 App Check obligatorio. Rama `web-retiro`.
+- **Paso 1 hecho**: `firebase/publico/` (Firebase Hosting, sitio `flagrante`) sirve
+  https://flagrante.web.app/privacidad (antes `privacy.html` de la raíz, movido con `git mv`) y
+  https://flagrante.web.app/eliminar-cuenta (la página que Play exige en Seguridad de los datos:
+  pasos en la app, solicitud por correo desde el correo de la cuenta en ≤30 días, qué se borra y qué
+  se conserva). `/privacy.html` redirige 301. Cabeceras de seguridad en `firebase.json` (CSP
+  `default-src 'none'`, HSTS, nosniff, frame-ancestors). Se despliega con
+  `npx firebase deploy --only hosting` desde `firebase/`.
+- Ajustes → Info enlaza la URL nueva. La raíz conserva un `privacy.html` que redirige, solo
+  mientras la ficha de Play apunte a la URL vieja.
+- ⚠️ **Falta en Play Console** (lo hace el usuario): cambiar la URL de la política y poner la de
+  eliminación de la cuenta. Hasta entonces Pages no se puede apagar.

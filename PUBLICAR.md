@@ -236,7 +236,8 @@ formatos publicados» si Firestore responde sin catálogo). En este orden:
 | Sincronización con Drive | ⛔ **retirada en la F4** (rama `f4-nube`): la información viaja con la cuenta, registro por registro y cifrada (§0, «La nube») |
 | Google Cloud | proyecto `Flagrante`: la Drive API y los clientes OAuth quedan **sin uso** desde la F4 |
 | Ficha de tienda | ✅ `store-listing.md` — nombre **Flagrante** |
-| Política de privacidad | ✅ https://getcorenova.github.io/lexcapture/privacy.html · HTTP 200 |
+| Política de privacidad | ✅ https://flagrante.web.app/privacidad (Firebase Hosting) · HTTP 200 — **falta cambiarla en Play Console** |
+| Eliminación de la cuenta (URL) | ✅ https://flagrante.web.app/eliminar-cuenta — va en Seguridad de los datos |
 | Ícono 512×512 de la ficha | ✅ `icon-store-512.png` (a sangre, sin transparencia) |
 | Gráfico de funciones 1024×500 | ✅ `lexcapture-android/store/feature-graphic-1024x500.png` |
 | Capturas de teléfono | ✅ 5 en `lexcapture-android/store/` a **1080×1920 (9:16 exacto)**. ⚠️ A 1080×2400 la consola las marcaba «Necesita recorte» |
