@@ -8816,4 +8816,4 @@ M8 rehecho, M14-M16 nuevos) y mirando la ventana en los dos temas.
   prestado, sin servicio) y horas.
 - Motor: `tnEstadisticas` gana `hT/hS`, `bl` (horas por franja), `dias`, `dom` y `meses[m].d`
   (un renglón por día). Se retiraron la tarjeta «Hipotético», las notas al pie y la leyenda rayada.
-- Anti-caché `?v=169` / `cache-v169`, `_BUILD=169`. Para la app de Play hace falta un `.aab` nuevo.
+- Anti-caché `?v=169` / `cache-v169`, `_BUILD=169`; `deploy:web` lo publicó como **build 170**. Para la app de Play hace falta un `.aab` nuevo.
