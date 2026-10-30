@@ -8755,7 +8755,7 @@ festivos, ni las novedades guardadas cambiaron.
 ## Turnos: franja rediseñada, barra de sección y ciclo, historial y estadísticas del año (2026-10-29, build 167)
 Once observaciones del usuario sobre cinco pantallazos (Inicio y Turnos). Verificado con
 `verify_turnos.mjs` (**79 checks**, antes 64; sección M nueva) y `verify_inicio.mjs` (45), y mirando
-las pantallas en los dos temas, en teléfono y escritorio. Sin commit ni despliegue.
+las pantallas en los dos temas, en teléfono y escritorio. Publicado como **build 168** (deploy:web sube el número).
 - **1 · Sin mosaico Turnos en el Inicio** (y sin el grupo «Servicio»): la franja «Mi turno» ES la
   puerta. Se fueron `tnModuloDato`, `tnMiniHtml` y el CSS `.mod-tile.ancho`/`.tn-mini`. El panel
   lateral de escritorio conserva su ítem.
