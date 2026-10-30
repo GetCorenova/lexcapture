@@ -8706,3 +8706,21 @@ novedades, ni la navegación entre meses cambiaron.
   día elegido, se cuenta en «el mes en cifras» (cuarta cifra + «Lo que registraste») y sale en el
   mes por chat.
 - Anti-caché `?v=163` / `cache-v163`, `_BUILD=163`. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: el turno se LEE en cada día (2026-10-29, build 164)
+Pedido del usuario: la barrita de 24 h no se entendía; prefiere leer el turno, sin saturar.
+- **Cada día lleva la abreviatura escrita** (`tnSenaHtml` → `.tn-lb`, de `TN_TURNOS[k].ab`):
+  **«3.º»** = Tercero · **«2.º–1.º»** = Segundo – primero · **«Disp.»** = Disponible. Los ordinales
+  son literalmente como se dice el turno; Disponible es la única palabra, y va con peso 600 (no
+  compite con un día de servicio). Las novedades siguen en versalitas (VAC, PER…) para distinguirse.
+- La **barrita (`tnMarcaHtml`, `.tn-mk`) se retiró** entera: celda, leyenda y día elegido usan la
+  misma etiqueta. ⚠️ La franja del Inicio y su línea de 24 h (`.tn-24`) no se tocaron.
+- **La leyenda descifra y da las horas** (`tnHorasCortas`): «3.º Tercero 13–21», «2.º–1.º Segundo –
+  primero 06–13 · 21–06», «Disp. Disponible». Sigue las horas que el usuario ajuste.
+- ⚠️ «2.º–1.º» mide 36,4 px a 12 px y la celda de un teléfono de 360 px tiene 40: con una consulta
+  de contenedor (`.tn-g .tn-c{container-type:inline-size}`, `@container (max-width:44px)`) baja a
+  11 px (33,4 px). En celdas más anchas se queda en 12 px.
+- Contraste AA (≥4,5:1) de la etiqueta sobre su celda medido en los dos temas.
+- `verify_turnos` 61/61: [J3] cada celda dice su turno escrito y no queda barrita, [J4] la leyenda
+  con horas, [I3] contraste de la etiqueta, [I4] a 360 px la etiqueta entera dentro de la celda.
+- Anti-caché `?v=164` / `cache-v164`, `_BUILD=164`. Para la app de Play hace falta un `.aab` nuevo.

@@ -167,13 +167,16 @@ log(/12 de octubre/.test(dia.t) && dia.f === 'Festivo · Día de la Raza' && dia
 /* ═══ J · rediseño del calendario (build 163) ═══ */
 const rd = await page.evaluate(() => {
   const g = e => getComputedStyle(e), fuera = [...document.querySelectorAll('#tn-g .tn-c.fuera')], card = document.querySelector('.tn-mes');
-  const mk = k => { const c = document.querySelector('#tn-g .tn-c[data-t="' + k + '"]'); return c ? c.querySelectorAll('.tn-mk i').length : -1; };
-  const ley = [...document.querySelectorAll('.tn-ley .tn-ley-s .tn-mk')].map(e => e.querySelectorAll('i').length);
+  /* Cada día dice su turno con texto: la etiqueta de TODA celda con turno es la del ciclo. */
+  const cel = [...document.querySelectorAll('#tn-g .tn-c[data-t]:not(.fuera)')].filter(c => c.dataset.t);
+  const mk = { ok: cel.length > 20 && cel.every(c => { const l = c.querySelector('.tn-lb'); return l && l.textContent === TN_TURNOS[c.dataset.t].ab; }),
+    barras: document.querySelectorAll('#tn-g .tn-mk').length, ab: TN_CICLO.map(k => TN_TURNOS[k].ab) };
+  const ley = [...document.querySelectorAll('.tn-ley>span')].slice(0, 3).map(e => e.innerText.replace(/\s+/g, ' ').trim());
   const otras = document.querySelector('.tn-otras'), lh = parseFloat(g(otras).lineHeight);
   return {
     fueraSolo: fuera.every(c => c.children.length === 1 && c.textContent.trim() === c.querySelector('.tn-c-n').textContent),
     fueraSinColor: fuera.every(c => g(c).backgroundColor === 'rgba(0, 0, 0, 0)' && !/tn-k-/.test(c.className) && c.tagName === 'SPAN'),
-    pastillas: document.querySelectorAll('#tn-g .tn-c-k').length, mk: { T: mk('T'), S: mk('S'), D: mk('D') }, ley,
+    pastillas: document.querySelectorAll('#tn-g .tn-c-k').length, mk, ley,
     sinBorde: [...document.querySelectorAll('#tn-g .tn-c:not(.fuera)')].every(c => g(c).borderTopWidth === '0px'),
     hoyAlto: document.querySelector('.tn-hoy').getBoundingClientRect().height,
     sin24: !document.querySelector('#tn-hoy .tn-24') && !document.querySelector('#tn-hoy .tn-man'),
@@ -182,9 +185,11 @@ const rd = await page.evaluate(() => {
   };
 });
 log(rd.fueraSolo && rd.fueraSinColor, '[J1] Días de otro mes: solo el número, sin color, sin turno y no se eligen', JSON.stringify(rd));
-log(rd.pastillas === 0 && rd.sinBorde, '[J2] Sin pastillas TER/2·1/DIS ni bordes en las celdas');
-log(rd.mk.T === 1 && rd.mk.S === 2 && rd.mk.D === 0, '[J3] La marca dibuja el turno: Tercero un tramo, Segundo – primero dos, Disponible ninguno', JSON.stringify(rd.mk));
-log(JSON.stringify(rd.ley) === '[1,2,0]', '[J4] La leyenda usa la MISMA marca que las celdas', JSON.stringify(rd.ley));
+log(rd.pastillas === 0 && rd.sinBorde, '[J2] Sin pastillas ni bordes en las celdas');
+log(rd.mk.ok && rd.mk.barras === 0 && JSON.stringify(rd.mk.ab) === JSON.stringify(['3.º', '2.º–1.º', 'Disp.']),
+  '[J3] Cada día dice su turno escrito (3.º · 2.º–1.º · Disp.), sin la barrita', JSON.stringify(rd.mk));
+log(JSON.stringify(rd.ley) === JSON.stringify(['3.º Tercero 13–21', '2.º–1.º Segundo – primero 06–13 · 21–06', 'Disp. Disponible']),
+  '[J4] La leyenda descifra la MISMA etiqueta y da las horas', JSON.stringify(rd.ley));
 log(rd.hoyAlto < 90 && rd.sin24, '[J5] La tarjeta de hoy es compacta: dos renglones, sin línea de 24 h ni «Mañana»', rd.hoyAlto);
 log(rd.otrasLineas === 1, '[J6] Las otras secciones caben en una sola línea', rd.otrasLineas);
 log(rd.fest, '[J7] El festivo se marca en la celda');
@@ -349,9 +354,9 @@ for (const tema of ['light', 'dark']) {
       const cc = document.querySelector('#tn-g .tn-c.tn-k-' + k + ':not(.hoy):not(.sel)');
       return { k, txt: g(cc.querySelector('.tn-c-n')).color, tint: 'rgba(0,0,0,0)', cel: g(cc).backgroundColor, card, min: 4.5 };
     });
-    const mk = ['ter', 'sp'].map(k => {
+    const mk = ['ter', 'sp', 'dis'].map(k => {
       const cc = document.querySelector('#tn-g .tn-c.tn-k-' + k + ':not(.hoy):not(.sel)');
-      return { k: k + '-marca', txt: g(cc.querySelector('.tn-mk i')).backgroundColor, tint: 'rgba(0,0,0,0)', cel: g(cc).backgroundColor, card, min: 3 };
+      return { k: k + '-turno', txt: g(cc.querySelector('.tn-lb')).color, tint: 'rgba(0,0,0,0)', cel: g(cc).backgroundColor, card, min: 4.5 };
     });
     const hoyE = document.querySelector('.tn-hoy .tn-est');
     return num.concat(mk).concat([{ k: 'sub', txt: g(hoyE).color, tint: 'rgba(0,0,0,0)', cel: g(document.querySelector('.tn-hoy')).backgroundColor, card: g(document.querySelector('.tn-hoy')).backgroundColor, min: 4.5 }]);
@@ -360,15 +365,17 @@ for (const tema of ['light', 'dark']) {
   const cap = await page.evaluate(() => ['ter', 'sp', 'dis'].map(k => { const d = document.createElement('div'); d.className = 'tn-c tn-k-' + k; d.innerHTML = '<span class="tn-cap">CAM</span>';
     document.getElementById('tn-g').appendChild(d); const g = getComputedStyle; const r = { k: k + '-cap', txt: g(d.firstChild).color, tint: 'rgba(0,0,0,0)', cel: g(d).backgroundColor, card: g(document.querySelector('.tn-mes')).backgroundColor, min: 4.5 }; d.remove(); return r; }));
   const crs = c.concat(cap).map(x => { const fondo = sobre(x.tint, sobre(x.cel, x.card)); return { k: x.k, v: +cr(x.txt, fondo).toFixed(2), min: x.min }; });
-  log(crs.every(x => x.v >= x.min), `[I3] Contraste del número, la marca y la abreviatura sobre la celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
+  log(crs.every(x => x.v >= x.min), `[I3] Contraste AA del número, el turno escrito y la sigla de novedad sobre la celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
   await ctx.close();
 }
 ({ ctx, page } = await abrir(360, 740, 'light'));
 await page.evaluate(async () => { await tnGuardar({ seccion: 3 }); go('turnos'); }); await page.waitForTimeout(300);
 const sx = await page.evaluate(() => ({ x: document.documentElement.scrollWidth - innerWidth,
   c: Math.min(...[...document.querySelectorAll('#tn-g .tn-c')].map(e => e.getBoundingClientRect().width)),
-  k: [...document.querySelectorAll('#tn-g .tn-mk')].every(e => e.getBoundingClientRect().width <= e.closest('.tn-c').getBoundingClientRect().width - 6) }));
-log(sx.x <= 0 && sx.c >= 40 && sx.k, '[I4] A 360 px: sin desborde, celdas de más de 40 px y la marca dentro de la celda', JSON.stringify(sx));
+  n: document.querySelectorAll('#tn-g .tn-lb').length,
+  k: [...document.querySelectorAll('#tn-g .tn-lb')].every(e => { const a = e.getBoundingClientRect(), b = e.closest('.tn-c').getBoundingClientRect();
+    return e.scrollWidth <= e.clientWidth && a.left >= b.left + 2 && a.right <= b.right - 2; }) }));
+log(sx.x <= 0 && sx.c >= 40 && sx.n > 20 && sx.k, '[I4] A 360 px: sin desborde, celdas de más de 40 px y el turno escrito entero dentro de la celda', JSON.stringify(sx));
 await ctx.close();
 ({ ctx, page } = await abrir(384, 800, 'light', { timezoneId: 'Asia/Tokyo' }));
 await page.clock.setFixedTime(new Date('2026-10-29T22:30:00-05:00'));   // 12:30 del 30 en Tokio
