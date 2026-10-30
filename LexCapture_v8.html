@@ -118,16 +118,16 @@
      En oscuro el neón es el texto; en claro es el fondo, con texto casi negro
      —un neón sobre blanco no se lee—, así se ve fluorescente en los dos temas. */
   --neon:#4CFF88;    --neon-bg:rgba(76,255,136,.14); --neon-bd:rgba(76,255,136,.45);
-  /* — Turnos de vigilancia (módulo Turnos, 2026-10-29; paleta del build 169):
-       azul profundo (2.º–1.º), turquesa (3.º) y gris neutro (Disponible). ⚠️ Son tokens PROPIOS: --ok,
+  /* — Turnos de vigilancia (módulo Turnos, 2026-10-29): verde, naranja y coral,
+       como el calendario que el usuario ya usaba. ⚠️ Son tokens PROPIOS: --ok,
        --flag, --danger y --cspT ya significan correcto, flagrancia, error y
        menores, y un turno no es ninguna de esas cosas. — */
-  --tn-dis:#A3ADBA;  --tn-dis-bg:rgba(163,173,186,.13); --tn-dis-bd:rgba(163,173,186,.38);
-  --tn-ter:#3DCFC0;  --tn-ter-bg:rgba(61,207,192,.13);  --tn-ter-bd:rgba(61,207,192,.40);
-  --tn-sp:#7EA6FF;   --tn-sp-bg:rgba(126,166,255,.13);  --tn-sp-bd:rgba(126,166,255,.40);
+  --tn-dis:#5ACB8E;  --tn-dis-bg:rgba(90,203,142,.13);  --tn-dis-bd:rgba(90,203,142,.38);
+  --tn-ter:#F2A04B;  --tn-ter-bg:rgba(242,160,75,.13);  --tn-ter-bd:rgba(242,160,75,.40);
+  --tn-sp:#F2857A;   --tn-sp-bg:rgba(242,133,122,.13);  --tn-sp-bd:rgba(242,133,122,.40);
   /* Tinte de la celda del calendario: color SÓLIDO (22 % del turno sobre la
      tarjeta), no un rgba, así el contraste se mide y no depende del fondo. */
-  --tn-dis-cel:#313A44; --tn-ter-cel:#1B4246; --tn-sp-cel:#293953;
+  --tn-dis-cel:#21413B; --tn-ter-cel:#43382C; --tn-sp-cel:#433236;
   /* Señales de arriba de la celda: festivo (rojo vivo) y novedad (fucsia). */
   --tn-fest:#FF4F5E; --tn-nov:#E879F9;
 
@@ -239,10 +239,10 @@
   /* En claro se invierte: el neón es el FONDO y el texto va casi negro. Un
      #4CFF88 como texto sobre blanco da 1,4:1 — ilegible. Así medido: 7,9:1. */
   --neon:#0B3D22;    --neon-bg:#4BE87E;              --neon-bd:#22C55E;
-  --tn-dis:#5B6573;  --tn-dis-bg:rgba(91,101,115,.09);  --tn-dis-bd:rgba(91,101,115,.32);
-  --tn-ter:#0F766E;  --tn-ter-bg:rgba(15,118,110,.09);  --tn-ter-bd:rgba(15,118,110,.32);
-  --tn-sp:#1D4ED8;   --tn-sp-bg:rgba(29,78,216,.08);   --tn-sp-bd:rgba(29,78,216,.30);
-  --tn-dis-cel:#EBEDEE; --tn-ter-cel:#E2EFEE; --tn-sp-cel:#E4EAFA;
+  --tn-dis:#0A7346;  --tn-dis-bg:rgba(10,115,70,.09);  --tn-dis-bd:rgba(10,115,70,.32);
+  --tn-ter:#9A4807;  --tn-ter-bg:rgba(154,72,7,.10);   --tn-ter-bd:rgba(154,72,7,.32);
+  --tn-sp:#BC3328;   --tn-sp-bg:rgba(188,51,40,.08);   --tn-sp-bd:rgba(188,51,40,.30);
+  --tn-dis-cel:#E3F2E9; --tn-ter-cel:#FAEDDD; --tn-sp-cel:#FBE6E2;
   --tn-fest:#E3182D; --tn-nov:#C026D3;
 
   --surface-selected:rgba(0,49,83,.09);
@@ -28311,7 +28311,7 @@ var TN_SRV = {
 var TN_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 var TN_DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 var TN_DC = ['dom','lun','mar','mié','jue','vie','sáb'];
-var TN_EMO = { T: '🟢', S: '🔵', D: '⚪' };   // solo en el texto que se comparte por chat
+var TN_EMO = { T: '🟠', S: '🔴', D: '🟢' };   // solo en el texto que se comparte por chat
 var _tnVer = null, _tnSel = null, _tnTick = null, _tnHoyPint = null;
 
 /* ── Motor (sin DOM) ─────────────────────────────────────────────────────── */

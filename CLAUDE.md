@@ -8793,16 +8793,16 @@ las pantallas en los dos temas, en teléfono y escritorio. Publicado como **buil
 - ⚠️ El ciclo calibrado (`desfase`) sigue siendo global: corre las tres secciones y el pasado.
 - Anti-caché `?v=167` / `cache-v167`, `_BUILD=167`. Para la app de Play hace falta un `.aab` nuevo.
 
-## Turnos: estadísticas del año rediseñadas y paleta azul/turquesa/gris (2026-10-29, build 169)
+## Turnos: estadísticas del año rediseñadas (2026-10-29, build 169)
 El usuario rechazó la ventana «Mis turnos» del build 167 (saturada, barras que contradecían las
 cifras, rayados, colores marrón/rojo poco distinguibles, notas de relleno) y pidió verla **por
 año, por mes, por día y por hora**. Verificado con `verify_turnos.mjs` (**82 checks**, antes 79;
 M8 rehecho, M14-M16 nuevos) y mirando la ventana en los dos temas.
-- **Paleta del módulo Turnos, en todo el módulo** (calendario, franja del Inicio, estadísticas):
-  2.º–1.º **azul profundo** (`#1D4ED8` claro / `#7EA6FF` oscuro), 3.º **turquesa** (`#0F766E` /
-  `#3DCFC0`), Disponible **gris neutro** (`#5B6573` / `#A3ADBA`); tintes de celda recalculados.
-  Contraste medido: texto del turno sobre su celda ≥4,6:1 y barras de festivo/novedad ≥3:1 en los
-  dos temas ([I3]). Emojis del texto por chat: 🔵 2.º–1.º · 🟢 3.º · ⚪ Disp.
+- ⚠️ **Paleta: DECISIÓN DEL USUARIO, se queda verde/naranja/coral.** El build 170 la cambió en
+  todo el módulo a azul profundo / turquesa / gris (lo pedía su propio plan de mejora); al verla,
+  el usuario pidió **devolver los colores de antes** y conservar todo lo demás. Build 171: los
+  tokens `--tn-*` y `TN_EMO` son otra vez, byte a byte, los del build 168. No volver a cambiarlos
+  sin que lo pida.
 - **AÑO**: las horas de servicio como cifra principal y los turnos debajo; la barra reparte las
   **HORAS** (un 2.º–1.º pesa el doble que un 3.º), tres tarjetas en una fila (2.º–1.º · 3.º ·
   Disp.) con turnos **y** horas, y el promedio por día, semana y mes. «Turno en curso incluido»

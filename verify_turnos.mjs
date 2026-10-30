@@ -326,8 +326,8 @@ log(await page.evaluate(() => tnCfg().novedades.length === 0), '[F7] Quitar la n
 /* ═══ G · compartir ═══ */
 const tx = await page.evaluate(() => tnTextoMes(2026, 9, 2, tnCfg()));
 const lin = tx.split('\n');
-log(lin[0] === '*Turnos · 2.ª sección*' && lin.length === 34 && /⚪ Lun 12 · Disponible · Festivo: Día de la Raza/.test(tx) &&
-    /🔵 Jue 29 · Segundo – primero \(06:00–13:00 y 21:00–06:00\)/.test(tx),
+log(lin[0] === '*Turnos · 2.ª sección*' && lin.length === 34 && /🟢 Lun 12 · Disponible · Festivo: Día de la Raza/.test(tx) &&
+    /🔴 Jue 29 · Segundo – primero \(06:00–13:00 y 21:00–06:00\)/.test(tx),
   '[G1] El mes por chat: un renglón por día, con turno, horas y festivo', lin.slice(0, 4));
 const td = await page.evaluate(() => tnTextoDia('2026-10-12', 2, tnCfg()));
 log(/Lunes 12 de octubre de 2026/.test(td) && /1\.ª sección: Tercero/.test(td) && /3\.ª sección: Segundo – primero/.test(td), '[G2] El día por chat dice también las otras secciones', td);
