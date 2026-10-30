@@ -8725,3 +8725,29 @@ Pedido del usuario: la barrita de 24 h no se entendía; prefiere leer el turno, 
   con horas, [I3] contraste de la etiqueta, [I4] a 360 px la etiqueta entera dentro de la celda.
 - Anti-caché `?v=164` / `cache-v164`, `_BUILD=164`; `deploy:web` lo publicó como **build 165**
   (el script sube el número otra vez al desplegar). Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: festivos y novedades visibles, el día en una hoja (2026-10-29, build 166)
+Cinco observaciones del usuario sobre tres pantallazos de Turnos. Verificado con `verify_turnos.mjs`
+(**64 checks**, antes 61) y mirando la pantalla en los dos temas. Ni el ciclo, ni las fechas, ni los
+festivos, ni las novedades guardadas cambiaron.
+- **Festivo = barra roja viva arriba de la celda** (`tnIndHtml`, `.tn-ind .f`, token `--tn-fest`:
+  `#E3182D` claro / `#FF4F5E` oscuro). Antes era un punto en la esquina, casi invisible.
+- **Una novedad ya NO tapa el turno**: la celda sigue diciendo el turno (`tnTurnoDia` = el que se
+  presta o, si la novedad libra, el del ciclo) y la novedad va como **barra fucsia** arriba
+  (`.tn-ind .n`, `--tn-nov`: `#C026D3` / `#E879F9`). Festivo y novedad el mismo día: la barra se
+  parte en dos. Se retiró la sigla en la celda (`.tn-cap`). `data-t` de la celda es siempre un turno
+  y `data-nov` el tipo de novedad.
+- **Leyenda en dos columnas, sin horas**: turnos a la izquierda (`3.º Tercero` …), señales a la
+  derecha (`Festivo` y la novedad **por su nombre**: las del mes, `tnNovMes`; sin ninguna,
+  «Permiso», la más común). `tnHorasCortas` se retiró.
+- **El día sube en una hoja** (`tnDiaSheet`, sobre el `act-sheet` de siempre) al tocarlo: arriba el
+  turno con sus horas; debajo una línea por festivo, novedad (editar / quitar con iconos), servicio
+  y «Otras secciones»; y las acciones Agregar novedad · Registrar servicio · Compartir el día. Se
+  retiró la tarjeta fija `#tn-dia` (`tnPintarDia`), que ocupaba media pantalla.
+- **La sección se elige desde el subtítulo de la barra** («2.ª sección ⌄», `#tn-sub` es un botón →
+  `tnSeccionSheet`): las tres con su turno de hoy, la elegida con chulo, y «Ajustar el ciclo». Fuera
+  la fila «Mi sección» con su lista desplegable. Sin sección, el estado vacío ofrece «1.ª · 2.ª · 3.ª».
+- Contraste: las barras ≥3:1 sobre el tinte de cada turno en los dos temas ([I3]).
+- `verify_turnos` 64/64: [D1] sin fila de formulario, [K1]/[K2] la hoja de la sección, [D7] la hoja
+  del día, [J4] la leyenda nueva, [J7] la barra de festivo, [F1]/[K3] la novedad no tapa el turno y la
+  leyenda la nombra. Publicado como **build 166**. Para la app de Play hace falta un `.aab` nuevo.

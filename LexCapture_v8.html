@@ -128,6 +128,8 @@
   /* Tinte de la celda del calendario: color SÓLIDO (22 % del turno sobre la
      tarjeta), no un rgba, así el contraste se mide y no depende del fondo. */
   --tn-dis-cel:#21413B; --tn-ter-cel:#43382C; --tn-sp-cel:#433236;
+  /* Señales de arriba de la celda: festivo (rojo vivo) y novedad (fucsia). */
+  --tn-fest:#FF4F5E; --tn-nov:#E879F9;
 
   /* — Superficies de estado. Antes cada componente resolvía «seleccionado» y
      «deshabilitado» por su cuenta; ahora tienen token, como --hover y --pressed. — */
@@ -241,6 +243,7 @@
   --tn-ter:#9A4807;  --tn-ter-bg:rgba(154,72,7,.10);   --tn-ter-bd:rgba(154,72,7,.32);
   --tn-sp:#BC3328;   --tn-sp-bg:rgba(188,51,40,.08);   --tn-sp-bd:rgba(188,51,40,.30);
   --tn-dis-cel:#E3F2E9; --tn-ter-cel:#FAEDDD; --tn-sp-cel:#FBE6E2;
+  --tn-fest:#E3182D; --tn-nov:#C026D3;
 
   --surface-selected:rgba(0,49,83,.09);
   --surface-disabled:rgba(16,36,56,.04);
@@ -2259,29 +2262,34 @@ body.cu-on{overflow:hidden}
   #ini-mods .mod-grid{grid-template-columns:1fr}
 }
 
-/* ═══ TURNOS (2026-10-29, build 162 · rediseño build 163) ═══
+/* ═══ TURNOS (2026-10-29, build 162 · rediseños builds 163 y 166) ═══
    Calendario de las tres secciones de vigilancia. Cada pieza toma el color de
    su turno por cuatro propiedades (--tc color · --tcb fondo · --tcd canto ·
    --tcel tinte de celda) que pone la clase tn-k-*: una celda, una muestra de
    la leyenda o una franja se pintan con la misma regla, y el tema claro solo
    redefine los tokens --tn-*.
    ⚠️ El turno de un día se dice con DOS señales a la vez: el TINTE de la celda
-   (de un vistazo) y la MARCA de abajo, que es el turno dibujado sobre las 24
-   horas del día (Tercero = un tramo al centro, Segundo – primero = mañana y
-   noche, Disponible = vacía). La forma no depende del color: se lee igual con
-   daltonismo, que el rojo y el verde no dejarían distinguir. */
+   (de un vistazo) y el turno ESCRITO abajo («3.º», «2.º–1.º», «Disp.»), que se
+   lee igual con daltonismo. Festivo y novedad NO cambian el turno: van como una
+   barra arriba de la celda (rojo vivo / fucsia, build 166). */
 .tn-k-dis{--tc:var(--tn-dis);--tcb:var(--tn-dis-bg);--tcd:var(--tn-dis-bd);--tcel:var(--tn-dis-cel)}
 .tn-k-ter{--tc:var(--tn-ter);--tcb:var(--tn-ter-bg);--tcd:var(--tn-ter-bd);--tcel:var(--tn-ter-cel)}
 .tn-k-sp{--tc:var(--tn-sp);--tcb:var(--tn-sp-bg);--tcd:var(--tn-sp-bd);--tcel:var(--tn-sp-cel)}
 .tn-k-lib{--tc:var(--text-2);--tcb:var(--surface-3);--tcd:var(--border-strong);--tcel:var(--surface-2)}
 .tn-dot{width:9px;height:9px;border-radius:50%;background:var(--tc);flex:none}
-.tn-sec{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-.tn-sec-l{font-size:14px;font-weight:600;color:var(--text-2);flex:none}
-.tn-sec .fs{flex:1;min-height:44px;padding-top:10px;padding-bottom:10px;font-weight:600}
+/* La sección se elige desde el subtítulo de la barra (build 166): «2.ª sección ⌄»
+   abre una hoja con las tres. Sin fila de formulario dentro de la pantalla. */
+.tn-subb{display:inline-flex;align-items:center;gap:4px;margin:1px 0 0 -6px;padding:2px 6px;border:0;border-radius:6px;
+  background:transparent;font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.topbar .tn-subb{display:inline-flex;font-weight:500}
+.tn-subb svg{width:14px;height:14px;stroke-width:2.2;flex:none}
+.tn-subb:active{background:var(--pressed)}
+@media(hover:hover){.tn-subb:hover{background:var(--hover)}}
+.tn-elige{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:16px}
 .tn-cols{display:grid;grid-template-columns:minmax(0,1fr);
-  grid-template-areas:"hoy" "mes" "dia" "res" "acc";row-gap:12px}
+  grid-template-areas:"hoy" "mes" "res" "acc";row-gap:12px}
 .tn-a-hoy{grid-area:hoy}.tn-a-mes{grid-area:mes}
-.tn-a-dia{grid-area:dia}.tn-a-res{grid-area:res}.tn-a-acc{grid-area:acc}
+.tn-a-res{grid-area:res}.tn-a-acc{grid-area:acc}
 .tn-cols>div:empty{display:none}
 .tn-cols .st{margin:0 0 12px}
 
@@ -2342,10 +2350,7 @@ body.cu-on{overflow:hidden}
 .tn-k-dis .tn-lb{font-weight:600}
 /* En la celda estrecha (teléfono de 360 px) «2.º–1.º» a 12 px roza el borde: baja un punto. */
 .tn-g .tn-c{container-type:inline-size}
-@container (max-width:44px){.tn-lb{font-size:11px}.tn-cap{font-size:10px;letter-spacing:.04em}}
-/* La sigla de una novedad, en versalitas: se distingue de un turno a primera vista. */
-.tn-cap{display:block;font-size:11px;line-height:14px;font-weight:700;letter-spacing:.06em;color:var(--tc)}
-.tn-k-lib .tn-cap{color:var(--text-2)}
+@container (max-width:44px){.tn-lb{font-size:11px}}
 
 /* El mes. */
 .tn-mes{padding:12px 10px 14px}
@@ -2366,7 +2371,7 @@ body.cu-on{overflow:hidden}
 .tn-wk span{text-align:center;font-size:11px;line-height:16px;font-weight:600;letter-spacing:.04em;color:var(--text-3)}
 .tn-g{touch-action:pan-y}
 .tn-c{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-  height:56px;min-width:0;padding:0;border:0;border-radius:12px;background:var(--tcel,transparent);color:var(--text);
+  height:56px;min-width:0;padding:6px 0 0;border:0;border-radius:12px;background:var(--tcel,transparent);color:var(--text);
   font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;
   transition:box-shadow var(--d1) var(--ease),transform var(--d1) var(--ease)}
 .tn-c:active{transform:scale(.95)}
@@ -2375,54 +2380,60 @@ body.cu-on{overflow:hidden}
   font-size:15px;line-height:1;font-weight:600;font-variant-numeric:tabular-nums}
 .tn-c.hoy .tn-c-n{background:var(--acc);color:var(--acc-fg);font-weight:700}
 .tn-c.sel,.tn-c.sel:hover{box-shadow:inset 0 0 0 2px var(--acc)}
-/* Festivo: un solo punto en la esquina. */
-.tn-c.fest::after{content:'';position:absolute;top:6px;right:6px;width:5px;height:5px;border-radius:50%;background:var(--text)}
+/* Festivo y novedad: una barra arriba de la celda (rojo vivo / fucsia). Con los
+   dos el mismo día, la barra se parte en dos. El turno de abajo no cambia. */
+.tn-ind{position:absolute;top:3px;left:8px;right:8px;display:flex;gap:3px;height:5px;pointer-events:none}
+.tn-ind i{flex:1;border-radius:3px}
+.tn-ind .f,.tn-ley-m .f{background:var(--tn-fest)}
+.tn-ind .n,.tn-ley-m .n{background:var(--tn-nov)}
 /* Otro mes: solo el número, apagado. */
 .tn-c.fuera{background:transparent;cursor:default}
 .tn-c.fuera .tn-c-n{color:var(--text-3);font-weight:500;opacity:.6}
 .tn-c.fuera:active{transform:none}
 @media(hover:hover){.tn-c.fuera:hover{box-shadow:none}}
 
-/* Leyenda: cada muestra es la misma celda en pequeño. */
-.tn-ley{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 4px 0;font-size:12px;line-height:16px;color:var(--text-2)}
-.tn-ley>span{display:inline-flex;align-items:center;gap:7px}
-.tn-ley-h{margin-left:-2px;color:var(--text-3);font-variant-numeric:tabular-nums}
-.tn-ley-s{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:20px;padding:0 6px;
+/* Leyenda en dos columnas: los turnos a la izquierda, las señales a la derecha. */
+.tn-ley{display:grid;grid-template-columns:auto minmax(0,1fr);gap:16px;margin:14px 4px 0;padding-top:12px;
+  border-top:1px solid var(--border);font-size:13px;line-height:18px;color:var(--text)}
+.tn-ley-c{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tn-ley-i{display:flex;align-items:center;gap:8px;min-width:0}
+.tn-ley-s{position:relative;display:inline-flex;align-items:center;justify-content:center;width:46px;height:22px;padding:0 4px;
   border-radius:6px;background:var(--tcel);flex:none}
+.tn-ley-m{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none}
+.tn-ley-m i{display:block;width:20px;height:5px;border-radius:3px}
 .tn-ley-s .tn-lb{font-size:11px;line-height:12px}
-.tn-ley-s .tn-cap{font-size:10px;line-height:12px;letter-spacing:.04em}
-.tn-ley-f{position:relative;width:34px;height:20px;border-radius:6px;background:var(--surface-2);flex:none}
-.tn-ley-f::after{content:'';position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;background:var(--text)}
 
-/* El día elegido. */
-.tn-dia{padding:16px}
-.tn-dia-h{display:flex;align-items:center;gap:8px}
-.tn-dia-t{flex:1;font-size:16px;line-height:22px;font-weight:700;color:var(--text)}
-.tn-hoyc{padding:2px 8px;border-radius:999px;background:var(--accG);color:var(--acc);font-size:12px;line-height:16px;font-weight:600}
-.tn-fest{margin-top:2px;font-size:13px;line-height:18px;color:var(--text-2)}
-.tn-fest b{color:var(--text);font-weight:600}
-.tn-dia-k{display:flex;align-items:center;gap:12px;margin-top:14px}
-.tn-dia-k .tn-ley-s{min-width:52px;height:32px;padding:0 8px;border-radius:8px}
-.tn-dia-k .tn-ley-s .tn-lb{font-size:14px;line-height:16px}
-.tn-dia-k .tn-ley-s .tn-cap{font-size:12px;line-height:14px}
-.tn-dia-k b{display:block;font-size:15px;line-height:20px;color:var(--text)}
-.tn-dia-k .h{display:block;font-size:13px;line-height:18px;color:var(--text-2);font-variant-numeric:tabular-nums}
-.tn-nov,.tn-srv{margin-top:12px;padding:10px 12px;border-radius:12px;background:var(--surface-2);
-  font-size:13px;line-height:18px;color:var(--text-2)}
-.tn-nov b,.tn-srv b{display:block;font-size:14px;color:var(--text)}
-.tn-nov-b{display:flex;gap:8px;margin-top:8px}
-.tn-srv{display:flex;align-items:center;gap:10px}
-.tn-srv>div{flex:1;min-width:0}
-.tn-srv-ic{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;flex:none;
-  background:var(--ok-bg);color:var(--ok)}
-.tn-srv-ic.no{background:var(--errB);color:var(--danger)}
-.tn-srv-ic svg{width:16px;height:16px;stroke-width:2.4}
-.tn-otras{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-top:12px;padding-top:12px;
-  border-top:1px solid var(--border);font-size:13px;line-height:18px;color:var(--text-2)}
+/* El día: una hoja que sube al tocarlo (build 166). Antes era una tarjeta fija
+   debajo del mes que ocupaba media pantalla aunque no se mirara. */
+.tn-ds-chip{width:auto;min-width:52px;height:32px;padding:0 8px;border-radius:8px}
+.tn-ds-chip .tn-lb{font-size:14px;line-height:16px}
+.tn-ds-t{font-size:16px;line-height:22px;font-weight:700;color:var(--text)}
+.tn-ds-s{font-size:13px;line-height:18px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.tn-hoyc{padding:2px 8px;border-radius:999px;background:var(--accG);color:var(--acc);font-size:12px;line-height:16px;font-weight:600;flex:none}
+.tn-ds{margin:0 4px 6px;border-bottom:1px solid var(--border)}
+.tn-ds-r{display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 8px;font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-ds-r+.tn-ds-r{border-top:1px solid var(--border)}
+.tn-ds-r b{color:var(--text);font-weight:600}
+.tn-ds-x{flex:1;min-width:0}
+.tn-ds-i{display:flex;align-items:center;justify-content:center;width:22px;height:22px;flex:none;color:var(--ok)}
+.tn-ds-i.no{color:var(--danger)}
+.tn-ds-i svg{width:18px;height:18px;stroke-width:2.4}
+.tn-ds-i i{display:block;width:20px;height:4px;border-radius:2px}
+.tn-ds-i .f{background:var(--tn-fest)}.tn-ds-i .n{background:var(--tn-nov)}
+.tn-ds-b{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;border:0;border-radius:50%;
+  background:transparent;color:var(--text-2);cursor:pointer}
+.tn-ds-b svg{width:18px;height:18px;stroke-width:2}
+.tn-ds-b:active{background:var(--pressed)}
+@media(hover:hover){.tn-ds-b:hover{background:var(--hover);color:var(--text)}}
+.tn-ds-b.del{color:var(--danger)}
+.tn-otras{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px}
 .tn-otra{display:inline-flex;align-items:center;gap:6px;color:var(--text)}
 .tn-otra .tn-dot{width:7px;height:7px}
-.tn-dia-b{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
-.tn-dia-b .tn-ancho{grid-column:1/-1}
+/* La hoja de la sección: la elegida lleva el chulo a la derecha. */
+.tn-secc-op .lic{width:56px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
+.tn-secc-op.on{background:var(--surface-selected)}
+.tn-secc-ok{display:flex;width:22px;height:22px;color:var(--acc);flex:none}
+.tn-secc-ok svg{width:22px;height:22px;stroke-width:2.4}
 
 /* El mes en cifras. */
 .tn-barra{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--surface-3);gap:2px}
@@ -2482,8 +2493,8 @@ body.cu-on{overflow:hidden}
 @media(min-width:900px){
   /* Escritorio: el mes a la derecha, todo lo demás a la izquierda. */
   .tn-cols{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);column-gap:20px;
-    grid-template-areas:"hoy mes" "dia mes" "res mes" "acc mes";
-    grid-template-rows:auto auto auto 1fr;align-items:start}
+    grid-template-areas:"hoy mes" "res mes" "acc mes";
+    grid-template-rows:auto auto 1fr;align-items:start}
   .tn-a-mes{position:sticky;top:16px}
   .tn-c{height:64px}
 }
@@ -2927,22 +2938,17 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
       <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
       <div class="ttl">
         <h1>Turnos</h1>
-        <span class="sub" id="tn-sub"></span>
+        <button class="sub tn-subb" id="tn-sub" onclick="tnSeccionSheet()" aria-haspopup="dialog"></button>
       </div>
       <button class="topbar-btn" id="tn-share" onclick="tnCompartir()" title="Compartir turnos" aria-label="Compartir turnos">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </button>
     </header>
     <div class="pane">
-      <div class="tn-sec">
-        <label class="tn-sec-l" for="tn-sec-sel">Mi sección</label>
-        <select class="fs" id="tn-sec-sel" onchange="tnElegirSeccion(+this.value)"></select>
-      </div>
       <div id="tn-vacio"></div>
       <div class="tn-cols" id="tn-cols">
         <div class="tn-a-hoy" id="tn-hoy"></div>
         <div class="tn-a-mes" id="tn-mes"></div>
-        <div class="tn-a-dia" id="tn-dia"></div>
         <div class="tn-a-res" id="tn-res"></div>
         <div class="tn-a-acc" id="tn-acc"></div>
       </div>
@@ -28414,17 +28420,18 @@ function renderTurnos() {
   if (!_tnVer) { var h = tnFecha(hoy); _tnVer = { y: h.getFullYear(), m: h.getMonth() }; }
   if (!_tnSel) _tnSel = hoy;
   var sub = document.getElementById('tn-sub');
-  if (sub) sub.textContent = sec ? TN_SECC[sec] + (t.desfase ? ' · ciclo ajustado' : '') : 'Elige tu sección';
-  var sg = document.getElementById('tn-sec-sel');
-  if (sg) sg.innerHTML = (sec ? '' : '<option value="" selected disabled>Elige tu sección</option>') + [1, 2, 3].map(function (s) {
-    return '<option value="' + s + '"' + (s === sec ? ' selected' : '') + '>' + TN_SECC[s] + '</option>';
-  }).join('');
+  if (sub) {
+    sub.innerHTML = escHtml(sec ? TN_SECC[sec] + (t.desfase ? ' · ciclo ajustado' : '') : 'Elige tu sección') + TN_CHEV_ABAJO;
+    sub.setAttribute('aria-label', 'Sección: ' + (sec ? TN_SECC[sec] : 'sin elegir') + '. Cambiar');
+  }
   var sh = document.getElementById('tn-share');
   if (sh) sh.style.display = sec ? '' : 'none';
   var vac = document.getElementById('tn-vacio'), cols = document.getElementById('tn-cols');
   if (!sec) {
     if (vac) vac.innerHTML = '<div class="empty"><div class="ic">' + LC_IC.turnos + '</div><h3>¿Cuál es tu sección?</h3>' +
-      '<p>Elígela arriba y el calendario se pinta con su ciclo.</p></div>';
+      '<p>El calendario se pinta con su ciclo.</p><div class="tn-elige">' + [1, 2, 3].map(function (s) {
+        return '<button class="btn bs" onclick="tnElegirSeccion(' + s + ')" aria-label="' + TN_SECC[s] + '">' + s + '.ª</button>';
+      }).join('') + '</div></div>';
     if (cols) cols.style.display = 'none';
     return;
   }
@@ -28432,27 +28439,32 @@ function renderTurnos() {
   if (cols) cols.style.display = '';
   tnPintarHoy();
   tnPintarMes();
-  tnPintarDia();
   tnPintarResumen();
   var acc = document.getElementById('tn-acc');
   if (acc) acc.innerHTML = '<div class="tn-acc">' +
     '<button class="btn bp" onclick="tnCompartir()">Compartir mis turnos</button>' +
     '<button class="btn bs" onclick="tnAjustar()">Ajustar el ciclo</button></div>';
 }
+/* El turno que se pinta en un día: el que se presta o, si una novedad lo libra,
+   el que dice el ciclo (build 166). La novedad va aparte, como una barra arriba. */
+function tnTurnoDia(tu) { return tu.ef || tu.base; }
 /* Lo de abajo de un día: el turno ESCRITO, abreviado como se dice en la calle
-   («3.º», «2.º–1.º», «Disp.»), o, con novedad, su sigla en versalitas (VAC, PER,
-   CAM…). Es la misma pieza en la celda, en la leyenda y en el día elegido; el
-   texto, y no solo el color, dice el turno. */
+   («3.º», «2.º–1.º», «Disp.»). Es la misma pieza en la celda, en la leyenda y
+   en la hoja del día; el texto, y no solo el color, dice el turno. */
 function tnSenaHtml(tu) {
-  return tu.nov ? '<span class="tn-cap" aria-hidden="true">' + TN_NOV[tu.nov.tipo].ab + '</span>'
-    : '<span class="tn-lb" aria-hidden="true">' + escHtml(TN_TURNOS[tu.ef].ab) + '</span>';
+  return '<span class="tn-lb" aria-hidden="true">' + escHtml(TN_TURNOS[tnTurnoDia(tu)].ab) + '</span>';
 }
-/* Las horas de un turno en corto, para la leyenda: «13–21», «06–13 · 21–06». */
-function tnHorasCortas(code, t) {
-  var hs = tnHoras(t);
-  return TN_TURNOS[code].bl.map(function (k) {
-    return hs[k].map(function (x) { return /:00$/.test(x) ? x.slice(0, 2) : x; }).join('–');
-  }).join(' · ');
+/* Las señales de arriba de la celda: festivo (rojo) y novedad (fucsia). */
+function tnIndHtml(fest, nov) {
+  return fest || nov ? '<span class="tn-ind" aria-hidden="true">' + (fest ? '<i class="f"></i>' : '') + (nov ? '<i class="n"></i>' : '') + '</span>' : '';
+}
+/* Qué novedades hay en el mes, para nombrarlas en la leyenda. Sin ninguna, se
+   nombra el permiso, que es la más común. */
+function tnNovMes(y, m, t) {
+  var a = ojISO(new Date(y, m, 1)), b = ojISO(new Date(y, m + 1, 0)), vis = {};
+  (t.novedades || []).forEach(function (n) { if (n.desde <= b && (n.hasta || n.desde) >= a) vis[n.tipo] = 1; });
+  var ks = Object.keys(TN_NOV).filter(function (k) { return vis[k]; });
+  return (ks.length ? ks : ['permiso']).map(function (k) { return TN_NOV[k].n; }).join(' · ');
 }
 function tnPintarHoy() {
   var el = document.getElementById('tn-hoy');
@@ -28483,20 +28495,19 @@ function tnPintarMes() {
     var d = new Date(y, m, 1 - lead + i), iso = ojISO(d);
     /* Días de otro mes: solo el número, apagado, y no se eligen. */
     if (d.getMonth() !== m) { h += '<span class="tn-c fuera" aria-hidden="true"><span class="tn-c-n">' + d.getDate() + '</span></span>'; continue; }
-    var tu = tnTurno(iso, sec, t), v = tnVista(tu), fest = lcFestivoNombre(d);
-    var cls = 'tn-c tn-k-' + v.c + (iso === hoy ? ' hoy' : '') + (iso === _tnSel ? ' sel' : '') + (fest ? ' fest' : '');
-    var lbl = tnFechaLarga(iso) + ': ' + v.n + (fest ? ', festivo ' + fest : '') + (tu.nov && tu.ef ? ', ' + TN_NOV[tu.nov.tipo].n : '');
-    h += '<button class="' + cls + '" data-iso="' + iso + '" data-t="' + (tu.ef || '') + '" onclick="tnElegir(\'' + iso + '\')" aria-pressed="' + (iso === _tnSel) + '" aria-label="' + escAttr(lbl) + '">' +
-      '<span class="tn-c-n">' + d.getDate() + '</span>' + tnSenaHtml(tu) + '</button>';
+    var tu = tnTurno(iso, sec, t), k = tnTurnoDia(tu), fest = lcFestivoNombre(d);
+    var cls = 'tn-c tn-k-' + TN_TURNOS[k].c + (iso === hoy ? ' hoy' : '') + (iso === _tnSel ? ' sel' : '') + (fest ? ' fest' : '') + (tu.nov ? ' nov' : '');
+    var lbl = tnFechaLarga(iso) + ': ' + TN_TURNOS[k].n + (fest ? ', festivo ' + fest : '') + (tu.nov ? ', ' + TN_NOV[tu.nov.tipo].n : '');
+    h += '<button class="' + cls + '" data-iso="' + iso + '" data-t="' + k + '"' + (tu.nov ? ' data-nov="' + tu.nov.tipo + '"' : '') +
+      ' onclick="tnElegir(\'' + iso + '\')" aria-pressed="' + (iso === _tnSel) + '" aria-label="' + escAttr(lbl) + '">' +
+      tnIndHtml(fest, tu.nov) + '<span class="tn-c-n">' + d.getDate() + '</span>' + tnSenaHtml(tu) + '</button>';
   }
-  h += '</div><div class="tn-ley">' +
+  h += '</div><div class="tn-ley"><div class="tn-ley-c">' +
     TN_CICLO.map(function (k) {
-      var hc = tnHorasCortas(k, t);
-      return '<span><span class="tn-ley-s tn-k-' + TN_TURNOS[k].c + '">' + tnSenaHtml({ ef: k }) + '</span>' + TN_TURNOS[k].n +
-        (hc ? '<span class="tn-ley-h">' + hc + '</span>' : '') + '</span>';
-    }).join('') +
-    '<span><span class="tn-ley-f"></span>Festivo</span>' +
-    '<span><span class="tn-ley-s tn-k-lib"><span class="tn-cap">VAC</span></span>Novedad</span></div></div>';
+      return '<span class="tn-ley-i"><span class="tn-ley-s tn-k-' + TN_TURNOS[k].c + '">' + tnSenaHtml({ ef: k }) + '</span>' + TN_TURNOS[k].n + '</span>';
+    }).join('') + '</div><div class="tn-ley-c">' +
+    '<span class="tn-ley-i"><span class="tn-ley-m"><i class="f"></i></span>Festivo</span>' +
+    '<span class="tn-ley-i tn-ley-nov"><span class="tn-ley-m"><i class="n"></i></span>' + escHtml(tnNovMes(y, m, t)) + '</span></div></div></div>';
   el.innerHTML = h;
   tnDeslizar(document.getElementById('tn-g'));
 }
@@ -28514,44 +28525,70 @@ function tnDeslizar(g) {
 }
 var TN_IC_OK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 var TN_IC_NO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
-function tnPintarDia() {
-  var el = document.getElementById('tn-dia');
-  if (!el) return;
-  var t = tnCfg(), sec = t.seccion, iso = _tnSel || tnHoy(), d = tnFecha(iso), tu = tnTurno(iso, sec, t), v = tnVista(tu);
-  var fest = lcFestivoNombre(d), hoy = tnHoy(), sv = tnServicio(iso, t);
-  var h = '<div class="card tn-dia"><div class="tn-dia-h"><div class="tn-dia-t">' + escHtml(tnFechaLarga(iso, d.getFullYear() !== tnFecha(hoy).getFullYear())) + '</div>' +
-    (iso === hoy ? '<span class="tn-hoyc">Hoy</span>' : '') + '</div>' +
-    (fest ? '<div class="tn-fest">Festivo · <b>' + escHtml(fest) + '</b></div>' : '') +
-    '<div class="tn-dia-k"><span class="tn-ley-s tn-k-' + v.c + '">' + tnSenaHtml(tu) + '</span><div><b>' + escHtml(v.n) + '</b><span class="h">' +
-      escHtml(tu.ef ? tnHorasTxt(tu.ef, t) : 'Por ciclo, ' + TN_TURNOS[tu.base].n) + '</span></div></div>';
+var TN_IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+var TN_IC_MAS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>';
+var TN_CHEV_ABAJO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+/* La hoja de un día (build 166): el turno arriba y, debajo, una línea por cosa
+   (festivo, novedad, servicio, las otras secciones) y las acciones. Sube al
+   tocar el día; antes era una tarjeta fija que ocupaba media pantalla. */
+function tnDiaSheet(iso) {
+  var t = tnCfg(), sec = t.seccion;
+  if (!sec) return;
+  var d = tnFecha(iso), tu = tnTurno(iso, sec, t), k = tnTurnoDia(tu), fest = lcFestivoNombre(d), hoy = tnHoy(), sv = tnServicio(iso, t);
+  var det = tu.ef ? tnHorasTxt(tu.ef, t) : 'Sin servicio';
+  var head = '<span class="tn-ley-s tn-ds-chip tn-k-' + TN_TURNOS[k].c + '">' + tnSenaHtml(tu) + '</span>' +
+    '<div class="prow-body"><div class="tn-ds-t">' + escHtml(tnFechaLarga(iso, d.getFullYear() !== tnFecha(hoy).getFullYear())) + '</div>' +
+    '<div class="tn-ds-s">' + escHtml(TN_TURNOS[k].n + ' · ' + det) + '</div></div>' +
+    (iso === hoy ? '<span class="tn-hoyc">Hoy</span>' : '');
+  var r = '';
+  if (fest) r += '<div class="tn-ds-r tn-ds-fest"><span class="tn-ds-i"><i class="f"></i></span><div class="tn-ds-x"><b>Festivo</b> · ' + escHtml(fest) + '</div></div>';
   if (tu.nov) {
-    var nv = tu.nov, rango = nv.hasta && nv.hasta !== nv.desde ? 'Del ' + tnFechaCorta(nv.desde) + ' al ' + tnFechaCorta(nv.hasta) : tnFechaCorta(nv.desde);
-    h += '<div class="tn-nov"><b>' + escHtml(TN_NOV[nv.tipo].n) + '</b>' + escHtml(rango) +
-      (nv.tipo === 'cambio' && tu.ef !== tu.base ? ' · por ciclo, ' + escHtml(TN_TURNOS[tu.base].n) : '') +
-      (nv.con ? '<br>Con ' + escHtml(nv.con) : '') + (nv.nota ? '<br>' + escHtml(nv.nota) : '') +
-      '<div class="tn-nov-b"><button class="btn bs bsm" onclick="tnNovedadForm(\'' + escAttr(nv.id) + '\')">Editar</button>' +
-      '<button class="btn bd bsm" onclick="tnNovedadQuitar(\'' + escAttr(nv.id) + '\')">Quitar</button></div></div>';
+    var nv = tu.nov, rango = nv.hasta && nv.hasta !== nv.desde ? 'del ' + tnFechaCorta(nv.desde) + ' al ' + tnFechaCorta(nv.hasta) : tnFechaCorta(nv.desde);
+    var mas = [rango];
+    if (nv.tipo === 'cambio' && tu.ef !== tu.base) mas.push('por ciclo, ' + TN_TURNOS[tu.base].n);
+    if (nv.con) mas.push('con ' + nv.con);
+    if (nv.nota) mas.push(nv.nota);
+    r += '<div class="tn-ds-r tn-ds-nov"><span class="tn-ds-i"><i class="n"></i></span><div class="tn-ds-x"><b>' + escHtml(TN_NOV[nv.tipo].n) + '</b> · ' + escHtml(mas.join(' · ')) + '</div>' +
+      '<button class="tn-ds-b" onclick="closeActionSheet();tnNovedadForm(\'' + escAttr(nv.id) + '\')" aria-label="Editar la novedad">' + TN_IC_EDIT + '</button>' +
+      '<button class="tn-ds-b del" onclick="closeActionSheet();tnNovedadQuitar(\'' + escAttr(nv.id) + '\')" aria-label="Quitar la novedad">' + TN_IC_NO + '</button></div>';
   }
   if (sv) {
     var sd = TN_SRV[sv.tipo], extra = [sv.detalle, sv.nota].filter(Boolean).join(' · ');
-    h += '<div class="tn-srv"><span class="tn-srv-ic' + (sd.no ? ' no' : '') + '">' + (sd.no ? TN_IC_NO : TN_IC_OK) + '</span>' +
-      '<div><b>' + escHtml(sd.n) + '</b>' + escHtml(extra || 'Servicio registrado') + '</div>' +
-      '<button class="btn bs bsm" onclick="tnServicioForm(\'' + iso + '\')">Editar</button></div>';
+    r += '<div class="tn-ds-r tn-srv' + (sd.no ? ' no' : '') + '"><span class="tn-ds-i' + (sd.no ? ' no' : '') + '">' + (sd.no ? TN_IC_NO : TN_IC_OK) + '</span>' +
+      '<div class="tn-ds-x"><b>' + escHtml(sd.n) + '</b>' + (extra ? ' · ' + escHtml(extra) : '') + '</div>' +
+      '<button class="tn-ds-b" onclick="closeActionSheet();tnServicioForm(\'' + iso + '\')" aria-label="Editar el servicio">' + TN_IC_EDIT + '</button></div>';
   }
-  h += '<div class="tn-otras"><span>Otras:</span>';
+  r += '<div class="tn-ds-r"><div class="tn-ds-x tn-otras"><span>Otras secciones:</span>';
   [1, 2, 3].forEach(function (s) {
     if (s === sec) return;
     var b = TN_TURNOS[tnBase(iso, s, t)];
-    h += '<span class="tn-otra tn-k-' + b.c + '"><span class="tn-dot"></span>' + s + '.ª ' + escHtml(b.n) + '</span>';
+    r += '<span class="tn-otra tn-k-' + b.c + '"><span class="tn-dot"></span>' + s + '.ª ' + escHtml(b.n) + '</span>';
   });
-  var bs = [];
-  if (!sv) bs.push(['tnServicioForm(\'' + iso + '\')', 'Registrar servicio']);
-  if (!tu.nov) bs.push(['tnNovedadForm(null,\'' + iso + '\')', 'Agregar novedad']);
-  bs.push(['tnCompartirDia()', 'Compartir el día']);
-  h += '</div><div class="tn-dia-b">' + bs.map(function (b, i) {
-    return '<button class="btn bs bsm' + (i === 0 && bs.length % 2 ? ' tn-ancho' : '') + '" onclick="' + b[0] + '">' + b[1] + '</button>';
-  }).join('') + '</div></div>';
-  el.innerHTML = h;
+  r += '</div></div>';
+  var it = function (fn, ic, ti, de) {
+    return '<button class="sheet-item" onclick="closeActionSheet();' + fn + '"><div class="lic">' + ic + '</div>' +
+      '<div class="body"><div class="ti">' + ti + '</div><div class="de">' + de + '</div></div></button>';
+  };
+  var acc = '';
+  if (!tu.nov) acc += it('tnNovedadForm(null,\'' + iso + '\')', TN_IC_MAS, 'Agregar novedad', 'Permiso, vacaciones, cambio de turno…');
+  if (!sv) acc += it('tnServicioForm(\'' + iso + '\')', TN_IC_OK, 'Registrar servicio', 'Lo que hiciste ese día');
+  acc += it('tnCompartirDia()', ACT_IC.wa, 'Compartir el día', 'Con el turno de las tres secciones');
+  openActionSheet(head, '<div class="tn-ds">' + r + '</div>' + acc);
+}
+/* La sección se cambia desde el subtítulo de la barra. Cada opción dice qué
+   turno tiene hoy esa sección. */
+function tnSeccionSheet() {
+  var t = tnCfg(), hoy = tnHoy();
+  openActionSheet('<div class="prow-body"><div class="tn-ds-t">Mi sección</div><div class="tn-ds-s">El calendario se pinta con su ciclo</div></div>',
+    [1, 2, 3].map(function (s) {
+      var b = TN_TURNOS[tnTurno(hoy, s, t, true).base], on = s === t.seccion;
+      return '<button class="sheet-item tn-secc-op' + (on ? ' on' : '') + '" onclick="closeActionSheet();tnElegirSeccion(' + s + ')" aria-pressed="' + on + '">' +
+        '<div class="lic tn-k-' + b.c + '" style="background:var(--tcel);border-color:transparent;color:var(--tc)">' + escHtml(b.ab) + '</div>' +
+        '<div class="body"><div class="ti">' + TN_SECC[s] + '</div><div class="de">Hoy · ' + escHtml(b.n) + '</div></div>' +
+        (on ? '<span class="tn-secc-ok">' + TN_IC_OK + '</span>' : '') + '</button>';
+    }).join('') +
+    (t.seccion ? '<button class="sheet-item" onclick="closeActionSheet();tnAjustar()"><div class="lic">' + TN_IC_EDIT + '</div>' +
+      '<div class="body"><div class="ti">Ajustar el ciclo</div><div class="de">Si tu unidad va corrida o cambian las horas</div></div></button>' : ''));
 }
 function tnPintarResumen() {
   var el = document.getElementById('tn-res');
@@ -28615,15 +28652,14 @@ function tnElegir(iso, ver) {
       c.classList.toggle('sel', on); c.setAttribute('aria-pressed', on);
     });
   }
-  tnPintarDia();
-  if (ver) { var el = document.getElementById('tn-dia'); if (el && el.scrollIntoView) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  tnDiaSheet(iso);
 }
 function tnMesMover(n) {
   var d = new Date(_tnVer.y, _tnVer.m + n, 1);
   _tnVer = { y: d.getFullYear(), m: d.getMonth() };
   var hoy = tnFecha(tnHoy());
   _tnSel = (hoy.getFullYear() === _tnVer.y && hoy.getMonth() === _tnVer.m) ? tnHoy() : ojISO(d);
-  tnPintarMes(); tnPintarDia(); tnPintarResumen();
+  tnPintarMes(); tnPintarResumen();
 }
 function tnIrHoy() { _tnVer = null; _tnSel = null; renderTurnos(); }
 

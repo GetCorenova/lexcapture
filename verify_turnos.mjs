@@ -130,21 +130,33 @@ log(hr.mes.T === 11 && hr.mes.S === 10 && hr.mes.D === 10 && hr.mes.horas === 24
 /* ═══ D · la pantalla ═══ */
 await page.evaluate(() => go('turnos')); await page.waitForTimeout(150);
 const vac = await page.evaluate(() => ({ e: !!document.querySelector('#tn-vacio .empty'), cols: getComputedStyle(document.getElementById('tn-cols')).display,
-  sh: getComputedStyle(document.getElementById('tn-share')).display, sel: document.getElementById('tn-sec-sel').tagName,
-  op: [...document.querySelectorAll('#tn-sec-sel option')].map(o => o.textContent) }));
-log(vac.e && vac.cols === 'none' && vac.sh === 'none' && vac.sel === 'SELECT' && vac.op.length === 4 && vac.op[0] === 'Elige tu sección',
-  '[D1] Sin sección: lista desplegable que pide elegirla y no enseña un calendario a ciegas', JSON.stringify(vac));
-await page.selectOption('#tn-sec-sel', '2'); await page.waitForTimeout(400);
+  sh: getComputedStyle(document.getElementById('tn-share')).display, sub: document.getElementById('tn-sub').tagName,
+  subT: document.getElementById('tn-sub').textContent.trim(), b: [...document.querySelectorAll('#tn-vacio .tn-elige button')].map(o => o.textContent),
+  fila: !!document.querySelector('#screen-turnos select, #tn-sec-sel, .tn-sec') }));
+log(vac.e && vac.cols === 'none' && vac.sh === 'none' && vac.sub === 'BUTTON' && vac.subT === 'Elige tu sección' && !vac.fila &&
+    JSON.stringify(vac.b) === JSON.stringify(['1.ª', '2.ª', '3.ª']),
+  '[D1] Sin sección: la pide con tres botones, sin fila de formulario, y no enseña un calendario a ciegas', JSON.stringify(vac));
+await page.click('#tn-vacio .tn-elige button:nth-child(2)'); await page.waitForTimeout(400);
 const d2 = await page.evaluate(() => {
-  const s = document.getElementById('screen-turnos'), r = s.getBoundingClientRect(), sl = document.getElementById('tn-sec-sel');
-  return { enMain: !!s.closest('#main'), alto: r.height, sec: tnCfg().seccion, on: sl.options[sl.selectedIndex].textContent, ops: sl.options.length,
+  const s = document.getElementById('screen-turnos'), r = s.getBoundingClientRect();
+  return { enMain: !!s.closest('#main'), alto: r.height, sec: tnCfg().seccion,
     celdas: document.querySelectorAll('#tn-g .tn-c').length, hoy: document.querySelectorAll('#tn-g .tn-c.hoy').length,
-    sub: document.getElementById('tn-sub').textContent, sem: document.querySelectorAll('.tn-sd, #tn-sem').length,
-    hoyN: document.querySelector('.tn-hoy-n b').textContent, otras: document.querySelectorAll('.tn-otra').length };
+    sub: document.getElementById('tn-sub').textContent.trim(), sem: document.querySelectorAll('.tn-sd, #tn-sem').length,
+    hoyN: document.querySelector('.tn-hoy-n b').textContent, diaFijo: !!document.getElementById('tn-dia') || !!document.querySelector('#screen-turnos .tn-dia') };
 });
-log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.on === '2.ª sección' && d2.ops === 3, '[D2] Elegir la sección la guarda y pinta la pantalla (vive en #main y tiene alto real)', JSON.stringify(d2));
-log(d2.celdas % 7 === 0 && d2.celdas >= 28 && d2.hoy === 1 && d2.sem === 0 && d2.otras === 2,
-  '[D3] Mes en semanas completas, hoy marcado una vez, sin «Próximos días» y las otras 2 secciones', JSON.stringify(d2));
+log(d2.enMain && d2.alto > 600 && d2.sec === 2 && d2.sub === '2.ª sección', '[D2] Elegir la sección la guarda, la barra la dice y pinta la pantalla (vive en #main y tiene alto real)', JSON.stringify(d2));
+log(d2.celdas % 7 === 0 && d2.celdas >= 28 && d2.hoy === 1 && d2.sem === 0 && !d2.diaFijo,
+  '[D3] Mes en semanas completas, hoy marcado una vez, sin «Próximos días» ni tarjeta fija del día', JSON.stringify(d2));
+await page.click('#tn-sub'); await page.waitForTimeout(350);
+const ss = await page.evaluate(() => ({ on: document.getElementById('act-sheet').classList.contains('on'),
+  ops: [...document.querySelectorAll('#act-items .tn-secc-op')].map(o => o.querySelector('.ti').textContent + '|' + o.querySelector('.de').textContent + '|' + o.classList.contains('on') + '|' + !!o.querySelector('.tn-secc-ok')),
+  hoy: [1, 2, 3].map(s => TN_TURNOS[tnBase(tnHoy(), s, tnCfg())].n), aj: [...document.querySelectorAll('#act-items .sheet-item .ti')].some(e => e.textContent === 'Ajustar el ciclo') }));
+log(ss.on && ss.ops.length === 3 && ss.ops.every((o, i) => o.startsWith((i + 1) + '.ª sección|Hoy · ' + ss.hoy[i] + '|' + (i === 1) + '|' + (i === 1))) && ss.aj,
+  '[K1] El subtítulo de la barra abre la hoja de la sección: las tres con su turno de hoy, la elegida con chulo', JSON.stringify(ss));
+await page.click('#act-items .tn-secc-op:nth-child(3)'); await page.waitForTimeout(400);
+const ss2 = await page.evaluate(() => ({ sec: tnCfg().seccion, sub: document.getElementById('tn-sub').textContent.trim(), on: document.getElementById('act-sheet').classList.contains('on') }));
+await page.evaluate(() => tnElegirSeccion(2)); await page.waitForTimeout(300);
+log(ss2.sec === 3 && ss2.sub === '3.ª sección' && !ss2.on, '[K2] Elegir otra sección desde la hoja la guarda, cierra la hoja y repinta', JSON.stringify(ss2));
 const hoyCel = await page.evaluate(() => { const h = tnHoy(); return { cel: document.querySelector('#tn-g .tn-c.hoy').dataset.t, ab: tnBase(h, 2, tnCfg()) }; });
 log(hoyCel.cel === hoyCel.ab, '[D4] La celda de hoy dice el turno que da el ciclo', JSON.stringify(hoyCel));
 const mv = await page.evaluate(() => { const a = _tnVer.m; tnMesMover(1); const b = _tnVer.m; tnMesMover(-2); const c = _tnVer.m; tnIrHoy(); return [a, b, c, _tnVer.m, !!document.querySelector('.tn-hoyb')]; });
@@ -157,12 +169,14 @@ const sw = await page.evaluate(() => {
   const m1 = _tnVer.m; tnIrHoy(); return (m1 - m0 + 12) % 12;
 });
 log(sw === 1, '[D6] Deslizar el mes hacia la izquierda pasa al siguiente', sw);
-await page.evaluate(() => tnElegir('2026-10-12')); await page.waitForTimeout(80);
-const dia = await page.evaluate(() => ({ t: document.querySelector('.tn-dia-t').textContent, f: (document.querySelector('.tn-fest') || {}).textContent,
-  k: document.querySelector('.tn-dia-k b').textContent, otras: [...document.querySelectorAll('.tn-otra')].map(o => o.innerText.replace(/\s+/g, ' ').trim()) }));
-log(/12 de octubre/.test(dia.t) && dia.f === 'Festivo · Día de la Raza' && dia.k === 'Disponible' &&
-    JSON.stringify(dia.otras) === JSON.stringify(['1.ª Tercero', '3.ª Segundo – primero']),
-  '[D7] El día elegido dice su turno, su festivo y el de las otras dos secciones', JSON.stringify(dia));
+await page.click('#tn-g .tn-c[data-iso="2026-10-12"]'); await page.waitForTimeout(350);
+const dia = await page.evaluate(() => ({ on: document.getElementById('act-sheet').classList.contains('on'), t: document.querySelector('#act-head .tn-ds-t').textContent,
+  f: (document.querySelector('#act-items .tn-ds-fest') || {}).innerText, k: document.querySelector('#act-head .tn-ds-s').textContent,
+  otras: [...document.querySelectorAll('#act-items .tn-otra')].map(o => o.innerText.replace(/\s+/g, ' ').trim()),
+  alto: document.getElementById('act-sheet').getBoundingClientRect().height }));
+log(dia.on && /12 de octubre/.test(dia.t) && /Festivo\s*·\s*Día de la Raza/.test(dia.f) && /^Disponible · /.test(dia.k) &&
+    JSON.stringify(dia.otras) === JSON.stringify(['1.ª Tercero', '3.ª Segundo – primero']) && dia.alto < 560,
+  '[D7] Tocar un día abre su hoja: turno, festivo y las otras dos secciones, en menos de media pantalla larga', JSON.stringify(dia));
 
 /* ═══ J · rediseño del calendario (build 163) ═══ */
 const rd = await page.evaluate(() => {
@@ -171,7 +185,8 @@ const rd = await page.evaluate(() => {
   const cel = [...document.querySelectorAll('#tn-g .tn-c[data-t]:not(.fuera)')].filter(c => c.dataset.t);
   const mk = { ok: cel.length > 20 && cel.every(c => { const l = c.querySelector('.tn-lb'); return l && l.textContent === TN_TURNOS[c.dataset.t].ab; }),
     barras: document.querySelectorAll('#tn-g .tn-mk').length, ab: TN_CICLO.map(k => TN_TURNOS[k].ab) };
-  const ley = [...document.querySelectorAll('.tn-ley>span')].slice(0, 3).map(e => e.innerText.replace(/\s+/g, ' ').trim());
+  const ley = [...document.querySelectorAll('.tn-ley .tn-ley-i')].map(e => e.innerText.replace(/\s+/g, ' ').trim());
+  const fc = document.querySelector('#tn-g .tn-c.fest'), fi = fc && fc.querySelector('.tn-ind .f');
   const otras = document.querySelector('.tn-otras'), lh = parseFloat(g(otras).lineHeight);
   return {
     fueraSolo: fuera.every(c => c.children.length === 1 && c.textContent.trim() === c.querySelector('.tn-c-n').textContent),
@@ -180,19 +195,21 @@ const rd = await page.evaluate(() => {
     sinBorde: [...document.querySelectorAll('#tn-g .tn-c:not(.fuera)')].every(c => g(c).borderTopWidth === '0px'),
     hoyAlto: document.querySelector('.tn-hoy').getBoundingClientRect().height,
     sin24: !document.querySelector('#tn-hoy .tn-24') && !document.querySelector('#tn-hoy .tn-man'),
-    otrasLineas: Math.round((otras.getBoundingClientRect().height - parseFloat(g(otras).paddingTop)) / lh),
-    fest: getComputedStyle(document.querySelector('#tn-g .tn-c.fest'), '::after').content !== 'none'
+    otrasLineas: Math.round(otras.getBoundingClientRect().height / lh),
+    fest: !!fi && fi.getBoundingClientRect().height >= 4 && fi.getBoundingClientRect().width >= 20 && fi.getBoundingClientRect().top - fc.getBoundingClientRect().top <= 6,
+    festLab: fc && fc.querySelector('.tn-lb').textContent === TN_TURNOS[fc.dataset.t].ab
   };
 });
 log(rd.fueraSolo && rd.fueraSinColor, '[J1] Días de otro mes: solo el número, sin color, sin turno y no se eligen', JSON.stringify(rd));
 log(rd.pastillas === 0 && rd.sinBorde, '[J2] Sin pastillas ni bordes en las celdas');
 log(rd.mk.ok && rd.mk.barras === 0 && JSON.stringify(rd.mk.ab) === JSON.stringify(['3.º', '2.º–1.º', 'Disp.']),
   '[J3] Cada día dice su turno escrito (3.º · 2.º–1.º · Disp.), sin la barrita', JSON.stringify(rd.mk));
-log(JSON.stringify(rd.ley) === JSON.stringify(['3.º Tercero 13–21', '2.º–1.º Segundo – primero 06–13 · 21–06', 'Disp. Disponible']),
-  '[J4] La leyenda descifra la MISMA etiqueta y da las horas', JSON.stringify(rd.ley));
+log(JSON.stringify(rd.ley) === JSON.stringify(['3.º Tercero', '2.º–1.º Segundo – primero', 'Disp. Disponible', 'Festivo', 'Permiso']),
+  '[J4] La leyenda: los tres turnos con su MISMA etiqueta y sin horas; a la derecha, festivo y la novedad por su nombre', JSON.stringify(rd.ley));
 log(rd.hoyAlto < 90 && rd.sin24, '[J5] La tarjeta de hoy es compacta: dos renglones, sin línea de 24 h ni «Mañana»', rd.hoyAlto);
 log(rd.otrasLineas === 1, '[J6] Las otras secciones caben en una sola línea', rd.otrasLineas);
-log(rd.fest, '[J7] El festivo se marca en la celda');
+log(rd.fest && rd.festLab, '[J7] El festivo es una barra roja arriba de la celda, y la celda sigue diciendo su turno', JSON.stringify(rd));
+await page.evaluate(() => closeActionSheet()); await page.waitForTimeout(250);
 /* Registro de servicio. */
 await page.evaluate(() => tnServicioForm('2026-10-11')); await page.waitForTimeout(150);
 await page.click('#tn-sv-ops [data-k="especial"]');
@@ -202,6 +219,7 @@ await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
 await page.evaluate(() => tnServicioForm('2026-10-14')); await page.waitForTimeout(150);
 await page.click('#tn-sv-ops [data-k="centinela"]');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
+await page.evaluate(() => tnDiaSheet('2026-10-14')); await page.waitForTimeout(150);
 const sv = await page.evaluate(() => {
   const t = tnCfg(), r = tnResumenMes(2026, 9, 2, t);
   return { n: t.servicios.length, a: tnServicio('2026-10-11', t), reg: r.reg, srv: r.srv, dia: document.querySelector('.tn-srv b') && document.querySelector('.tn-srv b').textContent,
@@ -215,10 +233,12 @@ log(sv.reg === 2 && sv.srv.centinela === 1 && sv.lista.length === 2 && sv.texto 
 await page.evaluate(() => tnServicioForm('2026-10-14')); await page.waitForTimeout(150);
 await page.click('#tn-sv-ops [data-k="noprestado"]'); await page.fill('#tn-sv-detalle', 'Citado a juicio');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
-const sv2 = await page.evaluate(() => ({ n: tnCfg().servicios.length, t: tnServicio('2026-10-14').tipo, no: !!document.querySelector('.tn-srv-ic.no') }));
+await page.evaluate(() => tnDiaSheet('2026-10-14')); await page.waitForTimeout(150);
+const sv2 = await page.evaluate(() => ({ n: tnCfg().servicios.length, t: tnServicio('2026-10-14').tipo, no: !!document.querySelector('#act-items .tn-srv .tn-ds-i.no') }));
+await page.evaluate(() => closeActionSheet());
 log(sv2.n === 2 && sv2.t === 'noprestado' && sv2.no, '[J11] Editar un día lo reemplaza (uno por día) y «No lo presté» se marca distinto', JSON.stringify(sv2));
 await page.evaluate(() => tnServicioQuitar('2026-10-14')); await page.evaluate(() => tnServicioQuitar('2026-10-11')); await page.waitForTimeout(300);
-log(await page.evaluate(() => tnCfg().servicios.length === 0 && !document.querySelector('.tn-srv')), '[J12] Quitar el registro lo borra');
+log(await page.evaluate(() => { tnDiaSheet('2026-10-14'); const r = tnCfg().servicios.length === 0 && !document.querySelector('#act-items .tn-srv'); closeActionSheet(); return r; }), '[J12] Quitar el registro lo borra');
 await page.evaluate(() => tnIrHoy()); await page.waitForTimeout(100);
 
 /* ═══ E · ajustar el ciclo y las horas ═══ */
@@ -247,11 +267,13 @@ await page.evaluate(h => tnNovedadForm(null, h), hoy); await page.waitForTimeout
 await page.click('#tn-nv-tipos [data-k="vacaciones"]');
 await page.fill('#tn-nv-hasta', fin);
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
-const nv = await page.evaluate(h => ({ n: tnCfg().novedades.length, cel: document.querySelector(`#tn-g .tn-c[data-iso="${h}"]`).className,
-  k: document.querySelector(`#tn-g .tn-c[data-iso="${h}"] .tn-cap`).textContent, hoyN: document.querySelector('.tn-hoy-n b').textContent,
-  bl: tnBloques(h, 2, tnCfg()).length }), hoy);
-log(nv.n === 1 && /tn-k-lib/.test(nv.cel) && nv.k === 'VAC' && nv.hoyN === 'Vacaciones' && nv.bl === 0,
-  '[F1] Unas vacaciones se pintan encima del ciclo y ese día no hay servicio', JSON.stringify(nv));
+const nv = await page.evaluate(h => { const c = document.querySelector(`#tn-g .tn-c[data-iso="${h}"]`), b = tnBase(h, 2, tnCfg());
+  return { n: tnCfg().novedades.length, cel: c.className, base: TN_TURNOS[b].c, k: c.querySelector('.tn-lb').textContent, ab: TN_TURNOS[b].ab,
+    ind: !!c.querySelector('.tn-ind .n'), nov: c.dataset.nov, hoyN: document.querySelector('.tn-hoy-n b').textContent,
+    ley: document.querySelector('.tn-ley-nov').innerText.trim(), bl: tnBloques(h, 2, tnCfg()).length }; }, hoy);
+log(nv.n === 1 && nv.cel.includes('tn-k-' + nv.base) && nv.k === nv.ab && nv.ind && nv.nov === 'vacaciones' && nv.hoyN === 'Vacaciones' && nv.bl === 0,
+  '[F1] Unas vacaciones: la celda sigue diciendo el turno del ciclo, con la barra fucsia arriba, y ese día no hay servicio', JSON.stringify(nv));
+log(/^Vacaciones/.test(nv.ley), '[K3] La leyenda nombra la novedad del mes («Vacaciones»), no «Novedad»', nv.ley);
 await page.evaluate(() => lcVolverInicio()); await page.waitForTimeout(250);
 const fr = await page.evaluate(() => document.querySelector('#ini-turno .tn-fr-n').textContent);
 log(fr === 'Vacaciones', '[F2] La franja del Inicio también la respeta', fr);
@@ -361,11 +383,12 @@ for (const tema of ['light', 'dark']) {
     const hoyE = document.querySelector('.tn-hoy .tn-est');
     return num.concat(mk).concat([{ k: 'sub', txt: g(hoyE).color, tint: 'rgba(0,0,0,0)', cel: g(document.querySelector('.tn-hoy')).backgroundColor, card: g(document.querySelector('.tn-hoy')).backgroundColor, min: 4.5 }]);
   });
-  /* La abreviatura de un cambio de turno va en el color del turno: se mide aparte. */
-  const cap = await page.evaluate(() => ['ter', 'sp', 'dis'].map(k => { const d = document.createElement('div'); d.className = 'tn-c tn-k-' + k; d.innerHTML = '<span class="tn-cap">CAM</span>';
-    document.getElementById('tn-g').appendChild(d); const g = getComputedStyle; const r = { k: k + '-cap', txt: g(d.firstChild).color, tint: 'rgba(0,0,0,0)', cel: g(d).backgroundColor, card: g(document.querySelector('.tn-mes')).backgroundColor, min: 4.5 }; d.remove(); return r; }));
+  /* Las barras de festivo y novedad son un gráfico (3:1) sobre el tinte de cada turno. */
+  const cap = await page.evaluate(() => ['ter', 'sp', 'dis'].flatMap(k => { const d = document.createElement('div'); d.className = 'tn-c tn-k-' + k; d.innerHTML = '<span class="tn-ind"><i class="f"></i><i class="n"></i></span>';
+    document.getElementById('tn-g').appendChild(d); const g = getComputedStyle, card = g(document.querySelector('.tn-mes')).backgroundColor;
+    const r = ['f', 'n'].map(x => ({ k: k + '-' + (x === 'f' ? 'festivo' : 'novedad'), txt: g(d.querySelector('.' + x)).backgroundColor, tint: 'rgba(0,0,0,0)', cel: g(d).backgroundColor, card, min: 3 })); d.remove(); return r; }));
   const crs = c.concat(cap).map(x => { const fondo = sobre(x.tint, sobre(x.cel, x.card)); return { k: x.k, v: +cr(x.txt, fondo).toFixed(2), min: x.min }; });
-  log(crs.every(x => x.v >= x.min), `[I3] Contraste AA del número, el turno escrito y la sigla de novedad sobre la celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
+  log(crs.every(x => x.v >= x.min), `[I3] Contraste AA del número y el turno escrito, y 3:1 de las barras de festivo y novedad, sobre la celda (${tema === 'light' ? 'claro' : 'oscuro'})`, crs);
   await ctx.close();
 }
 ({ ctx, page } = await abrir(360, 740, 'light'));
