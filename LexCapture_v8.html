@@ -118,16 +118,16 @@
      En oscuro el neón es el texto; en claro es el fondo, con texto casi negro
      —un neón sobre blanco no se lee—, así se ve fluorescente en los dos temas. */
   --neon:#4CFF88;    --neon-bg:rgba(76,255,136,.14); --neon-bd:rgba(76,255,136,.45);
-  /* — Turnos de vigilancia (módulo Turnos, 2026-10-29): verde, naranja y coral,
-       como el calendario que el usuario ya usaba. ⚠️ Son tokens PROPIOS: --ok,
+  /* — Turnos de vigilancia (módulo Turnos, 2026-10-29; paleta del build 169):
+       azul profundo (2.º–1.º), turquesa (3.º) y gris neutro (Disponible). ⚠️ Son tokens PROPIOS: --ok,
        --flag, --danger y --cspT ya significan correcto, flagrancia, error y
        menores, y un turno no es ninguna de esas cosas. — */
-  --tn-dis:#5ACB8E;  --tn-dis-bg:rgba(90,203,142,.13);  --tn-dis-bd:rgba(90,203,142,.38);
-  --tn-ter:#F2A04B;  --tn-ter-bg:rgba(242,160,75,.13);  --tn-ter-bd:rgba(242,160,75,.40);
-  --tn-sp:#F2857A;   --tn-sp-bg:rgba(242,133,122,.13);  --tn-sp-bd:rgba(242,133,122,.40);
+  --tn-dis:#A3ADBA;  --tn-dis-bg:rgba(163,173,186,.13); --tn-dis-bd:rgba(163,173,186,.38);
+  --tn-ter:#3DCFC0;  --tn-ter-bg:rgba(61,207,192,.13);  --tn-ter-bd:rgba(61,207,192,.40);
+  --tn-sp:#7EA6FF;   --tn-sp-bg:rgba(126,166,255,.13);  --tn-sp-bd:rgba(126,166,255,.40);
   /* Tinte de la celda del calendario: color SÓLIDO (22 % del turno sobre la
      tarjeta), no un rgba, así el contraste se mide y no depende del fondo. */
-  --tn-dis-cel:#21413B; --tn-ter-cel:#43382C; --tn-sp-cel:#433236;
+  --tn-dis-cel:#313A44; --tn-ter-cel:#1B4246; --tn-sp-cel:#293953;
   /* Señales de arriba de la celda: festivo (rojo vivo) y novedad (fucsia). */
   --tn-fest:#FF4F5E; --tn-nov:#E879F9;
 
@@ -239,10 +239,10 @@
   /* En claro se invierte: el neón es el FONDO y el texto va casi negro. Un
      #4CFF88 como texto sobre blanco da 1,4:1 — ilegible. Así medido: 7,9:1. */
   --neon:#0B3D22;    --neon-bg:#4BE87E;              --neon-bd:#22C55E;
-  --tn-dis:#0A7346;  --tn-dis-bg:rgba(10,115,70,.09);  --tn-dis-bd:rgba(10,115,70,.32);
-  --tn-ter:#9A4807;  --tn-ter-bg:rgba(154,72,7,.10);   --tn-ter-bd:rgba(154,72,7,.32);
-  --tn-sp:#BC3328;   --tn-sp-bg:rgba(188,51,40,.08);   --tn-sp-bd:rgba(188,51,40,.30);
-  --tn-dis-cel:#E3F2E9; --tn-ter-cel:#FAEDDD; --tn-sp-cel:#FBE6E2;
+  --tn-dis:#5B6573;  --tn-dis-bg:rgba(91,101,115,.09);  --tn-dis-bd:rgba(91,101,115,.32);
+  --tn-ter:#0F766E;  --tn-ter-bg:rgba(15,118,110,.09);  --tn-ter-bd:rgba(15,118,110,.32);
+  --tn-sp:#1D4ED8;   --tn-sp-bg:rgba(29,78,216,.08);   --tn-sp-bd:rgba(29,78,216,.30);
+  --tn-dis-cel:#EBEDEE; --tn-ter-cel:#E2EFEE; --tn-sp-cel:#E4EAFA;
   --tn-fest:#E3182D; --tn-nov:#C026D3;
 
   --surface-selected:rgba(0,49,83,.09);
@@ -2530,51 +2530,88 @@ body.cu-on{overflow:hidden}
 .tn-stc-ch svg{width:20px;height:20px;stroke-width:2}
 #tn-res .tn-nl{margin-top:12px}
 
-/* La ventana de estadísticas (build 167). Arriba lo prestado (cifra grande,
-   reparto y los dos turnos), luego lo hipotético con trazo discontinuo y
-   rayado —la convención de un dato estimado—, el año mes a mes y lo demás. */
+/* La ventana de estadísticas (rediseño build 169). Se lee de arriba abajo
+   bajando de escala: el AÑO (las horas como cifra principal, el reparto por
+   HORAS y los tres turnos con turnos y horas), lo que pasó (píldoras, sin
+   ceros), la HORA del día (en qué franja se prestaron las horas), y el MES en
+   una tabla que se abre en sus DÍAS. Sin notas al pie ni rayados: cada cifra
+   dice lo que mide. */
 #tn-st .card{margin-bottom:12px}
 #tn-st .st{margin:0 0 12px}
 .tn-st-y{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-8px 0 14px}
-.tn-st-yv{text-align:center;min-width:0}
+.tn-st-yv{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
 .tn-st-yv b{display:block;font-size:22px;line-height:28px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
-.tn-st-yv span{display:block;font-size:13px;line-height:18px;color:var(--text-2)}
-.tn-st-big{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
-.tn-st-big b{display:block;font-size:34px;line-height:40px;font-weight:700;letter-spacing:-.015em;color:var(--text);font-variant-numeric:tabular-nums}
-.tn-st-big span{display:block;font-size:13px;line-height:18px;color:var(--text-2)}
-.tn-st-k{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
-.tn-st-kt{display:flex;flex-direction:column;gap:2px;min-width:0;padding:12px;border-radius:12px;background:var(--surface-2)}
+.tn-st-yv>span{display:block;font-size:13px;line-height:18px;color:var(--text-2)}
+.tn-st-yv .tn-st-live{--tc:var(--ok);display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:3px 10px 3px 9px;border-radius:999px;
+  background:var(--ok-bg);font-size:12px;line-height:16px;font-weight:600;color:var(--text)}
+.tn-st-live .tn-vivo{width:8px;height:8px}
+.tn-st-tot{display:flex;align-items:baseline;gap:6px}
+.tn-st-tot b{font-size:36px;line-height:42px;font-weight:700;letter-spacing:-.015em;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-st-tot span{font-size:16px;line-height:22px;font-weight:600;color:var(--text-2)}
+.tn-st-sub{margin:2px 0 14px;font-size:14px;line-height:20px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.tn-st-sub b{color:var(--text);font-weight:600}
+.tn-st-k{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.tn-st-kt{display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px;border-radius:12px;background:var(--surface-2)}
 .tn-st-kt .tn-ley-s{align-self:flex-start;margin-bottom:6px}
-.tn-st-kt b{font-size:24px;line-height:30px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
-.tn-st-kt span{font-size:13px;line-height:18px;font-weight:600;color:var(--text)}
-.tn-st-kt small{font-size:12px;line-height:16px;color:var(--text-2);font-variant-numeric:tabular-nums}
-.tn-st-nota{display:flex;align-items:center;gap:8px;margin:12px 0 0;font-size:12px;line-height:16px;color:var(--text-2)}
-.tn-st-hip{border:1.5px dashed var(--tcd);box-shadow:none}
-.tn-st-hh{display:flex;align-items:center;gap:10px}
-.tn-st-ht{font-size:15px;line-height:20px;font-weight:600;color:var(--text)}
-.tn-st-ht b{font-size:22px;line-height:28px;font-weight:700;font-variant-numeric:tabular-nums;margin-right:2px}
-.tn-st-tag{margin-left:auto;padding:2px 9px;border-radius:999px;border:1px dashed var(--tcd);font-size:12px;line-height:16px;font-weight:600;color:var(--tc);flex:none}
-.tn-st-hip p{margin:8px 0 0;font-size:13px;line-height:18px;color:var(--text-2)}
-.tn-st-hip .tn-st-ap b{color:var(--text);font-variant-numeric:tabular-nums}
-.tn-st-mes{display:flex;flex-direction:column;gap:12px}
-.tn-st-f{display:grid;grid-template-columns:58px minmax(0,1fr) 62px;align-items:center;gap:10px}
-.tn-st-fm{font-size:14px;line-height:16px;font-weight:600;color:var(--text)}
-.tn-st-fm small{display:block;font-size:11px;line-height:14px;font-weight:500;color:var(--text-3)}
-.tn-st-fb{display:flex;gap:2px;height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
-.tn-st-fb i,.tn-st-ley i{display:block;height:100%;background:var(--tc)}
-.tn-st-fb i.hip,.tn-st-ley i.hip{background:repeating-linear-gradient(135deg,var(--tc) 0 2px,transparent 2px 5px)}
-.tn-st-fn{text-align:right;font-variant-numeric:tabular-nums}
-.tn-st-fn b{display:block;font-size:15px;line-height:18px;font-weight:700;color:var(--text)}
-.tn-st-fn small{display:block;font-size:12px;line-height:16px;color:var(--text-2)}
-.tn-st-ley{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:14px;font-size:12px;line-height:16px;color:var(--text-2)}
-.tn-st-ley span{display:inline-flex;align-items:center;gap:6px}
-.tn-st-ley i{width:16px;height:8px;border-radius:3px}
-.tn-st-r{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--border);
+.tn-st-kt b{font-size:22px;line-height:28px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-st-kt span{font-size:12px;line-height:16px;color:var(--text-2)}
+.tn-st-kt strong{margin-top:4px;font-size:14px;line-height:18px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-st-kt.dis strong{font-weight:500;color:var(--text-2)}
+.tn-st-avg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.tn-st-avg div{display:flex;flex-direction:column;align-items:center;text-align:center;min-width:0}
+.tn-st-avg div+div{border-left:1px solid var(--border)}
+.tn-st-avg b{font-size:16px;line-height:22px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-st-avg span{font-size:12px;line-height:16px;color:var(--text-2)}
+.tn-st-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.tn-st-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:var(--surface-1);
+  box-shadow:var(--sh-1);border:1px solid var(--card-bd);font-size:13px;line-height:18px;color:var(--text)}
+.tn-st-chip b{font-weight:700;font-variant-numeric:tabular-nums}
+.tn-st-chip i{width:8px;height:8px;border-radius:50%;flex:none}
+.tn-st-chip i.f{background:var(--tn-fest)}.tn-st-chip i.n{background:var(--tn-nov)}
+.tn-st-chip.cero{background:transparent;box-shadow:none;border-color:var(--border);color:var(--text-2)}
+.tn-st-chip.no{color:var(--danger)}
+.tn-st-fr{display:flex;flex-direction:column}
+.tn-st-fr .tn-24{margin:0 0 6px}
+.tn-st-fri{display:grid;grid-template-columns:10px minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);
   font-size:14px;line-height:20px;color:var(--text)}
-.st+.tn-st-r{border-top:0;padding-top:0}
-.tn-st-r b{font-weight:600;font-variant-numeric:tabular-nums}
-.tn-st-r.cero b{font-weight:500;color:var(--text-2)}
-.tn-st-r.no b{color:var(--danger)}
+.tn-st-fri .tn-dot{width:10px;height:10px;border-radius:3px}
+.tn-st-fri small{display:block;font-size:12px;line-height:16px;color:var(--text-2);font-variant-numeric:tabular-nums}
+.tn-st-fri span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.tn-st-fri b{display:block;font-weight:700}
+.tn-st-tb{display:flex;flex-direction:column;margin:0 -16px}
+.tn-st-th,.tn-st-f,.tn-st-ft{display:grid;grid-template-columns:minmax(0,1fr) 46px 46px 46px 64px 20px;align-items:center;gap:4px;
+  padding:0 12px 0 16px;font-variant-numeric:tabular-nums}
+.tn-st-th{padding-bottom:8px;font-size:12px;line-height:16px;font-weight:700;color:var(--text-2)}
+.tn-st-th span,.tn-st-f>span,.tn-st-ft span{text-align:right}
+.tn-st-th span:first-child,.tn-st-f>span:first-child,.tn-st-ft span:first-child{text-align:left}
+.tn-st-th .tn-k-ter,.tn-st-th .tn-k-sp,.tn-st-th .tn-k-dis{color:var(--tc)}
+.tn-st-f{width:100%;min-height:48px;border:none;border-top:1px solid var(--border);background:none;font:inherit;font-size:15px;line-height:20px;
+  color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background var(--d1) var(--ease)}
+.tn-st-f:active{background:var(--pressed)}
+@media(hover:hover){.tn-st-f:hover{background:var(--hover)}}
+.tn-st-f[aria-expanded="true"]{background:var(--surface-2)}
+.tn-st-fm{font-weight:600}
+.tn-st-fm small{display:block;font-size:11px;line-height:14px;font-weight:500;color:var(--text-3)}
+.tn-st-fd{color:var(--text-2)}
+.tn-st-fh{font-weight:700}
+.tn-st-ch{display:flex;justify-content:flex-end;color:var(--text-3)}
+.tn-st-ch svg{width:18px;height:18px;stroke-width:2;transition:transform var(--d2) var(--ease)}
+.tn-st-f[aria-expanded="true"] .tn-st-ch svg{transform:rotate(90deg)}
+.tn-st-ft{min-height:44px;border-top:2px solid var(--border-strong);font-size:15px;line-height:20px;font-weight:700;color:var(--text)}
+.tn-st-dl{background:var(--surface-2);padding:2px 12px 8px 16px}
+.tn-st-dl[hidden]{display:none}
+.tn-sd{display:grid;grid-template-columns:56px 62px minmax(0,1fr) 44px;align-items:center;gap:8px;min-height:40px;padding:6px 0;
+  border-top:1px solid var(--border);font-size:13px;line-height:18px;color:var(--text);font-variant-numeric:tabular-nums}
+.tn-sd:first-child{border-top:0}
+.tn-sd-f{display:flex;align-items:center;gap:6px;font-weight:600}
+.tn-sd-f i{width:6px;height:6px;border-radius:50%;background:var(--tn-fest);flex:none}
+.tn-sd-t{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--tc)}
+.tn-sd-h{color:var(--text-2)}
+.tn-sd-h em{font-style:normal;font-weight:600;color:var(--tn-nov)}
+.tn-sd-h em.no{color:var(--danger)}
+.tn-sd-n{text-align:right;font-weight:700}
+.tn-sd-n small{display:block;font-size:11px;line-height:14px;font-weight:500;color:var(--ok)}
+.tn-sd.cero .tn-sd-n{font-weight:500;color:var(--text-3)}
 .tn-st-vacio{margin-top:24px}
 
 @media(min-width:900px){
@@ -4018,7 +4055,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 168;
+var _BUILD = 169;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -28274,7 +28311,7 @@ var TN_SRV = {
 var TN_MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 var TN_DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 var TN_DC = ['dom','lun','mar','mié','jue','vie','sáb'];
-var TN_EMO = { T: '🟠', S: '🔴', D: '🟢' };   // solo en el texto que se comparte por chat
+var TN_EMO = { T: '🟢', S: '🔵', D: '⚪' };   // solo en el texto que se comparte por chat
 var _tnVer = null, _tnSel = null, _tnTick = null, _tnHoyPint = null;
 
 /* ── Motor (sin DOM) ─────────────────────────────────────────────────────── */
@@ -28441,26 +28478,37 @@ function tnDesfasePara(iso, sec, code) {
 function tnEstadisticas(y, t, ahora) {
   t = t || tnCfg(); ahora = ahora || tnAhora();
   var hoy = ojISO(ahora), ini = y + '-01-01', fin = y + '-12-31', hasta = fin < hoy ? fin : hoy;
-  var r = { y: y, desde: ini, hasta: hasta, futuro: ini > hoy, T: 0, S: 0, D: 0, apoyo: 0, horas: 0, fest: 0, noPrest: 0,
-    novDias: 0, nov: {}, especiales: 0, enCurso: null, secciones: [], meses: [] };
-  for (var m = 0; m < 12; m++) r.meses.push({ m: m, T: 0, S: 0, D: 0, apoyo: 0, horas: 0, dias: 0, total: new Date(y, m + 1, 0).getDate() });
+  var r = { y: y, desde: ini, hasta: hasta, futuro: ini > hoy, T: 0, S: 0, D: 0, apoyo: 0, horas: 0, hT: 0, hS: 0, dias: 0,
+    bl: { t2: 0, t3: 0, t41: 0 }, fest: 0, dom: 0, noPrest: 0, novDias: 0, nov: {}, especiales: 0, enCurso: null, secciones: [], meses: [] };
+  for (var m = 0; m < 12; m++) r.meses.push({ m: m, T: 0, S: 0, D: 0, apoyo: 0, horas: 0, dias: 0, total: new Date(y, m + 1, 0).getDate(), d: [] });
   if (r.futuro || !t.historial.length) return r;
+  /* `d` de cada mes = un renglón por día ya transcurrido (build 169): el turno
+     del día, las horas que se le cuentan y por qué (novedad, no prestado,
+     disponible), para bajar del año al mes, del mes al día y del día a la hora. */
   for (var iso = ini; iso <= hasta; iso = tnMas(iso, 1)) {
     var mm = r.meses[+iso.slice(5, 7) - 1], tu = tnTurno(iso, null, t), sv = tnServicio(iso, t), svd = sv && TN_SRV[sv.tipo];
-    mm.dias++;
+    var fest = lcFestivoNombre(tnFecha(iso)), dd = { iso: iso, ef: tu.ef, base: tu.base, h: 0, fest: fest || '', srv: sv ? sv.tipo : '' };
+    mm.dias++; r.dias++; mm.d.push(dd);
     var ul = r.secciones[r.secciones.length - 1];
     if (!ul || ul.seccion !== tu.sec) r.secciones.push({ seccion: tu.sec, desde: iso, hasta: iso }); else ul.hasta = iso;
     if (svd && svd.g === 'e') r.especiales++;
-    if (tu.nov && TN_NOV[tu.nov.tipo].libra) { r.novDias++; r.nov[tu.nov.tipo] = (r.nov[tu.nov.tipo] || 0) + 1; continue; }
+    if (tu.nov && TN_NOV[tu.nov.tipo].libra) { r.novDias++; r.nov[tu.nov.tipo] = (r.nov[tu.nov.tipo] || 0) + 1; dd.nov = tu.nov.tipo; continue; }
     if (tu.ef === 'D') { r.D++; mm.D++; if (svd && !svd.no) { r.apoyo++; mm.apoyo++; } continue; }
     var bl = tnBloques(iso, tu.sec, t);
-    if (!bl.length || bl[0].ini > ahora) continue;
-    if (svd && svd.no) { r.noPrest++; continue; }
+    if (!bl.length) continue;
+    if (bl[0].ini > ahora) { dd.pend = true; continue; }
+    if (svd && svd.no) { r.noPrest++; dd.no = true; continue; }
     var h = 0;
-    bl.forEach(function (b) { var z = b.fin < ahora ? b.fin : ahora; if (z > b.ini) h += (z - b.ini) / 36e5; });
-    r[tu.ef]++; mm[tu.ef]++; r.horas += h; mm.horas += h;
-    if (bl[bl.length - 1].fin > ahora) r.enCurso = { iso: iso, turno: tu.ef };
-    if (lcFestivoNombre(tnFecha(iso))) r.fest++;
+    dd.bl = bl.map(function (b) {
+      var z = b.fin < ahora ? b.fin : ahora, x = z > b.ini ? (z - b.ini) / 36e5 : 0;
+      h += x; r.bl[b.k] = (r.bl[b.k] || 0) + x;
+      return { k: b.k, ini: ojHHMM(b.ini), fin: ojHHMM(b.fin) };
+    });
+    dd.h = h;
+    r[tu.ef]++; mm[tu.ef]++; r.horas += h; mm.horas += h; r['h' + tu.ef] += h;
+    if (bl[bl.length - 1].fin > ahora) { r.enCurso = { iso: iso, turno: tu.ef }; dd.curso = true; }
+    if (fest) r.fest++;
+    if (tnFecha(iso).getDay() === 0) r.dom++;
   }
   return r;
 }
@@ -28873,12 +28921,20 @@ function tnPintarResumen() {
   el.innerHTML = h;
 }
 
-/* ── Estadísticas del año (ventana, build 167) ─────────────────────────────
-   Lo prestado del 1 de enero hasta hoy: los dos turnos de servicio con sus
-   horas, los disponibles como hipótesis aparte, el año mes a mes (el mes
-   actual hasta hoy, sin días futuros), las novedades y, si hubo traslado, en
-   qué sección se contó cada tramo. Se cambia de año con las flechas. */
-var _tnStY = null;
+/* ── Estadísticas del año (ventana, rediseño build 169) ────────────────────
+   Bajan de escala de arriba abajo:
+   · AÑO: las horas de servicio como cifra principal y los turnos como dato
+     secundario; la barra reparte las HORAS (no los turnos: un 2.º–1.º pesa el
+     doble que un 3.º) y cada turno dice sus turnos Y sus horas. Disponible va
+     al lado, con sus días y sin horas. Debajo, el promedio por día, semana y mes.
+   · Lo que pasó: festivos y domingos con servicio, novedades, servicios
+     especiales y no prestados, como píldoras; lo que vale cero no se pinta.
+   · HORA: en qué franja del día se prestaron las horas (2.º, 3.er y 4.º y
+     1.er turno), con la línea de 24 horas.
+   · MES: tabla con los turnos de cada clase y las horas; tocar un mes abre sus
+     DÍAS, cada uno con su turno, su horario y sus horas.
+   El mes actual y el año en curso llegan solo hasta ahora. */
+var _tnStY = null, _tnStR = null;
 function tnStatsAbrir(y) {
   var hy = tnFecha(tnHoy()).getFullYear();
   _tnStY = y || _tnStY || hy;
@@ -28891,59 +28947,126 @@ function tnStatsAno(n) {
   var el = document.getElementById('tn-st');
   if (el) el.innerHTML = tnStatsHtml(y);
 }
+/* Abre (o cierra) los días de un mes. Uno abierto a la vez. */
+function tnStatsMes(m) {
+  var bt = document.getElementById('tn-st-m' + m), dl = document.getElementById('tn-st-d' + m);
+  if (!bt || !dl || !_tnStR) return;
+  var abrir = bt.getAttribute('aria-expanded') !== 'true';
+  document.querySelectorAll('#tn-st .tn-st-f[aria-expanded="true"]').forEach(function (b) {
+    b.setAttribute('aria-expanded', 'false');
+    var d = document.getElementById(b.getAttribute('aria-controls')); if (d) d.hidden = true;
+  });
+  if (!abrir) return;
+  if (!dl.innerHTML) dl.innerHTML = tnStatsDiasHtml(_tnStR.meses[m]);
+  bt.setAttribute('aria-expanded', 'true'); dl.hidden = false;
+}
+/* Un renglón por día, del más reciente al primero: fecha · turno · horario (o
+   por qué no hay horas) · horas. */
+function tnStatsDiasHtml(mm) {
+  return mm.d.slice().reverse().map(function (d) {
+    var f = tnFecha(d.iso), k = d.ef ? TN_TURNOS[d.ef].c : 'lib';
+    var fecha = '<span class="tn-sd-f">' + tnCap(TN_DC[f.getDay()]) + ' ' + f.getDate() + (d.fest ? '<i title="' + escAttr(d.fest) + '"></i>' : '') + '</span>';
+    var tur = '<span class="tn-sd-t tn-k-' + k + '">' + (d.ef ? '<span class="tn-dot"></span>' + escHtml(TN_TURNOS[d.ef].ab) : '') + '</span>';
+    var hor = '', n = '—', cero = true;
+    if (d.nov) hor = '<em>' + escHtml(TN_NOV[d.nov].n) + '</em>';
+    else if (d.no) hor = '<em class="no">No lo presté</em>';
+    else if (d.ef === 'D') hor = d.srv && TN_SRV[d.srv] && !TN_SRV[d.srv].no ? escHtml(TN_SRV[d.srv].n) : 'Sin servicio';
+    else if (d.pend) hor = 'Empieza más tarde';
+    else if (d.bl) {
+      hor = d.bl.map(function (b) { return b.ini + '–' + b.fin; }).join('<br>');
+      n = tnNum(d.h) + ' h' + (d.curso ? '<small>en curso</small>' : ''); cero = false;
+    }
+    return '<div class="tn-sd' + (cero ? ' cero' : '') + '" role="row">' + fecha + tur + '<span class="tn-sd-h">' + hor + '</span><span class="tn-sd-n">' + n + '</span></div>';
+  }).join('');
+}
+/* La línea de 24 horas del año: qué turno cubre cada hora, con las horas que
+   tiene configuradas el funcionario. */
+function tnStats24Html(t) {
+  var hs = tnHoras(t), segs = '';
+  ['S', 'T'].forEach(function (k) {
+    TN_TURNOS[k].bl.forEach(function (b) {
+      var a = tnMin(hs[b][0]), z = tnMin(hs[b][1]);
+      (z <= a ? [[a, 1440], [0, z]] : [[a, z]]).forEach(function (p) {
+        if (p[1] > p[0]) segs += '<i class="tn-24-b tn-k-' + TN_TURNOS[k].c + '" style="left:' + (p[0] / 14.4).toFixed(2) + '%;width:' + ((p[1] - p[0]) / 14.4).toFixed(2) + '%"></i>';
+      });
+    });
+  });
+  var h = '<div class="tn-24" aria-hidden="true"><div class="tn-24-t">' + segs + '</div><div class="tn-24-ls">';
+  [0, 6, 12, 18, 24].forEach(function (x) { h += '<span style="left:' + (x / 24 * 100) + '%">' + String(x).padStart(2, '0') + '</span>'; });
+  return h + '</div></div>';
+}
 function tnStatsHtml(y) {
   var t = tnCfg(), ahora = tnAhora(), r = tnEstadisticas(y, t, ahora), hy = ahora.getFullYear();
+  _tnStR = r;
+  var pl = function (n, a, b) { return n === 1 ? a : b; };
   var flecha = function (n, dis, l, p) {
     return '<button class="tn-nav" onclick="tnStatsAno(' + n + ')" aria-label="' + l + '"' + (dis ? ' disabled' : '') + '><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="' + p + '"/></svg></button>';
   };
   var h = '<div class="tn-st-y">' + flecha(-1, y <= hy - 10, 'Año anterior', 'm15 18-6-6 6-6') +
-    '<div class="tn-st-yv"><b>' + y + '</b><span>' + (y === hy ? 'Del 1 de enero a hoy, ' + escHtml(tnFechaCorta(r.hasta)) : 'Año completo') + '</span></div>' +
+    '<div class="tn-st-yv"><b>' + y + '</b><span>' + (y === hy ? '1 ene – ' + escHtml(tnFechaCorta(r.hasta)) : 'Año completo') + '</span>' +
+      (r.enCurso ? '<span class="tn-st-live"><span class="tn-vivo"></span>Turno en curso incluido</span>' : '') + '</div>' +
     flecha(1, y >= hy, 'Año siguiente', 'm9 6 6 6-6 6') + '</div>';
   var tot = r.T + r.S;
   if (!tot && !r.D && !r.novDias) {
     return h + '<div class="empty tn-st-vacio"><div class="ic">' + LC_IC.turnos + '</div><h3>Sin turnos en ' + y + '</h3><p>Aquí aparecerán cuando los prestes.</p></div>';
   }
-  /* 1 · Lo prestado. */
-  h += '<div class="card tn-st-hero"><div class="tn-st-big"><div><b>' + tot + '</b><span>turno' + (tot === 1 ? '' : 's') + ' prestado' + (tot === 1 ? '' : 's') + '</span></div>' +
-    '<div><b>' + tnNum(r.horas) + '</b><span>horas de servicio</span></div></div>' +
-    (tot ? '<div class="tn-barra" aria-hidden="true">' + ['T', 'S'].map(function (k) {
-      return r[k] ? '<i class="tn-k-' + TN_TURNOS[k].c + '" style="flex:' + r[k] + '"></i>' : '';
-    }).join('') + '</div>' : '') +
-    '<div class="tn-st-k">' + ['T', 'S'].map(function (k) {
-      var m = TN_TURNOS[k].bl.reduce(function (a, b) { var hs = tnHoras(t)[b], x = tnMin(hs[0]), z = tnMin(hs[1]); return a + ((z <= x ? z + 1440 : z) - x); }, 0) / 60;
+  /* 1 · El año. */
+  var horasDe = function (k) {
+    return TN_TURNOS[k].bl.reduce(function (a, b) { var hs = tnHoras(t)[b], x = tnMin(hs[0]), z = tnMin(hs[1]); return a + ((z <= x ? z + 1440 : z) - x); }, 0) / 60;
+  };
+  var diasAno = new Date(y, 1, 29).getDate() === 29 ? 366 : 365, porDia = r.dias ? r.horas / r.dias : 0;
+  h += '<div class="card tn-st-hero"><div class="tn-st-tot"><b>' + tnNum(r.horas) + '</b><span>h de servicio</span></div>' +
+    '<div class="tn-st-sub"><b>' + tot + '</b> ' + pl(tot, 'turno prestado', 'turnos prestados') + '</div>' +
+    (r.horas ? '<div class="tn-barra" role="img" aria-label="' + escAttr('Horas: ' + tnNum(r.hS) + ' en Segundo – primero y ' + tnNum(r.hT) + ' en Tercero') + '">' +
+      ['S', 'T'].map(function (k) { return r['h' + k] ? '<i class="tn-k-' + TN_TURNOS[k].c + '" style="flex:' + r['h' + k].toFixed(2) + '"></i>' : ''; }).join('') + '</div>' : '') +
+    '<div class="tn-st-k">' + ['S', 'T'].map(function (k) {
       return '<div class="tn-st-kt tn-k-' + TN_TURNOS[k].c + '"><span class="tn-ley-s tn-k-' + TN_TURNOS[k].c + '">' + tnSenaHtml({ ef: k }) + '</span>' +
-        '<b>' + r[k] + '</b><span>' + escHtml(TN_TURNOS[k].n) + '</span><small>' + tnNum(m) + ' h cada uno</small></div>';
-    }).join('') + '</div>' +
-    (r.enCurso ? '<p class="tn-st-nota"><span class="tn-vivo tn-k-' + TN_TURNOS[r.enCurso.turno].c + '"></span>Incluye el turno en curso, con las horas hasta ahora.</p>' : '') + '</div>';
-  /* 2 · Disponibles: hipótesis aparte. */
-  h += '<div class="card tn-st-hip tn-k-dis"><div class="tn-st-hh"><span class="tn-ley-s tn-k-dis">' + tnSenaHtml({ ef: 'D' }) + '</span>' +
-    '<span class="tn-st-ht"><b>' + r.D + '</b> disponible' + (r.D === 1 ? '' : 's') + '</span><span class="tn-st-tag">Hipotético</span></div>' +
-    '<p>No se suman como servicio: en la mayoría se apoya un servicio especial.</p>' +
-    '<p class="tn-st-ap">' + (r.apoyo ? '<b>' + r.apoyo + '</b> con servicio registrado' : 'Ninguno con servicio registrado') + '</p></div>';
-  /* 3 · Mes a mes. */
-  var maxD = 31, filas = r.meses.filter(function (m) { return m.dias; });
-  h += '<div class="card tn-st-mm"><div class="st">Mes a mes</div><div class="tn-st-mes" role="table" aria-label="Turnos por mes">' + filas.map(function (m) {
-    var parcial = m.dias < m.total, seg = function (k, n) { return n ? '<i class="tn-k-' + TN_TURNOS[k].c + (k === 'D' ? ' hip' : '') + '" style="width:' + (n / maxD * 100).toFixed(2) + '%"></i>' : ''; };
-    return '<div class="tn-st-f" role="row"><span class="tn-st-fm" role="rowheader">' + tnCap(TN_MESES[m.m].slice(0, 3)) + (parcial ? '<small>hasta hoy</small>' : '') + '</span>' +
-      '<span class="tn-st-fb" aria-hidden="true">' + seg('T', m.T) + seg('S', m.S) + seg('D', m.D) + '</span>' +
-      '<span class="tn-st-fn" role="cell"><b>' + (m.T + m.S) + '</b><small>' + tnNum(m.horas) + ' h</small></span></div>';
-  }).join('') + '</div><div class="tn-st-ley">' + TN_CICLO.map(function (k) {
-    return '<span class="tn-k-' + TN_TURNOS[k].c + '"><i class="' + (k === 'D' ? 'hip' : '') + '"></i>' + TN_TURNOS[k].n + '</span>';
-  }).join('') + '</div><p class="tn-st-nota">El número es de turnos prestados; las horas, de servicio.</p></div>';
-  /* 4 · Lo demás que pasó en el año. */
+        '<b>' + r[k] + '</b><span>' + pl(r[k], 'turno', 'turnos') + ' de ' + tnNum(horasDe(k)) + ' h</span><strong>' + tnNum(r['h' + k]) + ' h</strong></div>';
+    }).join('') +
+    '<div class="tn-st-kt dis tn-k-dis"><span class="tn-ley-s tn-k-dis">' + tnSenaHtml({ ef: 'D' }) + '</span>' +
+      '<b>' + r.D + '</b><span>' + pl(r.D, 'disponible', 'disponibles') + '</span><strong>' +
+      (r.apoyo ? r.apoyo + ' con servicio' : 'Sin horas') + '</strong></div></div>' +
+    '<div class="tn-st-avg"><div><b>' + tnNum(porDia) + ' h</b><span>por día</span></div><div><b>' + tnNum(porDia * 7) + ' h</b><span>por semana</span></div>' +
+      '<div><b>' + tnNum(porDia * diasAno / 12) + ' h</b><span>por mes</span></div></div></div>';
+  /* 2 · Lo que pasó en el año: solo lo que no es cero. */
+  var ch = [];
+  if (r.fest) ch.push('<span class="tn-st-chip"><i class="f"></i><b>' + r.fest + '</b> ' + pl(r.fest, 'festivo', 'festivos') + ' con servicio</span>');
+  if (r.dom) ch.push('<span class="tn-st-chip"><b>' + r.dom + '</b> ' + pl(r.dom, 'domingo', 'domingos') + ' con servicio</span>');
   var novK = Object.keys(TN_NOV).filter(function (k) { return r.nov[k]; });
-  var fil = function (l, v, c) { return '<div class="tn-st-r' + (c ? ' ' + c : '') + '"><span>' + l + '</span><b>' + v + '</b></div>'; };
-  h += '<div class="card tn-st-otros"><div class="st">Novedades y registros</div>' +
-    (novK.length ? novK.map(function (k) { return fil(escHtml(TN_NOV[k].n), r.nov[k] + ' día' + (r.nov[k] === 1 ? '' : 's'), 'nov'); }).join('')
-      : fil('Novedades', 'Ninguna', 'nov cero')) +
-    fil('Festivos con servicio', r.fest) +
-    fil('Servicios especiales registrados', r.especiales) +
-    (r.noPrest ? fil('Turnos que no prestaste', r.noPrest, 'no') : '') + '</div>';
+  novK.forEach(function (k) { ch.push('<span class="tn-st-chip"><i class="n"></i>' + escHtml(TN_NOV[k].n) + ' · <b>' + r.nov[k] + '</b> ' + pl(r.nov[k], 'día', 'días') + '</span>'); });
+  if (!novK.length) ch.push('<span class="tn-st-chip cero">Sin novedades</span>');
+  if (r.especiales) ch.push('<span class="tn-st-chip"><b>' + r.especiales + '</b> ' + pl(r.especiales, 'servicio especial', 'servicios especiales') + '</span>');
+  if (r.noPrest) ch.push('<span class="tn-st-chip no"><b>' + r.noPrest + '</b> ' + pl(r.noPrest, 'turno no prestado', 'turnos no prestados') + '</span>');
+  h += '<div class="tn-st-chips">' + ch.join('') + '</div>';
+  /* 3 · Por hora del día. */
+  if (r.horas) {
+    var hs = tnHoras(t);
+    h += '<div class="card tn-st-fr"><div class="st">Por hora del día</div>' + tnStats24Html(t) + ['t2', 't3', 't41'].map(function (k) {
+      var turno = TN_TURNOS.T.bl.indexOf(k) >= 0 ? 'T' : 'S', v = r.bl[k] || 0;
+      return '<div class="tn-st-fri tn-k-' + TN_TURNOS[turno].c + '"><span class="tn-dot"></span><span>' + escHtml(TN_BLOQUES[k].n) +
+        '<small>' + hs[k][0] + '–' + hs[k][1] + '</small></span><span><b>' + tnNum(v) + ' h</b><small>' + Math.round(v / r.horas * 100) + ' %</small></span></div>';
+    }).join('') + '</div>';
+  }
+  /* 4 · Mes a mes, y cada mes en sus días. */
+  var filas = r.meses.filter(function (m) { return m.dias; });
+  var col = function (k) { return '<span class="tn-k-' + TN_TURNOS[k].c + '">' + escHtml(TN_TURNOS[k].ab) + '</span>'; };
+  h += '<div class="card tn-st-mm"><div class="st">Mes a mes</div><div class="tn-st-tb" role="table" aria-label="Turnos y horas por mes">' +
+    '<div class="tn-st-th" role="row"><span>Mes</span>' + col('S') + col('T') + col('D') + '<span>Horas</span><span></span></div>' +
+    filas.map(function (m) {
+      var parcial = m.dias < m.total;
+      return '<button class="tn-st-f" role="row" id="tn-st-m' + m.m + '" aria-expanded="false" aria-controls="tn-st-d' + m.m + '" onclick="tnStatsMes(' + m.m + ')">' +
+        '<span class="tn-st-fm" role="rowheader">' + tnCap(TN_MESES[m.m].slice(0, 3)) + (parcial ? '<small>hasta hoy</small>' : '') + '</span>' +
+        '<span role="cell">' + m.S + '</span><span role="cell">' + m.T + '</span><span class="tn-st-fd" role="cell">' + m.D + '</span>' +
+        '<span class="tn-st-fh" role="cell">' + tnNum(m.horas) + '</span><span class="tn-st-ch" aria-hidden="true">' + TN_CHEV + '</span></button>' +
+        '<div class="tn-st-dl" id="tn-st-d' + m.m + '" role="rowgroup" hidden></div>';
+    }).join('') +
+    '<div class="tn-st-ft" role="row"><span role="rowheader">Total</span><span role="cell">' + r.S + '</span><span role="cell">' + r.T + '</span>' +
+      '<span role="cell">' + r.D + '</span><span role="cell">' + tnNum(r.horas) + '</span><span></span></div></div></div>';
   /* 5 · Traslados: en qué sección se contó cada tramo. */
   if (r.secciones.length > 1) {
     h += '<div class="card tn-st-sec"><div class="st">Tu sección en ' + y + '</div>' + r.secciones.map(function (s) {
       return '<div class="tn-hs-i"><span class="tn-hs-s">' + s.seccion + '.ª</span><span class="tn-hs-r">Del ' + escHtml(tnFechaCorta(s.desde)) + ' al ' + escHtml(tnFechaCorta(s.hasta)) + '</span></div>';
-    }).join('') + '<p class="tn-st-nota">Cada día se cuenta con la sección que tenías ese día.</p></div>';
+    }).join('') + '</div>';
   }
   return h;
 }
