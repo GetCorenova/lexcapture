@@ -591,7 +591,7 @@ const ini = await page.evaluate(() => {
     ls: fr ? [...fr.querySelectorAll('.tn-24-ls span')].map(e => e.textContent).join(' ') : '', sig: fr ? fr.querySelectorAll('.tn-fr-sig .tn-fr-d').length : 0,
     orden: [...document.querySelectorAll('#ini-mods .mod-sec')].map(e => e.textContent) };
 });
-log(!ini.tile && JSON.stringify(ini.orden) === JSON.stringify(['Operación', 'Gestión', 'Mi cuenta']), '[H1] Sin mosaico Turnos: la franja es su puerta (grupos Operación · Gestión · Mi cuenta)', JSON.stringify(ini));
+log(!ini.tile && JSON.stringify(ini.orden) === JSON.stringify(['Operación', 'Gestión', 'Recursos', 'Mi cuenta']), '[H1] Sin mosaico Turnos: la franja es su puerta (grupos Operación · Gestión · Recursos · Mi cuenta; Recursos es de Formatos, build 176)', JSON.stringify(ini));
 log(ini.fr && ini.ver === 'Ver calendario' && /^Hoy · 2\.ª sección$/.test(ini.k) && ini.sig === 0 && !/Mañana/.test(await page.evaluate(() => document.querySelector('#ini-turno').innerText)),
   '[H2] La franja dice de dónde sale e invita a «Ver calendario», sin «Mañana · pasado» (build 174)', JSON.stringify(ini));
 log(ini.tr <= 6 && ini.ls === '00 06 12 18 24' && (!ini.dot || (ini.dot[0] === ini.dot[1] && ini.dot[0] <= 14)),

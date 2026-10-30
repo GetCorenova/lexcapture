@@ -16,7 +16,7 @@
      F4: `img-src` admite UNA imagen de Google (cleardot.gif): con la que el
      canal de Firestore comprueba si hay red cuando la conexión se corta. Sin
      ella, cada corte de señal llena la consola de avisos de la política. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com/images/cleardot.gif; font-src 'self' data:; connect-src 'self' https://content-firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://*.cloudfunctions.net; frame-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://www.google.com/images/cleardot.gif; font-src 'self' data:; connect-src 'self' https://content-firebaseappcheck.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://*.cloudfunctions.net; frame-src 'self'; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#003153">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -2605,6 +2605,71 @@ body.cu-on{overflow:hidden}
   .tn-c{height:64px}
 }
 
+/* ═══ FORMATOS (build 176) ═══
+   Catálogo de formatos en blanco. Solo tokens del Design System v2: la tarjeta
+   es la de Despachos (superficie, canto y sombra); la estrella va en el acento
+   (el ámbar ya significa flagrancia) y «Nuevo»/«Actualizado» en --info. */
+.fm-tabs{margin-bottom:12px}
+.fm-tabs .tab{display:inline-flex;align-items:center;gap:6px}
+.fm-tn{font-size:12px;font-weight:600;opacity:.8}
+.fm-otra{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;margin-bottom:10px;border-radius:var(--radius-sm);
+  background:var(--surface-2);border:1px solid var(--border);font-size:13px;color:var(--text-2);
+}
+.fm-otra button{font:inherit;font-size:13px;font-weight:600;color:var(--acc);background:none;border:0;cursor:pointer;padding:4px 2px}
+.fm-card{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 6px 12px 14px;background:var(--surface-1);border:1px solid var(--card-bd);
+  border-radius:12px;margin-bottom:8px;box-shadow:var(--sh-1);
+}
+.fm-ic{
+  width:44px;height:44px;border-radius:12px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--accG);color:var(--acc);
+}
+.fm-ic svg{width:22px;height:22px;stroke-width:1.8}
+.fm-b{flex:1;min-width:0;cursor:pointer;text-align:left;background:none;border:0;padding:0;color:inherit;font:inherit}
+.fm-n{font-size:15px;font-weight:600;line-height:20px;color:var(--text)}
+.fm-m{font-size:13px;line-height:18px;color:var(--text-2);margin-top:2px;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.fm-tags{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px}
+.fm-tag{font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:6px;
+  background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.fm-v{font-size:12px;color:var(--text-3)}
+.fm-new{font-size:11px;font-weight:700;letter-spacing:.04em;padding:2px 7px;border-radius:6px;
+  background:var(--info-bg);color:var(--info);border:1px solid color-mix(in srgb,var(--info) 35%,transparent)}
+.fm-fav{
+  width:38px;height:38px;border-radius:999px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;border:0;color:var(--text-3);cursor:pointer;
+  transition:background var(--d1) var(--ease),color var(--d1) var(--ease);
+}
+.fm-fav:hover{background:var(--surface-3)}
+.fm-fav svg{width:20px;height:20px;stroke-width:1.8}
+.fm-fav.on{color:var(--acc)}
+.fm-fav.on svg{fill:currentColor}
+.fm-estado{text-align:center;padding:32px 16px;color:var(--text-2);font-size:14px;line-height:1.5}
+.fm-estado svg{width:32px;height:32px;stroke-width:1.5;color:var(--text-3);display:block;margin:0 auto 10px}
+.fm-estado .btn{margin-top:12px}
+.fm-pie{font-size:12px;color:var(--text-3);text-align:center;margin-top:12px}
+/* Visor de PDF: pantalla completa, encima de todo menos la ventana de dirección. */
+#fm-ov{position:fixed;inset:0;z-index:250;display:none;flex-direction:column;background:var(--bg)}
+#fm-ov.on{display:flex}
+.fm-ov-h{
+  display:flex;align-items:center;gap:6px;padding:calc(8px + var(--sat)) 8px 8px;
+  background:var(--brand);color:#fff;
+  --text:#fff;--text-2:rgba(255,255,255,.78);--text-3:rgba(255,255,255,.78);--surface-3:rgba(255,255,255,.12);--pressed:rgba(255,255,255,.2);
+}
+.fm-ov-h .ttl{flex:1;min-width:0}
+.fm-ov-h .ttl b{display:block;font-size:15px;font-weight:600;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm-ov-h .ttl span{display:block;font-size:12px;color:var(--text-2)}
+.fm-ov-h .topbar-btn{color:#fff}
+#fm-ov-pags{flex:1;overflow:auto;padding:12px 12px calc(12px + var(--sab));background:var(--surface-3);-webkit-overflow-scrolling:touch}
+.fm-pag{margin:0 auto 12px;background:#fff;box-shadow:var(--sh-1)}
+.fm-pag canvas{display:block;width:100%;height:100%}
+.fm-ov-z{display:flex;gap:4px}
+
 /* ═══ RESPONSIVE ═══ */
 @media(min-width:580px){
   .fr{grid-template-columns:1fr 1fr;column-gap:10px}
@@ -2724,6 +2789,12 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div class="sb-item" data-screen="turnos" onclick="go('turnos')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11V6.5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h6"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><circle cx="17.5" cy="17.5" r="4"/><path d="M17.5 15.6v1.9l1.3 1"/></svg>
     Turnos
+  </div>
+  <div class="sb-sec">Recursos</div>
+
+  <div class="sb-item" data-screen="formatos" onclick="go('formatos')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+    Formatos
   </div>
 
   <div class="sb-bottom">
@@ -3031,6 +3102,30 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
         <button class="tab" id="tab-JUZGADO" onclick="switchDespTab('JUZGADO')">Juzgados</button>
       </div>
       <div id="desp-list" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- ====== FORMATOS (2026-10-30, build 176) ======
+       Catálogo de formatos en blanco (oficiales y no oficiales). El catálogo y
+       los archivos viven en Firebase, fuera del paquete; la app guarda el
+       catálogo y los archivos ya usados para funcionar sin señal. Lo pinta
+       renderFormatos(). Ver «Formatos» en CLAUDE.md. -->
+  <section id="screen-formatos" class="screen">
+    <header class="topbar">
+      <button class="topbar-btn topbar-back" onclick="lcVolverInicio()" aria-label="Volver al inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div class="ttl">
+        <h1>Formatos</h1>
+        <span class="sub" id="fm-sub">Catálogo de formatos</span>
+      </div>
+    </header>
+    <div class="pane">
+      <input class="desp-search" id="fm-q" type="search" placeholder="Buscar por nombre, código o norma…" oninput="fmPintar()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="lc-fm-nofill" data-form-type="other" data-lpignore="true" aria-label="Buscar formato">
+      <div class="tabs fm-tabs" id="fm-tabs" role="tablist">
+        <button class="tab on" id="fm-tab-oficial" role="tab" onclick="fmTab('oficial')">Oficiales <span class="fm-tn" id="fm-n-oficial"></span></button>
+        <button class="tab" id="fm-tab-no_oficial" role="tab" onclick="fmTab('no_oficial')">No oficiales <span class="fm-tn" id="fm-n-no_oficial"></span></button>
+      </div>
+      <div id="fm-list"></div>
+      <div class="fm-pie" id="fm-pie"></div>
     </div>
   </section>
 
@@ -3461,6 +3556,22 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
   <div id="share-diag" style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;line-height:1.5;opacity:.55;padding:6px 16px 2px;text-align:center;word-break:break-word;user-select:all;-webkit-user-select:all"></div>
 </div>
 
+<!-- ====== VISOR DE PDF (módulo Formatos) ======
+     pdf.js empaquetado en vendor/pdfjs/, cargado solo al abrir el visor. -->
+<div id="fm-ov" role="dialog" aria-modal="true" aria-label="Vista previa del formato">
+  <div class="fm-ov-h">
+    <button class="topbar-btn" onclick="fmVisorCerrar()" aria-label="Cerrar la vista previa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    <div class="ttl"><b id="fm-ov-t"></b><span id="fm-ov-s"></span></div>
+    <div class="fm-ov-z">
+      <button class="topbar-btn" onclick="fmVisorZoom(-1)" aria-label="Alejar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3M8 11h6"/></svg></button>
+      <button class="topbar-btn" onclick="fmVisorZoom(1)" aria-label="Acercar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3M8 11h6M11 8v6"/></svg></button>
+      <button class="topbar-btn" onclick="fmDescargar()" aria-label="Descargar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></button>
+      <button class="topbar-btn" onclick="fmCompartir()" aria-label="Compartir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg></button>
+    </div>
+  </div>
+  <div id="fm-ov-pags"></div>
+</div>
+
 <!-- ====== SHEET DE ACCIONES (menú ⋮ de las listas de Capturas y Personas) ====== -->
 <div class="sheet-back" id="act-back" onclick="closeActionSheet()"></div>
 <div class="sheet" id="act-sheet">
@@ -3514,7 +3625,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 </div><!-- #app -->
 
 <script>
-var screens = ['inicio','buscar','pendientes','capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','turnos','tnstats','ajustes','wizard','personas'];
+var screens = ['inicio','buscar','pendientes','capturas','nueva','estadisticas','dossier','dossierwa','perfil','despachos','turnos','tnstats','ajustes','wizard','personas','formatos'];
 /* Inicio por módulos (2026-10-29). _lcPrev = la pantalla de la que se viene;
    _lcAntesNueva = desde dónde se abrió «Nueva captura» (su «volver» y cancelar
    el formulario regresan ahí); _lcPushed = al salir de Inicio se empujó una
@@ -3584,6 +3695,7 @@ function go(name) {
   if (name === 'perfil') renderPerfilScreen();
   if (name === 'turnos') renderTurnos();
   if (name === 'tnstats') renderTnStats();
+  if (name === 'formatos') renderFormatos();
   tnReloj(name);
   if (name === 'despachos') { _despSelCb = null; _despachoTab = _despachoTab||'todos'; renderDespachos(_despachoTab); }
   // El navegador puede autocompletar o restaurar el buscador con un valor viejo
@@ -3624,6 +3736,7 @@ function lcVolverNueva() {
    acciones). Devuelve true si cerró algo: el botón atrás de Android cierra
    primero la capa de arriba, como en cualquier app de Android. */
 function lcCerrarCapa() {
+  if (fmVisorAbierto()) { fmVisorCerrar(true); return true; }
   var m = document.getElementById('modal');
   if (m && m.classList.contains('open')) { closeModal(); return true; }
   var hojas = [['act-sheet', function(){ closeActionSheet(); }], ['share-sheet', function(){ closeShareSheet(); }],
@@ -3639,6 +3752,10 @@ function lcCerrarCapa() {
    (se pregunta: antes salía de la app con todo lo diligenciado). Fuera de él,
    cierra la capa abierta o vuelve a Inicio; desde Inicio sale de la app. */
 window.addEventListener('popstate', function() {
+  /* El visor de Formatos: «cerrar» consume su entrada con history.back() y ese
+     regreso no debe navegar; el botón atrás lo cierra. */
+  if (_fmPopIgnorar) { _fmPopIgnorar = false; return; }
+  if (fmVisorAbierto()) { fmVisorCerrar(true); return; }
   if (lcDirAlPop()) return;   // la ventana de dirección se atiende primero
   var wiz = document.getElementById('screen-wizard');
   if (wiz && wiz.classList.contains('on') && wc) {
@@ -3682,7 +3799,8 @@ var LC_IC = {
   chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>',
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
   turnos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11V6.5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h6"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><circle cx="17.5" cy="17.5" r="4"/><path d="M17.5 15.6v1.9l1.3 1"/></svg>',
-  buscar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>'
+  buscar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>',
+  formatos: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>'
 };
 /* El orden de este arreglo ES el orden del Inicio. */
 var LC_MODULOS = [
@@ -3692,6 +3810,7 @@ var LC_MODULOS = [
   { g: 'Gestión',    id: 'despachos',    t: 'Despachos' },
   /* Turnos no es un mosaico (build 167): su puerta es la franja «Mi turno» de
      arriba del Inicio, que ya dice el turno de hoy. */
+  { g: 'Recursos',   id: 'formatos',     t: 'Formatos' },
   { g: 'Mi cuenta',  id: 'perfil',       t: 'Perfil' },
   { g: 'Mi cuenta',  id: 'ajustes',      t: 'Ajustes' }
 ];
@@ -3741,6 +3860,7 @@ function lcModuloDato(id) {
     return lcNombreSaludo(lcPerfilActivo()) || 'Sin configurar';
   }
   if (id === 'ajustes') return 'Unidad, apariencia y cuenta';
+  if (id === 'formatos') return fmModuloDato();
   return '';
 }
 function lcModuloCnt(id) {
@@ -4064,7 +4184,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 175;
+var _BUILD = 176;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -4680,6 +4800,7 @@ function _lcTrasAbrir() {
   lcBarraSistema();
   /* La cuenta decide si se ve la app o la bienvenida (ver «CUENTA»). */
   cuArranque();
+  fmArranque();
   _lcListo = true;
 }
 
@@ -24550,7 +24671,7 @@ function lcColaCopia() {
    (Configuración del proyecto → Tus apps → App web). No es secreta: la protegen
    las reglas de Firestore y, en la F3, App Check. `messagingSenderId` es el
    NÚMERO del proyecto: Play Integrity lo pide para dar el token de la prueba. */
-var CU_FB = { apiKey: 'AIzaSyDV85QDPDUiJZpj2PQ4S0eHPAav0chte58', authDomain: 'flagrante.firebaseapp.com', projectId: 'flagrante', appId: '1:837685454525:web:742cb87be63356ef5139d4', messagingSenderId: '837685454525' };
+var CU_FB = { apiKey: 'AIzaSyDV85QDPDUiJZpj2PQ4S0eHPAav0chte58', authDomain: 'flagrante.firebaseapp.com', projectId: 'flagrante', appId: '1:837685454525:web:742cb87be63356ef5139d4', messagingSenderId: '837685454525', storageBucket: 'flagrante.firebasestorage.app' };
 /* Las funciones del servidor viven en la misma región que la base de datos. */
 var CU_REGION = 'southamerica-east1';
 /* ¿El enlace de «olvidé la contraseña» abre ESTA app? Solo si en la consola se
@@ -24598,17 +24719,27 @@ function cuActiva() { return cuInstalada() && !cuWebSinCuenta() && (!cuEsLocal()
 function cuSesion() { return !!(_cuenta && _cuenta.sesion && _cuenta.dek); }
 
 /* ── El SDK, solo cuando hace falta ─────────────────────────────────────── */
-function cuSdk() {
-  if (_cuFB) return Promise.resolve(_cuFB);
-  if (_cuSdkP) return _cuSdkP;
-  _cuSdkP = new Promise(function (res, rej) {
-    if (window.FB && FB.initializeApp) { res(); return; }
+/* Carga vendor/firebase.js UNA vez para todos (la cuenta y Formatos): dos
+   <script> del mismo paquete crearían dos registros de Firebase distintos y los
+   objetos de uno no servirían con las funciones del otro. */
+var _lcFbP = null;
+function lcCargarFirebase() {
+  if (window.FB && FB.initializeApp) return Promise.resolve();
+  if (_lcFbP) return _lcFbP;
+  _lcFbP = new Promise(function (res, rej) {
     var s = document.createElement('script');
     s.src = 'vendor/firebase.js';
     s.onload = function () { (window.FB && FB.initializeApp) ? res() : rej(new Error('cu-sdk')); };
     s.onerror = function () { rej(new Error('cu-sdk')); };
     document.head.appendChild(s);
-  }).then(function () {
+  });
+  _lcFbP.catch(function () { _lcFbP = null; });
+  return _lcFbP;
+}
+function cuSdk() {
+  if (_cuFB) return Promise.resolve(_cuFB);
+  if (_cuSdkP) return _cuSdkP;
+  _cuSdkP = lcCargarFirebase().then(function () {
     var em = cuEmulador();
     var app = FB.initializeApp(cuConfig(), 'flagrante');
     /* F6: App Check ANTES que Auth y Firestore, para que su primera petición ya
@@ -29550,6 +29681,525 @@ if ('serviceWorker' in navigator && _lcEnEnvoltorio()) {
       .then(function(reg) { console.log('[Flagrante] SW registrado:', reg.scope); })
       .catch(function(err) { console.warn('[Flagrante] SW no disponible (requiere HTTPS):', err); });
   });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORMATOS (2026-10-30, build 176) — catálogo de formatos en blanco
+   Los formatos (oficiales y no oficiales) NO viajan en el paquete: el catálogo
+   es UN documento de Firestore (`formatos/catalogo`, una sola lectura por
+   consulta) y los archivos están en Cloud Storage. Se administran FUERA de la
+   app con `scripts/admin-formatos.mjs`; publicar uno nuevo no exige actualizar
+   la app en Play.
+   · Sin señal: el catálogo se guarda en IndexedDB (`fm_catalogo`) y cada archivo
+     la primera vez que se usa (`fm|<id>|<ext>`, con su SHA-256). Sin cifrar a
+     propósito: son formatos públicos, sin datos de nadie.
+   · Lectura pública (también la web de GitHub sin cuenta): usa una instancia
+     PROPIA de Firebase, sin Auth, así no toca la cuenta ni la nube.
+   · Favoritos en `cfg.formatosFav` ({id:1}, viaja con la configuración);
+     «visto» por equipo en `fm_visto` (el `actualizado` del catálogo).
+   ═══════════════════════════════════════════════════════════════════════════ */
+var FM_CAT = {
+  oficial:    { t: 'Oficiales',    uno: 'Oficial' },
+  no_oficial: { t: 'No oficiales', uno: 'No oficial' }
+};
+var FM_EXT = {
+  pdf:  { t: 'PDF',  mime: 'application/pdf' },
+  docx: { t: 'Word', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }
+};
+var FM_COMPROBAR_MS = 24 * 3600 * 1000;   // el Inicio pregunta por novedades una vez al día
+var FM_IC = {
+  doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.2L12 17.1l-5.6 2.9 1.1-6.2L2.9 9.4l6.3-.9z"/></svg>',
+  ver: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  dl: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
+  share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+  nube: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H8a6 6 0 1 1 5.7-7.9A4.5 4.5 0 1 1 17.5 19z"/><path d="m3 3 18 18"/></svg>'
+};
+var _fmCat = null;        // {v, version, actualizado, items, leido}
+var _fmVisto = null;      // `actualizado` del catálogo la última vez que se entró al módulo
+var _fmBase = null;       // la marca de «visto» con la que se compara en ESTA visita
+var _fmGuard = {};        // 'fm|id|ext' → sha256 de los archivos guardados en el equipo
+var _fmLocalP = null, _fmActP = null, _fmFB = null, _fmSdkP = null;
+var _fmTab = 'oficial', _fmEstado = '', _fmSel = null, _fmPrepara = 0, _fmPopIgnorar = false;
+
+/* ── Dónde hay catálogo ─────────────────────────────────────────────────── */
+function fmEmulador() {
+  if (!cuEsLocal()) return null;
+  try {
+    var o = JSON.parse(localStorage.getItem('lc_flags') || 'null');
+    var e = o && o.formatosEmulador;
+    if (e && e.host && e.puerto && e.stPuerto) return e;
+  } catch (x) {}
+  return null;
+}
+/* En localhost solo con los emuladores: así las demás suites no salen a la red. */
+function fmDisponible() { return fmEmulador() ? true : (!!CU_FB.apiKey && !!CU_FB.storageBucket && !cuEsLocal()); }
+function fmConfig() {
+  var e = fmEmulador();
+  if (e) return { apiKey: 'demo-flagrante', projectId: e.proyecto || 'demo-flagrante', appId: 'demo', storageBucket: e.bucket || 'demo-flagrante.appspot.com' };
+  return CU_FB;
+}
+function fmSdk() {
+  if (_fmFB) return Promise.resolve(_fmFB);
+  if (_fmSdkP) return _fmSdkP;
+  _fmSdkP = lcCargarFirebase().then(function () {
+    var em = fmEmulador();
+    var app = FB.initializeApp(fmConfig(), 'flagrante-formatos');
+    var db = FB.initializeFirestore(app, { localCache: FB.memoryLocalCache() });
+    var st = FB.getStorage(app);
+    /* Sin esto, una descarga sin señal reintenta 2 minutos antes de fallar. */
+    st.maxOperationRetryTime = 20000;
+    if (em) { FB.connectFirestoreEmulator(db, em.host, em.puerto); FB.connectStorageEmulator(st, em.host, em.stPuerto); }
+    _fmFB = { app: app, db: db, st: st };
+    return _fmFB;
+  });
+  _fmSdkP.catch(function () { _fmSdkP = null; });
+  return _fmSdkP;
+}
+
+/* ── El catálogo ────────────────────────────────────────────────────────── */
+function fmNormItems(raw) {
+  return (Array.isArray(raw) ? raw : []).filter(function (x) {
+    if (!x || typeof x.id !== 'string' || !x.id || !String(x.nombre || '').trim() || !FM_CAT[x.categoria]) return false;
+    var a = x.archivos || {};
+    return Object.keys(FM_EXT).some(function (k) { return a[k] && typeof a[k].ruta === 'string' && a[k].ruta; });
+  }).map(function (x) {
+    var a = {}, src = x.archivos || {};
+    Object.keys(FM_EXT).forEach(function (k) {
+      var f = src[k];
+      if (f && typeof f.ruta === 'string' && f.ruta) a[k] = { ruta: f.ruta, tam: +f.tam || 0, sha256: String(f.sha256 || '') };
+    });
+    return {
+      id: x.id, nombre: String(x.nombre).trim(), codigo: String(x.codigo || '').trim(),
+      categoria: x.categoria, fuente: String(x.fuente || '').trim(), norma: String(x.norma || '').trim(),
+      version: String(x.version || '').trim(), enlace: /^https:\/\//.test(x.enlace || '') ? x.enlace : '',
+      orden: +x.orden || 0, creado: +x.creado || 0, actualizado: +x.actualizado || 0, archivos: a
+    };
+  }).sort(function (a, b) { return (a.orden - b.orden) || lcCmpTxt(a.nombre, b.nombre); });
+}
+function fmCargarLocal() {
+  if (_fmLocalP) return _fmLocalP;
+  _fmLocalP = Promise.all([
+    lcIdbGet('fm_catalogo').catch(function () { return null; }),
+    lcIdbGet('fm_visto').catch(function () { return null; }),
+    lcIdbGet('fm_guard').catch(function () { return null; })
+  ]).then(function (r) {
+    if (r[0] && Array.isArray(r[0].items)) { _fmCat = r[0]; _fmCat.items = fmNormItems(_fmCat.items); }
+    _fmVisto = typeof r[1] === 'number' ? r[1] : null;
+    _fmGuard = (r[2] && typeof r[2] === 'object') ? r[2] : {};
+  });
+  return _fmLocalP;
+}
+/* Pregunta a Firestore. Devuelve true si el catálogo cambió. */
+function fmActualizar() {
+  if (!fmDisponible()) return Promise.resolve(false);
+  if (navigator.onLine === false) { _fmEstado = 'sinred'; return Promise.resolve(false); }
+  if (_fmActP) return _fmActP;
+  _fmEstado = 'cargando';
+  _fmActP = fmSdk().then(function (fb) {
+    return FB.getDocFromServer(FB.doc(fb.db, 'formatos', 'catalogo'));
+  }).then(function (s) {
+    var d = s.exists() ? s.data() : {};
+    var nuevo = { v: 1, version: +d.version || 0, actualizado: +d.actualizado || 0, items: fmNormItems(d.items), leido: Date.now() };
+    var cambio = !_fmCat || _fmCat.version !== nuevo.version;
+    _fmCat = nuevo; _fmEstado = '';
+    if (_on('formatos')) fmMarcarVisto();
+    return lcIdbSet('fm_catalogo', nuevo).catch(function () {}).then(function () {
+      if (cambio) fmPurgar();
+      return cambio;
+    });
+  }).catch(function (e) {
+    console.warn('[Formatos] no se pudo leer el catálogo:', (e && e.code) || e);
+    _fmEstado = navigator.onLine === false ? 'sinred' : 'error';
+    return false;
+  }).then(function (r) { _fmActP = null; return r; });
+  return _fmActP;
+}
+/* Los archivos guardados de formatos que ya no están (o cambiaron) se borran. */
+function fmPurgar() {
+  var vale = {};
+  (_fmCat ? _fmCat.items : []).forEach(function (it) {
+    Object.keys(it.archivos).forEach(function (k) { vale['fm|' + it.id + '|' + k] = it.archivos[k].sha256; });
+  });
+  var cambio = false;
+  Object.keys(_fmGuard).forEach(function (key) {
+    if (vale[key] && vale[key] === _fmGuard[key]) return;
+    delete _fmGuard[key]; cambio = true;
+    lcIdbDel(key).catch(function () {});
+  });
+  if (cambio) lcIdbSet('fm_guard', _fmGuard).catch(function () {});
+}
+function fmMarcarVisto() {
+  if (!_fmCat || !_fmCat.actualizado || _fmVisto === _fmCat.actualizado) return;
+  _fmVisto = _fmCat.actualizado;
+  lcIdbSet('fm_visto', _fmVisto).catch(function () {});
+}
+/* «Nuevo» / «Actualizado» frente a una marca de visto. La primera vez que se
+   entra (sin marca) nada es nuevo: si no, todo el catálogo saldría marcado. */
+function fmNovedad(it, base) {
+  if (base == null) return '';
+  if (it.creado > base) return 'Nuevo';
+  if (it.actualizado > base) return 'Actualizado';
+  return '';
+}
+function fmNuevos() {
+  if (!_fmCat || _fmVisto == null) return 0;
+  return _fmCat.items.filter(function (it) { return !!fmNovedad(it, _fmVisto); }).length;
+}
+function fmModuloDato() {
+  if (!_fmCat) return 'Oficiales y no oficiales';
+  var n = _fmCat.items.length, k = fmNuevos();
+  if (!n) return 'Sin formatos publicados';
+  return n + ' formato' + (n === 1 ? '' : 's') + (k ? ' · ' + k + ' novedad' + (k === 1 ? '' : 'es') : '');
+}
+/* Al abrir la sesión: se carga lo guardado y, una vez al día y con señal, se
+   pregunta por novedades (para el Inicio). No bloquea el arranque. */
+function fmArranque() {
+  fmCargarLocal().then(function () {
+    if (_on('inicio')) renderInicio();
+    if (!fmDisponible() || (_fmCat && Date.now() - (_fmCat.leido || 0) < FM_COMPROBAR_MS)) return;
+    setTimeout(function () {
+      if (navigator.onLine === false) return;
+      fmActualizar().then(function (c) {
+        if (c && _on('inicio')) renderInicio();
+        if (_on('formatos')) fmPintar();
+      });
+    }, 4000);
+  });
+}
+
+/* ── La pantalla ────────────────────────────────────────────────────────── */
+function renderFormatos() {
+  fmCargarLocal().then(function () {
+    _fmBase = _fmVisto;
+    fmMarcarVisto();
+    fmPintar();
+    if (fmDisponible() && navigator.onLine !== false) {
+      fmActualizar().then(function () { fmPintar(); });
+      fmPintar();   // «Cargando…» solo si no hay nada guardado todavía
+    }
+  });
+}
+function fmFavs() { return (DB.getConfig() || {}).formatosFav || {}; }
+function fmCoincide(it, palabras) {
+  if (!palabras.length) return true;
+  var t = lcNormNom([it.nombre, it.codigo, it.norma, it.fuente].join(' '));
+  return palabras.every(function (p) { return t.indexOf(p) >= 0; });
+}
+function fmPalabras() {
+  var q = lcNormNom((document.getElementById('fm-q') || {}).value || '');
+  return q ? q.split(' ') : [];
+}
+function fmTab(k) {
+  if (!FM_CAT[k]) return;
+  _fmTab = k;
+  fmPintar();
+}
+function fmPintar() {
+  var list = document.getElementById('fm-list');
+  if (!list) return;
+  var sub = document.getElementById('fm-sub'), pie = document.getElementById('fm-pie');
+  var items = _fmCat ? _fmCat.items : [];
+  var pal = fmPalabras(), fav = fmFavs();
+  var cuenta = { oficial: 0, no_oficial: 0 };
+  items.forEach(function (it) { if (fmCoincide(it, pal)) cuenta[it.categoria]++; });
+  Object.keys(FM_CAT).forEach(function (k) {
+    var b = document.getElementById('fm-tab-' + k), n = document.getElementById('fm-n-' + k);
+    if (b) { b.classList.toggle('on', k === _fmTab); b.setAttribute('aria-selected', k === _fmTab ? 'true' : 'false'); }
+    if (n) n.textContent = _fmCat ? String(cuenta[k]) : '';
+  });
+  if (sub) sub.textContent = _fmCat ? (items.length + ' documento' + (items.length === 1 ? '' : 's')) : 'Catálogo de formatos';
+  if (pie) pie.textContent = (_fmCat && _fmCat.leido) ? ('Catálogo revisado ' + lcHace(_fmCat.leido)) : '';
+
+  if (!_fmCat) {
+    var txt, ic = FM_IC.doc, btn = '';
+    if (!fmDisponible()) txt = 'El catálogo de formatos no está disponible en esta instalación.';
+    else if (_fmEstado === 'cargando') txt = 'Cargando el catálogo…';
+    else if (_fmEstado === 'sinred' || navigator.onLine === false) { ic = FM_IC.nube; txt = 'Sin conexión. El catálogo se descarga la primera vez que entras con señal; después funciona sin ella.'; }
+    else { txt = 'No se pudo cargar el catálogo.'; btn = '<button class="btn bs" onclick="renderFormatos()">Reintentar</button>'; }
+    list.innerHTML = '<div class="fm-estado">' + ic + escHtml(txt) + btn + '</div>';
+    return;
+  }
+  if (!items.length) { list.innerHTML = '<div class="fm-estado">' + FM_IC.doc + 'Aún no hay formatos publicados.</div>'; return; }
+
+  var vis = items.filter(function (it) { return it.categoria === _fmTab && fmCoincide(it, pal); })
+    .sort(function (a, b) { return (fav[a.id] ? 0 : 1) - (fav[b.id] ? 0 : 1); });   // orden estable: dentro de cada grupo, el del catálogo
+  var h = '', otra = _fmTab === 'oficial' ? 'no_oficial' : 'oficial';
+  if (pal.length && cuenta[otra] && !vis.length) {
+    h += '<div class="fm-otra"><span>' + cuenta[otra] + ' en ' + escHtml(FM_CAT[otra].t) + '</span>' +
+      '<button onclick="fmTab(\'' + otra + '\')">Ver</button></div>';
+  }
+  if (!vis.length) {
+    h += '<div class="fm-estado">' + (pal.length ? 'Sin resultados en ' + escHtml(FM_CAT[_fmTab].t) + '.' : 'No hay formatos en esta categoría.') + '</div>';
+    list.innerHTML = h;
+    return;
+  }
+  h += vis.map(function (it) {
+    var j = "'" + it.id + "'", es = !!fav[it.id], nov = fmNovedad(it, _fmBase);
+    var meta = [it.codigo, it.fuente].filter(Boolean).join(' · ');
+    var tags = Object.keys(FM_EXT).filter(function (k) { return it.archivos[k]; })
+      .map(function (k) { return '<span class="fm-tag">' + FM_EXT[k].t + '</span>'; }).join('');
+    return '<div class="fm-card" data-fm="' + escAttr(it.id) + '">' +
+      '<span class="fm-ic">' + FM_IC.doc + '</span>' +
+      '<button class="fm-b" onclick="fmMenu(' + j + ')">' +
+        '<div class="fm-n">' + escHtml(it.nombre) + '</div>' +
+        (meta ? '<div class="fm-m">' + escHtml(meta) + '</div>' : '') +
+        '<div class="fm-tags">' + tags +
+          (it.version ? '<span class="fm-v">Versión ' + escHtml(it.version) + '</span>' : '') +
+          (nov ? '<span class="fm-new">' + nov + '</span>' : '') +
+        '</div>' +
+      '</button>' +
+      '<button class="fm-fav' + (es ? ' on' : '') + '" onclick="fmFav(' + j + ')" aria-pressed="' + es + '" aria-label="' + (es ? 'Quitar de favoritos' : 'Marcar como favorito') + '">' + FM_IC.star + '</button>' +
+      moreBtn('fmMenu', it.id) +
+    '</div>';
+  }).join('');
+  list.innerHTML = h;
+}
+function fmItem(id) {
+  var r = null;
+  (_fmCat ? _fmCat.items : []).forEach(function (it) { if (it.id === id) r = it; });
+  return r;
+}
+function fmFav(id) {
+  var cfg = DB.getConfig() || {}, f = Object.assign({}, cfg.formatosFav || {});
+  var es = !f[id];
+  if (es) f[id] = 1; else delete f[id];
+  cfg.formatosFav = f;
+  DB.saveConfig(cfg);
+  if (_on('formatos')) fmPintar();
+  closeActionSheet();
+  toast(es ? 'Agregado a favoritos' : 'Quitado de favoritos');
+}
+
+/* ── El menú ⋮: primero el archivo (PDF o Word), después la acción ─────── */
+function fmTam(n) { return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+function fmHead(it) {
+  return '<span class="fm-ic">' + FM_IC.doc + '</span>' +
+    '<div class="prow-body"><div class="prow-name">' + escHtml(it.nombre) + '</div>' +
+    '<div class="prow-meta">' + escHtml([FM_CAT[it.categoria].uno, it.codigo, it.version ? 'Versión ' + it.version : ''].filter(Boolean).join(' · ')) + '</div></div>';
+}
+function fmBtn(onclick, icon, ti, de, dis) {
+  return '<button class="sheet-item"' + (dis ? ' disabled' : '') + ' onclick="' + onclick + '">' +
+    '<div class="lic" style="' + ACT_ACC + '">' + icon + '</div>' +
+    '<div class="body"><div class="ti">' + ti + '</div>' + (de ? '<div class="de">' + de + '</div>' : '') + '</div></button>';
+}
+function fmMenu(id) {
+  var it = fmItem(id); if (!it) return;
+  var exts = Object.keys(FM_EXT).filter(function (k) { return it.archivos[k]; });
+  /* Con un solo archivo no hay nada que elegir: directo a las acciones. */
+  if (exts.length === 1) { fmElegir(id, exts[0]); return; }
+  var es = !!fmFavs()[id], j = "'" + id + "'";
+  var h = exts.map(function (k) {
+    var a = it.archivos[k], g = _fmGuard['fm|' + id + '|' + k] === a.sha256;
+    return fmBtn('fmElegir(' + j + ',\'' + k + '\')', FM_IC.doc, FM_EXT[k].t,
+      [a.tam ? fmTam(a.tam) : '', g ? 'Guardado en el teléfono' : ''].filter(Boolean).join(' · '));
+  }).join('');
+  h += fmBtn('fmFav(' + j + ')', FM_IC.star, es ? 'Quitar de favoritos' : 'Marcar como favorito', '');
+  if (it.enlace) h += fmBtn('fmFuente(' + j + ')', FM_IC.link, 'Ver la fuente oficial', escHtml(it.fuente || ''));
+  openActionSheet(fmHead(it), '<div class="sheet-title">Elige el archivo</div>' + h);
+}
+function fmFuente(id) {
+  var it = fmItem(id); if (!it || !it.enlace) return;
+  closeActionSheet();
+  try { window.open(it.enlace, '_blank', 'noopener'); } catch (e) {}
+}
+/* Prepara el archivo ANTES de ofrecer Compartir: entre el toque y share() no
+   puede haber nada asíncrono (regla del proyecto, «Envío de documentos»). */
+function fmElegir(id, ext) {
+  var it = fmItem(id); if (!it || !it.archivos[ext]) return;
+  var turno = ++_fmPrepara;
+  _fmSel = null;
+  openActionSheet(fmHead(it), fmBtn('', FM_IC.doc, 'Preparando el ' + FM_EXT[ext].t + '…', '', true));
+  fmArchivo(it, ext).then(function (blob) {
+    if (turno !== _fmPrepara) return;
+    var fname = fmNombreArchivo(it, ext);
+    _fmSel = { it: it, ext: ext, blob: blob, fname: fname };
+    var de = FM_EXT[ext].t + (blob.size ? ' · ' + fmTam(blob.size) : '');
+    var h = '<div class="sheet-title">' + escHtml(de) + '</div>';
+    if (ext === 'pdf') h += fmBtn('fmVer()', FM_IC.ver, 'Ver', 'Vista previa en la app');
+    h += fmBtn('fmDescargar()', FM_IC.dl, 'Descargar', 'Guárdalo en Descargas');
+    h += fmBtn('fmCompartir()', FM_IC.share, 'Compartir', 'WhatsApp, correo u otra app');
+    openActionSheet(fmHead(it), h);
+  }).catch(function (e) {
+    if (turno !== _fmPrepara) return;
+    var sinRed = e && e.message === 'fm-sin-red';
+    openActionSheet(fmHead(it), fmBtn('', sinRed ? FM_IC.nube : FM_IC.doc,
+      sinRed ? 'Sin conexión' : 'No se pudo descargar',
+      sinRed ? 'Este archivo todavía no está guardado en el teléfono. Ábrelo una vez con señal.' : 'Inténtalo de nuevo en un momento.', true));
+  });
+}
+function fmNombreArchivo(it, ext) {
+  var base = (it.codigo && it.nombre.indexOf(it.codigo) < 0 ? it.codigo + ' ' : '') + it.nombre;
+  return base.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90) + '.' + ext;
+}
+function fmSha(buf) {
+  return crypto.subtle.digest('SHA-256', buf).then(function (h) {
+    return Array.prototype.map.call(new Uint8Array(h), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+  });
+}
+/* El archivo: del teléfono si ya está guardado con el mismo SHA-256; si no, de
+   Storage (y queda guardado). Un archivo que no cuadra con su SHA se descarta. */
+function fmArchivo(it, ext) {
+  var a = it.archivos[ext], key = 'fm|' + it.id + '|' + ext, mime = FM_EXT[ext].mime;
+  return lcIdbGet(key).catch(function () { return null; }).then(function (g) {
+    if (g && g.blob && g.sha256 === a.sha256) return g.blob;
+    if (!fmDisponible() || navigator.onLine === false) throw new Error('fm-sin-red');
+    return fmSdk().then(function (fb) {
+      return FB.getBlob(FB.ref(fb.st, a.ruta));
+    }).then(function (b) { return b.arrayBuffer(); }).then(function (buf) {
+      return fmSha(buf).then(function (sha) {
+        if (a.sha256 && sha !== a.sha256) throw new Error('fm-integridad');
+        var blob = new Blob([buf], { type: mime });
+        return lcIdbSet(key, { sha256: a.sha256 || sha, blob: blob, ts: Date.now() }).then(function () {
+          _fmGuard[key] = a.sha256 || sha;
+          return lcIdbSet('fm_guard', _fmGuard);
+        }).catch(function () {}).then(function () { return blob; });
+      });
+    }).catch(function (e) {
+      if (e && (e.message === 'fm-integridad' || e.message === 'fm-sin-red')) throw e;
+      console.warn('[Formatos] descarga:', (e && e.code) || e);
+      throw new Error(navigator.onLine === false ? 'fm-sin-red' : 'fm-descarga');
+    });
+  });
+}
+function fmOut() {
+  if (!_fmSel) return null;
+  var o = { blob: _fmSel.blob, fname: _fmSel.fname, label: _fmSel.it.nombre };
+  o.file = _mkShareFile(o);
+  return o;
+}
+/* ⚠️ Dentro del envoltorio un <a download> con un blob NO guarda nada (medido
+   en el emulador, Android 14): se escribe con Filesystem en la carpeta pública
+   Descargas. Si el nombre ya lo tiene un archivo de otra app, se prueba con
+   «(2)», «(3)»; si aun así no se puede, se abre la hoja de compartir. */
+function fmDescargarNativo(o) {
+  var P = window.Capacitor.Plugins.Filesystem;
+  return _blobToB64(o.blob).then(function (b64) {
+    var intento = function (nombre, n) {
+      return P.writeFile({ path: 'Download/' + nombre, data: b64, directory: 'EXTERNAL_STORAGE', recursive: true })
+        .then(function () { return nombre; })
+        .catch(function (e) {
+          if (n >= 3) throw e;
+          return intento(o.fname.replace(/(\.[a-z]+)$/, ' (' + (n + 1) + ')$1'), n + 1);
+        });
+    };
+    return intento(o.fname, 1);
+  });
+}
+function fmDescargar() {
+  var o = fmOut(); if (!o) return;
+  closeActionSheet();
+  if (_capNative()) {
+    fmDescargarNativo(o).then(function (nombre) { toast('«' + nombre + '» en Descargas ✓', 4000); })
+      .catch(function (e) {
+        console.warn('[Formatos] no se pudo guardar en Descargas:', e);
+        toast('No se pudo guardar en Descargas: elige dónde guardarlo', 4000);
+        _compartirDoc(o);
+      });
+    return;
+  }
+  _dlDocBlob(o.blob, o.fname);
+  toast('«' + o.fname + '» en Descargas ✓', 4000);
+}
+function fmCompartir() {
+  var o = fmOut(); if (!o) return;
+  closeActionSheet();
+  _compartirDoc(o);
+}
+
+/* ── El visor (pdf.js, empaquetado en vendor/pdfjs/) ────────────────────── */
+var _fmPdfP = null, _fmVis = null;
+function fmPdfjs() {
+  if (_fmPdfP) return _fmPdfP;
+  _fmPdfP = import('./vendor/pdfjs/pdf.min.mjs').then(function (m) {
+    m.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.mjs';
+    return m;
+  });
+  _fmPdfP.catch(function () { _fmPdfP = null; });
+  return _fmPdfP;
+}
+function fmVer() {
+  if (!_fmSel || _fmSel.ext !== 'pdf') return;
+  closeActionSheet();
+  var sel = _fmSel, ov = document.getElementById('fm-ov'), pags = document.getElementById('fm-ov-pags');
+  document.getElementById('fm-ov-t').textContent = sel.it.nombre;
+  document.getElementById('fm-ov-s').textContent = 'Abriendo…';
+  pags.innerHTML = '';
+  ov.classList.add('on');
+  try { history.pushState({ screen: 'formatos', visor: 1 }, '', location.hash); } catch (e) {}
+  fmPdfjs().then(function (pdfjs) {
+    return sel.blob.arrayBuffer().then(function (buf) {
+      return pdfjs.getDocument({ data: new Uint8Array(buf), isEvalSupported: false, useSystemFonts: true }).promise;
+    });
+  }).then(function (pdf) {
+    if (!ov.classList.contains('on')) { pdf.destroy(); return; }
+    _fmVis = { pdf: pdf, zoom: 1, sel: sel, obs: null };
+    document.getElementById('fm-ov-s').textContent = pdf.numPages + ' página' + (pdf.numPages === 1 ? '' : 's');
+    return fmVisorPintar();
+  }).catch(function (e) {
+    console.warn('[Formatos] visor:', e);
+    document.getElementById('fm-ov-s').textContent = 'No se pudo abrir';
+    pags.innerHTML = '<div class="fm-estado">No se pudo mostrar este PDF. Puedes descargarlo o compartirlo.</div>';
+  });
+}
+function fmVisorPintar() {
+  var v = _fmVis; if (!v) return Promise.resolve();
+  var pags = document.getElementById('fm-ov-pags');
+  if (v.obs) { v.obs.disconnect(); v.obs = null; }
+  var ancho = Math.max(200, pags.clientWidth - 24) * v.zoom;
+  pags.innerHTML = '';
+  var lista = [];
+  for (var i = 1; i <= v.pdf.numPages; i++) lista.push(i);
+  /* Las páginas se miden antes y se dibujan al acercarse a la vista: un formato
+     de varias hojas no se pinta entero de golpe. */
+  return Promise.all(lista.map(function (n) { return v.pdf.getPage(n); })).then(function (pages) {
+    if (_fmVis !== v) return;
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    v.obs = ('IntersectionObserver' in window) ? new IntersectionObserver(function (ents) {
+      ents.forEach(function (en) { if (en.isIntersecting) { v.obs.unobserve(en.target); fmVisorPagina(v, en.target, dpr); } });
+    }, { root: pags, rootMargin: '600px 0px' }) : null;
+    pages.forEach(function (pg, k) {
+      var vp = pg.getViewport({ scale: 1 }), esc = ancho / vp.width;
+      var d = document.createElement('div');
+      d.className = 'fm-pag';
+      d.style.width = Math.round(vp.width * esc) + 'px';
+      d.style.height = Math.round(vp.height * esc) + 'px';
+      d._pg = pg; d._esc = esc; d.setAttribute('data-pag', String(k + 1));
+      pags.appendChild(d);
+      if (v.obs) v.obs.observe(d); else fmVisorPagina(v, d, dpr);
+    });
+  });
+}
+function fmVisorPagina(v, d, dpr) {
+  if (_fmVis !== v || d._hecha) return;
+  d._hecha = true;
+  var vp = d._pg.getViewport({ scale: d._esc * dpr });
+  var c = document.createElement('canvas');
+  c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
+  d.appendChild(c);
+  d._pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise.then(function () {
+    d.setAttribute('data-ok', '1');
+  }).catch(function (e) { console.warn('[Formatos] página', e); });
+}
+function fmVisorZoom(dir) {
+  if (!_fmVis) return;
+  var z = [1, 1.5, 2, 3], i = z.indexOf(_fmVis.zoom);
+  var n = z[Math.max(0, Math.min(z.length - 1, i + dir))];
+  if (n === _fmVis.zoom) return;
+  _fmVis.zoom = n;
+  fmVisorPintar();
+}
+function fmVisorAbierto() { var o = document.getElementById('fm-ov'); return !!(o && o.classList.contains('on')); }
+/* `desdeAtras`: lo cierra el botón atrás de Android (la entrada ya se consumió). */
+function fmVisorCerrar(desdeAtras) {
+  var ov = document.getElementById('fm-ov');
+  if (!ov || !ov.classList.contains('on')) return;
+  ov.classList.remove('on');
+  var v = _fmVis; _fmVis = null;
+  if (v) { if (v.obs) v.obs.disconnect(); try { v.pdf.destroy(); } catch (e) {} }
+  document.getElementById('fm-ov-pags').innerHTML = '';
+  if (!desdeAtras) { _fmPopIgnorar = true; try { history.back(); } catch (e) { _fmPopIgnorar = false; } }
 }
 </script>
 </body>

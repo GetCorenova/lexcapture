@@ -30,3 +30,6 @@ export { getFunctions, httpsCallable, connectFunctionsEmulator } from 'firebase/
    canjea un token de Play Integrity por uno de App Check (ver acToken en la app);
    el SDK lo adjunta solo a Firestore, Auth y las funciones. */
 export { initializeAppCheck, CustomProvider } from 'firebase/app-check';
+/* Formatos (build 176): los archivos de los formatos en blanco. Se bajan con
+   `getBlob`, así el catálogo no guarda URLs con token. */
+export { getStorage, ref, getBlob, connectStorageEmulator } from 'firebase/storage';

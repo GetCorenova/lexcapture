@@ -159,6 +159,10 @@ for (const f of ['manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable
 // El SDK de Firebase de la cuenta: la app lo carga de 'vendor/firebase.js'.
 mkdirSync(join(WWW, 'vendor'), { recursive: true });
 copyFileSync(join(RAIZ, 'vendor', 'firebase.js'), join(WWW, 'vendor', 'firebase.js'));
+// El lector de PDF de Formatos (vendor/pdfjs/).
+mkdirSync(join(WWW, 'vendor', 'pdfjs'), { recursive: true });
+for (const f of ['pdf.min.mjs', 'pdf.worker.min.mjs', 'LICENSE'])
+  copyFileSync(join(RAIZ, 'vendor', 'pdfjs', f), join(WWW, 'vendor', 'pdfjs', f));
 ok(`www/ listo (build ${buildWeb})`);
 const cap = spawnSync('npx cap copy android', [], { cwd: WRAP, stdio: 'inherit', shell: true });
 if (cap.status !== 0) { console.error('\nBUILD FALLIDO — «npx cap copy android» devolvió ' + cap.status + '\n'); process.exit(1); }

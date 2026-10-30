@@ -187,6 +187,33 @@ de la nube a teléfonos que no pasan):
   **Firebase App Check API**, o el canje responde 403 (`ac/exchangePlayIntegrityToken-403`).
 - ⚠️ El token clásico de Play Integrity tiene su propio cupo diario (10 000), aparte del
   estándar de la prueba gratuita; App Check lo renueva cada hora por teléfono.
+- ⚠️ **Formatos (build 176)**: aplicar App Check en **Firestore** deja a la **web sin cuenta**
+  sin catálogo (la web no tiene token). Antes de aplicarlo, decidir: registrar la web con
+  reCAPTCHA Enterprise, o aceptar que el catálogo solo se vea en Android. En **Storage no
+  se aplica** App Check.
+
+### Formatos (rama `formatos`, build 176) **[USUARIO]**
+
+El código está hecho y probado contra los emuladores (`verify_formatos.mjs`). Mientras no
+se haga lo de abajo, la pantalla dice «No se pudo cargar el catálogo» (o «Aún no hay
+formatos publicados» si Firestore responde sin catálogo). En este orden:
+1. Firebase → **Storage** → Comenzar → ubicación **us-central1** (entra en la capa gratuita;
+   ⚠️ irreversible para el bucket por defecto). Confirmar que el bucket se llama
+   `flagrante.firebasestorage.app`; si no, pasar el nombre al asistente (va en `CU_FB`).
+2. **CORS del bucket** (sin esto la app no puede bajar los archivos). Desde Google Cloud
+   Shell, con un `cors.json` = `[{"origin":["https://getcorenova.github.io"],"method":["GET"],"maxAgeSeconds":3600}]`:
+   `gcloud storage buckets update gs://flagrante.firebasestorage.app --cors-file=cors.json`.
+   (La app de Android sirve desde ese mismo origen: no hace falta otro.)
+3. Firebase → Configuración del proyecto → **Cuentas de servicio** → Generar nueva clave
+   privada → guardarla como `..\keystore-RESGUARDAR\firebase-admin-PRIVADA.json`.
+   ⚠️ Nunca dentro de `Crear App` (se publica en GitHub Pages).
+4. Desplegar las reglas: desde `firebase\`: `npx firebase deploy --only firestore:rules,storage`.
+5. Primera carga: la carpeta `..\Formatos-catalogo\` ya tiene el lote inicial (FPJ-7 y
+   FPJ-8). `npm run formatos` (simula) y `npm run formatos -- --aplicar`.
+- Publicar o retirar un formato **no** exige paquete nuevo: se edita la carpeta y se vuelve
+  a correr el comando. La pantalla de Formatos sí viaja en el `.aab` (versionCode 8).
+- Costo: Firestore = 1 lectura por consulta (capa gratuita: 50 000/día). Storage
+  us-central1: gratis hasta 5 GB guardados y 100 GB descargados al mes.
 
 ---
 

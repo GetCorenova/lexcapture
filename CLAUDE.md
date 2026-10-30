@@ -8910,3 +8910,85 @@ saboteada para que guarde, fallan [K2] [K4] [K5] [K6]; con los tintes viejos, fa
     `.tn-sd*`, `.tn-barra`, `.tn-hs*`).
 - En verde: turnos 94 · inicio 45 · tema 51 · DS 9/9 · CSP 11 · estadísticas 58 · jerarquía 67.
 - Anti-caché `?v=174` / `cache-v174`, `_BUILD=174`; `deploy:web` lo publicó como **build 175**. Para la app de Play hace falta un `.aab` nuevo.
+
+## Formatos (2026-10-30, build 176)
+Módulo nuevo pedido por el usuario con un boceto de flujo y un pantallazo de referencia: un catálogo
+de **formatos en blanco** (oficiales y no oficiales) que se consultan, se ven, se descargan y se
+comparten. Rama `formatos`. Verificado con `verify_formatos.mjs` (**60 checks**, nuevo, contra los
+emuladores de Firestore y Storage y con el script de administración real) y mirando la pantalla en
+los dos temas, en teléfono y escritorio.
+- **Decisiones del usuario (2026-10-30)**: pestañas **Oficiales · No oficiales** (sin «Estudio» ni
+  «Todos») · vista previa con **pdf.js empaquetado** (Word sin vista previa) · sin señal: **catálogo
+  siempre, cada archivo queda guardado la primera vez que se usa** · acceso **público**, también la
+  web sin cuenta · grupo nuevo **«Recursos»** en el Inicio y el panel lateral · bucket en
+  **us-central1** (capa gratuita; son formatos públicos, sin datos personales) · favoritos, menú ⋮
+  que **primero elige PDF o Word** y luego la acción, e insignia **Nuevo / Actualizado** ·
+  administración por **carpeta + `formatos.json` + un comando**, nada dentro de la app.
+- ⚠️ **Los formatos NO viajan en el paquete y publicar uno NO exige actualizar la app en Play.** Solo
+  la pantalla viaja en el `.aab` (versionCode 8). El catálogo es **UN documento de Firestore**
+  (`formatos/catalogo` = `{v, version, actualizado, items[]}`, una lectura por consulta; caben de
+  sobra menos de 100 formatos) y los archivos están en Cloud Storage en
+  `formatos/estandarizados/` (oficial) y `formatos/no_estandarizados/`, con **parte del SHA-256 en
+  el nombre**: un archivo cambiado es un objeto nuevo y ninguna caché sirve el anterior.
+- **Administración: `scripts/admin-formatos.mjs`** (`npm run formatos` simula · `-- --aplicar`
+  publica · `-- --iniciar` crea la carpeta · `--emulador` para las pruebas). Lee
+  `..\Formatos-catalogo\formatos.json` (**fuera del repositorio**: este se publica en GitHub Pages),
+  valida (id, categoría, existencia, extensión y «firma» del archivo, 15 MB), sube **solo lo que
+  cambió** y escribe el catálogo en **una transacción** que sube la versión; lo que sale de la lista
+  se retira y su archivo se borra **al final** (si falla, sobra un archivo; nunca falta). Credencial:
+  `..\keystore-RESGUARDAR\firebase-admin-PRIVADA.json`. `firebase-admin@13.10.0` (la misma de las
+  funciones) es devDependency de la raíz. Lote inicial: FPJ-7 y FPJ-8 de `Documentos/Otro/`; el
+  `LEEME.txt` de la carpeta lista los demás formatos en blanco como candidatos.
+- **Reglas**: `formatos/{d}` lectura pública, escritura `false` en Firestore; `firebase/storage.rules`
+  (nuevo) igual para `formatos/**` y todo lo demás cerrado. El script usa el SDK de administración,
+  que no pasa por reglas. `firebase.json` gana la sección `storage` y su emulador (9199).
+- **La app (bloque `fm*`, al final del script)**: una instancia **propia** de Firebase
+  (`'flagrante-formatos'`, sin Auth) para no tocar la cuenta ni la nube. ⚠️ El `<script>` de
+  `vendor/firebase.js` se carga UNA vez para todos con **`lcCargarFirebase()`** (extraído de
+  `cuSdk`): dos copias del paquete crean dos registros de Firebase cuyos objetos no sirven con las
+  funciones del otro. En localhost solo con `lc_flags.formatosEmulador`, así las demás suites no
+  salen a la red. `CU_FB` gana `storageBucket`.
+- **Sin señal**: IndexedDB `fm_catalogo`, `fm|<id>|<ext>` = `{sha256, blob}`, `fm_guard` (qué hay
+  guardado) y `fm_visto`. **Sin cifrar a propósito** (formatos públicos). Un archivo que no cuadra
+  con su SHA se descarta; lo retirado o cambiado se borra del equipo al llegar el catálogo nuevo
+  (`fmPurgar`). Sin señal y sin el archivo guardado, el menú lo dice en vez de quedarse cargando.
+  `st.maxOperationRetryTime = 20000`: si no, una descarga sin red reintenta dos minutos.
+- **La pantalla `#screen-formatos`**: buscador en vivo (`lcNormNom`: sin tildes, todas las palabras,
+  por nombre, código, norma y fuente) · pestañas con su cuenta · si la búsqueda no da nada en la
+  pestaña y sí en la otra, «N en No oficiales · Ver» · tarjeta con nombre, código y fuente, insignias
+  PDF/Word, versión, «Nuevo»/«Actualizado», estrella y ⋮ · favoritos primero · «Catálogo revisado
+  hace…». La primera visita no marca nada como nuevo; las marcas se ven durante la visita en que
+  aparecen. El mosaico del Inicio dice «N formatos · K novedades».
+- **El menú ⋮**: con PDF y Word, **primero el archivo** (con su tamaño y «Guardado en el
+  teléfono»), favorito y fuente oficial (`enlace`); con un solo archivo va directo a las acciones.
+  El archivo se prepara **antes** de ofrecer Compartir (nada asíncrono entre el toque y `share()`).
+  **Ver** (solo PDF) · **Descargar** · **Compartir** (`_compartirDoc`: share nativo en Android,
+  `navigator.share({files})` en la web, descarga de respaldo).
+- ⚠️ **Dentro del envoltorio un `<a download>` con un blob NO guarda nada** (medido en el emulador,
+  Android 14: `/sdcard/Download` no cambia). `fmDescargarNativo` escribe con Filesystem
+  (`directory:'EXTERNAL_STORAGE'`, `path:'Download/<nombre>'`) en la carpeta pública Descargas,
+  prueba «(2)»/«(3)» si el nombre está ocupado, y si no puede abre la hoja de compartir. En la web
+  sigue `_dlDocBlob`. ⚠️ **Defecto PREEXISTENTE, no corregido aquí**: los demás «Descargar» de la
+  app (FPJ-5, actas, oficio…) usan `_dlDocBlob` también en Android, así que ahí tampoco guardan; su
+  vía que sí funciona es Compartir. Medido en el emulador: visor de pdf.js, Descargar y la hoja
+  nativa de Compartir funcionan dentro del envoltorio.
+- **El visor** (`#fm-ov`): pdf.js **6.3.289 legacy** (corre en WebView de Android 7-9) en
+  `vendor/pdfjs/` (copiado por `scripts/build-pdfjs.mjs`, que llama `build:web`, con la versión en
+  la primera línea), cargado con `import()` **solo al abrir el visor**, `isEvalSupported:false`,
+  páginas al ancho dibujadas al acercarse (IntersectionObserver), zoom ×1 a ×3 (la app bloquea el
+  pellizco), Descargar y Compartir. Atrás de Android lo cierra; cerrarlo consume su entrada de
+  historial sin navegar (`_fmPopIgnorar`). Precacheado por el Service Worker y copiado por
+  `build:android`. Añade ~1,8 MB al paquete (código, no documentos).
+- **CSP**: `connect-src` + `https://firebasestorage.googleapis.com`; `img-src` no cambia (no se
+  pintan imágenes remotas); el worker es local (`worker-src 'self'`).
+- ⚠️ **App Check**: aplicarlo en **Firestore** dejaría a la web sin cuenta sin catálogo; en Storage
+  no se aplica. Anotado en `PUBLICAR.md`.
+- `privacy.html` gana «Formatos en blanco» (la descarga no lleva datos del usuario). `PUBLICAR.md`
+  gana las tareas de consola: Storage en us-central1, CORS del bucket para
+  `https://getcorenova.github.io`, la clave de la cuenta de servicio, desplegar reglas y la primera
+  carga.
+- Suites adaptadas: `verify_inicio` (siete módulos y cuatro grupos, 45/45), `verify_turnos` [H1]
+  (94/94) y `verify_cuenta` [A2] (`CU_FB` con `storageBucket`, 62/62). Regresión completa: 60/63; en
+  rojo `mejora7` [B23] (preexistente) y `cuenta` [E11], intermitente (sola da 62/62). ⚠️ `verify_formatos` **muerde**: con el buscador y la caché
+  saboteados falla en D5, D6, D8 y aborta en F.
+- Anti-caché `?v=176` / `cache-v176`, `_BUILD=176`. `.aab` **versionCode 8**.

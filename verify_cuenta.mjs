@@ -115,7 +115,7 @@ await abrir(T0);
 const a1 = await T0.page.evaluate(() => ({ ov: document.getElementById('cu-ov').classList.contains('on'), activa: cuActiva(),
   inst: cuInstalada(), aj: (go('ajustes'), document.getElementById('aj-cuenta').innerHTML) }));
 log(!a1.ov && !a1.activa && a1.aj === '', '[A1] en localhost sin emuladores la app abre como antes, sin bienvenida ni sección Cuenta');
-log(!a1.activa && /var CU_FB = \{ apiKey: '[^']*', authDomain: '[^']*', projectId: '(flagrante)?', appId: '[^']*', messagingSenderId: '[^']*' \};/.test(src),
+log(!a1.activa && /var CU_FB = \{ apiKey: '[^']*', authDomain: '[^']*', projectId: '(flagrante)?', appId: '[^']*', messagingSenderId: '[^']*'(, storageBucket: '[^']*')? \};/.test(src),
     '[A2] la configuración de Firebase (vacía o la del proyecto real) no activa la cuenta en localhost sin emuladores');
 await T0.ctx.close();
 
