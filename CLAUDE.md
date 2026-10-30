@@ -8723,4 +8723,5 @@ Pedido del usuario: la barrita de 24 h no se entendía; prefiere leer el turno, 
 - Contraste AA (≥4,5:1) de la etiqueta sobre su celda medido en los dos temas.
 - `verify_turnos` 61/61: [J3] cada celda dice su turno escrito y no queda barrita, [J4] la leyenda
   con horas, [I3] contraste de la etiqueta, [I4] a 360 px la etiqueta entera dentro de la celda.
-- Anti-caché `?v=164` / `cache-v164`, `_BUILD=164`. Para la app de Play hace falta un `.aab` nuevo.
+- Anti-caché `?v=164` / `cache-v164`, `_BUILD=164`; `deploy:web` lo publicó como **build 165**
+  (el script sube el número otra vez al desplegar). Para la app de Play hace falta un `.aab` nuevo.
