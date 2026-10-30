@@ -8817,3 +8817,20 @@ M8 rehecho, M14-M16 nuevos) y mirando la ventana en los dos temas.
 - Motor: `tnEstadisticas` gana `hT/hS`, `bl` (horas por franja), `dias`, `dom` y `meses[m].d`
   (un renglón por día). Se retiraron la tarjeta «Hipotético», las notas al pie y la leyenda rayada.
 - Anti-caché `?v=169` / `cache-v169`, `_BUILD=169`; `deploy:web` lo publicó como **build 170**. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: el ciclo ya no se elige (2026-10-29, build 172)
+Pedido del usuario con el panel «Ajustar el ciclo» marcado: el bloque «Tu ciclo» («Hoy, ¿qué turno
+tiene la 2.ª sección?») no tenía sentido porque el ciclo ya está predeterminado. Rama
+`turnos-sin-calibrar`. Verificado con `verify_turnos.mjs` (82/82) y `verify_inicio.mjs` (45/45), y
+mirando el panel en los dos temas.
+- **Fuera la calibración entera**, no solo el bloque: `tnDesfasePara`, `tnCalElegir`,
+  `tnDesfaseTxt`, `_tnCal`, el CSS `.tn-cal-n`, la clave `desfase` de `tnCfg` y el parámetro en
+  `tnBase(iso, sec)`. ⚠️ Un `desfase` guardado por una versión anterior **se ignora** (el calendario
+  vuelve al ciclo fijo); guardar el horario lo escribe en 0. `.tn-cal` se queda: la usa el formulario
+  de novedades (cambio de turno).
+- El panel se llama **«Horario de los turnos»** y solo trae las horas, «Restaurar» y «Guardar». La
+  mitad derecha de la barra pasa de «Ciclo y horario» a **«Horario»** («Predeterminado» / «Ajustado»
+  según las horas). Mismo id `#tn-bar-ciclo`.
+- `verify_turnos` [A5]/[A6] miden ahora que el ciclo es fijo; [E1]/[E4], que el panel no trae el
+  ciclo y que guardar no lo mueve.
+- Anti-caché `?v=172` / `cache-v172`, `_BUILD=172`. Para la app de Play hace falta un `.aab` nuevo.

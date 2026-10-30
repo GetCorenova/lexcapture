@@ -2298,7 +2298,7 @@ body.cu-on{overflow:hidden}
 .tn-hoy-l{font-weight:500;color:var(--text-2)}
 .tn-hoy .tn-est{margin-top:2px;font-size:13px;line-height:18px;color:var(--text-2)}
 
-/* Barra «Mi sección | Ciclo y horario» (build 167): una pieza partida en dos
+/* Barra «Mi sección | Horario» (build 167; el ciclo ya no se ajusta desde el 172): una pieza partida en dos
    funciones independientes, cada mitad con su rótulo, su valor y su flecha. */
 .tn-bar{display:flex;align-items:stretch;padding:0;overflow:hidden}
 .tn-bar-b{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:6px;min-height:58px;padding:10px 8px 10px 14px;border:0;
@@ -2479,7 +2479,6 @@ body.cu-on{overflow:hidden}
 .tn-op small{margin-left:auto;font-size:13px;color:var(--text-2);font-variant-numeric:tabular-nums}
 .tn-grp{margin:2px 2px 8px;font-size:12px;line-height:16px;font-weight:600;color:var(--text-3)}
 .tn-ops+.tn-grp{margin-top:14px}
-.tn-cal-n{font-size:13px;line-height:18px;color:var(--text-2);margin:10px 2px 0}
 .tn-hr{display:grid;grid-template-columns:minmax(0,1fr) 84px auto 84px;align-items:center;gap:8px;margin-bottom:10px}
 .tn-hr>span{font-size:14px;font-weight:600;color:var(--text)}
 .tn-hr i{font-style:normal;color:var(--text-3);font-size:13px}
@@ -3054,7 +3053,7 @@ if(_t==='light')document.documentElement.setAttribute('data-theme','light');}cat
 
   <!-- ====== TURNOS (2026-10-29, build 162) ======
        Calendario de las tres secciones de vigilancia. Lo pinta renderTurnos():
-       el turno de hoy en dos renglones, la barra «Mi sección | Ciclo y horario»,
+       el turno de hoy en dos renglones, la barra «Mi sección | Horario»,
        el mes (con selector de mes y año) y la entrada a las estadísticas del año.
        Ver «Turnos» en CLAUDE.md. -->
   <section id="screen-turnos" class="screen">
@@ -4055,7 +4054,7 @@ var _shareDoc = null;   // documento pre-generado para el caso del sheet abierto
 // Número de build visible en el sheet — para saber, desde una captura de pantalla
 // en campo, qué versión del código corre realmente en el celular (la caché del
 // Service Worker suele hacer que se vea un build viejo).
-var _BUILD = 171;
+var _BUILD = 172;
 
 // Diagnóstico visible dentro del sheet de envío: build + soporte de Web Share de
 // archivos + resultado del último intento. Es el único canal fiable para saber
@@ -28340,7 +28339,6 @@ function tnCfg(cfg) {
   return {
     seccion: hs.length ? tnSeccionEn(tnHoy(), { historial: hs }) : null,
     historial: hs,
-    desfase: tnMod(Math.round(+t.desfase || 0), 3),
     horas: (t.horas && typeof t.horas === 'object') ? t.horas : null,
     novedades: Array.isArray(t.novedades) ? t.novedades.filter(function (n) { return n && n.id && TN_NOV[n.tipo] && n.desde; }) : [],
     servicios: Array.isArray(t.servicios) ? t.servicios.filter(function (x) { return x && x.id && TN_SRV[x.tipo] && /^\d{4}-\d{2}-\d{2}$/.test(x.fecha); }) : []
@@ -28381,9 +28379,11 @@ function tnHoras(t) {
   });
   return o;
 }
-/* El turno que el ciclo le da a una sección un día (sin novedades). */
-function tnBase(iso, sec, t) {
-  return TN_CICLO[tnMod(tnDia(iso) - tnDia(TN_ANCLA) + TN_OFF[sec] + (t ? t.desfase : 0), 3)];
+/* El turno que el ciclo le da a una sección un día (sin novedades). El ciclo
+   es FIJO (build 172, decisión del usuario): ya no se calibra, así que un
+   `desfase` guardado por una versión anterior se ignora. */
+function tnBase(iso, sec) {
+  return TN_CICLO[tnMod(tnDia(iso) - tnDia(TN_ANCLA) + TN_OFF[sec], 3)];
 }
 /* La novedad que cubre un día: si hay varias, manda la última registrada. */
 function tnNovedad(iso, t) {
@@ -28461,10 +28461,6 @@ function tnHorasTxt(code, t) {
   var hs = tnHoras(t), bl = TN_TURNOS[code].bl;
   if (!bl.length) return 'Sin servicio';
   return bl.map(function (k) { return hs[k][0] + '–' + hs[k][1]; }).join(' y ');
-}
-/* El desfase que hace que HOY la sección esté en el turno indicado. */
-function tnDesfasePara(iso, sec, code) {
-  return tnMod(TN_CICLO.indexOf(code) - (tnDia(iso) - tnDia(TN_ANCLA) + TN_OFF[sec]), 3);
 }
 /* Estadísticas de un año (build 167): lo YA PRESTADO, del 1 de enero hasta
    ahora (un año pasado, entero; uno que no ha empezado, nada).
@@ -28674,15 +28670,15 @@ function tnPintarBarra() {
   var t = tnCfg(), sec = t.seccion;
   if (!sec) { el.innerHTML = ''; return; }
   var prox = t.historial.filter(function (h) { return h.desde > tnHoy(); })[0];
-  var ajus = t.desfase || t.horas;
-  el.innerHTML = '<div class="card tn-bar" role="group" aria-label="Sección y ciclo">' +
+  var ajus = !!t.horas;
+  el.innerHTML = '<div class="card tn-bar" role="group" aria-label="Sección y horario">' +
     '<button class="tn-bar-b" id="tn-bar-sec" onclick="tnSeccionSheet()" aria-haspopup="dialog" aria-label="' + escAttr('Mi sección: ' + TN_SECC[sec] + '. Cambiar') + '">' +
       '<span class="tn-bar-x"><span class="tn-bar-l">Mi sección</span><span class="tn-bar-v">' + TN_SECC[sec] + '</span>' +
       (prox ? '<span class="tn-bar-n">Pasas a la ' + prox.seccion + '.ª el ' + escHtml(tnFechaCorta(prox.desde)) + '</span>' : '') + '</span>' +
       '<span class="tn-bar-ch">' + TN_CHEV_ABAJO + '</span></button>' +
     '<span class="tn-bar-sep" aria-hidden="true"></span>' +
-    '<button class="tn-bar-b" id="tn-bar-ciclo" onclick="tnAjustar()" aria-haspopup="dialog" aria-label="' + escAttr('Ciclo y horario: ' + (ajus ? 'ajustado' : 'predeterminado') + '. Configurar') + '">' +
-      '<span class="tn-bar-x"><span class="tn-bar-l">Ciclo y horario</span><span class="tn-bar-v">' + (ajus ? 'Ajustado' : 'Predeterminado') + '</span></span>' +
+    '<button class="tn-bar-b" id="tn-bar-ciclo" onclick="tnAjustar()" aria-haspopup="dialog" aria-label="' + escAttr('Horario de los turnos: ' + (ajus ? 'ajustado' : 'predeterminado') + '. Configurar') + '">' +
+      '<span class="tn-bar-x"><span class="tn-bar-l">Horario</span><span class="tn-bar-v">' + (ajus ? 'Ajustado' : 'Predeterminado') + '</span></span>' +
       '<span class="tn-bar-ch">' + TN_CHEV + '</span></button></div>';
 }
 function tnPintarMes() {
@@ -29249,49 +29245,26 @@ async function tnServicioQuitar(iso) {
   toast('Registro quitado');
 }
 
-/* Ajustar el ciclo: para la unidad cuyo ciclo va corrido respecto del
-   predeterminado, y para cambiar las horas de los tres turnos. */
-var _tnCal = null;
-function tnDesfaseTxt(d) {
-  return d ? 'Tu ciclo va corrido ' + d + ' día' + (d > 1 ? 's' : '') + ' respecto del predeterminado.' : 'Igual al ciclo predeterminado.';
-}
+/* Horario de los turnos. El ciclo es fijo y ya no se elige aquí (build 172,
+   decisión del usuario): solo se cambian las horas de los tres turnos. */
 function tnAjustar() {
-  var t = tnCfg(), sec = t.seccion;
-  if (!sec) { toast('Elige primero tu sección'); return; }
-  var hoy = tnHoy(), base = tnBase(hoy, sec, t), hs = tnHoras(t);
-  _tnCal = { code: base, desfase: t.desfase };
-  openPanel('Ajustar el ciclo',
-    '<div class="st">Tu ciclo</div>' +
-    '<p class="oj-hint">Hoy, ' + escHtml(tnFechaLarga(hoy).toLowerCase()) + ', ¿qué turno tiene la ' + TN_SECC[sec] + '?</p>' +
-    '<div class="tn-cal" id="tn-cal" role="radiogroup" aria-label="Turno de hoy">' + TN_CICLO.map(function (k) {
-      return '<button class="tn-op tn-k-' + TN_TURNOS[k].c + (k === base ? ' on' : '') + '" role="radio" aria-checked="' + (k === base) + '" data-k="' + k + '" onclick="tnCalElegir(\'' + k + '\')">' +
-        '<span class="tn-dot"></span>' + escHtml(TN_TURNOS[k].n) + '<small>' + escHtml(tnHorasTxt(k, t)) + '</small></button>';
-    }).join('') + '</div>' +
-    '<p class="tn-cal-n" id="tn-cal-n">' + tnDesfaseTxt(t.desfase) + '</p>' +
-    '<div class="st">Horario de los turnos</div>' +
+  var t = tnCfg();
+  if (!t.seccion) { toast('Elige primero tu sección'); return; }
+  var hs = tnHoras(t);
+  openPanel('Horario de los turnos',
     Object.keys(TN_BLOQUES).map(function (k) {
       return '<div class="tn-hr"><span>' + TN_BLOQUES[k].n + '</span>' + lcHoraInput('tn-h-' + k + '-a', hs[k][0]) + '<i>a</i>' + lcHoraInput('tn-h-' + k + '-b', hs[k][1]) + '</div>';
     }).join('') +
     '<div class="tn-mb"><button class="btn bs" onclick="tnAjusteRestaurar()">Restaurar</button>' +
       '<button class="btn bp" onclick="tnAjusteGuardar()">Guardar</button></div>');
 }
-function tnCalElegir(k) {
-  var t = tnCfg();
-  _tnCal = { code: k, desfase: tnDesfasePara(tnHoy(), t.seccion, k) };
-  document.querySelectorAll('#tn-cal .tn-op').forEach(function (b) { var on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); });
-  var n = document.getElementById('tn-cal-n');
-  if (n) n.textContent = tnDesfaseTxt(_tnCal.desfase);
-}
 function tnAjusteRestaurar() {
-  var t = tnCfg();
-  tnCalElegir(tnBase(tnHoy(), t.seccion, { desfase: 0 }));
   Object.keys(TN_BLOQUES).forEach(function (k) {
     document.getElementById('tn-h-' + k + '-a').value = TN_BLOQUES[k].def[0];
     document.getElementById('tn-h-' + k + '-b').value = TN_BLOQUES[k].def[1];
   });
 }
 async function tnAjusteGuardar() {
-  if (!_tnCal) return;
   var horas = {}, propias = false, mal = false;
   Object.keys(TN_BLOQUES).forEach(function (k) {
     var ea = document.getElementById('tn-h-' + k + '-a'), eb = document.getElementById('tn-h-' + k + '-b');
@@ -29302,11 +29275,10 @@ async function tnAjusteGuardar() {
     if (a !== TN_BLOQUES[k].def[0] || b !== TN_BLOQUES[k].def[1]) propias = true;
   });
   if (mal) { toast('Revisa las horas marcadas: van de 00:00 a 23:59 y no pueden ser iguales'); return; }
-  try { await tnGuardar({ desfase: _tnCal.desfase, horas: propias ? horas : null }); } catch (e) { return; }
-  _tnCal = null;
+  try { await tnGuardar({ desfase: 0, horas: propias ? horas : null }); } catch (e) { return; }
   closeModal();
   renderTurnos();
-  toast('Ciclo guardado');
+  toast('Horario guardado');
 }
 
 /* ── Compartir ────────────────────────────────────────────────────────────── */
