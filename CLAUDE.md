@@ -8833,4 +8833,4 @@ mirando el panel en los dos temas.
   según las horas). Mismo id `#tn-bar-ciclo`.
 - `verify_turnos` [A5]/[A6] miden ahora que el ciclo es fijo; [E1]/[E4], que el panel no trae el
   ciclo y que guardar no lo mueve.
-- Anti-caché `?v=172` / `cache-v172`, `_BUILD=172`. Para la app de Play hace falta un `.aab` nuevo.
+- Anti-caché `?v=172` / `cache-v172`, `_BUILD=172`; `deploy:web` lo publicó como **build 173**. Para la app de Play hace falta un `.aab` nuevo.
