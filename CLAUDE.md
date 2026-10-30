@@ -8991,4 +8991,4 @@ los dos temas, en teléfono y escritorio.
   (94/94) y `verify_cuenta` [A2] (`CU_FB` con `storageBucket`, 62/62). Regresión completa: 60/63; en
   rojo `mejora7` [B23] (preexistente) y `cuenta` [E11], intermitente (sola da 62/62). ⚠️ `verify_formatos` **muerde**: con el buscador y la caché
   saboteados falla en D5, D6, D8 y aborta en F.
-- Anti-caché `?v=176` / `cache-v176`, `_BUILD=176`. `.aab` **versionCode 8**.
+- Anti-caché `?v=176` / `cache-v176`, `_BUILD=176`; fusionado en `main` y publicado en la web como **build 177** (2026-10-30). `.aab` **versionCode 8**, sin subir a Play. Hasta que se hagan las tareas de consola de `PUBLICAR.md`, la pantalla dice que no pudo cargar el catálogo.
