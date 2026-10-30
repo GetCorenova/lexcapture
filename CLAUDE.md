@@ -8792,3 +8792,28 @@ las pantallas en los dos temas, en teléfono y escritorio. Publicado como **buil
   `tnResumenMes` («el mes en cifras» sumaba también lo no prestado).
 - ⚠️ El ciclo calibrado (`desfase`) sigue siendo global: corre las tres secciones y el pasado.
 - Anti-caché `?v=167` / `cache-v167`, `_BUILD=167`. Para la app de Play hace falta un `.aab` nuevo.
+
+## Turnos: estadísticas del año rediseñadas y paleta azul/turquesa/gris (2026-10-29, build 169)
+El usuario rechazó la ventana «Mis turnos» del build 167 (saturada, barras que contradecían las
+cifras, rayados, colores marrón/rojo poco distinguibles, notas de relleno) y pidió verla **por
+año, por mes, por día y por hora**. Verificado con `verify_turnos.mjs` (**82 checks**, antes 79;
+M8 rehecho, M14-M16 nuevos) y mirando la ventana en los dos temas.
+- **Paleta del módulo Turnos, en todo el módulo** (calendario, franja del Inicio, estadísticas):
+  2.º–1.º **azul profundo** (`#1D4ED8` claro / `#7EA6FF` oscuro), 3.º **turquesa** (`#0F766E` /
+  `#3DCFC0`), Disponible **gris neutro** (`#5B6573` / `#A3ADBA`); tintes de celda recalculados.
+  Contraste medido: texto del turno sobre su celda ≥4,6:1 y barras de festivo/novedad ≥3:1 en los
+  dos temas ([I3]). Emojis del texto por chat: 🔵 2.º–1.º · 🟢 3.º · ⚪ Disp.
+- **AÑO**: las horas de servicio como cifra principal y los turnos debajo; la barra reparte las
+  **HORAS** (un 2.º–1.º pesa el doble que un 3.º), tres tarjetas en una fila (2.º–1.º · 3.º ·
+  Disp.) con turnos **y** horas, y el promedio por día, semana y mes. «Turno en curso incluido»
+  es una píldora arriba, junto al año.
+- **Lo que pasó**: píldoras de festivos y domingos con servicio, novedades por tipo, servicios
+  especiales y no prestados; lo que vale cero no se pinta (solo «Sin novedades»).
+- **HORA**: «Por hora del día» = línea de 24 h con los turnos y las horas prestadas en cada
+  franja (2.º turno, 3.er turno, 4.º y 1.er turno) con su porcentaje.
+- **MES → DÍA**: tabla Mes | 2.º–1.º | 3.º | Disp. | Horas con fila Total; tocar un mes abre sus
+  días (uno a la vez, del más reciente al primero): fecha, turno, horario o motivo (novedad, no
+  prestado, sin servicio) y horas.
+- Motor: `tnEstadisticas` gana `hT/hS`, `bl` (horas por franja), `dias`, `dom` y `meses[m].d`
+  (un renglón por día). Se retiraron la tarjeta «Hipotético», las notas al pie y la leyenda rayada.
+- Anti-caché `?v=169` / `cache-v169`, `_BUILD=169`. Para la app de Play hace falta un `.aab` nuevo.
