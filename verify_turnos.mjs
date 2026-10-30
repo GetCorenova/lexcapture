@@ -75,14 +75,15 @@ const cont = await page.evaluate(() => {
     sig[tnBase('2025-12-31', s, { desfase: 0 })] === tnBase('2026-01-01', s, { desfase: 0 }));
 });
 log(cont, '[A4] El ciclo NO se reinicia el 1 de enero y funciona antes del 01/01/2026');
+/* Build 172: el ciclo es fijo. Un desfase guardado por una versión anterior se ignora. */
 const cal = await page.evaluate(() => {
-  const hoy = '2027-03-14', r = [];
-  [1, 2, 3].forEach(s => ['T', 'S', 'D'].forEach(k => { const d = tnDesfasePara(hoy, s, k); r.push(tnBase(hoy, s, { desfase: d }) === k && d >= 0 && d <= 2); }));
-  const d = tnDesfasePara(hoy, 2, 'D');
-  return { r, otras: tnBase(hoy, 1, { desfase: d }) !== tnBase(hoy, 2, { desfase: d }) && tnBase(hoy, 3, { desfase: d }) !== 'D' };
+  const hoy = '2027-03-14', fijo = [1, 2, 3].map(s => tnBase(hoy, s));
+  const conDesfase = [1, 2, 3].map(s => tnBase(hoy, s, tnCfg({ turnos: { seccion: s, desfase: 1 } })));
+  return { igual: JSON.stringify(fijo) === JSON.stringify(conDesfase), distintas: new Set(fijo).size === 3,
+    sinClave: !('desfase' in tnCfg({ turnos: { seccion: 2, desfase: 2 } })), sinFn: typeof tnDesfasePara === 'undefined' && typeof tnCalElegir === 'undefined' };
 });
-log(cal.r.every(Boolean), '[A5] Calibrar «hoy mi sección está en X» funciona en las 9 combinaciones', cal.r);
-log(cal.otras, '[A6] El desfase corre a las tres secciones a la vez: siguen teniendo turnos distintos');
+log(cal.igual && cal.sinClave, '[A5] El ciclo es fijo: un desfase guardado antes no lo corre', JSON.stringify(cal));
+log(cal.distintas && cal.sinFn, '[A6] Las tres secciones siguen con turnos distintos y no queda código de calibración', JSON.stringify(cal));
 
 /* ═══ B · festivos ═══ */
 const fest = await page.evaluate(() => lcFestivosCO(2026));
@@ -158,8 +159,8 @@ const bar = await page.evaluate(() => {
     abajo: [...document.querySelectorAll('#screen-turnos .btn')].map(e => e.textContent.trim()).filter(t => /Compartir mis turnos|Ajustar el ciclo/.test(t)),
     share: getComputedStyle(document.getElementById('tn-share')).display !== 'none' };
 });
-log(bar.entre && bar.lados && bar.alto >= 44 && JSON.stringify(bar.ls) === JSON.stringify(['Mi sección', 'Ciclo y horario']) && bar.ciclo === 'Predeterminado',
-  '[L1] Entre «Hoy» y el mes, una barra con dos mitades: «Mi sección» y «Ciclo y horario»', JSON.stringify(bar));
+log(bar.entre && bar.lados && bar.alto >= 44 && JSON.stringify(bar.ls) === JSON.stringify(['Mi sección', 'Horario']) && bar.ciclo === 'Predeterminado',
+  '[L1] Entre «Hoy» y el mes, una barra con dos mitades: «Mi sección» y «Horario»', JSON.stringify(bar));
 log(!bar.abajo.length && bar.share, '[L2] Sin «Compartir mis turnos» ni «Ajustar el ciclo» al final (compartir sigue en la barra superior)', JSON.stringify(bar.abajo));
 await page.click('#tn-bar-sec'); await page.waitForTimeout(350);
 const ss = await page.evaluate(() => ({ on: document.getElementById('act-sheet').classList.contains('on'),
@@ -259,15 +260,15 @@ await page.evaluate(() => tnServicioQuitar('2026-10-14')); await page.evaluate((
 log(await page.evaluate(() => { tnDiaSheet('2026-10-14'); const r = tnCfg().servicios.length === 0 && !document.querySelector('#act-items .tn-srv'); closeActionSheet(); return r; }), '[J12] Quitar el registro lo borra');
 await page.evaluate(() => tnIrHoy()); await page.waitForTimeout(100);
 
-/* ═══ E · ajustar el ciclo y las horas ═══ */
+/* ═══ E · el horario de los turnos (el ciclo ya no se elige) ═══ */
 await page.click('#tn-bar-ciclo'); await page.waitForTimeout(250);
-const hoyBase = await page.evaluate(() => tnBase(tnHoy(), 2, tnCfg()));
-const otro = { T: 'D', S: 'T', D: 'S' }[hoyBase];
-await page.click(`#tn-cal [data-k="${otro}"]`);
+const pan = await page.evaluate(() => ({ titulo: document.querySelector('#modal .mo-t, #modal .mo-title, #modal h2, #modal h3')?.textContent.trim() || '',
+  sinCiclo: !document.getElementById('tn-cal') && !/Tu ciclo|¿qué turno tiene/.test(document.getElementById('modal').innerText), horas: document.querySelectorAll('#modal .tn-hr').length }));
+const hoyBase = await page.evaluate(() => tnBase(tnHoy(), 2));
 await page.fill('#tn-h-t3-a', '1400');
 await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
-const aj = await page.evaluate(() => { const t = tnCfg(); return { base: tnBase(tnHoy(), 2, t), d: t.desfase, h: tnHoras(t).t3, sub: document.querySelector('#tn-bar-ciclo .tn-bar-v').textContent, abierto: document.getElementById('modal').classList.contains('open') }; });
-log(aj.base === otro && aj.d > 0 && aj.sub === 'Ajustado' && !aj.abierto, '[E1] «Ciclo y horario» abre el ajuste; calibrar deja hoy en el turno elegido y la barra dice «Ajustado»', JSON.stringify(aj));
+const aj = await page.evaluate(() => { const t = tnCfg(); return { base: tnBase(tnHoy(), 2, t), h: tnHoras(t).t3, sub: document.querySelector('#tn-bar-ciclo .tn-bar-v').textContent, abierto: document.getElementById('modal').classList.contains('open') }; });
+log(pan.sinCiclo && pan.horas === 3 && aj.base === hoyBase && aj.sub === 'Ajustado' && !aj.abierto, '[E1] «Horario» abre solo las horas (sin «Tu ciclo»); guardar no mueve el ciclo y la barra dice «Ajustado»', JSON.stringify({ pan, aj }));
 log(aj.h[0] === '14:00' && aj.h[1] === '21:00', '[E2] La hora se escribe de corrido en 24 h («1400» → 14:00) y se guarda', aj.h);
 await page.evaluate(() => tnAjustar()); await page.waitForTimeout(120);
 await page.fill('#tn-h-t2-a', '25:00');
@@ -275,8 +276,8 @@ await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(250);
 const mal = await page.evaluate(() => ({ open: document.getElementById('modal').classList.contains('open'), err: document.getElementById('tn-h-t2-a').classList.contains('fi-err') }));
 log(mal.open && mal.err, '[E3] Una hora imposible no se guarda: se marca en rojo', JSON.stringify(mal));
 await page.click('#modal .tn-mb .bs'); await page.click('#modal .tn-mb .bp'); await page.waitForTimeout(400);
-const rest = await page.evaluate(() => { const t = tnCfg(); return { d: t.desfase, h: t.horas }; });
-log(rest.d === 0 && rest.h === null, '[E4] «Restaurar» vuelve al ciclo y las horas predeterminadas', JSON.stringify(rest));
+const rest = await page.evaluate(() => { const t = tnCfg(); return { h: t.horas, sub: document.querySelector('#tn-bar-ciclo .tn-bar-v').textContent }; });
+log(rest.h === null && rest.sub === 'Predeterminado', '[E4] «Restaurar» vuelve a las horas predeterminadas', JSON.stringify(rest));
 
 /* ═══ F · novedades ═══ */
 const hoy = await page.evaluate(() => tnHoy());
