@@ -5,7 +5,7 @@
 > desde ese repositorio y renombrarlo dejaría tiesas las apps ya instaladas.
 > ⚠️ **Play exige que la ficha, la política de privacidad y el formulario de
 > Seguridad de los datos digan lo mismo.** Si se toca una, revisar las tres.
-> Política publicada: https://getcorenova.github.io/lexcapture/privacy.html
+> Política publicada: https://flagrante.web.app/privacidad
 
 ## Nombre de la app (máx. 30) — 9 usados
 Flagrante
@@ -97,8 +97,9 @@ Agrega a tu compañero con un código en pantalla y pásale personas y capturas 
 
 ## Datos de contacto
 - Correo: getcorenova@gmail.com
-- Sitio web: https://getcorenova.github.io/lexcapture/
-- Política de privacidad: https://getcorenova.github.io/lexcapture/privacy.html
+- Sitio web: https://flagrante.web.app
+- Eliminación de la cuenta (Seguridad de los datos → URL): https://flagrante.web.app/eliminar-cuenta
+- Política de privacidad: https://flagrante.web.app/privacidad
 
 ## Recursos gráficos — TODOS LISTOS en `lexcapture-android/store/`
 > Se regeneran con `npm run store:assets` y `npm run store:feature`.

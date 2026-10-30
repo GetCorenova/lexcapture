@@ -95,3 +95,6 @@ _tmp_*
 
 # Configuración del IDE (Android Studio / IntelliJ)
 .idea/
+
+# Caché del despliegue de Firebase Hosting
+firebase/.firebase/

@@ -318,8 +318,7 @@ const csp = (src.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)
 log(/connect-src[^;]*https:\/\/firebasestorage\.googleapis\.com/.test(csp) && /worker-src 'self'/.test(csp) && !/unsafe-eval/.test(csp), '[H1] la CSP abre solo Storage, el worker es local y sigue sin unsafe-eval');
 log(await page.evaluate(() => window.__csp.length === 0), '[H2] ninguna violación de la CSP', await page.evaluate(() => window.__csp.join(' ')));
 log(!/cdn\.|unpkg|jsdelivr|cdnjs/.test(src.slice(src.indexOf('FORMATOS (2026-10-30'))) && existsSync(join(ROOT, 'vendor/pdfjs/pdf.worker.min.mjs')), '[H3] pdf.js viaja en vendor/pdfjs/, sin CDN');
-const swSrc = readFileSync(join(ROOT, 'sw.js'), 'utf8');
-log(/vendor\/pdfjs\/pdf\.min\.mjs/.test(swSrc) && /vendor\/pdfjs\/pdf\.worker\.min\.mjs/.test(swSrc), '[H4] el Service Worker guarda el lector de PDF para abrir sin señal');
+log(!/serviceWorker\.register\(/.test(src), '[H4] la app ya no registra un Service Worker (web retirada): el lector viaja dentro del paquete');
 log(/vendor', 'pdfjs'/.test(readFileSync(join(ROOT, 'scripts/build-android.mjs'), 'utf8')), '[H5] el paquete de Android lleva el lector de PDF');
 const bloque = src.slice(src.indexOf('<section id="screen-formatos"'), src.indexOf('<!-- ====== TURNOS (2026-10-29'));
 log(!/\p{Extended_Pictographic}/u.test(bloque) && !/\p{Extended_Pictographic}/u.test(await page.evaluate(() => document.getElementById('screen-formatos').innerText)), '[H6] sin emojis en la pantalla');
